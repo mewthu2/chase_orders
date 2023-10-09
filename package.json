@@ -1,0 +1,16 @@
+{
+  "name": "app",
+  "private": "true",
+  "dependencies": {
+    "bootstrap": "^5.3.2",
+    "esbuild": "^0.19.3",
+    "fontawesome-free": "^1.0.4",
+    "sass": "^1.68.0",
+    "stimulus": "^3.2.2",
+    "turbo": "^1.10.14"
+  },
+  "scripts": {
+    "build": "esbuild app/javascript/*.* --bundle --sourcemap --outdir=app/assets/builds",
+    "build:css": "sass ./app/assets/stylesheets/admin.scss ./app/assets/builds/application.css --no-source-map --load-path=node_modules"
+  }
+}
