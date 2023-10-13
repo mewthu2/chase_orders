@@ -1,22 +1,28 @@
 default: &default
-  adapter: postgresql
-  encoding: unicode
-  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  host: <%= ENV.fetch("DB_HOST", "localhost") %>
-  port: <%= ENV.fetch("DB_PORT", 5432) %>
-  username: <%= ENV['DB_USERNAME'] %>
-  password: <%= ENV['DB_PASSWORD'] %>
+  adapter: mysql2
+  encoding: utf8
+  pool: <%= ENV.fetch("MYSQL_MAX_THREADS") { 50 } %>
+  reconnect: true
 
 development:
   <<: *default
-  database: chase_orders
+  url: <%= ENV['DEVELOPMENT_DATABASE_URL'] %>
+  username: <%= ENV['LOCAL_DATABASE_USERNAME'] %>
+  password: <%= ENV['LOCAL_DATABASE_PASSWORD'] %>
+  database: sgo4_development
 
 test:
   <<: *default
-  database: chase_orders_test
+  url: <%= ENV['TEST_DATABASE_URL'] %>
+
+staging:
+  <<: *default
+  url: <%= ENV['STAGING_DATABASE_URL'] %>
+  username: <%= ENV['DATABASE_USERNAME'] %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
 
 production:
   <<: *default
-  database: chase_orders_production
-  username: <%= ENV['DB_USERNAME'] %>
-  password: <%= ENV['DB_PASSWORD'] %>
+  url: <%= ENV['PRODUCTION_DATABASE_URL'] %>
+  username: <%= ENV['DATABASE_USERNAME'] %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
