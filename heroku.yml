@@ -1,0 +1,32 @@
+ruby '3.1.3'
+
+production:
+  adapter: mysql2
+  encoding: utf8mb4
+  url: <%= ENV['CLEARDB_DATABASE_URL'] %>
+
+setup:
+  addons:
+    - cleardb:igniteL
+  buildpacks:
+    - ruby
+    - https://github.com/heroku/heroku-buildpack-nodejs.git
+
+release:
+  - bundle exec rake db:migrate
+  - bundle exec rake assets:precompile
+
+web: bundle exec puma -C config/puma.rb
+
+clock: bundle exec whenever --update-crontab
+
+config:
+  RAILS_MASTER_KEY: <%= ENV['RAILS_MASTER_KEY'] %>
+  SECRET_KEY_BASE: <%= ENV['SECRET_KEY_BASE'] %>
+  DEVISE_SECRET_KEY: <%= ENV['DEVISE_SECRET_KEY'] %>
+  CLEARDB_DATABASE_URL: <%= ENV['CLEARDB_DATABASE_URL'] %>
+  RAILS_ENV: production
+
+db: 
+  migrate: 
+    - bundle exec rake db:migrate
