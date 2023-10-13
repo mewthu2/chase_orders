@@ -6,10 +6,9 @@ default: &default
 
 development:
   <<: *default
-  host: us-cdbr-east-06.cleardb.net
-  username: b88e968ae42645
-  password: a01a5ff8
-  database: heroku_09c99bed38708ae
+  username: <%= ENV['LOCAL_DATABASE_USERNAME'] %>
+  password: <%= ENV['LOCAL_DATABASE_PASSWORD'] %>
+  database: <%= ENV['LOCAL_DATABASE_NAME'] %>
 
 test:
   <<: *default
