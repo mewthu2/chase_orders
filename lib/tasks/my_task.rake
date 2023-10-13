@@ -1,4 +1,4 @@
-namespace :my_tasks do
+namespace :my_task do
   task do_something: :production do
     TestJob.perform_now
   end
