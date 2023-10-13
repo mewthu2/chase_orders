@@ -1,5 +1,5 @@
-namespace :my_task do
-  task do_something: :production do
+namespace :test do
+  task do_something: :environment do
     TestJob.perform_now
   end
 end
