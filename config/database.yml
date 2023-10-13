@@ -23,6 +23,7 @@ staging:
 
 production:
   <<: *default
-  url: <%= ENV['PRODUCTION_DATABASE_URL'] %>
-  username: <%= ENV['DATABASE_USERNAME'] %>
-  password: <%= ENV['DATABASE_PASSWORD'] %>
+  host: us-cdbr-east-06.cleardb.net
+  username: b88e968ae42645
+  password: a01a5ff8
+  database: heroku_09c99bed38708ae
