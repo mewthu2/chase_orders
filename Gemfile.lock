@@ -271,7 +271,6 @@ DEPENDENCIES
   mysql2
   puma (~> 5.0)
   rails (~> 7.0.6)
-  rake
   redis (~> 4.0)
   rest-client
   selenium-webdriver
