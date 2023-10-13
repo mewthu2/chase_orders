@@ -3,6 +3,9 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby "3.1.3"
 
+# Use mysql as the database for Active Record
+gem 'mysql2'
+
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 7.0.6"
 
@@ -16,9 +19,6 @@ gem "sprockets-rails"
 gem 'i18n'
 
 gem 'httparty'
-
-# Use postgressql as the database for Active Record
-gem "pg"
 
 # Devise is a flexible authentication solution for Rails based on Warden
 gem 'devise'

@@ -136,6 +136,7 @@ GEM
     minitest (5.20.0)
     msgpack (1.7.2)
     multi_xml (0.6.0)
+    mysql2 (0.5.5)
     net-imap (0.3.7)
       date
       net-protocol
@@ -152,7 +153,6 @@ GEM
     nokogiri (1.15.4-x86_64-linux)
       racc (~> 1.4)
     orm_adapter (0.5.0)
-    pg (1.5.4)
     psych (5.1.0)
       stringio
     public_suffix (5.0.3)
@@ -266,7 +266,7 @@ DEPENDENCIES
   i18n
   importmap-rails
   jbuilder
-  pg
+  mysql2
   puma (~> 5.0)
   rails (~> 7.0.6)
   redis (~> 4.0)
