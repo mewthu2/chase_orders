@@ -7,8 +7,8 @@
 #
 set :output, "/path/to/my/cron_log.log"
 #
-every 5.minues do
-  runner "teste whenever"
+every 1.minutes do
+  runner "puts 'TESTE'"
 end
 
 #
