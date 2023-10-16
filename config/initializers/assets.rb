@@ -16,5 +16,4 @@ Rails.application.config.assets.paths << Rails.root.join('vendor/assets')
 Rails.application.config.assets.precompile += %w[*.js *.scss]
 Rails.application.config.assets.precompile += %w[admin/views/*.css]
 Rails.application.config.assets.precompile += %w[admin/views/*.js]
-Rails.application.config.assets.precompile += %w( actiontext.css )
 

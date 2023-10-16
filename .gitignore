@@ -9,14 +9,14 @@
 /test/tmp/
 /test/version_tmp/
 /tmp/
+# Used by dotenv library to load environment variables.
 .env
+
 .rubocop.yml
 /config/master.key
 log/development.log
 app/assets/builds/*
-app/public/assets
-# Used by dotenv library to load environment variables.
-# .env
+public/assets
 
 # Ignore Byebug command history file.
 .byebug_history
