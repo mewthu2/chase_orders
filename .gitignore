@@ -13,7 +13,8 @@
 .rubocop.yml
 /config/master.key
 log/development.log
-
+app/assets/builds/*
+app/public/assets
 # Used by dotenv library to load environment variables.
 # .env
 
