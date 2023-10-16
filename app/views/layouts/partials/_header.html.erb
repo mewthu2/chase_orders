@@ -1,0 +1,19 @@
+<header class="navbar-header">
+  <div class="navbar-brand">
+    <div class="brand-logo">
+      <%= image_tag 'admin/chase-logo', style: 'max-width:52%;' %>
+    </div>
+  </div>
+  <div class="navbar-content">
+    <%= yield :title %>
+  </div>
+  <div class="navbar-dropdowns">
+    <nav class="navbar navbar-expand-sm">
+      <div class="dropdown" style="margin-top: 7px; margin-right: 20px;">
+        <img src="https://github.com/test.png" alt="" width="32" height="32" class="rounded-circle me-2">
+        <strong><%= current_user.name %></strong>
+        <%= link_to destroy_user_session_path(current_user), data: { turbo: :false } do %>Sair<% end %>
+      </div>
+    </nav>
+  </div>
+</header>

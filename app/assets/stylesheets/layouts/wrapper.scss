@@ -1,0 +1,24 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 980px;
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  background: #12202f;
+}
+.wrapper > section {
+  padding: 15px 20px;
+}
+.wrapper > section:not(.sem-menu) {
+  margin-left: 250px;
+}
+@media only screen and (min-width: 768px) {
+  .wrapper > section {
+    margin-top: 45px;
+  }
+}
+.wrapper > section > .content-wrapper .row {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}

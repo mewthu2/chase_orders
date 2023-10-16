@@ -1,0 +1,192 @@
+aside.left-menu {
+  position: absolute;
+  background-color: #1b2834;
+  min-height: 100%;
+  width: 250px;
+}
+aside.left-menu .aside-inner {
+  margin-top: 45px;
+}
+@media only screen and (max-width: 768px) {
+  aside.left-menu {
+    margin-top: -45px;
+  }
+}
+aside.left-menu .nav {
+  position: relative;
+  overflow: hidden;
+}
+aside.left-menu .nav > .nav-heading {
+  padding: 0;
+  border: 0;
+  width: 100%;
+}
+aside.left-menu .nav > .nav-heading:first-child > a{
+  border-top: 1px solid #e2e2e2;
+  text-decoration: none;
+}
+aside.left-menu .nav > .nav-heading > a,
+aside.left-menu .nav > .nav-heading > span {
+  font-size: 12px;
+  padding: 8px 12px !important;
+  position: relative;
+  display: block;
+  color: #585858;
+  cursor: pointer;
+  border-bottom: 1px solid #e2e2e2;
+  background-color: #f8f8f8;
+  white-space: nowrap;
+}
+aside.left-menu .nav > .nav-heading > a > .svg-inline--fa,
+aside.left-menu .nav > .nav-heading > span > .svg-inline--fa {
+  font-size: 14px;
+  width: 20px;
+  margin-right: 3px;
+}
+aside.left-menu .nav > .nav-heading.active > a,
+aside.left-menu .nav > .nav-heading.active > span,
+aside.left-menu .nav > .nav-heading > a:hover,
+aside.left-menu .nav > .nav-heading > span:hover {
+  background-color: #ffffff;
+  color: #038ed3;
+  text-decoration: none;
+}
+aside.left-menu .nav > .nav-heading > a:hover:before,
+aside.left-menu .nav > .nav-heading > span:hover:before,
+aside.left-menu .nav > .nav-heading.active > a:before,
+aside.left-menu .nav > .nav-heading.active > span:before {
+  display: block;
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -1px;
+  bottom: 0;
+  z-index: 1;
+  border-left: 3px solid #038ed3;
+}
+aside.left-menu .nav > .nav-heading > ul > li > a > span {
+  display: block;
+  margin-left: 20px;
+}
+aside.left-menu .nav > .nav-heading > ul {
+  position: relative;
+  background-color: #fff;
+  list-style: none;
+  padding: 0;
+}
+aside.left-menu .nav > .nav-heading > ul:before {
+  content: "";
+  display: block;
+  position: absolute;
+  z-index: 1;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  border: 1px #8eb3d0 dotted;
+  border-width: 0 0 0 1px;
+}
+aside.left-menu .nav > .nav-heading > ul:after {
+  display: block;
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-style: solid;
+  border-width: 0 2px 0 0;
+  border-color: #038ed3;
+}
+aside.left-menu .nav > .nav-heading > ul > li {
+  position: relative;
+  border-bottom: 1px #ddd dotted;
+}
+aside.left-menu .nav > .nav-heading > ul > li:before {
+  content: "";
+  width: 7px;
+  display: block;
+  position: absolute;
+  z-index: 1;
+  left: 20px;
+  top: 18px;
+  border: 1px #8eb3d0 dotted;
+  border-width: 1px 0 0;
+}
+aside.left-menu .nav > .nav-heading > ul > li > a {
+  font-size: 12px;
+  -webkit-animation: fadeInLeft 0.5s;
+  -o-animation: fadeInLeft 0.5s;
+  animation: fadeInLeft 0.5s;
+  white-space: normal;
+  padding: 10px 12px 10px 16px;
+  display: block;
+  color: #616161;
+}
+aside.left-menu .nav > .nav-heading > ul > li.active,
+aside.left-menu .nav > .nav-heading > ul > li.open,
+aside.left-menu .nav > .nav-heading > ul > li.active > a,
+aside.left-menu .nav > .nav-heading > ul > li:hover > a,
+aside.left-menu .nav > .nav-heading > ul > li.open > a,
+aside.left-menu .nav > .nav-heading > ul > li.active .nav,
+aside.left-menu .nav > .nav-heading > ul > li.open .nav {
+  background-color: #f5f5f5;
+  color: #038ed3;
+}
+
+aside.left-menu .nav > .nav-heading > ul > li > a > .svg-inline--fa {
+  visibility: hidden;
+  position: absolute;
+  padding-left: 0px;
+  margin-right: 20px;
+  font-size: -12px;
+  height: 14px;
+  width: 8px;
+  z-index: 1;
+  background: #fff;
+  color: #038ed3;
+}
+
+aside.left-menu .nav > .nav-heading > ul > li.active > a > .svg-inline--fa,
+aside.left-menu .nav > .nav-heading > ul > li:hover > a > .svg-inline--fa {
+  visibility: visible;
+  background: #f5f5f5;
+}
+aside.left-menu .nav > .nav-heading > ul > li > a > span {
+  display: block;
+  margin-left: 20px;
+}
+aside.left-menu .nav > .nav-heading,
+aside.left-menu .nav > .nav-heading >ul > li > a > span {
+  -webkit-animation: fadeIn 1s;
+  -o-animation: fadeIn 1s;
+  animation: fadeIn 1s;
+}
+aside.left-menu .nav > .nav-heading > a > .svg-inline--fa.arrow,
+aside.left-menu .nav > .nav-heading > span > .arrow {
+  font-size: 18px;
+  margin-right: 3px;
+  position: absolute;
+  right: 12px;
+}
+
+aside.left-menu .sidebar:after {
+  content: "";
+  background: #ccc;
+  position: absolute;
+  display: block;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 1px;
+  -webkit-transform: translateZ(0px);
+}
+aside.left-menu .sidebar .sidebar-search {
+  background-color: #1b2834;
+  position: relative;
+  padding: 15px;
+  width: 248px;
+  z-index: 1;
+}
+aside.left-menu .sidebar .sidebar-search .search .btn-primary {
+  padding: 5px 13px;
+}
