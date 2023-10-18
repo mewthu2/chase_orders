@@ -20,6 +20,17 @@ class Tiny::Orders
     response.with_indifferent_access[:retorno]
   end
 
+  def self.get_all_orders(situacao_ocorrencia)
+    response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
+                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                formato: 'json',
+                                                situacaoOcorrencia: situacao_ocorrencia,
+                                                dataInicialOcorrencia: (Date.today - 7.days).strftime('%d/%m/%Y'),
+                                                dataFinalOcorrencia: Date.today.strftime('%d/%m/%Y')
+                                              }))
+    response.with_indifferent_access[:retorno]
+  end
+
   def self.obtain_order(order_id)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PEDIDO'),
                                        query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),

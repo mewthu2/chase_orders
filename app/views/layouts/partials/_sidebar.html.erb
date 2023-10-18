@@ -2,31 +2,37 @@
   <div class="aside-inner">
     <div class="d-flex justify-content-center flex-shrink-0 p-3 text-white">
       <ul class="nav nav-pills flex-column mb-auto">
-        <li class="nav-item">
-          <a href="#" class="nav-link text-info" aria-current="page">
-            <i class="fas fa-home h5"></i> Home
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="#" class="nav-link text-info">
-            <i class="fas fa-dashboard h5"></i> Dashboard
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="#" class="nav-link text-info">
-            <i class="fas fa-list h5"></i> Pedidos Tiny ERP
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="#" class="nav-link text-info">
-            <i class="fa-solid fa-box-open"></i> Pedidos Shopify
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="#" class="nav-link text-info">
-            <i class="fa-solid fa-truck"></i> Pedidos Correios LOG+
-          </a>
-        </li>
+        <a class="btn btn-dark w-100 text-info mb-3" href="/" role="button">
+          <i class="fas fa-house"></i> Home
+        </a>
+
+        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
+          <i class="fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
+        </a>
+        <ul class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
+          <li class="mb-3"><%= link_to dashboard_index_path, class: 'text-secondary' do %> <span> Acompanhamento </span><% end %></li>
+        </ul>
+
+        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-tiny" role="button" aria-expanded="false" aria-controls="collase-tiny">
+          <i class="fas fa-list"></i> Pedidos Tiny ERP <i class="fa fa-angle-down arrow"></i>
+        </a>
+        <ul class="flex-column mb-auto collapse mb-3" id="collase-tiny">
+          <li class="mb-3"><%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'text-secondary' do %> <span> Pedidos por situação </span><% end %></li>
+        </ul>
+
+        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-shopify" role="button" aria-expanded="false" aria-controls="collase-shopify">
+          <i class="fa-solid fa-box-open"></i> Pedidos Shopify <i class="fa fa-angle-down arrow"></i>
+        </a>
+        <ul class="flex-column mb-auto collapse mb-3" id="collase-shopify">
+        
+        </ul>
+
+        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-correios" role="button" aria-expanded="false" aria-controls="collase-correios">
+          <i class="fa-solid fa-truck"></i> Pedidos Correios LOG+ <i class="fa fa-angle-down arrow"></i>
+        </a>
+        <ul class="flex-column mb-auto collapse mb-3" id="collase-correios">
+        
+        </ul>
       </ul>
     </div>
   </div>

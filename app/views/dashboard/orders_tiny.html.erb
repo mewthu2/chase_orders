@@ -1,0 +1,61 @@
+<% title 'Pedidos por situação' %>
+
+<div class="container">
+  <div class="row d-flex justify-content-center">
+    <div class="btn-group mb-3" role="group">
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'aberto'), class: 'btn btn-dark text-secondary' do %> Aberto <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'aprovado'), class: 'btn btn-dark text-secondary' do %> Aprovado <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'btn btn-dark text-secondary' do %> Preparando Envio <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'faturado'), class: 'btn btn-dark text-secondary' do %> Faturado <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'pronto_envio'), class: 'btn btn-dark text-secondary' do %> Pronto para Envio <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'enviado'), class: 'btn btn-dark text-secondary' do %> Enviado <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'entregue'), class: 'btn btn-dark text-secondary' do %> Entregue <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'nao_entregue'), class: 'btn btn-dark text-secondary' do %> Não Entregue <% end %>
+      <%= link_to orders_tiny_dashboard_index_path(situacao: 'cancelado'), class: 'btn btn-dark text-secondary' do %> Cancelado <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="container" style="overflow-x:scroll;">
+  <table class="table table-dark table-hover table-responsive" >
+    <thead>
+      <tr>
+        <th class="text-center">id</th>
+        <th class="text-center">numero</th>
+        <th class="text-center">numero_ecommerce</th>
+        <th class="text-center">data_pedido</th>
+        <th class="text-center">data_prevista</th>
+        <th class="text-center">nome</th>
+        <th class="text-center">valor</th>
+        <th class="text-center">id_vendedor</th>
+        <th class="text-center">nome_vendedor</th>
+        <th class="text-center">situacao</th>
+        <th class="text-center">codigo_rastreamento</th>
+        <th class="text-center">url_rastreamento</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @orders[:pedidos].each do |order| %>
+        <tr>
+          <td class="text-center"><%= order[:pedido][:id] %></td>
+          <td class="text-center"><%= order[:pedido][:numero] %></td>
+          <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
+          <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
+          <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
+          <td class="text-center"><%= order[:pedido][:nome] %></td>
+          <td class="text-center"><%= order[:pedido][:valor] %></td>
+          <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
+          <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
+          <td class="text-center"><%= order[:pedido][:situacao] %></td>
+          <td class="text-center"><%= order[:pedido][:codigo_rastreamento] %></td>
+          <td class="text-center"><%= order[:pedido][:url_rastreamento] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot>
+      <tr>
+       
+      </tr>
+    </tfoot>
+  </table>
+</div>

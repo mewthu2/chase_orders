@@ -12,7 +12,7 @@
   }
 }
 .brand-logo {
-  background: black;
+  background: #1b2834;
 }
 .navbar-header .navbar-brand {
   float: left;
@@ -21,10 +21,8 @@
   padding: 0;
   width: 250px;
   margin: 0;
-  border-right: 1px solid #bbb;
 }
 .navbar-header .navbar-brand .brand-logo {
-  border-bottom: 1px solid #ddd;
   height: 45px;
 }
 .navbar-header .navbar-brand .brand-logo img {
@@ -39,7 +37,7 @@
   color: #FFF;
   text-transform: uppercase;
   font-size: 14px;
-  padding: 9px 20px;
+  padding: 12px 20px;
 }
 .navbar-header .navbar-dropdowns {
   float: right;
@@ -163,7 +161,6 @@
   font-size: 13px;
   font-weight: 700;
   text-transform: none;
-  border-bottom: 1px solid #ccc;
 }
 .navbar-header .navbar-dropdowns .user-notifications > .dropdown-menu > .dropdown-header a {
   display: inline-block;
