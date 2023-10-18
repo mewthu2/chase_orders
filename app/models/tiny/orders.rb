@@ -19,4 +19,12 @@ class Tiny::Orders
                                                 pagina: page }))
     response.with_indifferent_access[:retorno]
   end
+
+  def self.obtain_order(order_id)
+    response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PEDIDO'),
+                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                formato: 'json',
+                                                id: order_id }))
+    response.with_indifferent_access[:retorno]
+  end
 end
