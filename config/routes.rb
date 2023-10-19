@@ -1,5 +1,5 @@
 Rails.application.routes.draw do
-  devise_for :user
+  devise_for :user, skip: [:registrations]
   root to: 'home#index'
   resources :dashboard, only: [:index] do
     collection do

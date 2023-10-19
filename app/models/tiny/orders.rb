@@ -26,7 +26,25 @@ class Tiny::Orders
                                                 formato: 'json',
                                                 situacao: situacao
                                               }))
-    response.with_indifferent_access[:retorno]
+    total = []
+    if response.with_indifferent_access[:retorno][:numero_paginas].present?
+      response.with_indifferent_access[:retorno][:numero_paginas].times do |re|
+        total << JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
+                                        query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                  formato: 'json',
+                                                  situacao: situacao,
+                                                  pagina: re
+                                                }))
+      end
+      total.first.with_indifferent_access[:retorno]
+    else
+      response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
+                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                formato: 'json',
+                                                situacao: situacao
+                                              }))
+      response.with_indifferent_access[:retorno]
+    end
   end
 
   def self.obtain_order(order_id)

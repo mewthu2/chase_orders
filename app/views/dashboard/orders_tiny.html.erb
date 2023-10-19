@@ -16,46 +16,57 @@
   </div>
 </div>
 
-<div class="container" style="overflow-x:scroll;">
-  <table class="table table-dark table-hover table-responsive" >
-    <thead>
-      <tr>
-        <th class="text-center">id</th>
-        <th class="text-center">numero</th>
-        <th class="text-center">numero_ecommerce</th>
-        <th class="text-center">data_pedido</th>
-        <th class="text-center">data_prevista</th>
-        <th class="text-center">nome</th>
-        <th class="text-center">valor</th>
-        <th class="text-center">id_vendedor</th>
-        <th class="text-center">nome_vendedor</th>
-        <th class="text-center">situacao</th>
-        <th class="text-center">codigo_rastreamento</th>
-        <th class="text-center">url_rastreamento</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @orders[:pedidos].each do |order| %>
+<% if @orders[:pedidos].present? %>
+  <div class="container" style="overflow-x:scroll;">
+    <table class="table table-dark table-hover table-responsive" >
+      <thead>
         <tr>
-          <td class="text-center"><%= order[:pedido][:id] %></td>
-          <td class="text-center"><%= order[:pedido][:numero] %></td>
-          <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
-          <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
-          <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
-          <td class="text-center"><%= order[:pedido][:nome] %></td>
-          <td class="text-center"><%= order[:pedido][:valor] %></td>
-          <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
-          <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
-          <td class="text-center"><%= order[:pedido][:situacao] %></td>
-          <td class="text-center"><%= order[:pedido][:codigo_rastreamento] %></td>
-          <td class="text-center"><%= order[:pedido][:url_rastreamento] %></td>
+          <th class="text-center">id</th>
+          <th class="text-center">numero</th>
+          <th class="text-center">numero_ecommerce</th>
+          <th class="text-center">data_pedido</th>
+          <th class="text-center">data_prevista</th>
+          <th class="text-center">nome</th>
+          <th class="text-center">valor</th>
+          <th class="text-center">id_vendedor</th>
+          <th class="text-center">nome_vendedor</th>
+          <th class="text-center">situacao</th>
+          <th class="text-center">codigo_rastreamento</th>
+          <th class="text-center">url_rastreamento</th>
         </tr>
-      <% end %>
-    </tbody>
-    <tfoot>
-      <tr>
-       
-      </tr>
-    </tfoot>
-  </table>
-</div>
+      </thead>
+      <tbody>
+        <% @orders[:pedidos].each do |order| %>
+          <tr>
+            <td class="text-center"><%= order[:pedido][:id] %></td>
+            <td class="text-center"><%= order[:pedido][:numero] %></td>
+            <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
+            <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
+            <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
+            <td class="text-center"><%= order[:pedido][:nome] %></td>
+            <td class="text-center"><%= order[:pedido][:valor] %></td>
+            <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
+            <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
+            <td class="text-center"><%= order[:pedido][:situacao] %></td>
+            <td class="text-center"><%= order[:pedido][:codigo_rastreamento] %></td>
+            <td class="text-center"><%= order[:pedido][:url_rastreamento] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+        
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+<% else %>
+  <div class="alert alert-dark">
+    Sem resultados para a situação selecionada
+  </div>
+<% end %>
+<script>
+  $(document).ready(function() {
+      $('.table').DataTable();
+  });
+</script>
