@@ -14,7 +14,6 @@
   },
   "scripts": {
     "build": "esbuild app/javascript/*.* --bundle --sourcemap --outdir=app/assets/builds",
-    "build:css": "sass ./app/assets/stylesheets/admin.scss --no-source-map --load-path=node_modules",
-    "heroku-postbuild": "npm install"
+    "build:css": "sass ./app/assets/stylesheets/admin.scss --no-source-map --load-path=node_modules"
   }
 }

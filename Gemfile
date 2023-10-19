@@ -20,7 +20,11 @@ gem 'i18n'
 
 gem 'httparty'
 
-gem 'importmap-rails'
+# ApexCharts.RB is a ruby charting library that's going to give your ruby app beautiful, interactive, and responsive charts powered by ApexCharts.JS
+gem 'apexcharts'
+
+# An easy way to keep your users' passwords secure.
+gem 'bcrypt'
 
 # Devise is a flexible authentication solution for Rails based on Warden
 gem 'devise'

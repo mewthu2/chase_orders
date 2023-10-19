@@ -1,1 +1,76 @@
 <% title 'Acompanhamento' %>
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-7 col-md-7 col-sm-7 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
+      <div class="page-header">
+        <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> Pedidos na fila de processamento -  <span class="badge bg-secondary text-dark"> Preparando Envio </span></h5>
+      </div>
+      <% if @orders[:pedidos].present? %>
+        <div class="container" style="overflow-x:scroll;">
+          <table class="table table-dark table-hover table-responsive" >
+            <thead>
+              <tr>
+                <th class="text-center">id</th>
+                <th class="text-center">numero</th>
+                <th class="text-center">numero_ecommerce</th>
+                <th class="text-center">data_pedido</th>
+                <th class="text-center">data_prevista</th>
+                <th class="text-center">nome</th>
+                <th class="text-center">valor</th>
+                <th class="text-center">id_vendedor</th>
+                <th class="text-center">nome_vendedor</th>
+                <th class="text-center">situacao</th>
+                <th class="text-center">codigo_rastreamento</th>
+                <th class="text-center">url_rastreamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @orders[:pedidos].each do |order| %>
+                <tr>
+                  <td class="text-center"><%= order[:pedido][:id] %></td>
+                  <td class="text-center"><%= order[:pedido][:numero] %></td>
+                  <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
+                  <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
+                  <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
+                  <td class="text-center"><%= order[:pedido][:nome] %></td>
+                  <td class="text-center"><%= order[:pedido][:valor] %></td>
+                  <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
+                  <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
+                  <td class="text-center"><%= order[:pedido][:situacao] %></td>
+                  <td class="text-center"><%= order[:pedido][:codigo_rastreamento] %></td>
+                  <td class="text-center"><%= order[:pedido][:url_rastreamento] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+            <tfoot>
+              <tr>
+              
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      <% else %>
+        <div class="alert alert-dark">
+          Sem resultados para a situação selecionada
+        </div>
+      <% end %>
+    </div>
+    <div class="col-lg-4 col-md-4 col-sm-4 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
+      <div class="page-header">
+        <h5>Preparando Envio / Aprovado / Aberto</h5> 
+      </div>
+      <%= pie_chart([
+                      {name: "Preparando Envio", data: @preparando_envio.present? ? @preparando_envio.count : 0},
+                      {name: "Aberto", data: @aberto.present? ? @aberto.count : 0},
+                      {name: "Aprovado", data: @aprovado.present? ? @aprovado.count : 0}
+                    ], legend: "bottom") 
+      %>
+    </div>
+  </div>
+</div>
+<script>
+  $(document).ready(function() {
+      $('.table').DataTable();
+  });
+</script>
