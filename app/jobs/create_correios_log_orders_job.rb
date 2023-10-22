@@ -11,8 +11,16 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   def create_correios_log_orders
     orders = Tiny::Orders.get_orders('preparando_envio', 1)
 
-    orders[:numero_paginas].times do |page|
-      orders = Tiny::Orders.get_orders('preparando_envio', page)
+    if orders[:numero_paginas].present?
+      orders[:numero_paginas].times do |page|
+        orders = Tiny::Orders.get_orders('preparando_envio', page)
+        orders[:pedidos].each do |order|
+          next unless order.present?
+          next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
+          create_one_log_order(order)
+        end
+      end
+    else
       orders[:pedidos].each do |order|
         next unless order.present?
         next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
@@ -47,7 +55,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order('801349276')
+      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -60,10 +68,13 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     client_data = selected_order[:pedido][:cliente]
 
+    # Some 'total_pedido' have a zero value, reasoned by discount
+    assert_value = selected_order[:pedido][:total_pedido] == '0.00' ? selected_order[:pedido][:total_produtos] : selected_order[:pedido][:total_pedido]
+
     begin
       params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce]
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
-      params[:valor]            << selected_order[:pedido][:total_pedido]
+      params[:valor]            << assert_value
       params[:nome]             << client_data[:nome]
       params[:endereco]         << client_data[:endereco]
       params[:numero]           << client_data[:numero]
@@ -79,12 +90,10 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
       # Form items array
       order_items = selected_order[:pedido][:itens]
-      itens = []
 
       order_items.each do |oi|
-        itens << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
+        params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
-      params[:itens] << itens
       attempt.update(params: params)
 
       verify_params(attempt, params)
