@@ -40,19 +40,21 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
-    attempt.update(status: :error, error: 'Requisição vazia') unless request.present?
-    
-    attempt.update(status_code: request['statusCode'],
-                   message: request['mensagem'],
-                   exception: request['excecao'],
-                   classification: request['classificacao'],
-                   cause: request['causa'],
-                   url: request['url'],
-                   user: request['user'])
-    if request['statusCode'] == 200
-      attempt.update(status: :success)
+    if request.present?
+      attempt.update(status_code: request['statusCode'],
+                     message: request['mensagem'],
+                     exception: request['excecao'],
+                     classification: request['classificacao'],
+                     cause: request['causa'],
+                     url: request['url'],
+                     user: request['user'])
+      if request['statusCode'] == 200
+        attempt.update(status: :success)
+      else
+        attempt.update(status: :fail)
+      end
     else
-      attempt.update(status: :fail)
+      attempt.update(status: :error, error: 'Requisição vazia')
     end
   end
 end
