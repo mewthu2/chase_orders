@@ -5,34 +5,39 @@ class Correios::Orders
       'Content-Type' => 'application/json',
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
     }
+
     body = {
-      'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
-      'numero' => params[:numero_ecommerce],
-      'dataSolicitacao' => params[:data_pedido],
-      'valordeclarado' => params[:valor],
-      'cartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
-      'codigoservico' => '39888',
-      'numeroPLP' => '',
-      'numeroSerie' => '1',
-      'cnpjTransportadora' => ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA'),
-      'servicosAdicionais' => ['019'],
-      'destinatario' => {
-        'nome' => params[:valor],
-        'logradouro' => params[:endereco],
-        'numeroEndereco' => params[:numero],
-        'complemento' => params[:complemento],
-        'bairro' => params[:bairro],
-        'cep' => params[:cep],
-        'cidade' => params[:cidade],
-        'uf' => params[:uf],
-        'ddd' => params[:fone].match(/\(([^)]+)\)/)[1],
-        'telefone' => params[:fone].scan(/[^()]+/).last.strip,
-        'email' => params[:email],
-        'cpf' => params[:cpf_cnpj],
-        'cnpj' => ''
-      },
-      'itensPedido' => params[:itens].first
-    }
+            "codigoArmazem": "#{ENV.fetch('CORREIOS_COD_ARMAZEM')}",
+            "numero": params[:numero_ecommerce],
+            "dataSolicitacao": params[:data_pedido],
+            "valordeclarado": params[:valor],
+            "cartaoPostagem": "#{ENV.fetch('CORREIOS_CARTAO_POSTAGEM')}",
+            "codigoservico": "39888",
+            "numeroPLP": "",
+            "numeroSerie": "1",
+            "cnpjTransportadora": "#{ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')}",
+            "servicosAdicionais": [
+                "019"
+            ],
+            "destinatario": {
+                "nome": params[:nome],
+                "logradouro": params[:endereco],
+                "numeroEndereco": params[:numero],
+                "complemento": params[:complemento],
+                "bairro": params[:bairro],
+                "cep": params[:cep],
+                "cidade": params[:cidade],
+                "uf": params[:uf],
+                "ddd": params[:fone].match(/\(([^)]+)\)/)[1],
+                "telefone": params[:fone].scan(/[^()]+/).last.strip,
+                "email": params[:email],
+                "cpf": params[:cpf_cnpj],
+                "cnpj": ""
+            },
+            "itensPedido": [
+              params[:itens].first[1]
+            ]
+          }
     attempt.update(requisition: body)
     begin
       request = HTTParty.post(ENV.fetch('CORREIOS_CRIAR_PEDIDO'), headers: authentication, body: body.to_json)

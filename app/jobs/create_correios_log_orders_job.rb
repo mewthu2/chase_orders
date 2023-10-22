@@ -15,6 +15,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       orders = Tiny::Orders.get_orders('preparando_envio', page)
       orders[:pedidos].each do |order|
         next unless order.present?
+        next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
         create_one_log_order(order)
       end
     end
@@ -46,7 +47,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order('800705459')
+      selected_order = Tiny::Orders.obtain_order('801349276')
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -68,7 +69,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:numero]           << client_data[:numero]
       params[:complemento]      << client_data[:complemento]
       params[:bairro]           << client_data[:bairro]
-      params[:cep]              << client_data[:cep]
+      params[:cep]              << client_data[:cep].gsub('.', '').gsub('-', '')
       params[:cidade]           << client_data[:cidade]
       params[:uf]               << client_data[:uf]
       params[:fone]             << client_data[:fone]
@@ -81,7 +82,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       itens = []
 
       order_items.each do |oi|
-        itens << { 'codigo' => oi[:item][:codigo].upcase, 'quantidade' => oi[:item][:quantidade].sub(/\.?0*\z/, '') }
+        itens << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
       params[:itens] << itens
       attempt.update(params: params)

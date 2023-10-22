@@ -7,38 +7,24 @@
         </a>
 
         <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
-          <i class="fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
+          <i class="justify-content-center fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
         </a>
         <ul class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
            <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to dashboard_index_path, class: 'text-light' do %> <span> Acompanhamento </span><% end %></div>
         </ul>
 
-        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-tiny" role="button" aria-expanded="false" aria-controls="collase-tiny">
-          <i class="fas fa-list"></i> Pedidos Tiny ERP <i class="fa fa-angle-down arrow"></i>
+        <a class="justify-content-center btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-tiny" role="button" aria-expanded="false" aria-controls="collase-tiny">
+          <i class="justify-content-center fas fa-list"></i> Pedidos <i class="fa fa-angle-down arrow"></i>
         </a>
         <ul class="flex-column mb-auto collapse mb-3" id="collase-tiny">
-           <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'text-light' do %> <span> Pedidos por situação </span><% end %></div>
-        </ul>
-
-        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-shopify" role="button" aria-expanded="false" aria-controls="collase-shopify">
-          <i class="fa-solid fa-box-open"></i> Pedidos Shopify <i class="fa fa-angle-down arrow"></i>
-        </a>
-        <ul class="flex-column mb-auto collapse mb-3" id="collase-shopify">
-        
-        </ul>
-
-        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-correios" role="button" aria-expanded="false" aria-controls="collase-correios">
-          <i class="fa-solid fa-truck"></i> Pedidos Correios LOG+ <i class="fa fa-angle-down arrow"></i>
-        </a>
-        <ul class="flex-column mb-auto collapse mb-3" id="collase-correios">
-        
+           <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'text-light' do %> <span> Tiny ERP </span><% end %></div>
         </ul>
 
         <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
-          <i class="fa-solid fa-plug"></i> Automações <i class="fa fa-angle-down arrow"></i>
+          <i class="fa-regular fa-hourglass"></i> Histórico de Tentativas <i class="fa fa-angle-down arrow"></i>
         </a>
-        <ul class="flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to attempts_path, class: 'text-light' do %> <span> Criação de Pedidos nos Correios </span><% end %></div>
+        <ul class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to attempts_path, class: 'text-light' do %> <span> Todas as Tentativas </span><% end %></div>
         </ul>
       </ul>
     </div>
