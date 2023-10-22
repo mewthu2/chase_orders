@@ -3,11 +3,13 @@
   <head>
     <title><%= content_for?(:title) ? "#{yield(:title)} - ChaseOrders" : 'ChaseOrders' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="turbo-cache-control" content="no-cache">
+    <meta name="turbolinks-visit-control" content="reload">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
-    <%= stylesheet_link_tag "application", media: "all" %>
-    <%= javascript_include_tag "application" %>
-    <%= javascript_importmap_tags %>
+    <%= stylesheet_link_tag 'admin', media: 'all', 'data-turbo-track': 'reload'  %>
+    <%= javascript_include_tag "application", 'data-turbo-track': 'reload' %>
+
      <!--  load popper.js  -->
     <script
       src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"

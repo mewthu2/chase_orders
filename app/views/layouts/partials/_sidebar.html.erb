@@ -10,14 +10,14 @@
           <i class="fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
         </a>
         <ul class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
-          <li class="mb-3"><%= link_to dashboard_index_path, class: 'text-secondary' do %> <span> Acompanhamento </span><% end %></li>
+           <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to dashboard_index_path, class: 'text-light' do %> <span> Acompanhamento </span><% end %></div>
         </ul>
 
         <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-tiny" role="button" aria-expanded="false" aria-controls="collase-tiny">
           <i class="fas fa-list"></i> Pedidos Tiny ERP <i class="fa fa-angle-down arrow"></i>
         </a>
         <ul class="flex-column mb-auto collapse mb-3" id="collase-tiny">
-          <li class="mb-3"><%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'text-secondary' do %> <span> Pedidos por situação </span><% end %></li>
+           <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to orders_tiny_dashboard_index_path(situacao: 'preparando_envio'), class: 'text-light' do %> <span> Pedidos por situação </span><% end %></div>
         </ul>
 
         <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-shopify" role="button" aria-expanded="false" aria-controls="collase-shopify">
@@ -32,6 +32,13 @@
         </a>
         <ul class="flex-column mb-auto collapse mb-3" id="collase-correios">
         
+        </ul>
+
+        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
+          <i class="fa-solid fa-plug"></i> Automações <i class="fa fa-angle-down arrow"></i>
+        </a>
+        <ul class="flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to attempts_path, class: 'text-light' do %> <span> Criação de Pedidos nos Correios </span><% end %></div>
         </ul>
       </ul>
     </div>

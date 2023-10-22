@@ -1,22 +1,20 @@
 class Correios::Orders
-  def self.create_orders(params)
+  def self.create_orders(params, attempt)
     authentication = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg==',
-      'Cookie' => 'LBprdExt1=533331978.47873.0000; LBprdint3=1614413834.47873.0000'
+      'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
     }
-
     body = {
-      'codigoArmazem' => Env.fetch('CORREIOS_COD_ARMAZEM'),
+      'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
       'numero' => params[:numero_ecommerce],
       'dataSolicitacao' => params[:data_pedido],
       'valordeclarado' => params[:valor],
-      'cartaoPostagem' => Env.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'cartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'codigoservico' => '39888',
       'numeroPLP' => '',
       'numeroSerie' => '1',
-      'cnpjTransportadora' => Env.fetch('CORREIOS_CNPJ_TRANSPORTADORA'),
+      'cnpjTransportadora' => ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA'),
       'servicosAdicionais' => ['019'],
       'destinatario' => {
         'nome' => params[:valor],
@@ -33,9 +31,26 @@ class Correios::Orders
         'cpf' => params[:cpf_cnpj],
         'cnpj' => ''
       },
-      'itensPedido' => params[:itens]
+      'itensPedido' => params[:itens].first
     }
+    attempt.update(requisition: body)
+    begin
+      request = HTTParty.post(ENV.fetch('CORREIOS_CRIAR_PEDIDO'), headers: authentication, body: body.to_json)
+    rescue StandardError => e
+      attempt.update(error: e, status: :error)
+    end
 
-    response = HTTParty.post(ENV.fetch('CORREIOS_CRIAR_PEDIDO'), headers: authentication, body: body.to_json)
+    attempt.update(status_code: request['statusCode'],
+                   message: request['mensagem'],
+                   exception: request['excecao'],
+                   classification: request['classificacao'],
+                   cause: request['causa'],
+                   url: request['url'],
+                   user: request['user'])
+    if request['statusCode'] == 200
+      attempt.update(status: :success)
+    else
+      attempt.update(status: :fail)
+    end
   end
 end

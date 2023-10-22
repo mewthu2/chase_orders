@@ -10,10 +10,13 @@ class DashboardController < ApplicationController
 
   def orders_tiny
     @orders = Tiny::Orders.get_all_orders(params[:situacao])
+    respond_to do |f|
+      f.js { render layout: false, content_type: 'text/javascript' }
+      f.html
+    end
   end
 
   private
 
-  def load_form_references
-  end
+  def load_form_references; end
 end

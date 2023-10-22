@@ -1,0 +1,39 @@
+<% title 'Tentativas de Integração' %>
+
+<div class="container">
+  <table class="table table-dark table-hover table-responsive" id="attemps-table">
+    <thead>
+      <tr>
+        <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @attempts.each do |attempt| %>
+        <tr>
+          <td class="text-center"><%= attempt.id %></td>
+          <td class="text-center"><%= attempt.tiny_order_id %></td>
+          <td class="text-center"><%= attempt.kinds %></td>
+          <td class="text-center"><%= attempt.status %></td>
+          <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
+          <td class="text-center"><%= attempt.error %></td>
+          <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="7">
+          <%= page_entries_info @attempts %>
+        </th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>

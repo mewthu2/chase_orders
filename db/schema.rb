@@ -10,8 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_09_24_192408) do
-  create_table "users", charset: "utf8", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
+ActiveRecord::Schema[7.0].define(version: 2023_10_21_212502) do
+  create_table "attempts", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "kinds"
+    t.bigint "status"
+    t.text "requisition"
+    t.text "params"
+    t.string "error"
+    t.string "status_code"
+    t.string "message"
+    t.string "exception"
+    t.string "classification"
+    t.string "cause"
+    t.string "url"
+    t.string "user"
+    t.integer "tiny_order_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "users", charset: "utf8mb3", force: :cascade do |t|
     t.string "name"
     t.string "phone"
     t.string "email", default: "", null: false

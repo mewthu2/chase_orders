@@ -23,6 +23,12 @@ gem 'httparty'
 # ApexCharts.RB is a ruby charting library that's going to give your ruby app beautiful, interactive, and responsive charts powered by ApexCharts.JS
 gem 'apexcharts'
 
+# will_paginate is a pagination library that integrates with Ruby on Rails, Sinatra, Hanami::View, and Sequel.
+gem 'will_paginate-bootstrap4'
+
+# Bundle and transpile JavaScript [https://github.com/rails/jsbundling-rails]
+gem "jsbundling-rails"
+
 # An easy way to keep your users' passwords secure.
 gem 'bcrypt'
 

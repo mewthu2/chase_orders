@@ -1,5 +1,5 @@
 class Tiny::Orders
-  def self.get_orders(situacao_ocorrencia, page)
+  def self.get_orders(situacao, page)
     # Descrição	          Código
     # Em aberto	          aberto
     # Aprovado	          aprovado
@@ -13,7 +13,7 @@ class Tiny::Orders
     response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
                                        query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
                                                 formato: 'json',
-                                                situacaoOcorrencia: situacao_ocorrencia,
+                                                situacao: situacao,
                                                 dataInicialOcorrencia: (Date.today - 7.days).strftime('%d/%m/%Y'),
                                                 dataFinalOcorrencia: Date.today.strftime('%d/%m/%Y'),
                                                 pagina: page }))
@@ -30,7 +30,7 @@ class Tiny::Orders
     if response.with_indifferent_access[:retorno][:numero_paginas].present?
       response.with_indifferent_access[:retorno][:numero_paginas].times do |re|
         total << JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                        query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                         query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
                                                   formato: 'json',
                                                   situacao: situacao,
                                                   pagina: re
@@ -39,9 +39,9 @@ class Tiny::Orders
       total.first.with_indifferent_access[:retorno]
     else
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
-                                                formato: 'json',
-                                                situacao: situacao
+                                         query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                  formato: 'json',
+                                                  situacao: situacao
                                               }))
       response.with_indifferent_access[:retorno]
     end
