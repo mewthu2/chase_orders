@@ -40,6 +40,8 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
+    attempt.update(status: :error, error: 'Requisição vazia') unless request.present?
+    
     attempt.update(status_code: request['statusCode'],
                    message: request['mensagem'],
                    exception: request['excecao'],
