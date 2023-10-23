@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_10_22_175145) do
+ActiveRecord::Schema[7.0].define(version: 2023_10_23_015614) do
   create_table "attempts", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -26,6 +26,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_22_175145) do
     t.string "user"
     t.integer "tiny_order_id"
     t.integer "order_correios_id"
+    t.integer "id_nota_fiscal"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
