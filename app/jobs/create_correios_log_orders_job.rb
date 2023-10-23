@@ -17,6 +17,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
         orders[:pedidos].each do |order|
           next unless order.present?
           next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
+
           create_one_log_order(order)
         end
       end
@@ -60,6 +61,10 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
+
+    p 'Sleeping 3 seconds'
+    sleep(3)
+    p 'Weaking Up, and get back to work!'
 
     # Obtain invoice number
     begin
