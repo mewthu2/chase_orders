@@ -1,6 +1,15 @@
 <% title 'Criação de Pedidos nos Correios' %>
 
 <div class="container">
+  <div class="row d-flex justify-content-center">
+    <div class="btn-group mb-3" role="group">
+      <%= link_to attempts_path(status: :success), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
+      <%= link_to attempts_path(status: :fail), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
+    </div>
+  </div>
+</div>
+
+<div class="container">
   <table class="table table-dark table-hover table-responsive" id="attemps-table">
     <thead>
       <tr>

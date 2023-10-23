@@ -3,7 +3,7 @@ class AttemptsController < ApplicationController
   protect_from_forgery except: :verify_attempts
 
   def index
-    @attempts = Attempt.all
+    @attempts = Attempt.where(status: params[:status])
                        .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 
