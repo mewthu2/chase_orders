@@ -31,6 +31,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_one_log_order(order)
     params = {
+      invoice: '',
       numero_ecommerce: '',
       data_pedido: '',
       valor: '',
@@ -60,6 +61,13 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       attempt.update(error: e, status: :error)
     end
 
+    # Obtain invoice number
+    begin
+      invoice = Tiny::Invoices.obtain_invoice(selected_order[:pedido][:id_nota_fiscal])
+    rescue StandardError => e
+      attempt.update(error: e, status: :error)
+    end
+
     # Verify order founded
     attempt.update(error: "Order - #{order[:pedido][:id]} não encontrada", status: :error) unless selected_order.present?
 
@@ -73,6 +81,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     assert_value = selected_order[:pedido][:total_pedido] == '0.00' ? selected_order[:pedido][:total_produtos] : selected_order[:pedido][:total_pedido]
 
     begin
+      params[:invoice]          << invoice[:numero].sub!(/^0/, '')
       params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce]
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
@@ -110,7 +119,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def verify_params(attempt, params)
     required_params = [:numero_ecommerce, :data_pedido, :valor, :nome, :endereco, :numero,
-                       :complemento, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj]
+                       :complemento, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj, :invoice]
 
     missing_params = required_params.select { |param| params[param] == "" }
 

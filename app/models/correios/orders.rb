@@ -5,10 +5,9 @@ class Correios::Orders
       'Content-Type' => 'application/json',
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
     }
-
     body = {
               "codigoArmazem": "#{ENV.fetch('CORREIOS_COD_ARMAZEM')}",
-              "numero": params[:numero_ecommerce],
+              "numero": params[:invoice],
               "dataSolicitacao": params[:data_pedido],
               "valordeclarado": params[:valor],
               "cartaoPostagem": "#{ENV.fetch('CORREIOS_CARTAO_POSTAGEM')}",

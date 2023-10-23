@@ -7,4 +7,12 @@ class Tiny::Invoices
                                                 numeroEcommerce: numero_ecommerce }))
     response.with_indifferent_access[:retorno][:pedidos]
   end
+
+  def self.obtain_invoice(invoice_id)
+    response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_NOTA_FISCAL'),
+                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                                formato: 'json',
+                                                id: invoice_id }))
+    response.with_indifferent_access[:retorno][:nota_fiscal]
+  end
 end
