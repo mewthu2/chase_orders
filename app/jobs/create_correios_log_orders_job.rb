@@ -31,7 +31,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_one_log_order(order)
     params = {
-      id_nota_fiscal: '',
+      numero_ecommerce: '',
       data_pedido: '',
       valor: '',
       nome: '',
@@ -73,7 +73,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     assert_value = selected_order[:pedido][:total_pedido] == '0.00' ? selected_order[:pedido][:total_produtos] : selected_order[:pedido][:total_pedido]
 
     begin
-      params[:id_nota_fiscal] << selected_order[:pedido][:id_nota_fiscal]
+      params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce]
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
       params[:nome]             << client_data[:nome]
@@ -109,7 +109,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def verify_params(attempt, params)
-    required_params = [:id_nota_fiscal, :data_pedido, :valor, :nome, :endereco, :numero,
+    required_params = [:numero_ecommerce, :data_pedido, :valor, :nome, :endereco, :numero,
                        :complemento, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj]
 
     missing_params = required_params.select { |param| params[param] == "" }

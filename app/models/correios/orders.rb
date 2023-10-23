@@ -8,7 +8,7 @@ class Correios::Orders
 
     body = {
               "codigoArmazem": "#{ENV.fetch('CORREIOS_COD_ARMAZEM')}",
-              "numero": params[:id_nota_fiscal],
+              "numero": params[:numero_ecommerce],
               "dataSolicitacao": params[:data_pedido],
               "valordeclarado": params[:valor],
               "cartaoPostagem": "#{ENV.fetch('CORREIOS_CARTAO_POSTAGEM')}",
