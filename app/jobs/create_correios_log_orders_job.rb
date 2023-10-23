@@ -55,7 +55,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order('801430075')
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -66,6 +66,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     # Verifying client data after continue
     attempt.update(error: 'Dados do Cliente não disponíveis', status: :error) unless selected_order[:pedido][:cliente].present?
 
+    # Find client data on selected order hash
     client_data = selected_order[:pedido][:cliente]
 
     # Some 'total_pedido' have a zero value, reasoned by discount
@@ -110,7 +111,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     required_params = [:numero_ecommerce, :data_pedido, :valor, :nome, :endereco, :numero,
                        :complemento, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj]
 
-    missing_params = required_params.select { |param| params[param].nil? }
+    missing_params = required_params.select { |param| params[param] == "" }
 
     return unless missing_params.any?
     error_message = "#{missing_params.join(', ')} não presente"
