@@ -64,7 +64,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     p 'Sleeping 3 seconds'
     sleep(3)
-    p 'Weaking Up, and get back to work!'
+    p 'Waking Up, and get back to work!'
 
     # Obtain invoice number
     begin
