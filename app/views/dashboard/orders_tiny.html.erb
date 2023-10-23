@@ -38,12 +38,12 @@
       <tbody>
         <% @orders[:pedidos].each do |order| %>
           <tr>
-            <td class="text-center"><%= order[:pedido][:id] %> - <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= order[:pedido][:id] %>', '_blank');">Ver no Tiny</span></td>
+            <td class="text-center" style="min-width:12em;"><%= order[:pedido][:id] %> - <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= order[:pedido][:id] %>', '_blank');">Ver no Tiny</span></td>
             <td class="text-center"><%= order[:pedido][:numero] %></td>
             <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
             <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
             <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
-            <td width="200" class="text-center"><%= order[:pedido][:nome] %></td>
+            <td class="text-center" style="min-width:20em;"><%= order[:pedido][:nome] %></td>
             <td class="text-center"><%= order[:pedido][:valor] %></td>
             <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
             <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
