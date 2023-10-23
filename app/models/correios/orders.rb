@@ -46,15 +46,17 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
-    attempt_data = {
-      status_code: request['statusCode'],
-      message: request['mensagem'],
-      exception: request['excecao'],
-      classification: request['classificacao'],
-      cause: request['causa'],
-      url: request['url'],
-      user: request['user']
-    }
+    if request['statusCode'].present?
+      attempt_data = {
+        status_code: request['statusCode'],
+        message: request['mensagem'],
+        exception: request['excecao'],
+        classification: request['classificacao'],
+        cause: request['causa'],
+        url: request['url'],
+        user: request['user']
+      }
+    end
 
     attempt_data[:status] = request['statusCode'] == 200 ? :success : :fail
 
