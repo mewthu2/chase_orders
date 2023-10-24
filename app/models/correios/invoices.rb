@@ -23,7 +23,7 @@ class Correios::Invoices
         attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
       when 400
         if response.body.include?('faturado')
-          attempt.update(status: :success, status_code: response.code, message: response.body)
+          attempt.update(status: :success, status_code: response.code, message: response.body, xml_sended: true)
         else
           attempt.update(status: :error, status_code: response.code, message: response.body)
         end
