@@ -5,7 +5,6 @@ class Correios::Invoices
       'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
       'Content-Type' => 'application/x-www-form-urlencoded',
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg==',
-      'Cookie' => 'LBprdExt1=533331978.47873.0000; LBprdint3=1446707210.47873.0000'
     }
 
     body = { 'xml': attempt.xml_nota }
@@ -18,6 +17,10 @@ class Correios::Invoices
       attempt.update(error: e, status: :error)
     end
 
-    attempt.update(xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
+    if response.code == 200
+      attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
+    else
+      attempt.update(status: :error, status_code: response.code, message: response.body)
+    end
   end
 end
