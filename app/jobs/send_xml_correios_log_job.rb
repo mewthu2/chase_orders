@@ -9,7 +9,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
   end
 
   def send_all_xml
-    Attempt.where(kinds: :create_correios_order, xml_sended: false).each do |att|
+    Attempt.where(kinds: :create_correios_order, status: 2).each do |att|
       send_one_xml(att)
     end
   end
@@ -21,7 +21,6 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
-
     doc = Nokogiri::XML(invoice)
 
     doc.traverse do |node|
@@ -30,7 +29,8 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
 
     attempt.update(xml_nota: doc.to_xml.gsub("\n", ''),
                    order_correios_id: att.order_correios_id,
-                   id_nota_fiscal: att.id_nota_fiscal)
+                   id_nota_fiscal: att.id_nota_fiscal,
+                   tiny_order_id: att.tiny_order_id)
 
     if attempt.present?
       Correios::Invoices.send_xml_to_correios(attempt)

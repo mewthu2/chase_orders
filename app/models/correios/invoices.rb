@@ -18,12 +18,15 @@ class Correios::Invoices
     end
 
     if response.present?
-      if response.code == 200
-        attempt.update(status: response.body == attempt.xml_nota ? :success : :error, xml_sended: true, status_code: response.code)
-      elsif response.body.include?('faturado')
-        attempt.update(status: :success, status_code: response.code, message: response.body)
-      else
-        attempt.update(status: :error, status_code: response.code, message: response.body)
+      case response.code
+      when 200
+        attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
+      when 400
+        if response.body.include?('faturado')
+          attempt.update(status: :success, status_code: response.code, message: response.body)
+        else
+          attempt.update(status: :error, status_code: response.code, message: response.body)
+        end
       end
     else
       attempt.update(status: :error, message: 'Requisição vazia')
