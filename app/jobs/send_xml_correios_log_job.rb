@@ -10,6 +10,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
 
   def send_all_xml
     Attempt.where(kinds: :create_correios_order, status: 2).each do |att|
+      next if Attempt.find_by(kinds: :send_xml, status: 2, order_correios_id: att.order_correios_id).present?
       send_one_xml(att)
     end
   end
