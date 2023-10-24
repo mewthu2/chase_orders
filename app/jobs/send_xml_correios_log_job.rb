@@ -18,7 +18,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     attempt = Attempt.create(kinds: :send_xml)
 
     begin
-      invoice = Correios::Invoices.obtain_xml(invoice_id)
+      invoice = Tiny::Invoices.obtain_xml(invoice_id)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
