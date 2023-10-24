@@ -16,11 +16,13 @@ class Correios::Invoices
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
-
-    if response.code == 200
-      attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
-    else
-      attempt.update(status: :error, status_code: response.code, message: response.body)
+    
+    if response.present?
+      if response.code == 200
+        attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
+      else
+        attempt.update(status: :error, status_code: response.code, message: response.body)
+      end
     end
   end
 end
