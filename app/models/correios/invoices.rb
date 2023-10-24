@@ -6,7 +6,7 @@ class Correios::Invoices
       'Content-Type' => 'application/x-www-form-urlencoded',
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg==',
     }
-    p 'XISDE'
+
     body = { 'xml': attempt.xml_nota }
 
     begin
@@ -16,13 +16,17 @@ class Correios::Invoices
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
-    
+
     if response.present?
       if response.code == 200
-        attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
+        attempt.update(status: response.body == attempt.xml_nota ? :success : :error, xml_sended: true, status_code: response.code)
+      elsif response.body.include?('faturado')
+        attempt.update(status: :success, status_code: response.code, message: response.body)
       else
         attempt.update(status: :error, status_code: response.code, message: response.body)
       end
+    else
+      attempt.update(status: :error, message: 'Requisição vazia')
     end
   end
 end
