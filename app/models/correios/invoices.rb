@@ -1,5 +1,5 @@
 class Correios::Invoices
-  def self.send_xml_to_correios(invoice, attempt)
+  def self.send_xml_to_correios(attempt)
     headers = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
@@ -8,14 +8,16 @@ class Correios::Invoices
       'Cookie' => 'LBprdExt1=533331978.47873.0000; LBprdint3=1446707210.47873.0000'
     }
 
-    body = { 'xml': formatada }
+    body = { 'xml': attempt.xml_nota }
 
     begin
-      request = HTTParty.post(ENV.fetch('CORREIOS_ENVIAR_XML'),
-                              headers: headers,
-                              body: body)
+      response = HTTParty.post(ENV.fetch('CORREIOS_ENVIAR_XML'),
+                               headers: headers,
+                               body: body)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
+
+    attempt.update(xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
   end
 end

@@ -3,7 +3,12 @@ class AttemptsController < ApplicationController
   protect_from_forgery except: :verify_attempts
 
   def index
-    @attempts = Attempt.where(status: params[:status])
+    @attempts = Attempt.where(status: params[:status], kinds: 0)
+                       .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+  end
+
+  def send_xml
+    @attempts = Attempt.where(status: params[:status], kinds: 1)
                        .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 
