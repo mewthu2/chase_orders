@@ -21,7 +21,6 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
       invoice = Tiny::Invoices.obtain_xml(invoice_id)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
-      next
     end
 
     doc = Nokogiri::XML(invoice)

@@ -44,7 +44,6 @@ class Correios::Orders
                               body: body.to_json)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
-      next
     end
 
     if request['statusCode'].present?
@@ -71,8 +70,5 @@ class Correios::Orders
     attempt_data[:error] = 'Requisição vazia' unless request.present?
 
     attempt.update(attempt_data)
-  end
-
-  def self.send_xml_to_correios(invoice, attempt)
   end
 end

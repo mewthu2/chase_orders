@@ -8,7 +8,7 @@ class Correios::Invoices
       'Cookie' => 'LBprdExt1=533331978.47873.0000; LBprdint3=1446707210.47873.0000'
     }
 
-    body = { 'xml': invoice }
+    body = { 'xml': formatada }
 
     begin
       request = HTTParty.post(ENV.fetch('CORREIOS_ENVIAR_XML'),
@@ -16,7 +16,6 @@ class Correios::Invoices
                               body: body)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
-      next
     end
   end
 end
