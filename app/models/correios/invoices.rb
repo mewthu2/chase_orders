@@ -6,7 +6,7 @@ class Correios::Invoices
       'Content-Type' => 'application/x-www-form-urlencoded',
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg==',
     }
-
+    p 'XISDE'
     body = { 'xml': attempt.xml_nota }
 
     begin
