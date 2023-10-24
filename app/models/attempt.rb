@@ -1,6 +1,6 @@
 class Attempt < ApplicationRecord
   enum status: [:fail, :error, :success]
-  enum kinds: [:create_correios_order]
+  enum kinds: [:create_correios_order, :send_xml]
   # Callbacks
   # Associacoes
 

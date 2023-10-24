@@ -15,4 +15,11 @@ class Tiny::Invoices
                                                 id: invoice_id }))
     response.with_indifferent_access[:retorno][:nota_fiscal]
   end
+
+  def self.obtain_xml(invoice_id)
+    HTTParty.get(ENV.fetch('OBTER_XML_NOTA_FISCAL'),
+                 query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                          formato: 'string',
+                          id: invoice_id })
+  end
 end

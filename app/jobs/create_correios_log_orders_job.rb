@@ -60,6 +60,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
+      next
     end
 
     p 'Sleeping 3 seconds'
@@ -71,6 +72,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       invoice = Tiny::Invoices.obtain_invoice(selected_order[:pedido][:id_nota_fiscal])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
+      next
     end
 
     # Verify order founded
@@ -116,6 +118,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     rescue StandardError => e
       attempt.update(error: e, status: :error)
+      next
     end
 
     # Create Order in Correios Log +

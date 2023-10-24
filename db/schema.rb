@@ -10,12 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_10_23_015614) do
+ActiveRecord::Schema[7.0].define(version: 2023_10_23_234548) do
   create_table "attempts", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
     t.text "requisition"
     t.text "params"
+    t.text "xml_nota"
+    t.boolean "xml_sended", default: false
     t.string "error"
     t.string "status_code"
     t.string "message"
