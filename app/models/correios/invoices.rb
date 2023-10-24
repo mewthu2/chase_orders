@@ -11,13 +11,13 @@ class Correios::Invoices
 
     begin
       response = HTTParty.post(ENV.fetch('CORREIOS_ENVIAR_XML'),
-                               headers: headers,
-                               body: body)
+                               headers:,
+                               body:)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
 
-    if response.present?
+    if response&.body.present?
       case response.code
       when 200
         attempt.update(status: :success, xml_sended: true, status_code: response.code) if response.body == attempt.xml_nota
