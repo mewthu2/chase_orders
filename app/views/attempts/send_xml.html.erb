@@ -1,0 +1,56 @@
+<% title 'Criação de Pedidos nos Correios' %>
+
+<div class="container">
+  <div class="row d-flex justify-content-center">
+    <div class="btn-group mb-3" role="group">
+      <%= link_to attempts_path(status: :success), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
+      <%= link_to attempts_path(status: :fail), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
+      <%= link_to attempts_path(status: :error), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <table class="table table-dark table-hover table-responsive" id="attemps-table">
+    <thead>
+      <tr>
+        <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @attempts.each do |attempt| %>
+        <tr>
+          <td class="text-center"><%= attempt.id %></td>
+          <td class="text-center">
+            <%= attempt.tiny_order_id %> - 
+            <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
+              Ver no Tiny
+            </span>
+          </td>
+          <td class="text-center"><%= attempt.id_nota_fiscal %></td>
+          <td class="text-center"><%= attempt.kinds %></td>
+          <td class="text-center"><%= attempt.status %></td>
+          <td class="text-center"><%= attempt.status_code %></td>
+          <td class="text-center"><%= attempt.error.present? ? attempt.error : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+          <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="8">
+          <%= page_entries_info @attempts %>
+        </th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>

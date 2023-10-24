@@ -4,21 +4,20 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     when 'all'
       send_all_xml
     when 'one'
-      send_one_xml(params)
+      send_one_xml(att)
     end
   end
 
-  def send_all
+  def send_all_xml
     Attempt.where(kinds: :create_correios_order, xml_sended: false).each do |att|
       send_one_xml(att)
     end
   end
 
   def send_one_xml(att)
-    attempt = Attempt.create(kinds: :send_xml)
-
     begin
-      invoice = Tiny::Invoices.obtain_xml(invoice_id)
+      attempt = Attempt.create(kinds: :send_xml)
+      invoice = Tiny::Invoices.obtain_xml(att.id_nota_fiscal.to_s)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -26,15 +25,17 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     doc = Nokogiri::XML(invoice)
 
     doc.traverse do |node|
-      if node.element?
-        if node.name == 'xPed'
-          node.content = "801908784"
-        end
-      end
+      node.content = att.order_correios_id.to_s if node.element? && node.name == 'xPed'
     end
 
-    attempt.update(xml_nota: doc.to_xml)
+    attempt.update(xml_nota: doc.to_xml.gsub("\n", ''),
+                   order_correios_id: att.order_correios_id,
+                   id_nota_fiscal: att.id_nota_fiscal)
 
-    send_xml_to_correios(attempt)
+    if attempt.present?
+      Correios::Invoices.send_xml_to_correios(attempt)
+    else
+      attempt.update(status: :error, error: 'Nota vazia')
+    end
   end
 end
