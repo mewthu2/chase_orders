@@ -22,4 +22,11 @@ class Tiny::Invoices
                           formato: 'string',
                           id: invoice_id })
   end
+
+  def self.invoice_emition(invoice_id)
+    HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
+                 query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                          formato: 'string',
+                          id: invoice_id })
+  end
 end
