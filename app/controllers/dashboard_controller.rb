@@ -15,6 +15,15 @@ class DashboardController < ApplicationController
     end
   end
 
+  def get_tracking
+    response = Correios::Orders.get_tracking("18315478")
+    if response.code == 200
+      @tracking = response['rastreio']
+    else
+      @tracking = nil
+    end
+  end
+
   private
 
   def load_form_references; end

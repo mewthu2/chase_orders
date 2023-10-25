@@ -1,0 +1,5 @@
+<% if @tracking.present? %>
+  <div class="alert alert-primary"><%= @tracking %></div>
+<% else %>
+  <div class="alert alert-warning">Rastreamento não encontrado</div>
+<% end %>
