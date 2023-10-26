@@ -15,13 +15,15 @@ class DashboardController < ApplicationController
     end
   end
 
-  def get_tracking
-    response = Correios::Orders.get_tracking("18315478")
+  def tracking
+    tracking_number = params[:tracking_number]
+    response = Correios::Orders.get_tracking(tracking_number)
     if response.code == 200
       @tracking = response['rastreio']
     else
       @tracking = nil
     end
+    json_response(@tracking)
   end
 
   private

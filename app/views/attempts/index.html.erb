@@ -16,6 +16,7 @@
       <tr>
         <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
@@ -34,6 +35,7 @@
               Ver no Tiny
             </span>
           </td>
+          <td class="text-center"><%= attempt.order_correios_id %></td>
           <td class="text-center"><%= attempt.id_nota_fiscal %></td>
           <td class="text-center"><%= attempt.kinds %></td>
           <td class="text-center"><%= attempt.status %></td>
