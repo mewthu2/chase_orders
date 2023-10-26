@@ -83,7 +83,11 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     client_data = selected_order[:pedido][:cliente]
 
     # Some 'total_pedido' have a zero value, reasoned by discount
-    assert_value = selected_order[:pedido][:total_pedido] == '0.00' ? selected_order[:pedido][:total_produtos] : selected_order[:pedido][:total_pedido]
+    if selected_order[:pedido][:total_pedido] > selected_order[:pedido][:total_produtos]
+      assert_value = selected_order[:pedido][:total_pedido]
+    else
+      assert_value = selected_order[:pedido][:total_produtos]
+    end
 
     begin
       params[:invoice]          << invoice[:numero].sub!(/^0/, '')
