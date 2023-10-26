@@ -69,16 +69,16 @@ class Correios::Orders
     end
   end
 
-  # def self.get_tracking(order_correios_id)
-  #   authentication = {
-  #     'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
-  #     'Content-Type' => 'application/json',
-  #     'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
-  #   }
-  #   begin
-  #     HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id, headers: authentication)
-  #   rescue StandardError => e
-  #     attempt.update(error: e, status: :error)
-  #   end
-  # end
+  def self.get_tracking(order_correios_id)
+    authentication = {
+      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'Content-Type' => 'application/json',
+      'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
+    }
+    begin
+      HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id, headers: authentication)
+    rescue StandardError => e
+      attempt.update(error: e, status: :error)
+    end
+  end
 end
