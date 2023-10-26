@@ -14,9 +14,9 @@ class Correios::Orders
       codigoArmazem: correios_cod_armazem,
       numero: params[:invoice],
       dataSolicitacao: params[:data_pedido],
-      valorDeclarado: params[:valor].gsub('.', ','),
+      valordeclarado: params[:valor].gsub('.', ','),
       cartaoPostagem: correios_cartao_postagem,
-      codigoServico: '39888',
+      codigoservico: '39888',
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
@@ -49,6 +49,7 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
+    return unless request.body.nil? || request.body.empty?
     if request['statusCode'].present?
       attempt_data = {
         status_code: request['statusCode'],
