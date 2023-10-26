@@ -49,35 +49,23 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
-    return unless request.body.nil? || request.body.empty?
-    if request['statusCode'].present?
-      attempt_data = {
-        status_code: request['statusCode'],
-        message: request['mensagem'].nil? ? '' : request['mensagem'],
-        exception: request['excecao'].nil? ? '' : request['excecao'],
-        classification: request['classificacao'].nil? ? '' : request['classificacao'],
-        cause: request['causa'].nil? ? '' : request['causa'],
-        url: request['url'].nil? ? '' : request['url'],
-        user: request['user'].nil? ? '' : request['user']
-      }
+    if request.present?
+      attempt.update(status_code: request['statusCode'],
+                     message: request['mensagem'],
+                     exception: request['excecao'],
+                     classification: request['classificacao'],
+                     cause: request['causa'],
+                     url: request['url'],
+                     user: request['user'])
+      if request['statusCode'] == 200
+        attempt.update(status: :success)
+      else
+        attempt.update(status: :fail)
+        attempt.update(status: :success) if request['mensagem'].include?('Pedido já Cadastrado')
+      end
     else
-      attempt_data = {
-        message: request
-      }
+      attempt.update(status: :error, error: 'Requisição vazia')
     end
-
-    attempt_data[:status] = request['statusCode'] == 200 ? :success : :fail
-
-    if request['mensagem'].present? && request['mensagem'].include?('Pedido já Cadastrado')
-      match_data = request['mensagem'].match(/\(ID: (\d+)\)/)
-      attempt_data[:status] = :success if match_data
-      attempt_data[:order_correios_id] = match_data[1].to_i if match_data
-    end
-
-    attempt_data[:status] ||= :error
-    attempt_data[:error] = 'Requisição vazia' unless request.present?
-
-    attempt.update(attempt_data)
   end
 
   # def self.get_tracking(order_correios_id)
