@@ -4,10 +4,10 @@ class Correios::Invoices
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
       'Content-Type' => 'application/x-www-form-urlencoded',
-      'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg==',
+      'Authorization' => "Basic #{Base64.strict_encode64(ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
-    body = { 'xml': attempt.xml_nota }
+    body = { xml: attempt.xml_nota }
 
     begin
       response = HTTParty.post(ENV.fetch('CORREIOS_ENVIAR_XML'),

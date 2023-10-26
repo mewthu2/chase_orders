@@ -11,9 +11,9 @@ class Tiny::Orders
     # Não Entregue	      nao_entregue
     # Cancelado	          cancelado
     response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                       query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
                                                 formato: 'json',
-                                                situacao: situacao,
+                                                situacao:,
                                                 dataInicialOcorrencia: (Date.today - 7.days).strftime('%d/%m/%Y'),
                                                 dataFinalOcorrencia: Date.today.strftime('%d/%m/%Y'),
                                                 pagina: page }))
@@ -22,26 +22,26 @@ class Tiny::Orders
 
   def self.get_all_orders(situacao)
     response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                       query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
                                                 formato: 'json',
-                                                situacao: situacao
+                                                situacao:
                                               }))
     total = []
     if response.with_indifferent_access[:retorno][:numero_paginas].present?
       response.with_indifferent_access[:retorno][:numero_paginas].times do |re|
         total << JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                         query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
                                                   formato: 'json',
-                                                  situacao: situacao,
+                                                  situacao:,
                                                   pagina: re
                                                 }))
       end
       total.first.with_indifferent_access[:retorno]
     else
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                         query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
                                                   formato: 'json',
-                                                  situacao: situacao
+                                                  situacao:
                                               }))
       response.with_indifferent_access[:retorno]
     end
@@ -49,7 +49,7 @@ class Tiny::Orders
 
   def self.obtain_order(order_id)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PEDIDO'),
-                                       query: { token: ENV.fetch('TOKEN_LOG_PRODUCTION'),
+                                       query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
                                                 formato: 'json',
                                                 id: order_id }))
     response.with_indifferent_access[:retorno]

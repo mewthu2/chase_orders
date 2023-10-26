@@ -57,7 +57,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order("802387058")
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -113,7 +113,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       order_items.each do |oi|
         params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
-      attempt.update(params: params)
+      attempt.update(params:)
       attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i)
 
       verify_params(attempt, params)
