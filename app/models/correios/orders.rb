@@ -62,7 +62,7 @@ class Correios::Orders
         attempt.update(status: :success)
       else
         attempt.update(status: :fail)
-        attempt.update(status: :success) if request['mensagem'].include?('Pedido já Cadastrado')
+        attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(request['mensagem'])[1]) if request['mensagem'].include?('Pedido já Cadastrado')
       end
     else
       attempt.update(status: :error, error: 'Requisição vazia')
