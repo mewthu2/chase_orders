@@ -9,6 +9,7 @@ class Correios::Orders
     correios_cod_armazem = ENV.fetch('CORREIOS_COD_ARMAZEM')
     correios_cartao_postagem = ENV.fetch('CORREIOS_CARTAO_POSTAGEM')
     correios_cnpj_transportadora = ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')
+    fone = params[:fone].present? ? params[:fone] : ''
 
     body = {
       codigoArmazem: correios_cod_armazem,
@@ -30,8 +31,8 @@ class Correios::Orders
         cep: params[:cep],
         cidade: params[:cidade],
         uf: params[:uf],
-        ddd: params[:fone].match(/\(([^)]+)\)/)[1],
-        telefone: params[:fone].scan(/[^()]+/).last.strip,
+        ddd: fone.match(/\(([^)]+)\)/).present? ? fone.match(/\(([^)]+)\)/)[1] : fone,
+        telefone: fone.scan(/[^()]+/)&.last.present? ? fone.scan(/[^()]+/)&.last.strip : fone.scan(/[^()]+/)&.last,
         email: params[:email],
         cpf: params[:cpf_cnpj],
         cnpj: ''
