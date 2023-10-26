@@ -14,7 +14,7 @@ class Correios::Orders
       codigoArmazem: correios_cod_armazem,
       numero: params[:invoice],
       dataSolicitacao: params[:data_pedido],
-      valorDeclarado: params[:valor],
+      valorDeclarado: params[:valor].gsub('.', ','),
       cartaoPostagem: correios_cartao_postagem,
       codigoServico: '39888',
       numeroPLP: '',
@@ -52,12 +52,16 @@ class Correios::Orders
     if request['statusCode'].present?
       attempt_data = {
         status_code: request['statusCode'],
-        message: request['mensagem'],
-        exception: request['excecao'],
-        classification: request['classificacao'],
-        cause: request['causa'],
-        url: request['url'],
-        user: request['user']
+        message: request['mensagem'].nil? ? '' : request['mensagem'],
+        exception: request['excecao'].nil? ? '' : request['excecao'],
+        classification: request['classificacao'].nil? ? '' : request['classificacao'],
+        cause: request['causa'].nil? ? '' : request['causa'],
+        url: request['url'].nil? ? '' : request['url'],
+        user: request['user'].nil? ? '' : request['user']
+      }
+    else
+      attempt_data = {
+        message: request
       }
     end
 
@@ -75,16 +79,16 @@ class Correios::Orders
     attempt.update(attempt_data)
   end
 
-  def self.get_tracking(order_correios_id)
-    authentication = {
-      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
-      'Content-Type' => 'application/json',
-      'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
-    }
-    begin
-      HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id, headers: authentication)
-    rescue StandardError => e
-      attempt.update(error: e, status: :error)
-    end
-  end
+  # def self.get_tracking(order_correios_id)
+  #   authentication = {
+  #     'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+  #     'Content-Type' => 'application/json',
+  #     'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
+  #   }
+  #   begin
+  #     HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id, headers: authentication)
+  #   rescue StandardError => e
+  #     attempt.update(error: e, status: :error)
+  #   end
+  # end
 end

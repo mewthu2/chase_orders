@@ -57,7 +57,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order("802387058")
+      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -130,7 +130,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     required_params = [:numero_ecommerce, :data_pedido, :valor, :nome, :endereco, :numero,
                        :complemento, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj, :invoice]
 
-    missing_params = required_params.select { |param| params[param] == "" }
+    missing_params = required_params.select { |param| params[param] == '' }
 
     return unless missing_params.any?
     error_message = "#{missing_params.join(', ')} não presente"
