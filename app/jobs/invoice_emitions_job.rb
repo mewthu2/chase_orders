@@ -22,7 +22,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
       response = Tiny::Invoices.invoice_emition(att.id_nota_fiscal.to_s)
       case response.code
       when 200
-        if response.include?('A nota fiscal não foi enviada')
+        if response.include?('A nota fiscal não foi enviada') || response.include?('porém apenas notas pendentes')
           attempt.update(
             order_correios_id: att.order_correios_id,
             id_nota_fiscal: att.id_nota_fiscal,
