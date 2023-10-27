@@ -4,7 +4,6 @@ Rails.application.routes.draw do
 
   resources :dashboard, only: [:index] do
     collection do
-      get 'orders_tiny/:situacao', to: 'dashboard#orders_tiny', as: :orders_tiny
       get 'tracking', to: 'dashboard#tracking', as: :tracking
     end
   end

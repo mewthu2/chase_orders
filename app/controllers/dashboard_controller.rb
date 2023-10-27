@@ -5,13 +5,19 @@ class DashboardController < ApplicationController
     orders = Tiny::Orders.get_all_orders('preparando_envio')
     ids_to_reject = Attempt.where(status: :success).pluck(:tiny_order_id).map &:to_s
     @orders = orders['pedidos'].reject { |order| ids_to_reject.include?(order['pedido']['id']) } if orders['pedidos'].present?
-  end
 
-  def orders_tiny
-    @orders = Tiny::Orders.get_all_orders(params[:situacao])
-    respond_to do |f|
-      f.js { render layout: false, content_type: 'text/javascript' }
-      f.html
+    @invoice_emition = []
+
+    Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id).each do |att|
+      next if Attempt.find_by(kinds: :emission_invoice, status: 2, order_correios_id: att.order_correios_id).present?
+      @invoice_emition << att
+    end
+
+    @send_xml = []
+
+    Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id).each do |att|
+      next if Attempt.find_by(kinds: :send_xml, status: 2, order_correios_id: att.order_correios_id).present?
+      @send_xml << att
     end
   end
 
