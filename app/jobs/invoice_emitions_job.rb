@@ -22,13 +22,24 @@ class InvoiceEmitionsJob < ActiveJob::Base
       response = Tiny::Invoices.invoice_emition(att.id_nota_fiscal.to_s)
       case response.code
       when 200
-        attempt.update(
-          order_correios_id: att.order_correios_id,
-          id_nota_fiscal: att.id_nota_fiscal,
-          tiny_order_id: att.tiny_order_id,
-          status_code: response.code,
-          status: :success
-        )
+        if response.include?('A nota fiscal não foi enviada')
+          attempt.update(
+            order_correios_id: att.order_correios_id,
+            id_nota_fiscal: att.id_nota_fiscal,
+            tiny_order_id: att.tiny_order_id,
+            status_code: response.code,
+            message: response,
+            status: :error
+          )
+        else
+          attempt.update(
+            order_correios_id: att.order_correios_id,
+            id_nota_fiscal: att.id_nota_fiscal,
+            tiny_order_id: att.tiny_order_id,
+            status_code: response.code,
+            status: :success
+          )
+        end
       else
         attempt.update(error: "Unexpected response code: #{response.code}", status: :error)
       end
