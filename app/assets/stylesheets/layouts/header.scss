@@ -1,6 +1,8 @@
 .navbar-header {
   position: relative;
-  background: #1b2834;
+  background-color: #000000;
+  opacity: 1;
+  background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #000000 20px ), repeating-linear-gradient( #13143155, #131431 );
   height: 45px;
   width: 100%;
   min-width: 768px;

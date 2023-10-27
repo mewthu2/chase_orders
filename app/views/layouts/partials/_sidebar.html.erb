@@ -9,7 +9,7 @@
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
           <i class="justify-content-center fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
         </a>
-        <div class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
+        <div class="justify-content-center flex-column mb-auto collapse mb-2" id="collase-dashboard">
           <div class="mb-3"> 
             <i class="fa-solid fa-plus"></i>
             <%= link_to dashboard_index_path, class: 'text-light link' do %> 
@@ -48,15 +48,17 @@
     </div>
   </div>
   <hr>
-  <span class="d-flex justify-content-center"> Buscar código de rastreio: </span>
-  <div class="container d-flex justify-content-center mt-2">
-    <input class="form-control" id="tracking_number" placeholder="Digite o número do pedido">
-    <button class="btn btn-dark text-secondary"id="search_button">Procurar</button>
-  </div>
   <div class="container">
-    <span class="badge bg-secondary w-100 text-info">
+    <span class="d-flex justify-content-center"> Buscar código de rastreio: </span>
+    <div class="container d-flex justify-content-center mt-2">
+      <input class="form-control" id="tracking_number" placeholder="Digite o número do pedido">
+      <button class="btn btn-dark text-secondary"id="search_button">Procurar</button>
+    </div>
+  </div>
+  <div class="container d-flex justify-content-center">
+    <span class="badge bg-secondary text-info">
       <i id="loading" class="fa-regular fa-compass"></i>
-      <div class="container mt-2 h5 d-flex justify-content-center" id="tracking_result"></div>
+      <div class="mt-2 h5" id="tracking_result"></div>
     </span>
   </div>
   <div class="d-flex justify-content-center" style="position: fixed; margin-top: 21em; margin-left: 6em;">

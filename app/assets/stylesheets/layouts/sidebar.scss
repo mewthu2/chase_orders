@@ -1,10 +1,12 @@
 aside.left-menu {
   position: absolute;
-  background-color: #1b2834;
   min-height: 100%;
   width: 250px;
   border-right-style: outset;
   border-color: grey;
+  background-color: #000000;
+  opacity: 1;
+  background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #000000 20px ), repeating-linear-gradient( #13143155, #131431 );
 }
 aside.left-menu .aside-inner {
   margin-top: 45px;

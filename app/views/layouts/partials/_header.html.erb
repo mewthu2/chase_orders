@@ -9,8 +9,8 @@
   </div>
   <div class="navbar-dropdowns">
     <nav class="navbar navbar-expand-sm">
-      <div class="dropdown" style="margin-top: 7px; margin-right: 20px;">
-        <img src="https://github.com/test.png" alt="" width="32" height="32" class="rounded-circle me-2">
+      <div class="dropdown" style="margin-top: 7px; margin-right: -12em;">
+        <%= image_tag 'admin/usuario-200x200', style: 'width:10%; border-radius: 50%;' %>
         <strong><%= current_user.name %></strong>
         <%= link_to destroy_user_session_path(current_user), data: { turbo: :false } do %>Sair<% end %>
       </div>
