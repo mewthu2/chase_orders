@@ -3,6 +3,8 @@ aside.left-menu {
   background-color: #1b2834;
   min-height: 100%;
   width: 250px;
+  border-right-style: outset;
+  border-color: grey;
 }
 aside.left-menu .aside-inner {
   margin-top: 45px;
