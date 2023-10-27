@@ -5,6 +5,8 @@
   width: 100%;
   min-width: 768px;
   z-index: 1011;
+  border-bottom-style: outset;
+  border-color: grey;
 }
 @media only screen and (min-width: 768px) {
   .navbar-header {
