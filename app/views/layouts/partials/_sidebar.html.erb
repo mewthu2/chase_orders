@@ -6,22 +6,44 @@
           <i class="fas fa-house"></i> Home
         </a>
 
-        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
           <i class="justify-content-center fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
         </a>
-        <ul class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
-           <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to dashboard_index_path, class: 'text-light link' do %> <span> Acompanhamento </span><% end %></div>
-        </ul>
+        <div class="flex-column mb-auto collapse mb-2" id="collase-dashboard">
+          <div class="mb-3"> 
+            <i class="fa-solid fa-plus"></i>
+            <%= link_to dashboard_index_path, class: 'text-light link' do %> 
+              <span>
+                Acompanhamento
+              </span>
+            <% end %>
+          </div>
+        </div>
 
-        <a class="btn btn-dark w-100 text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
           <i class="fa-regular fa-hourglass"></i> Histórico de Tentativas <i class="fa fa-angle-down arrow"></i>
         </a>
-        <ul class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to attempts_path(status: :success), class: 'text-light link' do %> <span> Tentativas de Criação de Pedido no Correios </span><% end %></div>
-        </ul>
-        <ul class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> <i class="fa-solid fa-plus"></i><%= link_to send_xml_attempts_path(status: :success), class: 'text-light link' do %> <span> Tentativas de Envio de XML para o Correios </span><% end %></div>
-        </ul>
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> 
+            <i class="fa-solid fa-plus"></i>
+            <%= link_to attempts_path(status: :success), class: 'text-light link' do %> 
+              <span> 
+                Criação de Pedido no Correios 
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> 
+            <i class="fa-solid fa-plus"></i>
+            <%= link_to send_xml_attempts_path(status: :success), class: 'text-light link' do %>
+              <span>
+                Envio de XML para o Correios
+              </span>
+            <% end %>
+          </div>
+        </div>
       </ul>
     </div>
   </div>
