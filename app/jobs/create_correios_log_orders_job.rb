@@ -89,33 +89,25 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       assert_value = selected_order[:pedido][:total_produtos]
     end
 
-    # Setting array to store the errors
-    errors = {
-      avoid_step: false,
-      error_message: []
-    }
-
     # Setting founded valures
     begin
-      params[:invoice]          << invoice[:numero].present? ? invoice[:numero].sub!(/^0/, '') : (errors[:error_message] << 'Número de Nota Fiscal vazio') && (errors[:avoid_step] << true)
-      params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce].present? ? selected_order[:pedido][:numero_ecommerce] : errors[:error_message] << 'Número de Ecommerce vazio'
-      params[:data_pedido]      << selected_order[:pedido][:data_pedido].present? ? selected_order[:pedido][:data_pedido] : errors[:error_message] << 'Data do Pedido vazia'
-      params[:valor]            << assert_value.present? ? assert_value : (errors[:error_message] << 'Valor do pedido está vazio') && (errors[:avoid_step] << true)
+      params[:invoice]          << invoice[:numero].sub!(/^0/, '')
+      params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce]
+      params[:data_pedido]      << selected_order[:pedido][:data_pedido]
+      params[:valor]            << assert_value
       params[:nome]             << client_data[:nome]
       params[:endereco]         << client_data[:endereco]
       params[:numero]           << client_data[:numero]
       params[:complemento]      << client_data[:complemento]
       params[:bairro]           << client_data[:bairro]
-      params[:cep]              << client_data[:cep].present? ? client_data[:cep].gsub('.', '').gsub('-', '') : (errors[:error_message] << 'Cep do pedido está vazio') && (errors[:avoid_step] << true)
+      params[:cep]              << client_data[:cep].gsub('.', '').gsub('-', '')
       params[:cidade]           << client_data[:cidade]
       params[:uf]               << client_data[:uf]
       params[:fone]             << client_data[:fone]
       params[:email]            << client_data[:email]
-      params[:cpf_cnpj]         << client_data[:cpf_cnpj].present? ? client_data[:cpf_cnpj].gsub('.', '').gsub('-', '') : (errors[:error_message] << 'Cep do pedido está vazio') && (errors[:avoid_step] << true)
+      params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
-
-      return if errors[:avoid_step] == true
-
+      p params
       # Form items array
       order_items = selected_order[:pedido][:itens]
 
