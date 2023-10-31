@@ -76,7 +76,7 @@ class Correios::Orders
       'Authorization' => 'Basic YnJhc2lsY2hhc2U6dm84UXNoUGpKR2FGSHBCSGMwV2dOTDdiWjZKbEpBOEx5ZFRYRWtXTg=='
     }
     begin
-      HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id, headers: authentication)
+      HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id.to_s, headers: authentication)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
