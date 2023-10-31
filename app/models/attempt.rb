@@ -7,7 +7,11 @@ class Attempt < ApplicationRecord
   # Validacoes
 
   # Escopos
-
+  add_scope :search do |value|
+    where('attempts.tiny_order_id LIKE :valor OR
+           attempts.order_correios_id LIKE :valor OR
+           attempts.id LIKE :valor', valor: "#{value}%")
+  end
   # Metodos estaticos
   # Metodos publicos
   # Metodos GET

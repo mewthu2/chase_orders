@@ -9,12 +9,12 @@
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
           <i class="justify-content-center fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
         </a>
-        <div class="justify-content-center flex-column mb-auto collapse mb-2" id="collase-dashboard">
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-dashboard">
           <div class="mb-3"> 
-            <i class="fa-solid fa-plus"></i>
+            <i class="fa-solid fa-binoculars text-info"></i>
             <%= link_to dashboard_index_path, class: 'text-light link' do %> 
               <span>
-                Acompanhamento
+                Acompanhamento das filas
               </span>
             <% end %>
           </div>
@@ -25,8 +25,8 @@
         </a>
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
           <div class="mb-3"> 
-            <i class="fa-solid fa-plus"></i>
-            <%= link_to attempts_path(status: :success), class: 'text-light link' do %> 
+            <i class="fa-solid fa-file-lines text-info"></i>
+            <%= link_to attempts_path(status: :success, kinds: :create_correios_order), class: 'text-light link' do %> 
               <span> 
                 Criação de Pedido no Correios 
               </span>
@@ -36,8 +36,19 @@
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
           <div class="mb-3"> 
-            <i class="fa-solid fa-plus"></i>
-            <%= link_to send_xml_attempts_path(status: :success), class: 'text-light link' do %>
+            <i class="fa-solid fa-file-invoice text-info"></i>
+            <%= link_to attempts_path(status: :success, kinds: :emission_invoice), class: 'text-light link' do %>
+              <span>
+                Emissão de nota fiscal no Tiny
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> 
+            <i class="fa-regular fa-file-zipper text-info"></i>
+            <%= link_to attempts_path(status: :success, kinds: :send_xml), class: 'text-light link' do %>
               <span>
                 Envio de XML para o Correios
               </span>

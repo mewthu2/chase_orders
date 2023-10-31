@@ -1,4 +1,11 @@
-<% title 'Tentativas de Criação de Pedidos nos Correios' %>
+<% case params[:kinds] %>
+<% when 'create_correios_order' %>
+  <% title 'Tentativas de Criação de Pedidos nos Correios' %>
+<% when 'send_xml' %>
+  <% title 'Tentativas de Envio de XML para os Pedidos nos Correios' %>
+<% when 'emission_invoice' %>
+  <% title 'Tentativas de Emissão de Nota Fiscal no Tiny' %>
+<% end %>
 
 <div class="container">
   <div class="row d-flex justify-content-center">
@@ -10,12 +17,34 @@
   </div>
 </div>
 
+<%= form_tag(attempts_path, method: 'get') do %>
+  <div class="card mb-lg advanced-search-form bg-dark text-light" id="filters">
+    <%= hidden_field_tag :status, {}, value: params[:status] %>
+    <%= hidden_field_tag :kinds, {}, value: params[:kinds] %>
+    <div class="card-header text-info">
+      Pesquisa avançada
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-12">
+          <%= label_tag :search, 'Procurar' %>
+          <%= text_field_tag :search, params[:search], class: 'form-control', placeholder: 'Pesquise por número pedido Tiny/Correios/Nota Fiscal' %>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <%= button_tag class: 'btn btn-secondary text-info', name: '' do %><i class="fa fa-search text-info"></i> Pesquisar<% end %>
+    </div>
+  </div>
+<% end %>
+
 <div class="container">
   <table class="table table-dark table-hover table-responsive" id="attemps-table">
     <thead>
       <tr>
-        <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
+        <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
+        <th class="text-center"><%= 'ID' %></th>
+        <th class="text-center"><%= 'Pedido no Tiny' %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
@@ -28,6 +57,13 @@
     <tbody>
       <% @attempts.each do |attempt| %>
         <tr>
+          <td>
+            <% if params[:status] == 'success' %>
+              <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-sm btn-secondary text-info' do %> 
+                <i class="fa-solid fa-repeat"></i>
+              <% end %>
+            <% end %>
+          </td>
           <td class="text-center"><%= attempt.id %></td>
           <td class="text-center">
             <%= attempt.tiny_order_id %> - 

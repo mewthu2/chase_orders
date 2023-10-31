@@ -1,5 +1,5 @@
 class InvoiceEmitionsJob < ActiveJob::Base
-  def perform(param)
+  def perform(param, att)
     case param
     when 'all'
       all_emissions

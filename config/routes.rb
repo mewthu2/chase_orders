@@ -10,7 +10,7 @@ Rails.application.routes.draw do
 
   resources :attempts, only: [:index] do
     collection do
-      get :send_xml
+      get :reprocess
       get :verify_attempts
     end
   end

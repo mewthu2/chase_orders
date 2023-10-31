@@ -1,5 +1,6 @@
 class DashboardController < ApplicationController
   before_action :load_form_references, only: [:index]
+  protect_from_forgery except: :modal_test
 
   def index
     orders = Tiny::Orders.get_all_orders('preparando_envio')
@@ -21,6 +22,9 @@ class DashboardController < ApplicationController
     end
   end
 
+  def modal_test
+  end
+  
   def tracking
     tracking_number = params[:tracking_number]
     response = Correios::Orders.get_tracking(tracking_number)
