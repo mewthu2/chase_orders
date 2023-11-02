@@ -8,13 +8,6 @@ class GetTrackingJob < ActiveJob::Base
     end
   end
 
-  def send_all_xml
-    Attempt.where(kinds: :send_xml, status: :success).each do |att|
-      next if Attempt.find_by(kinds: :get_tracking, status: 2, order_correios_id: att.order_correios_id).present?
-      get_one_tracking(att)
-    end
-  end
-
   def get_one_tracking(att)
     begin
       attempt = Attempt.create(kinds: :get_tracking)
@@ -29,7 +22,7 @@ class GetTrackingJob < ActiveJob::Base
                      id_nota_fiscal: att.id_nota_fiscal,
                      tiny_order_id: att.tiny_order_id)
     else
-      attempt.update(status: :error, error: 'Nota vazia')
+      attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
 
       # Returns the object to the queue
       att.destroy
