@@ -55,6 +55,17 @@
             <% end %>
           </div>
         </div>
+
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          <div class="mb-3"> 
+            <i class="fa-solid fa-location-dot text-info"></i>
+            <%= link_to attempts_path(status: :success, kinds: :get_tracking), class: 'text-light link' do %>
+              <span>
+                Solicitação de código de rastreio do Correios
+              </span>
+            <% end %>
+          </div>
+        </div>
       </ul>
     </div>
   </div>

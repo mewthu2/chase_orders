@@ -5,6 +5,8 @@
   <% title 'Tentativas de Envio de XML para os Pedidos nos Correios' %>
 <% when 'emission_invoice' %>
   <% title 'Tentativas de Emissão de Nota Fiscal no Tiny' %>
+<% when 'get_tracking' %>
+  <% title 'Tentativas de solicitação de código de rastreio' %>
 <% end %>
 
 <div class="container">
@@ -45,6 +47,7 @@
         <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
         <th class="text-center"><%= 'ID' %></th>
         <th class="text-center"><%= 'Pedido no Tiny' %></th>
+        <th class="text-center"><%= 'Rastreio' %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
@@ -71,6 +74,7 @@
               Ver no Tiny
             </span>
           </td>
+          <td class="text-center"><%= attempt.tracking %></td>
           <td class="text-center"><%= attempt.order_correios_id %></td>
           <td class="text-center"><%= attempt.id_nota_fiscal %></td>
           <td class="text-center"><%= attempt.kinds %></td>
@@ -83,7 +87,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <th colspan="8">
+        <th colspan="12">
           <%= page_entries_info @attempts %>
         </th>
       </tr>

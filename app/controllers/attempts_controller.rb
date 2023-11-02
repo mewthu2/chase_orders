@@ -21,9 +21,11 @@ class AttemptsController < ApplicationController
         order = Tiny::Orders.obtain_order(attempt.tiny_order_id)
         CreateCorreiosLogOrdersJob.perform_now('one', order)
       when 'send_xml'
-        SendXmlCorreiosLogJob.perform_now('one', att)
+        SendXmlCorreiosLogJob.perform_now('one', attempt)
       when 'emission_invoice'
-        InvoiceEmitionsJob.perform_now('one', att)
+        InvoiceEmitionsJob.perform_now('one', attempt)
+      when 'get_tracking'
+        GetTrackingJob.perform_now('one', attempt)
       end
     rescue StandardError => e
       redirect_to(root_path, alert: "Ocorreu um erro no reprocessamento: #{e}")

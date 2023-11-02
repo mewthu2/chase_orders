@@ -57,7 +57,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order(order_id)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -68,7 +68,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain invoice number
     begin
-      invoice = Tiny::Invoices.obtain_invoice(selected_order[:pedido][:id_nota_fiscal])
+      invoice = Tiny::Invoices.obtain_invoice("802706448")
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -107,7 +107,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:email]            << client_data[:email]
       params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
-      p params
+
       # Form items array
       order_items = selected_order[:pedido][:itens]
 
