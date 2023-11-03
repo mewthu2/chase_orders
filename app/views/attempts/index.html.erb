@@ -12,9 +12,9 @@
 <div class="container">
   <div class="row d-flex justify-content-center">
     <div class="btn-group mb-3" role="group">
-      <%= link_to attempts_path(status: :success), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
-      <%= link_to attempts_path(status: :fail), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
-      <%= link_to attempts_path(status: :error), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
+      <%= link_to attempts_path(kinds: params[:kinds], status: :success, search: params[:search]), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
+      <%= link_to attempts_path(kinds: params[:kinds], status: :fail, search: params[:search]), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
+      <%= link_to attempts_path(kinds: params[:kinds], status: :error, search: params[:search]), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
     </div>
   </div>
 </div>

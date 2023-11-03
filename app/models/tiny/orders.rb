@@ -54,4 +54,13 @@ class Tiny::Orders
                                                 id: order_id }))
     response.with_indifferent_access[:retorno]
   end
+
+  def self.send_tracking(order_id, tracking)
+    response = JSON.parse(HTTParty.get(ENV.fetch('TINY_SEND_TRACKING'),
+                                       query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                                formato: 'json',
+                                                id: order_id,
+                                                codigoRastreamento: tracking }))
+    response.with_indifferent_access[:retorno]
+  end
 end

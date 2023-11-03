@@ -1,8 +1,8 @@
 <aside class="left-menu">
   <div class="aside-inner">
-    <div class="d-flex justify-content-center flex-shrink-0 p-3 text-white">
+    <div class="flex-shrink-0 p-3 text-white">
       <ul class="nav nav-pills flex-column mb-auto">
-        <a class="btn btn-dark w-100 text-info mb-3" href="/" role="button">
+        <a class="btn btn-dark text-info mb-3" href="/" role="button">
           <i class="fas fa-house"></i> Home
         </a>
 
@@ -73,15 +73,12 @@
   <div class="container">
     <span class="d-flex justify-content-center"> Buscar código de rastreio: </span>
     <div class="container d-flex justify-content-center mt-2">
-      <input class="form-control" id="tracking_number" placeholder="Digite o número do pedido">
-      <button class="btn btn-dark text-secondary"id="search_button">Procurar</button>
+      <input class="form-control" id="tracking_number" placeholder="Num pedido correios">
+      <button class="btn btn-dark text-secondary"id="search_button"><i id="loading" class="fa-regular fa-compass"></i></button>
     </div>
   </div>
   <div class="container d-flex justify-content-center">
-    <span class="badge bg-secondary text-info">
-      <i id="loading" class="fa-regular fa-compass"></i>
-      <div class="mt-2 h5" id="tracking_result"></div>
-    </span>
+    <div class="badge bg-secondary text-info mt-2 fs-3" id="tracking_result"></div>
   </div>
   <div class="d-flex justify-content-center" style="position: fixed; margin-top: 21em; margin-left: 6em;">
     <small class="text-light"> Chase Brasil <i class="fas fa-registered"></i></small>
