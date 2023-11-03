@@ -20,9 +20,13 @@ class DashboardController < ApplicationController
       next if Attempt.find_by(kinds: :send_xml, status: 2, order_correios_id: att.order_correios_id).present?
       @send_xml << att
     end
-  end
 
-  def modal_test
+    @get_tracking = []
+
+    Attempt.where(kinds: :send_xml, status: 2).distinct(:order_correios_id).each do |att|
+      next if Attempt.find_by(kinds: :get_tracking, status: 2, order_correios_id: att.order_correios_id).present?
+      @get_tracking << att
+    end
   end
   
   def tracking
