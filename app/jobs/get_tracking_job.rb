@@ -16,14 +16,22 @@ class GetTrackingJob < ActiveJob::Base
   end
 
   def get_one_tracking(att)
+    # Get tracking
     begin
       attempt = Attempt.create(kinds: :get_tracking)
       tracking = Correios::Orders.get_tracking(att.order_correios_id)
     rescue StandardError => e
-      attempt.update(error: e, status: :error)
+      attempt.update(error: e, status: :error, message: 'Erro na solicitação de rastreio aos Correios')
     end
 
-    if tracking['rastreio'].present? && tracking['rastreio'][0].present?
+    # Get order
+    begin
+      order = Tiny::Orders.obtain_order(att.tiny_order_id)
+    rescue StandardError => e
+      attempt.update(error: e, status: :error, message: 'Erro na solicitação de pedido ao Tiny')
+    end
+
+    if tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
       attempt.update(tracking: tracking['rastreio'][0]['codigoObjeto'],
                      order_correios_id: att.order_correios_id,
                      id_nota_fiscal: att.id_nota_fiscal,
@@ -32,9 +40,16 @@ class GetTrackingJob < ActiveJob::Base
       begin
         send = Tiny::Orders.send_tracking(att.tiny_order_id, tracking['rastreio'][0]['codigoObjeto'])
       rescue StandardError => e
-        attempt.update(error: e, status: :error)
+        attempt.update(error: e, status: :error, message: 'Erro no envio de rastreio ao Tiny')
       end
       attempt.update(message: send)
+
+      begin
+        Tiny::Orders.change_situation(att.tiny_order_id, 'Enviado') if order['pedido']['situacao'] == 'Faturado'
+      rescue StandardError => e
+        attempt.update(error: e, status: :error, message: 'Erro no envio de rastreio ao Tiny')
+      end
+
     else
       attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
 
