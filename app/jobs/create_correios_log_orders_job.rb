@@ -68,7 +68,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain invoice number
     begin
-      invoice = Tiny::Invoices.obtain_invoice("802706448")
+      invoice = Tiny::Invoices.obtain_invoice(order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
