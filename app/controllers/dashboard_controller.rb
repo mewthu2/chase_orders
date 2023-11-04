@@ -28,7 +28,7 @@ class DashboardController < ApplicationController
       @get_tracking << att
     end
   end
-  
+
   def tracking
     tracking_number = params[:tracking_number]
     response = Correios::Orders.get_tracking(tracking_number)
