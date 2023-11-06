@@ -7,26 +7,17 @@ class DashboardController < ApplicationController
     ids_to_reject = Attempt.where(status: :success).pluck(:tiny_order_id).map &:to_s
     @orders = orders['pedidos'].reject { |order| ids_to_reject.include?(order['pedido']['id']) } if orders['pedidos'].present?
 
-    @invoice_emition = []
+    @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
+                              .distinct(:order_correios_id)
+                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).select(:order_correios_id))
 
-    Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id).each do |att|
-      next if Attempt.find_by(kinds: :emission_invoice, status: 2, order_correios_id: att.order_correios_id).present?
-      @invoice_emition << att
-    end
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
+                       .distinct(:order_correios_id)
+                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).select(:order_correios_id))
 
-    @send_xml = []
-
-    Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id).each do |att|
-      next if Attempt.find_by(kinds: :send_xml, status: 2, order_correios_id: att.order_correios_id).present?
-      @send_xml << att
-    end
-
-    @get_tracking = []
-
-    Attempt.where(kinds: :send_xml, status: 2).distinct(:order_correios_id).each do |att|
-      next if Attempt.find_by(kinds: :get_tracking, status: 2, order_correios_id: att.order_correios_id).present?
-      @get_tracking << att
-    end
+    @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
+                           .distinct(:order_correios_id)
+                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).select(:order_correios_id))
   end
 
   def tracking

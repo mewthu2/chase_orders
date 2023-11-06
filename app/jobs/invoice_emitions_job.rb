@@ -9,8 +9,12 @@ class InvoiceEmitionsJob < ActiveJob::Base
   end
 
   def all_emissions
-    Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id).each do |att|
-      next if Attempt.find_by(kinds: :emission_invoice, status: 2, order_correios_id: att.order_correios_id).present?
+    distinct_attempts = Attempt.where(kinds: :create_correios_order, status: 2).distinct(:order_correios_id)
+
+    existing_emission_attempts = Attempt.where(kinds: :emission_invoice, status: 2, order_correios_id: distinct_attempts.pluck(:order_correios_id))
+
+    attempts_to_emission = distinct_attempts.where.not(order_correios_id: existing_emission_attempts.pluck(:order_correios_id))
+    attempts_to_emission.each do |att|
       one_emission(att)
     end
   end

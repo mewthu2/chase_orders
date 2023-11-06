@@ -9,8 +9,14 @@ class GetTrackingJob < ActiveJob::Base
   end
 
   def pull_all_tracking
-    Attempt.where(kinds: :send_xml, status: 2).each do |att|
-      next if Attempt.find_by(kinds: :get_tracking, status: 2, order_correios_id: att.order_correios_id).present?
+    attempts = Attempt.where(kinds: :send_xml, status: 2)
+
+    order_correios_ids = attempts.pluck(:order_correios_id)
+
+    existing_tracking_attempts = Attempt.where(kinds: :get_tracking, status: 2, order_correios_id: order_correios_ids)
+
+    attempts_to_get_tracking = attempts.where.not(order_correios_id: existing_tracking_attempts.pluck(:order_correios_id))
+    attempts_to_get_tracking.each do |att|
       get_one_tracking(att)
     end
   end
