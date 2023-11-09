@@ -111,7 +111,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:cidade]           << client_data[:cidade]
       params[:uf]               << client_data[:uf]
       params[:fone]             << client_data[:fone]
-      params[:email]            << client_data[:email]
+      params[:email]            << client_data[:email].present? ? client_data[:email] : 'contato@chasebrasil.com'
       params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
 
