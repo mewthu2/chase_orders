@@ -96,6 +96,13 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       ecommerce_number = '0'
     end
 
+    # assert email
+    if client_data[:email].present?
+      email = client_data[:email]
+    else
+      email = 'contato@chasebrasil.com'
+    end
+
     # Setting founded valures
     begin
       params[:invoice]          << invoice[:numero].sub!(/^0/, '')
@@ -111,20 +118,20 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:cidade]           << client_data[:cidade]
       params[:uf]               << client_data[:uf]
       params[:fone]             << client_data[:fone]
-      params[:email]            << client_data[:email].present? ? client_data[:email] : 'contato@chasebrasil.com'
+      params[:email]            << email
       params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
 
       # Form items array
       order_items = selected_order[:pedido][:itens]
-      p 'PASSOU 8'
+
       order_items.each do |oi|
         params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
-      p 'PASSOU 9'
+
       attempt.update(params:)
       attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i)
-      p 'PASSOU 10'
+
       verify_params(attempt, params)
 
     rescue StandardError => e
