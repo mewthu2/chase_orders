@@ -89,10 +89,17 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       assert_value = selected_order[:pedido][:total_produtos]
     end
 
+    # assert ecommerce
+    if selected_order[:pedido][:numero_ecommerce].present?
+      ecommerce_number = selected_order[:pedido][:numero_ecommerce]
+    else
+      ecommerce_number = '0'
+    end
+
     # Setting founded valures
     begin
       params[:invoice]          << invoice[:numero].sub!(/^0/, '')
-      params[:numero_ecommerce] << selected_order[:pedido][:numero_ecommerce]
+      params[:numero_ecommerce] << ecommerce_number
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
       params[:nome]             << client_data[:nome]
@@ -110,13 +117,14 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
       # Form items array
       order_items = selected_order[:pedido][:itens]
-
+      p 'PASSOU 8'
       order_items.each do |oi|
         params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
+      p 'PASSOU 9'
       attempt.update(params:)
       attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i)
-
+      p 'PASSOU 10'
       verify_params(attempt, params)
 
     rescue StandardError => e
@@ -124,11 +132,11 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     end
 
     # Create Order in Correios Log +
-    Correios::Orders.create_orders(params, attempt) if !attempt.error.present? || params[:pedido].present?
+    Correios::Orders.create_orders(params, attempt) unless attempt.error.present?
   end
 
   def verify_params(attempt, params)
-    required_params = [:data_pedido, :valor, :nome, :endereco, :numero, :bairro, :cep, :cidade, :uf, :fone, :email, :cpf_cnpj, :invoice]
+    required_params = [:data_pedido, :valor, :nome, :endereco, :numero, :bairro, :cep, :cidade, :uf, :email, :cpf_cnpj, :invoice]
 
     missing_params = required_params.select { |param| params[param] == '' }
 
