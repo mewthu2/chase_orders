@@ -43,6 +43,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
       Correios::Invoices.send_xml_to_correios(attempt)
     else
       attempt.update(status: :error, error: "Nota vazia, pedido tiny: #{att.tiny_order_id}")
+      Attempt.where(tiny_order_id: att.tiny_order_id, status: :success, kinds: :emission_invoice).destroy_all
     end
   end
 end

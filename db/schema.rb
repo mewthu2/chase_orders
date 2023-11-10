@@ -10,13 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_11_02_143549) do
+ActiveRecord::Schema[7.0].define(version: 2023_11_10_202855) do
   create_table "attempts", charset: "utf8", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
     t.text "requisition"
     t.text "params"
-    t.text "xml_nota"
+    t.text "xml_nota", size: :long
     t.boolean "xml_sended", default: false
     t.string "error"
     t.string "status_code"
