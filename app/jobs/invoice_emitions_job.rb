@@ -11,7 +11,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
   def all_emissions
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
                               .distinct(:order_correios_id)
-                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).select(:order_correios_id))
+                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).pluck(:order_correios_id))
     @invoice_emition.each do |att|
       one_emission(att)
     end
