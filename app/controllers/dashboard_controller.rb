@@ -24,7 +24,7 @@ class DashboardController < ApplicationController
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).select(:order_correios_id))
 
-    @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
+    @get_tracking = Attempt.where(kinds: :create_correios_order, status: 2)
                            .distinct(:order_correios_id)
                            .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).select(:order_correios_id))
   end
