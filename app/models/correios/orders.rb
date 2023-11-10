@@ -51,13 +51,13 @@ class Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
-    if request.include?('Pedido já Cadastrado')
+    if request.present? && request.force_encoding('UTF-8').include?('Pedido já Cadastrado')
       @request = JSON.parse(request)
     else
       @request = request
     end
- 
-    attempt.update(status: :success, order_correios_id: request.body[/\/pedidos\/(\d+)/, 1]) if request.include?('/efulfillment/v1/pedidos/')
+
+    attempt.update(status: :success, order_correios_id: @request.body[/\/pedidos\/(\d+)/, 1]) if @request.present? && @request.include?('/efulfillment/v1/pedidos/')
     return if attempt.status == :success
 
     if @request.present?
@@ -72,7 +72,7 @@ class Correios::Orders
         attempt.update(status: :success)
       else
         attempt.update(status: :fail)
-        attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]) if @request['mensagem'].include?('Pedido já Cadastrado')
+        attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]) if @request.present? && @request['mensagem'].present? && @request['mensagem'].include?('Pedido já Cadastrado')
       end
     else
       attempt.update(status: :error, error: 'Requisição vazia')

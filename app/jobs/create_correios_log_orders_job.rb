@@ -143,7 +143,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def verify_params(attempt, params)
-    required_params = [:data_pedido, :valor, :nome, :endereco, :bairro, :cep, :cidade, :uf, :email, :cpf_cnpj, :invoice]
+    required_params = [:data_pedido, :valor, :nome, :endereco, :bairro, :cep, :cidade, :numero, :uf, :email, :cpf_cnpj, :invoice]
 
     missing_params = required_params.select { |param| params[param] == '' }
 
