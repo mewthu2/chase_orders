@@ -4,8 +4,17 @@ class DashboardController < ApplicationController
 
   def index
     orders = Tiny::Orders.get_all_orders('preparando_envio')
-    ids_to_reject = Attempt.where(status: :success).pluck(:tiny_order_id).map &:to_s
-    @orders = orders['pedidos'].reject { |order| ids_to_reject.include?(order['pedido']['id']) } if orders['pedidos'].present?
+    ids_to_reject = Attempt.where(kinds: :create_correios_order, status: :success).pluck(:tiny_order_id).map &:to_json
+    if orders[:numero_paginas].present?
+      @orders = []
+      orders[:numero_paginas].times do |page|
+        page_orders = Tiny::Orders.get_orders('preparando_envio', page)
+        page_orders[:pedidos].each do |order|
+          @orders << order
+        end
+      end
+    end
+    @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) } if orders['pedidos'].present?
 
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
                               .distinct(:order_correios_id)
