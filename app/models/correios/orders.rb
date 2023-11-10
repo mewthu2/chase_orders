@@ -58,9 +58,9 @@ class Correios::Orders
     end
 
     attempt.update(status: :success, order_correios_id: @request.body[/\/pedidos\/(\d+)/, 1]) if @request.present? && @request.include?('/efulfillment/v1/pedidos/')
-    return if attempt.status == :success
+    return if attempt.status == 2
 
-    if @request.present?
+    if @request.present? && attempt.status != 2
       attempt.update(status_code: @request['statusCode'],
                      message: @request['mensagem'],
                      exception: @request['excecao'],
@@ -71,11 +71,11 @@ class Correios::Orders
       if @request['statusCode'] == 200
         attempt.update(status: :success)
       else
-        attempt.update(status: :fail)
+        attempt.update(status: :fail) unless attempt.order_correios_id.present?
         attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]) if @request.present? && @request['mensagem'].present? && @request['mensagem'].include?('Pedido já Cadastrado')
       end
     else
-      attempt.update(status: :error, error: 'Requisição vazia')
+      attempt.update(status: :error, error: 'Requisição vazia') unless attempt.order_correios_id.present?
     end
   end
 
