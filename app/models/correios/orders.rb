@@ -45,24 +45,34 @@ class Correios::Orders
     begin
       request = HTTParty.post(ENV.fetch('CORREIOS_CRIAR_PEDIDO'),
                               headers: authentication,
-                              body: body.to_json)
+                              body: body.to_json,
+                              format: 'string')
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
 
-    if request.present?
-      attempt.update(status_code: request['statusCode'],
-                     message: request['mensagem'],
-                     exception: request['excecao'],
-                     classification: request['classificacao'],
-                     cause: request['causa'],
-                     url: request['url'],
-                     user: request['user'])
-      if request['statusCode'] == 200
+    if request.include?('Pedido já Cadastrado')
+      @request = JSON.parse(request)
+    else
+      @request = request
+    end
+ 
+    attempt.update(status: :success, order_correios_id: request.body[/\/pedidos\/(\d+)/, 1]) if request.include?('/efulfillment/v1/pedidos/')
+    return if attempt.status == :success
+
+    if @request.present?
+      attempt.update(status_code: @request['statusCode'],
+                     message: @request['mensagem'],
+                     exception: @request['excecao'],
+                     classification: @request['classificacao'],
+                     cause: @request['causa'],
+                     url: @request['url'],
+                     user: @request['user'])
+      if @request['statusCode'] == 200
         attempt.update(status: :success)
       else
         attempt.update(status: :fail)
-        attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(request['mensagem'])[1]) if request['mensagem'].include?('Pedido já Cadastrado')
+        attempt.update(status: :success, order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]) if @request['mensagem'].include?('Pedido já Cadastrado')
       end
     else
       attempt.update(status: :error, error: 'Requisição vazia')

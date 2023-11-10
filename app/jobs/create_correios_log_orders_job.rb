@@ -17,7 +17,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
         orders[:pedidos].each do |order|
           next unless order.present?
           next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
-
+          next if Attempt.where(tiny_order_id: order[:pedido][:id], status: [0, 1]).count > 5
           create_one_log_order(order)
         end
       end
@@ -105,7 +105,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Setting founded valures
     begin
-      params[:invoice]          << invoice[:numero].sub!(/^0/, '')
+      params[:invoice]          << invoice[:numero]
       params[:numero_ecommerce] << ecommerce_number
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
@@ -143,7 +143,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def verify_params(attempt, params)
-    required_params = [:data_pedido, :valor, :nome, :endereco, :numero, :bairro, :cep, :cidade, :uf, :email, :cpf_cnpj, :invoice]
+    required_params = [:data_pedido, :valor, :nome, :endereco, :bairro, :cep, :cidade, :uf, :email, :cpf_cnpj, :invoice]
 
     missing_params = required_params.select { |param| params[param] == '' }
 
