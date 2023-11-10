@@ -33,7 +33,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     end
     xml_nfe_content = doc.at('xml_nfe').inner_html
 
-    attempt.update(xml_nota: xml_nfe_content.to_xml.gsub("\n", ''),
+    attempt.update(xml_nota: xml_nfe_content.gsub("\n", ''),
                    order_correios_id: att.order_correios_id,
                    id_nota_fiscal: att.id_nota_fiscal,
                    tiny_order_id: att.tiny_order_id)
