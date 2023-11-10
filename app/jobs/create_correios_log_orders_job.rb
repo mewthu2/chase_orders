@@ -77,7 +77,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     attempt.update(error: "Order - #{order[:pedido][:id]} não encontrada", status: :error) unless selected_order.present?
 
     # Verifying client data after continue
-    attempt.update(error: 'Dados do Cliente não disponíveis', status: :error) unless selected_order[:pedido][:cliente].present?
+    attempt.update(error: 'Dados do Cliente não disponíveis', status: :error) unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
 
     # Find client data on selected order hash
     client_data = selected_order[:pedido][:cliente]

@@ -32,7 +32,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
             id_nota_fiscal: att.id_nota_fiscal,
             tiny_order_id: att.tiny_order_id,
             status_code: response.code,
-            message: response,
+            message: response.message.first(100),
             status: :error
           )
         else
