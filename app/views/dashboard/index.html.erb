@@ -26,7 +26,7 @@
             </tr>
           </thead>
           <tbody>
-            <% @orders.each do |order| %>
+            <% @all_orders.each do |order| %>
             <tr>
                 <td>
                   <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: order[:pedido][:id]), class: 'text-light', method: :post do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>

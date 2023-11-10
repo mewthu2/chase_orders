@@ -14,7 +14,7 @@ class DashboardController < ApplicationController
         end
       end
     end
-    @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) }.distinct(:tiny_order_id) if orders['pedidos'].present?
+    @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) } if orders['pedidos'].present?
 
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
                               .distinct(:order_correios_id)
