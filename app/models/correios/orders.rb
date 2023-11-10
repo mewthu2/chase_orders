@@ -62,7 +62,7 @@ class Correios::Orders
 
     if @request.present? && attempt.status != 2
       attempt.update(status_code: @request['statusCode'],
-                     message: @request,
+                     message: @request['mensagem'],
                      exception: @request['excecao'],
                      classification: @request['classificacao'],
                      cause: @request['causa'],
