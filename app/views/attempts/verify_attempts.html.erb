@@ -1,6 +1,6 @@
 <% title 'Tentativas de Integração' %>
 
-<div class="container">
+<div class="container" style="overflow-x:scroll;">
   <table class="table table-dark table-hover table-responsive" id="attemps-table">
     <thead>
       <tr>
@@ -10,6 +10,7 @@
         <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
+        <th class="text-center"><%= 'XML enviado' %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
       </tr>
     </thead>
@@ -27,6 +28,14 @@
           <td class="text-center"><%= attempt.status %></td>
           <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
           <td class="text-center"><%= attempt.error %></td>
+          <td class="text-center">
+            <% if attempt.xml_nota.present? %>
+              <button class="btn btn-primary" onclick="copiarConteudo(<%= attempt.id %>)">Copiar XML</button>
+            <% end %>
+            <span class="content<%= attempt.id %>" style="display:none">
+              <%= attempt.xml_nota %>
+            </span>
+          </td>
           <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
         </tr>
       <% end %>
@@ -40,5 +49,34 @@
     </tfoot>
   </table>
 </div>
+
+<script>
+  $(document).ready(function() {
+      $('.table').DataTable();
+  });
+
+  function copiarConteudo(id) {
+    // Seleciona o elemento com a classe "content" + o ID específico
+    var conteudo = document.querySelector('.content' + id);
+
+    if (conteudo) {
+
+        var texto = conteudo.textContent
+        console.log(texto);
+        var areaTransferencia = document.createElement('textarea');
+        areaTransferencia.value = texto;
+
+        document.body.appendChild(areaTransferencia);
+
+        areaTransferencia.select();
+
+        document.execCommand('copy');
+
+        console.log('Conteúdo copiado!');
+    }
+}
+
+
+</script>
 
 <%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
