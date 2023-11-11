@@ -17,7 +17,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
         orders[:pedidos].each do |order|
           next unless order.present?
           next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
-          next if Attempt.where(tiny_order_id: order[:pedido][:id], status: [0, 1]).count > 5
+
           create_one_log_order(order)
         end
       end

@@ -18,11 +18,11 @@ class DashboardController < ApplicationController
 
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
                               .distinct(:order_correios_id)
-                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).select(:order_correios_id))
+                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).pluck(:order_correios_id))
 
     @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
                        .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).select(:order_correios_id))
+                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
 
     @get_tracking = Attempt.where(kinds: :create_correios_order, status: 2)
                            .distinct(:order_correios_id)
