@@ -11,7 +11,7 @@ class GetTrackingJob < ActiveJob::Base
   def pull_all_tracking
     @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
                            .distinct(:order_correios_id)
-                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).select(:order_correios_id))
+                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).pluck(:order_correios_id))
     @get_tracking.each do |att|
       get_one_tracking(att)
     end
