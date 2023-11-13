@@ -1,21 +1,21 @@
-<% case params[:kinds] %>
-<% when 'create_correios_order' %>
-  <% title 'Tentativas de Criação de Pedidos nos Correios' %>
-<% when 'send_xml' %>
-  <% title 'Tentativas de Envio de XML para os Pedidos nos Correios' %>
-<% when 'emission_invoice' %>
-  <% title 'Tentativas de Emissão de Nota Fiscal no Tiny' %>
-<% when 'get_tracking' %>
-  <% title 'Tentativas de solicitação de código de rastreio' %>
-<% end %>
+<div class="row">
+  <% case params[:kinds] %>
+  <% when 'create_correios_order' %>
+    <% title 'Tentativas de Criação de Pedidos nos Correios' %>
+  <% when 'send_xml' %>
+    <% title 'Tentativas de Envio de XML para os Pedidos nos Correios' %>
+  <% when 'emission_invoice' %>
+    <% title 'Tentativas de Emissão de Nota Fiscal no Tiny' %>
+  <% when 'get_tracking' %>
+    <% title 'Tentativas de solicitação de código de rastreio' %>
+  <% end %>
+</div>
 
-<div class="container">
-  <div class="row d-flex justify-content-center">
-    <div class="btn-group mb-3" role="group">
-      <%= link_to attempts_path(kinds: params[:kinds], status: :success, search: params[:search]), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
-      <%= link_to attempts_path(kinds: params[:kinds], status: :fail, search: params[:search]), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
-      <%= link_to attempts_path(kinds: params[:kinds], status: :error, search: params[:search]), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
-    </div>
+<div class="row d-flex justify-content-center">
+  <div class="btn-group mb-3" role="group">
+    <%= link_to attempts_path(kinds: params[:kinds], status: :success, search: params[:search]), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
+    <%= link_to attempts_path(kinds: params[:kinds], status: :fail, search: params[:search]), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
+    <%= link_to attempts_path(kinds: params[:kinds], status: :error, search: params[:search]), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
   </div>
 </div>
 
@@ -30,7 +30,7 @@
       <div class="row">
         <div class="col-sm-12">
           <%= label_tag :search, 'Procurar' %>
-          <%= text_field_tag :search, params[:search], class: 'form-control', placeholder: 'Pesquise por número pedido Tiny/Correios/Nota Fiscal' %>
+          <%= text_field_tag :search, params[:search], class: 'form-control', placeholder: 'Pesquise por número pedido Tiny/Correios/Nota Fiscal ou por erro' %>
         </div>
       </div>
     </div>
@@ -40,59 +40,63 @@
   </div>
 <% end %>
 
-<div class="container">
-  <table class="table table-dark table-hover table-responsive" id="attemps-table">
-    <thead>
-      <tr>
-        <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
-        <th class="text-center"><%= 'ID' %></th>
-        <th class="text-center"><%= 'Pedido no Tiny' %></th>
-        <th class="text-center"><%= 'Rastreio' %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @attempts.each do |attempt| %>
+<div class="row">
+  <div class="col-12">
+    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="attemps-table">
+      <thead>
         <tr>
-          <td>
-            <% if params[:status] == 'success' %>
-              <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-sm btn-secondary text-info' do %> 
-                <i class="fa-solid fa-repeat"></i>
-              <% end %>
-            <% end %>
-          </td>
-          <td class="text-center"><%= attempt.id %></td>
-          <td class="text-center">
-            <%= attempt.tiny_order_id %> - 
-            <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
-              Ver no Tiny
-            </span>
-          </td>
-          <td class="text-center"><%= attempt.tracking %></td>
-          <td class="text-center"><%= attempt.order_correios_id %></td>
-          <td class="text-center"><%= attempt.id_nota_fiscal %></td>
-          <td class="text-center"><%= attempt.kinds %></td>
-          <td class="text-center"><%= attempt.status %></td>
-          <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
-          <td class="text-center"><%= attempt.error.present? ? attempt.error : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
-          <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
+          <th class="text-center"><%= 'ID' %></th>
+          <th class="text-center"><%= 'Pedido no Tiny' %></th>
+          <th class="text-center"><%= 'Rastreio' %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
         </tr>
-      <% end %>
-    </tbody>
-    <tfoot>
-      <tr>
-        <th colspan="12">
-          <%= page_entries_info @attempts %>
-        </th>
-      </tr>
-    </tfoot>
-  </table>
+      </thead>
+      <tbody>
+        <% @attempts.each do |attempt| %>
+          <tr>
+            <td>
+              <% if params[:status] == 'success' %>
+                <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-sm btn-secondary text-info' do %> 
+                  <i class="fa-solid fa-repeat"></i>
+                <% end %>
+              <% end %>
+            </td>
+            <td class="text-center"><%= attempt.id %></td>
+            <td class="text-center">
+              <%= attempt.tiny_order_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
+                Ver no Tiny
+              </span>
+            </td>
+            <td class="text-center"><%= attempt.tracking %></td>
+            <td class="text-center"><%= attempt.order_correios_id %></td>
+            <td class="text-center"><%= attempt.id_nota_fiscal %></td>
+            <td class="text-center"><%= attempt.kinds %></td>
+            <td class="text-center"><%= attempt.status %></td>
+            <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
+            <td class="text-center"><%= attempt.error.present? ? attempt.error : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= attempt.message.present? ? attempt.message : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="12">
+            <%= page_entries_info @attempts %>
+          </th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 </div>
 
 <%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>

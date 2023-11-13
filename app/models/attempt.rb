@@ -10,6 +10,8 @@ class Attempt < ApplicationRecord
   add_scope :search do |value|
     where('attempts.tiny_order_id LIKE :valor OR
            attempts.order_correios_id LIKE :valor OR
+           attempts.error LIKE :valor OR
+           attempts.message LIKE :valor OR
            attempts.id LIKE :valor', valor: "#{value}%")
   end
   # Metodos estaticos

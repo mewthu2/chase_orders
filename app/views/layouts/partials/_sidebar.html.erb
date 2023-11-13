@@ -3,17 +3,17 @@
     <div class="flex-shrink-0 p-3 text-white">
       <ul class="nav nav-pills flex-column mb-auto">
         <a class="btn btn-dark text-info mb-3" href="/" role="button">
-          <i class="fas fa-house"></i> Home
+          <i class="fa-regular fa-house"></i> <span class="name-button"> Home </span>
         </a>
 
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
-          <i class="justify-content-center fas fa-concierge-bell"></i> Dashboard <i class="fa fa-angle-down arrow"></i>
+          <i class="justify-content-center fa-regular fa-concierge-bell"></i> <span class="name-button"> Dashboard </span><i class="fa fa-angle-down arrow"></i>
         </a>
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-dashboard">
-          <div class="mb-3"> 
-            <i class="fa-solid fa-binoculars text-info"></i>
-            <%= link_to dashboard_index_path, class: 'text-light link' do %> 
-              <span>
+          <div class="mb-3 col-icon"> 
+            <%= link_to dashboard_index_path, class: 'text-light link' do %>
+              <i class="fa-solid fa-binoculars text-info"></i>
+              <span class="name-col">
                 Acompanhamento das filas
               </span>
             <% end %>
@@ -21,13 +21,13 @@
         </div>
 
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
-          <i class="fa-regular fa-hourglass"></i> Histórico de Tentativas <i class="fa fa-angle-down arrow"></i>
+          <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
         </a>
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> 
-            <i class="fa-solid fa-file-lines text-info"></i>
+          <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(status: :success, kinds: :create_correios_order), class: 'text-light link' do %> 
-              <span> 
+              <i class="fa-solid fa-file-lines text-info"></i>
+              <span class="name-col"> 
                 Criação de Pedido no Correios 
               </span>
             <% end %>
@@ -35,10 +35,10 @@
         </div>
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> 
-            <i class="fa-solid fa-file-invoice text-info"></i>
+          <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(status: :success, kinds: :emission_invoice), class: 'text-light link' do %>
-              <span>
+              <i class="fa-solid fa-file-invoice text-info link"></i>
+              <span class="name-col">
                 Emissão de nota fiscal no Tiny
               </span>
             <% end %>
@@ -46,10 +46,10 @@
         </div>
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> 
-            <i class="fa-regular fa-file-zipper text-info"></i>
+          <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(status: :success, kinds: :send_xml), class: 'text-light link' do %>
-              <span>
+              <i class="fa-regular fa-file-zipper text-info link"></i>
+              <span class="name-col">
                 Envio de XML para o Correios
               </span>
             <% end %>
@@ -57,10 +57,10 @@
         </div>
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3"> 
-            <i class="fa-solid fa-location-dot text-info"></i>
+          <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(status: :success, kinds: :get_tracking), class: 'text-light link' do %>
-              <span>
+              <i class="fa-solid fa-location-dot text-info link"></i>
+              <span class="name-col">
                 Solicitação de código de rastreio do Correios
               </span>
             <% end %>
@@ -70,42 +70,52 @@
     </div>
   </div>
   <hr>
-  <div class="container">
-    <span class="d-flex justify-content-center"> Buscar código de rastreio: </span>
-    <div class="container d-flex justify-content-center mt-2">
-      <input class="form-control" id="tracking_number" placeholder="Num pedido correios">
-      <button class="btn btn-dark text-secondary"id="search_button"><i id="loading" class="fa-regular fa-compass"></i></button>
-    </div>
-  </div>
-  <div class="container d-flex justify-content-center">
-    <div class="badge bg-secondary text-info mt-2 d-flex justify-content-center fs-5" id="tracking_result"></div>
-  </div>
-  <div class="d-flex justify-content-center" style="position: fixed; margin-top: 21em; margin-left: 6em;">
+  <div class="d-flex justify-content-center logo-chase" style="position: fixed; margin-top: 21em; margin-left: 6em;">
     <small class="text-light"> Chase Brasil <i class="fas fa-registered"></i></small>
   </div>
 </aside>
-<script>
-  $(document).ready(function() {
-    $('#search_button').click(function() {
-      var trackingNumber = $('#tracking_number').val();
-      $('#loading').addClass('fa-spin');
-      $.ajax({
-        url: '<%= tracking_dashboard_index_path %>',
-        type: 'GET',
-        data: { tracking_number: trackingNumber },
-        dataType: 'json',
-        success: function(response) {
-          if (response[0]) {
-            $('#tracking_result').html(response[0]['codigoObjeto']);
-          } else {
-            $('#tracking_result').html('Nenhum resultado encontrado.');
-          }
-          $('#loading').removeClass('fa-spin');
-        },
-        error: function() {
-          $('#tracking_result').html('Erro ao buscar informações de rastreamento.');
-        }
-      });
-    });
-  });
-</script>
+<style>
+  @media (max-width: 999px) {
+    
+  .navbar-header .navbar-content {
+    font-size: 0px;
+  }
+  .col-icon {
+    display: flex;
+    justify-content: center;
+  }
+  .name-col {
+    display:none;
+  }
+
+  .navbar-header .navbar-dropdowns {
+    float: inline-start;
+  }
+
+  .name-button,
+  .logo-chase {
+    display:none !important;
+  }
+
+  .left-menu {
+    width: 70px !important;
+  }
+  
+  .wrapper > section:not(.sem-menu) {
+    margin-left: 60px !important;
+  }
+
+  .navbar-header .navbar-brand .brand-logo,
+  .navbar-header .navbar-brand  {
+    width: 205px !important;
+  }
+
+  .wrapper > section > .content-wrapper .row {
+    margin-top: -7px !important;
+  }
+}
+
+@media (min-width: 1000px) {
+  
+}
+</style>
