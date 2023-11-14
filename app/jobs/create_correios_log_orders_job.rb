@@ -80,6 +80,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     attempt.update(error: 'Dados do Cliente não disponíveis', status: :error) unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
 
     # Find client data on selected order hash
+    return unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
     client_data = selected_order[:pedido][:cliente]
 
     # Some 'total_pedido' have a zero value, reasoned by discount
