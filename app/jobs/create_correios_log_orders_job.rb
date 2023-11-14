@@ -57,7 +57,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order("804194683")
+      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
