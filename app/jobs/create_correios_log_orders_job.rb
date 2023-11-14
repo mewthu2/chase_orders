@@ -114,15 +114,17 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       cidade = selected_order[:pedido][:endereco_entrega][:cidade]
       fone = selected_order[:pedido][:endereco_entrega][:fone]
       uf = selected_order[:pedido][:endereco_entrega][:uf]
+      cpf = selected_order[:pedido][:endereco_entrega][:cpf_cnpj]
     else
       endereco = client_data[:endereco]
       numero = client_data[:numero]
       complemento = client_data[:complemento]
       bairro = client_data[:bairro]
-      cep = client_data[:cep].gsub('.', '').gsub('-', '')
+      cep = client_data[:cep]
       cidade = client_data[:cidade]
       fone = client_data[:fone]
       uf = client_data[:uf]
+      cpf = client_data[:cpf_cnpj]
     end
 
     # Setting founded valures
@@ -141,7 +143,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:uf]               << uf
       params[:fone]             << fone
       params[:email]            << email
-      params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
+      params[:cpf_cnpj]         << cpf.gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
 
       # Form items array
