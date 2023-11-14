@@ -57,7 +57,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order("804194683")
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -104,6 +104,27 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       email = 'contato@chasebrasil.com'
     end
 
+    # assert address
+    if selected_order[:pedido][:endereco_entrega].present?
+      endereco = selected_order[:pedido][:endereco_entrega][:endereco]
+      numero = selected_order[:pedido][:endereco_entrega][:numero]
+      complemento = selected_order[:pedido][:endereco_entrega][:complemento]
+      bairro = selected_order[:pedido][:endereco_entrega][:bairro]
+      cep = selected_order[:pedido][:endereco_entrega][:cep]
+      cidade = selected_order[:pedido][:endereco_entrega][:cidade]
+      fone = selected_order[:pedido][:endereco_entrega][:fone]
+      uf = selected_order[:pedido][:endereco_entrega][:uf]
+    else
+      endereco = client_data[:endereco]
+      numero = client_data[:numero]
+      complemento = client_data[:complemento]
+      bairro = client_data[:bairro]
+      cep = client_data[:cep].gsub('.', '').gsub('-', '')
+      cidade = client_data[:cidade]
+      fone = client_data[:fone]
+      uf = client_data[:uf]
+    end
+
     # Setting founded valures
     begin
       params[:invoice]          << invoice[:numero]
@@ -111,14 +132,14 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
       params[:nome]             << client_data[:nome]
-      params[:endereco]         << client_data[:endereco]
-      params[:numero]           << client_data[:numero]
-      params[:complemento]      << client_data[:complemento]
-      params[:bairro]           << client_data[:bairro]
-      params[:cep]              << selected_order[:pedido][:endereco_entrega][:cep].gsub('.', '').gsub('-', '')
-      params[:cidade]           << client_data[:cidade]
-      params[:uf]               << client_data[:uf]
-      params[:fone]             << client_data[:fone]
+      params[:endereco]         << endereco
+      params[:numero]           << numero
+      params[:complemento]      << complemento
+      params[:bairro]           << bairro
+      params[:cep]              << cep.gsub('.', '').gsub('-', '')
+      params[:cidade]           << cidade
+      params[:uf]               << uf
+      params[:fone]             << fone
       params[:email]            << email
       params[:cpf_cnpj]         << client_data[:cpf_cnpj].gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
