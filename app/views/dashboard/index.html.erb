@@ -90,7 +90,7 @@
             <% @invoice_emition.each do |att| %>
             <tr>
                 <td>
-                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
                 <td class="text-center" style="min-width:12em;">
                   <%= att.tiny_order_id %> -
                   <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= att.tiny_order_id %>', '_blank');">
@@ -147,7 +147,7 @@
             <% @send_xml.each do |att| %>
             <tr>
                 <td>
-                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
                 <td class="text-center" style="min-width:12em;">
                   <%= att.tiny_order_id %> -
                   <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= att.tiny_order_id %>', '_blank');">
@@ -204,7 +204,7 @@
             <% @get_tracking.each do |att| %>
             <tr>
                 <td>
-                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
                 <td class="text-center" style="min-width:12em;">
                   <%= att.tiny_order_id %> -
                   <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= att.tiny_order_id %>', '_blank');">
