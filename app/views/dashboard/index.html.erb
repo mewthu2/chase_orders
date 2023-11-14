@@ -29,7 +29,7 @@
             <% @all_orders.each do |order| %>
             <tr>
                 <td>
-                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: order[:pedido][:id]), class: 'text-light', method: :post do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: order[:pedido][:id]), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
                 <td class="text-center" style="min-width:12em;">
                   <%= order[:pedido][:id] %> -
                   <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= order[:pedido][:id] %>', '_blank');">
