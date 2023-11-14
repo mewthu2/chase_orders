@@ -115,7 +115,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:numero]           << client_data[:numero]
       params[:complemento]      << client_data[:complemento]
       params[:bairro]           << client_data[:bairro]
-      params[:cep]              << client_data[:cep].gsub('.', '').gsub('-', '')
+      params[:cep]              << selected_order[:pedido][:endereco_entrega][:cep].gsub('.', '').gsub('-', '')
       params[:cidade]           << client_data[:cidade]
       params[:uf]               << client_data[:uf]
       params[:fone]             << client_data[:fone]
