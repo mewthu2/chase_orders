@@ -9,25 +9,25 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def create_correios_log_orders
-    orders = Tiny::Orders.get_orders('preparando_envio', 1)
+    page = 1
+    orders = Tiny::Orders.get_orders('preparando_envio', page)
 
-    if orders[:numero_paginas].present?
-      orders[:numero_paginas].times do |page|
-        orders = Tiny::Orders.get_orders('preparando_envio', page)
-        orders[:pedidos].each do |order|
-          next unless order.present?
-          next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
-
-          create_one_log_order(order)
-        end
-      end
-    else
+    while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
       orders[:pedidos].each do |order|
-        next unless order.present?
-        next if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
-        create_one_log_order(order)
+        process_order(order)
       end
+
+      page += 1
+      orders = Tiny::Orders.get_orders('preparando_envio', page)
     end
+  end
+
+  def process_order(order)
+    return unless order.present?
+
+    return if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
+
+    create_one_log_order(order)
   end
 
   def create_one_log_order(order)
@@ -130,8 +130,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
         params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
 
-      attempt.update(params:)
-      attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i)
+      attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i, params:)
 
       verify_params(attempt, params)
 
