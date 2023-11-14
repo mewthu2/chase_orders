@@ -15,7 +15,6 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
 
     @send_xml.each do |att|
       send_one_xml(att)
-      sleep(10)
     end
   end
 

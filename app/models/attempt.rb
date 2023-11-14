@@ -14,6 +14,21 @@ class Attempt < ApplicationRecord
            attempts.message LIKE :valor OR
            attempts.id LIKE :valor', valor: "#{value}%")
   end
+
+  add_scope :by_status do |status, kinds|
+    if status == 'error' || 'fail'
+      case kinds
+      when 'create_correios_order'
+        where.not(tiny_order_id: Attempt.where(kinds: :create_correios_order, status: :success).pluck(:tiny_order_id).uniq)
+      when 'send_xml'
+        where.not(tiny_order_id: Attempt.where(kinds: :send_xml, status: :success).pluck(:tiny_order_id).uniq)
+      when 'emission_invoice'
+        where.not(tiny_order_id: Attempt.where(kinds: :emission_invoice, status: :success).pluck(:tiny_order_id).uniq)
+      when 'get_tracking'
+        where.not(tiny_order_id: Attempt.where(kinds: :get_tracking, status: :success).pluck(:tiny_order_id).uniq)
+      end
+    end
+  end
   # Metodos estaticos
   # Metodos publicos
   # Metodos GET
