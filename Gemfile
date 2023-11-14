@@ -12,9 +12,6 @@ gem "rails", "~> 7.0.6"
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'
 
-# The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
-gem "sprockets-rails"
-
 # Ruby internationalization and localization (i18n) solution.
 gem 'i18n'
 
