@@ -18,7 +18,7 @@ class Correios::Invoices
     end
 
     begin
-      tracking = Correios::Orders.get_tracking("18415685")
+      tracking = Correios::Orders.get_tracking(attempt.order_correios_id)
     rescue StandardError => e
       attempt.update(error: e, message: 'Erro ao solicitar o rastreio', status: :error)
     end
