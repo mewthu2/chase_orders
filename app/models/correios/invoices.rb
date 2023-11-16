@@ -18,7 +18,7 @@ class Correios::Invoices
     end
 
     begin
-      tracking = Correios::Orders.get_tracking(attempt.order_correios_id)
+      tracking = Correios::Orders.get_tracking("18415685")
     rescue StandardError => e
       attempt.update(error: e, message: 'Erro ao solicitar o rastreio', status: :error)
     end
@@ -32,7 +32,7 @@ class Correios::Invoices
           attempt.update(status: :error, status_code: response.code, message: 'Rastreio não disponível')
         end
       when 400
-        if response.body.include?('faturado') && tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
+        if tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
           attempt.update(status: :success, status_code: response.code, message: response.body, xml_sended: true, tracking: tracking['rastreio'][0]['codigoObjeto'])
         else
           attempt.update(status: :error, status_code: response.code, message: 'Rastreio não disponível')
