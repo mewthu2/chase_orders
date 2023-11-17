@@ -21,7 +21,7 @@ class Correios::Orders
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
-      servicosAdicionais: ['019'],
+      servicosAdicionais: params[:forma_envio] == ('39888' || '03662') ? ['019'] : [''],
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],
