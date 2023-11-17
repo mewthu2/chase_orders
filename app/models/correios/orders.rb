@@ -17,7 +17,7 @@ class Correios::Orders
       dataSolicitacao: params[:data_pedido],
       valordeclarado: params[:valor].gsub('.', ','),
       cartaoPostagem: correios_cartao_postagem,
-      codigoservico: '39888',
+      codigoservico: params[:forma_envio],
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,

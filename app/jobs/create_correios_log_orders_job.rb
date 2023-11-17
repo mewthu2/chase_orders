@@ -48,6 +48,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       email: '',
       cpf_cnpj: '',
       pedido_id: '',
+      forma_envio: '',
       itens: []
     }
 
@@ -57,7 +58,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order('804806060')
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -127,6 +128,20 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       cpf = client_data[:cpf_cnpj]
     end
 
+    # assert sending way
+    return attempt.update(error: 'Forma de Envio não localizada', status: :error) unless selected_order.dig(:pedido, :forma_envio).present?
+
+    forma_envio_code = case selected_order[:pedido][:forma_envio]
+                       when 'S'
+                         '39888'
+                       when 'P'
+                         '39870'
+                       when 'E'
+                         '03662'
+                       else
+                         return attempt.update(error: 'Forma de Envio desconhecida', status: :error)
+                       end
+
     # Setting founded valures
     begin
       params[:invoice]          << invoice[:numero]
@@ -145,6 +160,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:email]            << email
       params[:cpf_cnpj]         << cpf.gsub('.', '').gsub('-', '')
       params[:pedido_id]        << selected_order[:pedido][:id]
+      params[:forma_envio]      << forma_envio_code
 
       # Form items array
       order_items = selected_order[:pedido][:itens]
@@ -166,7 +182,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def verify_params(attempt, params)
-    required_params = [:data_pedido, :valor, :nome, :endereco, :bairro, :cep, :cidade, :numero, :uf, :email, :cpf_cnpj, :invoice]
+    required_params = [:data_pedido, :valor, :nome, :endereco, :bairro, :cep, :cidade, :numero, :uf, :email, :cpf_cnpj, :invoice, :forma_envio]
 
     missing_params = required_params.select { |param| params[param] == '' }
 
