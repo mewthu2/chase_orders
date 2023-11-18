@@ -3,7 +3,7 @@
 <div class="row">
   <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
     <div class="page-header">
-      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> Fila -  <span class="badge bg-secondary"> Criação de Pedido no Correios </span></h5>
+      <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Criação de Pedido no Correios </span></h5>
     </div>
     <% if @orders.present? %>
       <div class="container" style="overflow-x:scroll;">
@@ -68,7 +68,7 @@
 <div class="row">
   <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
     <div class="page-header">
-      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> Fila -  <span class="badge bg-primary"> Emissão de Nota Fiscal no Tiny </span></h5>
+      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> <span class="badge bg-success">On</span> Fila -  <span class="badge bg-primary"> Emissão de Nota Fiscal no Tiny </span></h5>
     </div>
     <% if @invoice_emition.present? %>
       <div class="container" style="overflow-x:scroll;">
@@ -125,7 +125,7 @@
 <div class="row">
   <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
     <div class="page-header">
-      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> Fila -  <span class="badge bg-success"> Envio de XML para os Correios </span></h5>
+      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> <span class="badge bg-success">On</span> Fila -  <span class="badge bg-success"> Envio de XML para os Correios </span></h5>
     </div>
     <% if @send_xml.present? %>
       <div class="container" style="overflow-x:scroll;">
@@ -182,7 +182,7 @@
 <div class="row">
   <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
     <div class="page-header">
-      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> Fila -  <span class="badge bg-danger"> Solicitação de código de rastreio do Correios </span></h5>
+      <h5><i class="fa-solid fa-spinner fa-spin text-info h5"></i> <span class="badge bg-success">On</span> Fila -  <span class="badge bg-danger"> Solicitação de código de rastreio do Correios </span></h5>
     </div>
     <% if @get_tracking.present? %>
       <div class="container" style="overflow-x:scroll;">
