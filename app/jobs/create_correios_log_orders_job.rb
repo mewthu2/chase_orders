@@ -1,5 +1,6 @@
 class CreateCorreiosLogOrdersJob < ActiveJob::Base
   def perform(param, order)
+    return unless verify_comercial_hour?
     case param
     when 'all'
       create_correios_log_orders
