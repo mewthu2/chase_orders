@@ -4,7 +4,7 @@ module ApplicationHelper
   end
 
   def verify_comercial_hour?
-    dia_da_semana = Time.now.day
+    dia_da_semana = Time.now.wday
 
     hora_atual = Time.now.hour
     minutos_atual = Time.now.min
