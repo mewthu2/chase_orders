@@ -30,8 +30,7 @@ class DashboardController < ApplicationController
   end
 
   def tracking
-    tracking_number = params[:tracking_number]
-    response = Correios::Orders.get_tracking(tracking_number)
+    response = Correios::Orders.get_tracking(params[:tracking_number])
     if response.code == 200
       @tracking = response['rastreio']
     else
@@ -39,6 +38,18 @@ class DashboardController < ApplicationController
     end
     json_response(@tracking)
   end
+
+  def stock
+    response = Correios::Orders.get_stock(params[:item_code])
+    if response.code == 200
+      @stock = response
+    else
+      @stock = nil
+    end
+    json_response(@stock)
+  end
+
+  def api_correios; end
 
   private
 

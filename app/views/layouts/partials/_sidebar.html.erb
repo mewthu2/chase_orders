@@ -66,6 +66,21 @@
             <% end %>
           </div>
         </div>
+
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-utils" role="button" aria-expanded="false" aria-controls="collase-correios">
+          <i class="far fa-thumbs-up"></i> <span class="name-button">Úteis </span> <i class="fa fa-angle-down arrow"></i>
+        </a>
+
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-utils">
+          <div class="mb-3 col-icon"> 
+            <%= link_to api_correios_dashboard_index_path, class: 'text-light link' do %>
+              <i class="fas fa-clipboard-check text-info link"></i>
+              <span class="name-col">
+                Api Correios
+              </span>
+            <% end %>
+          </div>
+        </div>
       </ul>
     </div>
   </div>

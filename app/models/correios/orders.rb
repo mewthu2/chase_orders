@@ -21,7 +21,7 @@ class Correios::Orders
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
-      servicosAdicionais: params[:forma_envio] == ('39888' || '03662') ? ['019'] : ['099'],
+      servicosAdicionais: params[:forma_envio] == ('39888' || '03662') ? ['019'] : [],
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],
@@ -90,5 +90,15 @@ class Correios::Orders
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
+  end
+
+  def self.get_stock(item_code)
+    authentication = {
+      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'Content-Type' => 'application/json',
+      'Authorization' => "Basic #{Base64.strict_encode64(ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+    }
+
+    HTTParty.get(ENV.fetch('CORREIOS_ESTOQUE') + "#{item_code}/estoque", headers: authentication)
   end
 end
