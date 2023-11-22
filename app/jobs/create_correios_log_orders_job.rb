@@ -58,7 +58,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Create Attempt
     attempt = Attempt.create!(kinds: :create_correios_order,
-                              tiny_order_id: 805524953)
+                              tiny_order_id: order[:pedido][:id])
 
     # Obtain more info from a specific order
     begin
