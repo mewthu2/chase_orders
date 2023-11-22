@@ -1,0 +1,15 @@
+development:
+  url: redis://localhost:6379/1
+  logger: info
+
+test:
+  url: redis://localhost:6379/1
+  logger: false
+
+staging:
+  url: redis://localhost:6379/1
+  logger: false
+
+production:
+  url: ENV["REDIS_URL"]
+  logger: warn

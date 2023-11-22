@@ -1,0 +1,1 @@
+REDIS_CONFIG = YAML.load_file("#{Rails.root.to_s}/config/redis.yml")[Rails.env].deep_symbolize_keys
