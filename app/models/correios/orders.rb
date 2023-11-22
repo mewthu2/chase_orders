@@ -57,8 +57,8 @@ class Correios::Orders
       @request = request
     end
 
-    attempt.update(status: :success, order_correios_id: @request.body[/\/pedidos\/(\d+)/, 1]) if @request.present? && @request.include?('/efulfillment/v1/pedidos/')
-    return if attempt.status == 2
+    attempt.update(message: @request, status: :success, order_correios_id: @request.body[/\/pedidos\/(\d+)/, 1]) if @request.present? && @request.include?('/efulfillment/v1/pedidos/')
+    return if attempt.status == 'success'
 
     if @request.present? && attempt.status != 2
       attempt.update(status_code: @request['statusCode'],

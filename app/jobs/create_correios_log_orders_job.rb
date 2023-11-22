@@ -58,7 +58,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Create Attempt
     attempt = Attempt.create!(kinds: :create_correios_order,
-                              tiny_order_id: order[:pedido][:id])
+                              tiny_order_id: 805524953)
 
     # Obtain more info from a specific order
     begin
@@ -94,6 +94,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     else
       assert_value = selected_order[:pedido][:total_produtos]
     end
+    assert_value = '50.00' if assert_value < '50.00'
 
     # assert ecommerce
     if selected_order[:pedido][:numero_ecommerce].present?
