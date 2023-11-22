@@ -1,4 +1,5 @@
 class CreateCorreiosLogOrdersJob < ActiveJob::Base
+  queue_as :default
   include ApplicationHelper
 
   def perform(param, order)
