@@ -1,5 +1,7 @@
 {
-  "name": "app",
+  "name": "chase_orders",
+  "repository": "https://github.com/mewthu2/chase_orders",
+  "author": "Daniel Correa <mewtwofernandes@gmail.com>",
   "private": "true",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.4.2",
