@@ -1,4 +1,4 @@
-class Shopify::Order
+class Shopify::Orders
   require 'shopify_api'
 
   def self.create_order
