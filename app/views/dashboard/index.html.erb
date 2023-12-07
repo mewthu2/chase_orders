@@ -5,7 +5,7 @@
     <div class="page-header">
       <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Criação de Pedido no Correios </span></h5>
     </div>
-    <% if @orders.present? %>
+    <% if @all_orders.present? %>
       <div class="container" style="overflow-x:scroll;">
         <table class="table table-dark table-hover table-responsive" >
           <thead>
@@ -238,6 +238,27 @@
 
 <script>
   $(document).ready(function() {
-      $('.table').DataTable();
+    $('.table').DataTable({
+      "scroll": false,
+      aLengthMenu: [
+        [10, 25, 50, 100, -1],
+        [10, 25, 50, 100, "Todas"]
+      ],
+      "sDom": '<"d-flex justify-content-between"lf>t<>p',
+      "language": {
+        "lengthMenu": "Exibindo _MENU_ respostas por página",
+        "zeroRecords": "Sem dados",
+        "info": "Exibindo página _PAGE_ de _PAGES_",
+        "infoEmpty": "Sem dados",
+        "infoFiltered": "( Filtrando de _MAX_ registros totais)",
+        "search": "Pesquisar",
+        "paginate": {
+          "first":      "Primeiro",
+          "last":       "Último",
+          "next":       "",
+          "previous":   ""
+        }
+      },
+    });
   });
 </script>

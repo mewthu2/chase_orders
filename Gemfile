@@ -23,9 +23,6 @@ gem 'apexcharts'
 # will_paginate is a pagination library that integrates with Ruby on Rails, Sinatra, Hanami::View, and Sequel.
 gem 'will_paginate-bootstrap4'
 
-# Bundle and transpile JavaScript [https://github.com/rails/jsbundling-rails]
-gem "jsbundling-rails"
-
 # An easy way to keep your users' passwords secure.
 gem 'bcrypt'
 
@@ -99,3 +96,5 @@ group :test do
 end
 
 gem "sidekiq", "~> 7.2"
+
+gem "shopify_api", "~> 13.3"

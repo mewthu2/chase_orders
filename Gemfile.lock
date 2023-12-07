@@ -106,6 +106,7 @@ GEM
     ffi (1.15.5)
     globalid (1.2.1)
       activesupport (>= 6.1)
+    hash_diff (1.1.1)
     http-accept (1.7.0)
     http-cookie (1.0.5)
       domain_name (~> 0.5)
@@ -126,6 +127,7 @@ GEM
       activesupport (>= 5.0.0)
     jsbundling-rails (1.1.1)
       railties (>= 6.0.0)
+    jwt (2.7.1)
     loofah (2.21.3)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
@@ -160,6 +162,8 @@ GEM
       racc (~> 1.4)
     nokogiri (1.15.4-x86_64-linux)
       racc (~> 1.4)
+    oj (3.16.1)
+    openssl (3.2.0)
     orm_adapter (0.5.0)
     psych (5.1.0)
       stringio
@@ -225,15 +229,28 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
+    securerandom (0.3.0)
     selenium-webdriver (4.10.0)
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
+    shopify_api (13.3.1)
+      activesupport
+      concurrent-ruby
+      hash_diff
+      httparty
+      jwt
+      oj
+      openssl
+      securerandom
+      sorbet-runtime
+      zeitwerk (~> 2.5)
     sidekiq (7.2.0)
       concurrent-ruby (< 2)
       connection_pool (>= 2.3.0)
       rack (>= 2.2.4)
       redis-client (>= 0.14.0)
+    sorbet-runtime (0.5.11145)
     sprockets (4.2.1)
       concurrent-ruby (~> 1.0)
       rack (>= 2.2.4, < 4)
@@ -303,6 +320,7 @@ DEPENDENCIES
   rest-client
   sassc-rails
   selenium-webdriver
+  shopify_api (~> 13.3)
   sidekiq (~> 7.2)
   stimulus-rails
   turbo-rails
