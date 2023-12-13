@@ -15,7 +15,7 @@ class DashboardController < ApplicationController
       end
       @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) }
     else
-      @all_orders = orders.deep_symbolize_keys[:pedidos].reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
+      @all_orders = orders.deep_symbolize_keys[:pedidos]&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
     end
 
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
