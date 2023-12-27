@@ -34,8 +34,8 @@ class Correios::Orders
         ddd: fone.match(/\(([^)]+)\)/).present? ? fone.match(/\(([^)]+)\)/)[1] : fone,
         telefone: fone.scan(/[^()]+/)&.last.present? ? fone.scan(/[^()]+/)&.last.strip : fone.scan(/[^()]+/)&.last,
         email: params[:email],
-        cpf: params[:cpf_cnpj],
-        cnpj: ''
+        cpf: params[:cpf_cnpj].length <= 11 ? params[:cpf_cnpj] : '',
+        cnpj: params[:cpf_cnpj].length > 11 ? params[:cpf_cnpj].gsub('/', '') : ''
       },
       itensPedido: params[:itens]
     }
