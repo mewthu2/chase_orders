@@ -10,6 +10,6 @@ module ApplicationHelper
     # minutos_atual = Time.now.min
 
     # dia_da_semana >= 1 && dia_da_semana <= 5 && (hora_atual > 8 || (hora_atual == 8 && minutos_atual >= 0)) && hora_atual < 15
-    false
+    true
   end
 end
