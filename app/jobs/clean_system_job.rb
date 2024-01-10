@@ -1,6 +1,6 @@
 class CleanSystemJob < ActiveJob::Base
   def perform
-    clean_all
+    clean_create_order_attempts
   end
 
   def clean_create_order_attempts
