@@ -11,10 +11,34 @@
         </a>
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-dashboard">
           <div class="mb-3 col-icon"> 
-            <%= link_to dashboard_index_path, class: 'text-light link' do %>
+            <%= link_to dashboard_index_path, class: 'text-light link', target:'_blank' do %>
               <i class="fa-solid fa-binoculars text-info"></i>
               <span class="name-col">
-                Acompanhamento das filas
+                Criação de pedidos
+              </span>
+            <% end %>
+          </div>
+          <div class="mb-3 col-icon"> 
+            <%= link_to invoice_emition_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+              <i class="fa-solid fa-binoculars text-info"></i>
+              <span class="name-col">
+                Emissão de Nota Fiscal no Tiny
+              </span>
+            <% end %>
+          </div>
+          <div class="mb-3 col-icon"> 
+            <%= link_to send_xml_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+              <i class="fa-solid fa-binoculars text-info"></i>
+              <span class="name-col">
+                Envio de XML para os Correios
+              </span>
+            <% end %>
+          </div>
+          <div class="mb-3 col-icon"> 
+            <%= link_to push_tracking_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+              <i class="fa-solid fa-binoculars text-info"></i>
+              <span class="name-col">
+                Solicitação de código de rastreio do Correios
               </span>
             <% end %>
           </div>
