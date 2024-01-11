@@ -17,11 +17,9 @@ class DashboardController < ApplicationController
     else
       @all_orders = orders.deep_symbolize_keys[:pedidos]&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
     end
-    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
-                       .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
-
-   
+    # @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
+    #                    .distinct(:order_correios_id)
+    #                    .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
   end
 
   def tracking
