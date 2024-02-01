@@ -1,4 +1,4 @@
-class CleanDatabaseJob < ActiveJob::Base
+class CreateNoteTiny2Job < ActiveJob::Base
   def perform
     create_note
   end
