@@ -11,59 +11,63 @@
         </a>
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-dashboard">
           <div class="mb-3 col-icon"> 
-            <%= link_to dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+            <%= link_to dashboard_index_path, class: 'text-light link' do %>
               <i class="fa-solid fa-binoculars text-info"></i>
               <span class="name-col">
-                Criação de pedidos
+                Geração de notas fiscais
               </span>
             <% end %>
           </div>
-          <div class="mb-3 col-icon"> 
-            <%= link_to invoice_emition_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
-              <i class="fa-solid fa-binoculars text-info"></i>
-              <span class="name-col">
-                Emissão de Nota Fiscal no Tiny
-              </span>
-            <% end %>
-          </div>
-          <div class="mb-3 col-icon"> 
-            <%= link_to send_xml_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
-              <i class="fa-solid fa-binoculars text-info"></i>
-              <span class="name-col">
-                Envio de XML para os Correios
-              </span>
-            <% end %>
-          </div>
-          <div class="mb-3 col-icon"> 
-            <%= link_to push_tracking_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
-              <i class="fa-solid fa-binoculars text-info"></i>
-              <span class="name-col">
-                Solicitação de código de rastreio do Correios
-              </span>
-            <% end %>
-          </div>
+          <!--
+            <div class="mb-3 col-icon"> 
+              <%= link_to invoice_emition_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+                <i class="fa-solid fa-binoculars text-info"></i>
+                <span class="name-col">
+                  Emissão de Nota Fiscal no Tiny
+                </span>
+              <% end %>
+            </div>
+            <div class="mb-3 col-icon"> 
+              <%= link_to send_xml_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+                <i class="fa-solid fa-binoculars text-info"></i>
+                <span class="name-col">
+                  Envio de XML para os Correios
+                </span>
+              <% end %>
+            </div>
+            <div class="mb-3 col-icon"> 
+              <%= link_to push_tracking_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
+                <i class="fa-solid fa-binoculars text-info"></i>
+                <span class="name-col">
+                  Solicitação de código de rastreio do Correios
+                </span>
+              <% end %>
+            </div>
+          !-->
         </div>
 
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
-          <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
-        </a>
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(status: :success, kinds: :create_correios_order), class: 'text-light link' do %> 
-              <i class="fa-solid fa-file-lines text-info"></i>
-              <span class="name-col"> 
-                Criação de Pedido no Correios 
-              </span>
-            <% end %>
+          <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
+            <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
+          </a>
+        <!--
+          <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+            <div class="mb-3 col-icon"> 
+              <%= link_to attempts_path(status: :success, kinds: :create_correios_order), class: 'text-light link' do %> 
+                <i class="fa-solid fa-file-lines text-info"></i>
+                <span class="name-col"> 
+                  Criação de Pedido no Correios 
+                </span>
+              <% end %>
+            </div>
           </div>
-        </div>
+        !-->
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
           <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(status: :success, kinds: :emission_invoice), class: 'text-light link' do %>
+            <%= link_to attempts_path(kinds: :create_note_tiny2), class: 'text-light link' do %>
               <i class="fa-solid fa-file-invoice text-info link"></i>
               <span class="name-col">
-                Emissão de nota fiscal no Tiny
+                Criação de notas no Tiny 2
               </span>
             <% end %>
           </div>
@@ -71,40 +75,57 @@
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
           <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(status: :success, kinds: :send_xml), class: 'text-light link' do %>
-              <i class="fa-regular fa-file-zipper text-info link"></i>
+            <%= link_to attempts_path(kinds: :emission_invoice_tiny2), class: 'text-light link' do %>
+              <i class="fa-solid fa-file-invoice text-info link"></i>
               <span class="name-col">
-                Envio de XML para o Correios
+                Emissão de notas no Tiny 2
               </span>
             <% end %>
           </div>
         </div>
 
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(status: :success, kinds: :get_tracking), class: 'text-light link' do %>
-              <i class="fa-solid fa-location-dot text-info link"></i>
-              <span class="name-col">
-                Solicitação de código de rastreio do Correios
-              </span>
-            <% end %>
+        <!--
+          <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+            <div class="mb-3 col-icon"> 
+              <%= link_to attempts_path(status: :success, kinds: :send_xml), class: 'text-light link' do %>
+                <i class="fa-regular fa-file-zipper text-info link"></i>
+                <span class="name-col">
+                  Envio de XML para o Correios
+                </span>
+              <% end %>
+            </div>
           </div>
-        </div>
-
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-utils" role="button" aria-expanded="false" aria-controls="collase-correios">
-          <i class="far fa-thumbs-up"></i> <span class="name-button">Úteis </span> <i class="fa fa-angle-down arrow"></i>
-        </a>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-utils">
-          <div class="mb-3 col-icon"> 
-            <%= link_to api_correios_dashboard_index_path, class: 'text-light link' do %>
-              <i class="fas fa-clipboard-check text-info link"></i>
-              <span class="name-col">
-                Api Correios
-              </span>
-            <% end %>
+        !-->
+        
+        <!--
+          <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+            <div class="mb-3 col-icon"> 
+              <%= link_to attempts_path(status: :success, kinds: :get_tracking), class: 'text-light link' do %>
+                <i class="fa-solid fa-location-dot text-info link"></i>
+                <span class="name-col">
+                  Solicitação de código de rastreio do Correios
+                </span>
+              <% end %>
+            </div>
           </div>
-        </div>
+        !-->
+
+        <!--
+          <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-utils" role="button" aria-expanded="false" aria-controls="collase-correios">
+            <i class="far fa-thumbs-up"></i> <span class="name-button">Úteis </span> <i class="fa fa-angle-down arrow"></i>
+          </a>
+
+          <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-utils">
+            <div class="mb-3 col-icon"> 
+              <%= link_to api_correios_dashboard_index_path, class: 'text-light link' do %>
+                <i class="fas fa-clipboard-check text-info link"></i>
+                <span class="name-col">
+                  Api Correios
+                </span>
+              <% end %>
+            </div>
+          </div>
+        !-->
       </ul>
     </div>
   </div>

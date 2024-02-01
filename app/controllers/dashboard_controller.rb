@@ -3,12 +3,12 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def index
-    orders = Tiny::Orders.get_all_orders('preparando_envio')
-    ids_to_reject = Attempt.where(kinds: :create_correios_order, status: :success).pluck(:tiny_order_id).map &:to_json
+    orders = Tiny::Orders.get_all_orders('faturado')
+    ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map &:to_json
     if orders[:numero_paginas].present? && orders[:numero_paginas] != 1 && orders['pedidos'].present?
       @orders = []
       orders[:numero_paginas].times do |page|
-        page_orders = Tiny::Orders.get_orders('preparando_envio', page)
+        page_orders = Tiny::Orders.get_orders('faturado', page)
         page_orders[:pedidos].each do |order|
           @orders << order
         end

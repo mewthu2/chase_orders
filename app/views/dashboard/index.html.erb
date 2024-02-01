@@ -1,9 +1,9 @@
-<% title 'Criação de pedidos' %>
+<% title 'Geração de notas fiscais' %>
 
 <div class="row">
   <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
     <div class="page-header">
-      <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Criação de Pedido no Correios </span></h5>
+      <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Geração de notas fiscais </span></h5>
     </div>
     <% if @all_orders.present? %>
       <div class="card bg-secondary" style="overflow-x:scroll;">
