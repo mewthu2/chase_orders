@@ -1,4 +1,4 @@
-class CleanDatabaseJob < ActiveJob::Base
+class EmitionNoteTiny2Job < ActiveJob::Base
   def perform
     emission_tiny2
   end
