@@ -6,16 +6,15 @@ class CreateNoteTiny2Job < ActiveJob::Base
   def create_note
     orders = Tiny::Orders.get_all_orders('faturado')
 
-    attempt = Attempt.create(kinds: :create_note_tiny2)
-
     orders[:pedidos].each do |order|
       p '2 segundos espera ai'
       sleep(2.seconds)
       p 'Pronto, vamos'
 
-      next if Attempt.find_by(kinds: :create_note_tiny2, tiny_order_id: order[:pedido][:id], status: :success).id.present?
+      next if Attempt.find_by(kinds: :create_note_tiny2, tiny_order_id: order[:pedido][:id], status: :success).present?
 
       puts('Não encontrei nenhuma tentativa sucedidade, bora')
+      attempt = Attempt.create(kinds: :create_note_tiny2)
 
       attempt.update(tiny_order_id: order[:pedido][:id])
 
@@ -33,6 +32,10 @@ class CreateNoteTiny2Job < ActiveJob::Base
 
       attempt.update(kinds: :create_note_tiny2,
                      id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal])
+      if !invoice.present?
+        attempt.update(message: 'Nota fiscal não encontrada')
+        next
+      end
 
       invoice['itens'].each do |item|
         id_produto = item['item']['id_produto']
@@ -79,10 +82,18 @@ class CreateNoteTiny2Job < ActiveJob::Base
       end
 
       retorno = Nokogiri::XML(request.body)
+      if retorno.nil? || retorno.at('id')
+        begin
+        rescue StandardError => e
+          attempt.update(error: e, status: :error)
+        end
+      end
 
-      if (retorno.at('status_processamento').text == '3' && retorno.at('status').text == 'OK') || retorno.at('erro').text == 'Registro em duplicidade - Nota fiscal já cadastrada'
+      attempt.update(message: request.message, requisition: request.body)
+
+      if (retorno&.at('status_processamento')&.text == '3' && retorno&.at('status')&.text == 'OK') || retorno&.at('erro')&.text == 'Registro em duplicidade - Nota fiscal já cadastrada'
         attempt.update(status: :success)
-        attempt.update(id_nota_tiny2: 793946236, status_code: 200, requisition: request.body, message: request.message)
+        attempt.update(id_nota_tiny2: retorno.at('id').text, status_code: 200, requisition: request.body, message: request.message)
       end
     end
   end
@@ -96,7 +107,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
       'hora_entrada_saida' => DateTime.now.strftime('%H:%M'),
       'cliente' => {
         'nome' => 'Chase Brasil Comercio de Artigos Esportidos Ltda. - 01',
-        'tipo_pessoa' => 'Pessoa Jurídica',
+        'tipo_pessoa' => 'J',
         'cpf_cnpj' => '25405327/0001-74',
         'ie' => '0029090240004',
         'rg' => '',
@@ -112,18 +123,18 @@ class CreateNoteTiny2Job < ActiveJob::Base
         'atualizar_cliente' => 'N'
       },
       'endereco_entrega' => {
-        'tipo_pessoa' => '',
-        'cpf_cnpj' => '',
-        'endereco' => '',
-        'numero' => '',
+        'tipo_pessoa' => 'J',
+        'cpf_cnpj' => '25405327/0002-55',
+        'endereco' => 'EST MUNICIPAL VEREADOR LAMARTINE JOSE DE OLIVEIRA',
+        'numero' => '1137',
         'complemento' => '',
-        'bairro' => '',
-        'cep' => '',
-        'cidade' => '',
-        'uf' => '',
+        'bairro' => 'DO RODEIO',
+        'cep' => '37.640-000',
+        'cidade' => 'Extrema',
+        'uf' => 'MG',
         'fone' => '',
-        'nome_destinatario' => '',
-        'ie' => ''
+        'nome_destinatario' => 'Chase Brasil Comercio de Artigos Esportivos Ltda. - 01',
+        'ie' => '0029090240187'
       },
       'itens' => invoice['itens'].map do |item|
         {

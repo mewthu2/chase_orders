@@ -13,9 +13,14 @@ class EmitionNoteTiny2Job < ActiveJob::Base
         request = HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
                                query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
                                         formato: 'string',
-                                        id: att.id_nota_tiny2.to_s })
+                                        id: '794118273' })
       rescue StandardError => e
         attempt.update(error: e, status: :error)
+      end
+      if request.code == 200
+        attempt.update(status: :success)
+      else
+        attempt.update(status: :error, message: 'Algo ocorreu de errado na integração dos dados')
       end
     end
   end

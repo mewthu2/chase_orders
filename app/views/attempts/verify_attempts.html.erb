@@ -7,6 +7,7 @@
         <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
+        <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
         <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
@@ -25,6 +26,7 @@
             </span>
           </td>
           <td class="text-center"><%= attempt.kinds %></td>
+          <td class="text-center"><%= attempt.message %></td>
           <td class="text-center"><%= attempt.status %></td>
           <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
           <td class="text-center"><%= attempt.error %></td>
