@@ -13,7 +13,7 @@ class EmitionNoteTiny2Job < ActiveJob::Base
         request = HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
                                query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
                                         formato: 'string',
-                                        id: '794118273' })
+                                        id: att.id_nota_tiny2 })
       rescue StandardError => e
         attempt.update(error: e, status: :error)
       end
