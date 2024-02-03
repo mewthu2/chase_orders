@@ -4,7 +4,8 @@ class EmitionNoteTiny2Job < ActiveJob::Base
   end
 
   def emission_tiny2
-    Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(kinds: :emission_invoice_tiny2, status: :success).each do |att|
+    ids_to_reject = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id)
+    Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject).each do |att|
       attempt = Attempt.create(kinds: :emission_invoice_tiny2,
                                id_nota_tiny2: att.id_nota_tiny2,
                                id_nota_fiscal: att.id_nota_fiscal,
