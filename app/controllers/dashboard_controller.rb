@@ -17,8 +17,8 @@ class DashboardController < ApplicationController
     else
       @all_orders = orders.deep_symbolize_keys[:pedidos]&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
     end
-
-    @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(kinds: :emission_invoice_tiny2, status: :success)
+    ids_to_reject_emitions = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id)
+    @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject_emitions)
   end
 
   def invoice_emition
