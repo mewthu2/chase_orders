@@ -180,7 +180,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
       'especie_volumes' => invoice['especie_volumes'],
       'marca_volumes' => invoice['marca_volumes'],
       'numero_volumes' => invoice['numero_volumes'],
-      'valor_desconto' => invoice['valor_desconto'],
+      'valor_desconto' => '',
       'valor_frete' => '0',
       'valor_seguro' => invoice['valor_seguro'],
       'valor_despesas' => invoice['valor_outras'],
