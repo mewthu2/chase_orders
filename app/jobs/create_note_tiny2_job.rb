@@ -74,9 +74,9 @@ class CreateNoteTiny2Job < ActiveJob::Base
 
       begin
         request = HTTParty.post(ENV.fetch('INCLUIR_NOTA'),
-                                query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
-                                         formato: 'string',
-                                         nota: nota.to_json })
+                                body: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
+                                        formato: 'string',
+                                        nota: nota.to_json })
       rescue StandardError => e
         attempt.update(error: e, status: :error)
       end
