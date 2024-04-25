@@ -19,6 +19,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :products
+
   resources :attempts, only: [:index] do
     collection do
       get :reprocess

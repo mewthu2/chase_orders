@@ -1,13 +1,16 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.1.3"
+ruby "3.2.2"
 
 # Use mysql as the database for Active Record
-gem 'mysql2', require: false
+gem 'mysql2', '~> 0.5.5'
+
+# This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
+gem "shopify_api", "~> 13.3"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.0.6"
+gem "rails", "~> 7.1.3"
 
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'
@@ -15,6 +18,10 @@ gem 'rest-client'
 # Ruby internationalization and localization (i18n) solution.
 gem 'i18n'
 
+# Simple, efficient background processing for Ruby.
+gem "sidekiq", "~> 7.2"
+
+# Makes http fun again! Ain't no party like a httparty, because a httparty don't stop.
 gem 'httparty'
 
 # ApexCharts.RB is a ruby charting library that's going to give your ruby app beautiful, interactive, and responsive charts powered by ApexCharts.JS
@@ -33,7 +40,7 @@ gem 'devise'
 gem 'sassc-rails'
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem 'puma', '~> 5.0'
+gem 'puma', '~> 6.0'
 
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -94,7 +101,3 @@ group :test do
   gem "selenium-webdriver"
   gem "webdrivers"
 end
-
-gem "sidekiq", "~> 7.2"
-
-gem "shopify_api", "~> 13.3"

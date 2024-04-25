@@ -18,15 +18,7 @@
               </span>
             <% end %>
           </div>
-          <!--
-            <div class="mb-3 col-icon"> 
-              <%= link_to invoice_emition_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
-                <i class="fa-solid fa-binoculars text-info"></i>
-                <span class="name-col">
-                  Emissão de Nota Fiscal no Tiny
-                </span>
-              <% end %>
-            </div>
+           <!--
             <div class="mb-3 col-icon"> 
               <%= link_to send_xml_dashboard_index_path, class: 'text-light link', target:'_blank' do %>
                 <i class="fa-solid fa-binoculars text-info"></i>
@@ -45,10 +37,24 @@
             </div>
           !-->
         </div>
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-shopify" role="button" aria-expanded="false" aria-controls="collase-dashboard">
+          <i class="justify-content-center fa-regular fa-concierge-bell"></i> <span class="name-button"> Shopify </span><i class="fa fa-angle-down arrow"></i>
+        </a>
 
-          <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
-            <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
-          </a>
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-shopify">
+          <div class="mb-3 col-icon"> 
+            <%= link_to products_path, class: 'text-light link', target:'_blank' do %>
+              <i class="fa-solid fa-binoculars text-info"></i>
+              <span class="name-col">
+                Produtos Shopify
+              </span>
+            <% end %>
+          </div>
+        </div>
+
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-correios">
+          <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
+        </a>
         <!--
           <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
             <div class="mb-3 col-icon"> 

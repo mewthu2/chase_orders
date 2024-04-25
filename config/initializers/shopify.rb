@@ -1,7 +1,6 @@
 ShopifyAPI::Context.setup(
   api_key: ENV.fetch('SHOPIFY_API_KEY'),
   api_secret_key: ENV.fetch('SHOPIFY_API_SECRET'),
-  host: "https://chasebrasil.myshopify.com",
   scope: "read_orders,read_products",
   is_embedded: true,
   api_version: "2023-10",

@@ -10,8 +10,8 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_02_01_195610) do
-  create_table "attempts", charset: "utf8mb3", force: :cascade do |t|
+ActiveRecord::Schema[7.0].define(version: 2024_04_24_052211) do
+  create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
     t.text "requisition"
@@ -35,7 +35,29 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_01_195610) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "users", charset: "utf8mb3", force: :cascade do |t|
+  create_table "product_updates", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.string "modify_responsible"
+    t.string "field"
+    t.string "original_value"
+    t.string "modified_value"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_product_updates_on_product_id"
+  end
+
+  create_table "products", charset: "utf8mb3", force: :cascade do |t|
+    t.string "sku"
+    t.string "tiny_product_id"
+    t.string "shopify_product_id"
+    t.string "shopify_inventory_item_id"
+    t.string "shopify_product_name"
+    t.string "cost"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "users", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.string "name"
     t.string "phone"
     t.string "email", default: "", null: false
@@ -61,4 +83,5 @@ ActiveRecord::Schema[7.0].define(version: 2024_02_01_195610) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
+  add_foreign_key "product_updates", "products"
 end

@@ -61,13 +61,6 @@ class DashboardController < ApplicationController
 
   def api_correios; end
 
-  def shopify_list
-    session = ShopifyAPI::Auth::Session.new(
-      shop: 'chasebrasil-store.myshopify.com',
-      access_token: ENV.fetch('SHOPIFY_TOKEN'),
-    )
-  end
-
   private
 
   def load_form_references; end

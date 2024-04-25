@@ -32,7 +32,7 @@ class Correios::Orders
         cidade: params[:cidade],
         uf: params[:uf],
         ddd: fone.match(/\(([^)]+)\)/).present? ? fone.match(/\(([^)]+)\)/)[1] : fone,
-        telefone: fone.scan(/[^()]+/)&.last.present? ? fone.scan(/[^()]+/)&.last.strip : fone.scan(/[^()]+/)&.last,
+        telefone: fone.scan(/[^()]+/)&.last.present? ? fone.scan(/[^()]+/)&.last&.strip : fone.scan(/[^()]+/)&.last,
         email: params[:email],
         cpf: params[:cpf_cnpj].length <= 11 ? params[:cpf_cnpj] : '',
         cnpj: params[:cpf_cnpj].length > 11 ? params[:cpf_cnpj].gsub('/', '') : ''

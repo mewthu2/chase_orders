@@ -1,0 +1,71 @@
+<div class="row">
+  <% title 'Produtos Shopify' %>
+</div>
+
+<%= form_tag(products_path, method: 'get') do %>
+  <div class="card mb-lg advanced-search-form bg-dark text-light" id="filters">
+    <div class="card-header text-info">
+      Pesquisa avançada
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-sm-12">
+          <%= label_tag :search, 'Procurar' %>
+          <%= text_field_tag :search, params[:search], class: 'form-control', placeholder: 'Pesquise por sku, id, custo ou id do produto no tiny' %>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <%= button_tag class: 'btn btn-secondary text-info', name: '' do %><i class="fa fa-search text-info"></i> Pesquisar<% end %>
+    </div>
+  </div>
+<% end %>
+
+<div class="row">
+  <div class="col-12">
+    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="products-table">
+      <thead>
+        <tr>
+          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
+          <th class="text-center"><%= Product.human_attribute_name :id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :tiny_product_id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :shopify_product_id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :shopify_inventory_item_id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :shopify_product_name %></th>
+          <th class="text-center"><%= Product.human_attribute_name :cost %></th>
+          <th class="text-center"><%= Product.human_attribute_name :updated_at %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @products.each do |product| %>
+          <tr>
+            <td>
+        
+            </td>
+            <td class="text-center"><%= product.id %></td>
+            <td class="text-center">
+              <%= product.tiny_product_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_PRODUCT_URL')%><%= product.tiny_product_id %>&deposito=true', '_blank');">
+                Ver no Tiny
+              </span>
+            </td>
+            <td class="text-center"><%= product.shopify_product_id.present? ? product.shopify_product_id : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= product.shopify_inventory_item_id.present? ? product.shopify_inventory_item_id : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= product.shopify_product_name.present? ? product.shopify_product_name : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= product.cost %></td>
+            <td class="text-center"><%= product.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="12">
+            <%= page_entries_info @attempts %>
+          </th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>

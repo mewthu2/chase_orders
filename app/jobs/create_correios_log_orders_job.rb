@@ -177,7 +177,6 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i, params:)
 
       verify_params(attempt, params)
-
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
