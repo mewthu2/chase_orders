@@ -331,7 +331,7 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   jsbundling-rails
-  mysql2 (~> 0.5.5)
+  mysql2
   nokogiri
   puma (~> 6.0)
   rails (~> 7.1.3)

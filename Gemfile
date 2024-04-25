@@ -4,7 +4,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby "3.2.2"
 
 # Use mysql as the database for Active Record
-gem 'mysql2', '~> 0.5.5'
+gem 'mysql2'
 
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
 gem "shopify_api", "~> 13.3"
