@@ -55,6 +55,7 @@ class Tiny::Products
       products.each do |tiny_product_data|
         next if tiny_product_data['produto']['codigo'] == tiny_product_data['produto']['nome']
         Product.find_or_create_by(sku: tiny_product_data['produto']['codigo'],
+                                  shopify_product_name: tiny_product_data['produto']['nome'],
                                   tiny_product_id: tiny_product_data['produto']['id'])
       end
     end
