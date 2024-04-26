@@ -12,7 +12,7 @@ class ProductIntegrationJob < ActiveJob::Base
 
   def update_product_cost_on_tiny
     Product.each do |product|
-      tiny_product = Tiny::Products.find_product(product.tiny_product_id)
+      tiny_product = Tiny::Products.find_product("739566362")
     end
   end
 end
