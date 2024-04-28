@@ -61,3 +61,6 @@ yarn-debug.log*
 
 # Used by RuboCop. Remote config files pulled in from inherit_from directive.
 # .rubocop-https?--*
+
+# Ignore node_modules
+/node_modules/
