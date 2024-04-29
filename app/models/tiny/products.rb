@@ -30,12 +30,15 @@ class Tiny::Products
       response.with_indifferent_access[:retorno]
     end
 
-    def update_product(product)
-      response = JSON.parse(HTTParty.get(ENV.fetch('ALTERA_PRODUTO'),
-                                         query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
-                                                  formato: 'json',
-                                                  produto: product }))
-      response.with_indifferent_access[:retorno]
+    def update_product(products)
+      HTTParty.post(ENV.fetch('ALTERAR_PRODUTO'), body: {
+                                token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                formato: 'json',
+                                produto: products.to_json
+                              }, headers: {
+                                'Cookie' => '__cf_bm=b7051RRfkZC9AV_x5yhIR1YwwFKbCBPhyfHyy6UkYiA-1714414033-1.0.1.1-yM8S6uVPTUHPbqgBucg.8Ar9U5shYRd5zAGggCvd88XerAZtCE9ti1Whloyh5bUX2DNyQQN92b7G1gORyv2Dmw',
+                                'Content-Type' => 'application/x-www-form-urlencoded'
+                              })
     end
 
     private
