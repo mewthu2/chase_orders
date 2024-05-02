@@ -1,0 +1,97 @@
+<%= form_for(product, html: { autocomplete: 'off' }, data: { disabled: read_only }) do |form| %>
+  <div class="container bg-dark p-3">
+    <div class="page-header">
+      <h4> Editar Produto <small class="text-light"> Dados sobre o produto</small></h4>
+    </div>
+
+    <div class="row">
+      <%= form.label :shopify_product_name, class: 'col-2 col-form-label text-right text-primary' %>
+      <div class="col-12">
+        <%= form.object.shopify_product_name&.html_safe %>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-3">
+        <%= form.label :sku %>
+        <%= form.text_field :sku, class: 'form-control' %>
+      </div>
+      <div class="col-3">
+        <%= form.label 'Tiny ID' %>
+        <%= form.text_field :tiny_product_id, class: 'form-control' %>
+      </div>
+      <div class="col-3">
+        <%= form.label 'Shopify ID' %>      
+        <%= form.text_field :shopify_product_id, class: 'form-control' %>
+      </div>
+      <div class="col-3">
+        <%= form.label 'inventory_id' %>
+        <%= form.text_field :shopify_inventory_item_id, class: 'form-control' %>
+      </div>
+    </div>
+    <div class="page-header">
+      <h4> Sincronização Tiny <small class="text-light"> Atributos que podem ser atualizados</small></h4>
+    </div>
+
+    <div class="row">
+      <div class="col-4">
+        <%= form.label :cost %>
+        <%= form.text_field :cost, class: 'form-control' %>
+      </div>
+    </div>
+  </div>
+
+  <div class="container bg-light p-3">
+    <div class="page-header text-dark">
+      <h4> Produto no tiny <small class="text-muted"> Dados sobre o produto</small></h4>
+
+      <%= JSON.pretty_generate(@tiny_product).html_safe %>
+    </div>
+  </div>
+
+  <div class="container bg-dark mt-2 p-2">
+    <div class="page-header">
+      <h4> Histórico de atualizações <small class="text-light"> Atributos que foram atualizados no Tiny pelo sistema</small></h4>
+    </div>
+
+    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="attemps-table">
+      <thead>
+        <tr>
+          <th class="text-center"><%= 'ID' %></th>
+          <th class="text-center"><%= 'Produto no Tiny' %></th>
+          <th class="text-center"><%= 'Usuário' %></th>
+          <th class="text-center"><%= ProductUpdate.human_attribute_name :field %></th>
+          <th class="text-center"><%= ProductUpdate.human_attribute_name :original_value %></th>
+          <th class="text-center"><%= ProductUpdate.human_attribute_name :modified_value %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% form.object.product_updates.each do |product_update| %>
+          <tr>
+            <td class="text-center"><%= product_update.id %></td>
+            <td class="text-center">
+              <%= product_update.product.tiny_product_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= product_update.product.tiny_product_id %>', '_blank');">
+                Ver no Tiny
+              </span>
+            </td>
+            <td class="text-center"><%= product_update.user.name %></td>
+            <td class="text-center"><%= product_update.field %></td>
+            <td class="text-center"><%= product_update.original_value %></td>
+            <td class="text-center"><%= product_update.modified_value %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+      </tfoot>
+    </table>
+  </div>
+
+
+  <div class="panel-buttons bg-dark">
+    <%= link_to products_path, class: 'btn btn-secondary btn-lg' do %><i class="fa fa-undo"></i> Voltar <% end %>
+    <% unless read_only %>
+      <%= form.button class: 'btn btn-primary btn-lg', data: { disable_with: 'Salvando...' } do %><i class="fa fa-check"></i> Salvar <% end %>
+    <% end %>
+  </div>
+<% end %>

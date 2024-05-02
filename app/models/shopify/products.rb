@@ -1,7 +1,6 @@
 class Shopify::Products
   require 'shopify_api'
-  ## To do após validar com Henrique a questão de produtos que estão sem sku (com nome)
-  ## falta criar o script em si de alteração de parametros dos produtos no tiny, restante está testado e ok
+
   class << self
     def list_all_products(function)
       response = client_shopify_rest.get(path: 'products', query: { limit: 150 })
@@ -59,6 +58,9 @@ class Shopify::Products
     def find_or_create_product(inventory_items)
       inventory_items.each do |shopify_inventory_item_data|
         product = Product.find_by(sku: shopify_inventory_item_data['sku'])
+
+        next unless product.present?
+
         product.update(shopify_inventory_item_id: shopify_inventory_item_data['id'],
                        cost: shopify_inventory_item_data['cost'])
       end

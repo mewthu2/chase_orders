@@ -19,7 +19,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :products
+  resources :products do
+    collection do
+      get :product_integration
+    end
+  end
 
   resources :attempts, only: [:index] do
     collection do

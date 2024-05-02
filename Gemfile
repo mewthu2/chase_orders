@@ -27,6 +27,9 @@ gem 'httparty'
 # ApexCharts.RB is a ruby charting library that's going to give your ruby app beautiful, interactive, and responsive charts powered by ApexCharts.JS
 gem 'apexcharts'
 
+# Cocoon makes it easier to handle nested forms.
+gem 'cocoon'
+
 # will_paginate is a pagination library that integrates with Ruby on Rails, Sinatra, Hanami::View, and Sequel.
 gem 'will_paginate-bootstrap4'
 
