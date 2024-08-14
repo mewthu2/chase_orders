@@ -41,7 +41,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
         id_produto = item['item']['id_produto']
 
         obter_produto = HTTParty.get(ENV.fetch('OBTER_PRODUTO'),
-                                     query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                     query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                                               formato: 'string',
                                               id: id_produto })
         doc = Nokogiri::XML(obter_produto)
@@ -106,25 +106,11 @@ class CreateNoteTiny2Job < ActiveJob::Base
       'data_entrada_saida' => DateTime.now.strftime('%d/%m/%Y'),
       'hora_entrada_saida' => DateTime.now.strftime('%H:%M'),
       'cliente' => {
-        'nome' => 'Chase Brasil Comercio de Artigos Esportidos Ltda. - 01',
+        'nome' => 'Chase Brasil Comercio de Artigos Esportivos Ltda. - 03',
         'tipo_pessoa' => 'J',
-        'cpf_cnpj' => '25405327/0001-74',
-        'ie' => '0029090240004',
+        'cpf_cnpj' => '25405327/0003-36',
+        'ie' => '29090240268',
         'rg' => '',
-        'endereco' => 'Rua Juvenal Meio Senra',
-        'numero' => '355',
-        'complemento' => '',
-        'bairro' => 'Belvedere',
-        'cep' => '30.320-660',
-        'cidade' => 'Belo Horizonte',
-        'uf' => 'MG',
-        'fone' => '',
-        'email' => 'site@chasebrasil.com',
-        'atualizar_cliente' => 'N'
-      },
-      'endereco_entrega' => {
-        'tipo_pessoa' => 'J',
-        'cpf_cnpj' => '25405327/0002-55',
         'endereco' => 'EST MUNICIPAL VEREADOR LAMARTINE JOSE DE OLIVEIRA',
         'numero' => '1137',
         'complemento' => '',
@@ -133,8 +119,22 @@ class CreateNoteTiny2Job < ActiveJob::Base
         'cidade' => 'Extrema',
         'uf' => 'MG',
         'fone' => '',
-        'nome_destinatario' => 'Chase Brasil Comercio de Artigos Esportivos Ltda. - 01',
-        'ie' => '0029090240187'
+        'email' => 'site@chasebrasil.com',
+        'atualizar_cliente' => 'N'
+      },
+      'endereco_entrega' => {
+        'tipo_pessoa' => 'J',
+        'cpf_cnpj' => '25405327/0003-36',
+        'endereco' => 'EST MUNICIPAL VEREADOR LAMARTINE JOSE DE OLIVEIRA',
+        'numero' => '1137',
+        'complemento' => '',
+        'bairro' => 'DO RODEIO',
+        'cep' => '37.640-000',
+        'cidade' => 'Extrema',
+        'uf' => 'MG',
+        'fone' => '',
+        'nome_destinatario' => 'Chase Brasil Comercio de Artigos Esportivos Ltda. - 03',
+        'ie' => '29090240268'
       },
       'itens' => invoice['itens'].map do |item|
         {

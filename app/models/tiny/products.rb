@@ -24,7 +24,7 @@ class Tiny::Products
 
     def find_product(product_id)
       response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PRODUTO'),
-                                         query: { token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                         query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                                                   formato: 'json',
                                                   id: product_id }))
       response.with_indifferent_access[:retorno]
@@ -32,7 +32,7 @@ class Tiny::Products
 
     def update_product(products)
       HTTParty.post(ENV.fetch('ALTERAR_PRODUTO'), body: {
-                                token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                                 formato: 'json',
                                 produto: products.to_json
                               }, headers: {
@@ -46,7 +46,7 @@ class Tiny::Products
     def get_products_response(situacao, pagina = nil)
       response = JSON.parse(HTTParty.get(ENV.fetch('PRODUTOS_PESQUISA'),
                                          query: {
-                                          token: ENV.fetch('TOKEN_TINY_PRODUCTION'),
+                                          token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                                           formato: 'json',
                                           situacao:,
                                           pagina:
