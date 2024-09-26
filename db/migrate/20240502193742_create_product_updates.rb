@@ -1,5 +1,5 @@
 class CreateProductUpdates < ActiveRecord::Migration[7.1]
-  def change
+  def up
     create_table :product_updates do |t|
       t.references :product, null: false, foreign_key: true, index: true
       t.references :user, null: false, foreign_key: true, index: true
@@ -10,5 +10,9 @@ class CreateProductUpdates < ActiveRecord::Migration[7.1]
       t.string :json_return
       t.timestamps
     end
+  end
+
+  def down
+    drop_table :product_updates
   end
 end

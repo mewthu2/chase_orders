@@ -1,6 +1,7 @@
 class ProductsController < ApplicationController
   before_action :load_form_references, only: [:index]
   before_action :set_product, only: %i[edit update]
+  skip_before_action :authenticate_user!, only: [:download]  # Ignora autenticação apenas para download
 
   def index
     @products = Product.search(params[:search])
@@ -20,13 +21,24 @@ class ProductsController < ApplicationController
     end
   end
 
+  def download
+    origin = params[:origin]
+    filename = "planilha_estoque_#{origin}.xlsx"
+    file_path = Rails.root.join('app', 'assets', 'planilhas', origin, filename)
+
+    if File.exist?(file_path)
+      send_file(file_path, filename:, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    else
+      render plain: 'Arquivo não encontrado', status: :not_found
+    end
+  end
+
   def product_integration
     redirect_to products_path, notice: 'Informações sincronizadas com sucesso.' if ProductIntegrationJob.perform_now('update_product_cost', Product.find(params[:product_id]), current_user)
   end
 
   private
 
-  # Set product by ID
   def set_product
     @product = Product.find(params[:id])
     @tiny_product = Tiny::Products.find_product(@product.tiny_product_id)
@@ -34,7 +46,6 @@ class ProductsController < ApplicationController
 
   def load_form_references; end
 
-  # It allows only useful parameters.
   def product_params
     params.require(:product)
           .permit(:sku,
@@ -42,6 +53,8 @@ class ProductsController < ApplicationController
                   :shopify_product_id,
                   :shopify_inventory_item_id,
                   :shopify_product_name,
+                  :tiny_lagoa_seca_product_id,
+                  :tiny_bh_shopping_id,
                   :cost)
   end
 end

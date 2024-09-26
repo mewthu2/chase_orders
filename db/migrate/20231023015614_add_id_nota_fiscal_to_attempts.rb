@@ -1,5 +1,9 @@
 class AddIdNotaFiscalToAttempts < ActiveRecord::Migration[7.0]
-  def change
-    add_column :attempts, :id_nota_fiscal, :integer, after: :order_correios_id
+  def up
+    add_column :attempts, :id_nota_fiscal, :integer
+  end
+
+  def down
+    remove_column :attempts, :id_nota_fiscal
   end
 end

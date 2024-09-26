@@ -13,6 +13,9 @@ class Shopify::Products
           break unless next_page_info
 
           response = client_shopify_rest.get(path: 'products', query: { limit: 150, page_info: next_page_info })
+
+          update_or_create_by_product_data(response.body['products'])
+
           process_inventory_items(response)
         end
       end
@@ -30,14 +33,14 @@ class Shopify::Products
       end
 
       inventory_items_response = search_inventory_item_info(inventory_item_ids.join(','))
-      find_or_create_product(inventory_items_response.body['inventory_items'])
+      update_or_create_by_inventory_data(inventory_items_response.body['inventory_items'])
 
       loop do
         next_page_info = inventory_items_response.next_page_info
         break unless next_page_info
 
         inventory_items_response = client_shopify_rest.get(path: 'inventory_items', query: { page_info: next_page_info })
-        find_or_create_product(inventory_items_response.body['inventory_items'])
+        update_or_create_by_inventory_data(inventory_items_response.body['inventory_items'])
       end
     end
 
@@ -55,14 +58,41 @@ class Shopify::Products
       ShopifyAPI::Clients::Rest::Admin.new(session:)
     end
 
-    def find_or_create_product(inventory_items)
-      inventory_items.each do |shopify_inventory_item_data|
-        product = Product.find_by(sku: shopify_inventory_item_data['sku'])
+    def update_or_create_by_product_data(products)
+      products.each do |shopify_product_data|
+        shopify_product_data['variants'].each do |variant_data|
+          product = Product.find_or_initialize_by(sku: variant_data['sku'])
 
-        next unless product.present?
+          product.assign_attributes(
+            shopify_product_name: shopify_product_data['title'],
+            shopify_product_id: shopify_product_data['id'],
+            cost: variant_data['cost'],
+            sku: variant_data['sku'],
+            price: variant_data['price'],
+            option1: variant_data['option1'],
+            option2: variant_data['option2'],
+            option3: variant_data['option3'],
+            compare_at_price: variant_data['compare_at_price'],
+            vendor: shopify_product_data['vendor'],
+            tags: shopify_product_data['tags'],
+            created_at: variant_data['created_at'],
+            updated_at: variant_data['updated_at']
+          )
+
+          product.save!
+        end
+      end
+    end
+
+    def update_or_create_by_inventory_data(inventory_items)
+      inventory_items.each do |shopify_inventory_item_data|
+        product = Product.find_or_initialize_by(sku: shopify_inventory_item_data['sku'])
 
         product.update(shopify_inventory_item_id: shopify_inventory_item_data['id'],
-                       cost: shopify_inventory_item_data['cost'])
+                       cost: shopify_inventory_item_data['cost'],
+                       sku: shopify_inventory_item_data['sku'],
+                       created_at: shopify_inventory_item_data['created_at'],
+                       updated_at: shopify_inventory_item_data['updated_at'])
       end
     end
   end

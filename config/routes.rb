@@ -22,6 +22,8 @@ Rails.application.routes.draw do
   resources :products do
     collection do
       get :product_integration
+  
+      get '/planilhas/:origin/:filename', to: 'products#download', as: :download_planilha
     end
   end
 

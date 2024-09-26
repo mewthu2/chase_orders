@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_05_02_193742) do
+ActiveRecord::Schema[7.2].define(version: 2024_09_25_200322) do
   create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -51,11 +51,21 @@ ActiveRecord::Schema[7.1].define(version: 2024_05_02_193742) do
 
   create_table "products", charset: "utf8mb3", force: :cascade do |t|
     t.string "sku"
-    t.string "tiny_product_id"
+    t.string "tiny_lagoa_seca_product_id"
+    t.integer "tiny_bh_shopping_id"
     t.string "shopify_product_id"
     t.string "shopify_inventory_item_id"
     t.string "shopify_product_name"
     t.string "cost"
+    t.string "price"
+    t.string "compare_at_price"
+    t.string "vendor"
+    t.string "option1"
+    t.string "option2"
+    t.string "option3"
+    t.string "stock_lagoa_seca"
+    t.string "stock_bh_shopping"
+    t.string "tags"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

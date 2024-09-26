@@ -3,6 +3,9 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby "3.2.2"
 
+# This gem supports operating on xlsx files (Open XML format). While it is capable of properly parsing the entire OOXML structure
+gem 'rubyXL'
+
 # Use mysql as the database for Active Record
 gem 'mysql2'
 

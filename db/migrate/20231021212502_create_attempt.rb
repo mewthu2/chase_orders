@@ -1,5 +1,5 @@
 class CreateAttempt < ActiveRecord::Migration[7.0]
-  def change
+  def up
     create_table :attempts do |t|
       t.bigint :kinds
       t.bigint :status
@@ -16,5 +16,9 @@ class CreateAttempt < ActiveRecord::Migration[7.0]
       t.integer :tiny_order_id
       t.timestamps
     end
+  end
+
+  def down
+    drop_table :attempts
   end
 end

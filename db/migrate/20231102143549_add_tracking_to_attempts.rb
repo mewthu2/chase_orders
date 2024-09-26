@@ -1,5 +1,9 @@
 class AddTrackingToAttempts < ActiveRecord::Migration[7.0]
-  def change
-    add_column :attempts, :tracking, :string, after: :id_nota_fiscal
+  def up
+    add_column :attempts, :tracking, :string
+  end
+
+  def down
+    remove_column :attempts, :tracking
   end
 end
