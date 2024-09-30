@@ -22,9 +22,10 @@ class ProductsController < ApplicationController
   end
 
   def download
+    type = params[:type]
     origin = params[:origin]
-    filename = "planilha_estoque_#{origin}.xlsx"
-    file_path = Rails.root.join('app', 'assets', 'planilhas', origin, filename)
+    filename = "planilha_#{type}_#{origin}.xlsx"
+    file_path = Rails.root.join('app', 'assets', 'planilhas', type, origin, filename)
 
     if File.exist?(file_path)
       send_file(file_path, filename:, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

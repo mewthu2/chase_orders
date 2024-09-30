@@ -1,13 +1,18 @@
 class MakeSpreadsheetJob < ApplicationJob
   queue_as :default
 
-  def perform(origin)
-    generate_xlsx(origin)
+  def perform(origin, kind)
+    case kind
+    when 'product'
+      generate_product_xlsx(origin)
+    when 'order'
+      generate_order_xlsx(origin)
+    end
   end
 
   private
 
-  def generate_xlsx(origin)
+  def generate_product_xlsx(origin)
     workbook = RubyXL::Workbook.new
     tab = workbook.worksheets[0]
     tab.sheet_name = "Planilha estoque - (#{origin})"
@@ -50,11 +55,33 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 15, product.tags)
     end
 
-    clear_folder_and_save_xlsx(workbook, origin)
+    clear_folder_and_save_xlsx(workbook, origin, 'product')
   end
 
-  def clear_folder_and_save_xlsx(workbook, origin)
-    folder_path = Rails.root.join('app', 'assets', 'planilhas', origin)
+  def generate_order_xlsx(origin)
+    workbook = RubyXL::Workbook.new
+    tab = workbook.worksheets[0]
+    tab.sheet_name = "Planilha Pedidos - (#{origin})"
+
+    header = ['order_number', 'date', 'price', 'quantity', 'SKU', 'canceled']
+    header.each_with_index { |data, col| tab.add_cell(0, col, data) }
+
+    OrderItem.all.each_with_index do |order_item, row|
+      order = order_item.order
+
+      tab.add_cell(row + 1, 0, order.id)
+      tab.add_cell(row + 1, 1, order_item.created_at.strftime('%d/%m/%Y'))
+      tab.add_cell(row + 1, 2, order_item.price)
+      tab.add_cell(row + 1, 3, order_item.quantity)
+      tab.add_cell(row + 1, 4, order_item.sku)
+      tab.add_cell(row + 1, 5, order_item.canceled? ? 'Sim' : 'Não')
+    end
+
+    clear_folder_and_save_xlsx(workbook, origin, 'order')
+  end
+
+  def clear_folder_and_save_xlsx(workbook, origin, type)
+    folder_path = Rails.root.join('app', 'assets', 'planilhas', type, origin)
 
     FileUtils.mkdir_p(folder_path) unless File.directory?(folder_path)
 
@@ -63,7 +90,8 @@ class MakeSpreadsheetJob < ApplicationJob
       File.delete(file_path) if file != '.' && file != '..'
     end
 
-    file_name = "planilha_estoque_#{origin}.xlsx"
+    file_name = "planilha_#{type}_#{origin}.xlsx"
+
     file_path = File.join(folder_path, file_name)
 
     workbook.write(file_path)

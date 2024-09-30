@@ -14,7 +14,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_correios_log_orders
     page = 1
-    orders = Tiny::Orders.get_orders('preparando_envio', page)
+    orders = Tiny::Orders.get_orders_response(ENV.fetch('TOKEN_TINY3_PRODUCTION'), 'preparando_envio', page)
 
     while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
       orders[:pedidos].each do |order|
@@ -22,7 +22,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       end
 
       page += 1
-      orders = Tiny::Orders.get_orders('preparando_envio', page)
+      orders = Tiny::Orders.get_orders(ENV.fetch('TOKEN_TINY3_PRODUCTION'), 'preparando_envio', page)
     end
   end
 
@@ -62,7 +62,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), order[:pedido][:id])
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end

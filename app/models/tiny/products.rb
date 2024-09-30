@@ -102,10 +102,10 @@ class Tiny::Products
     def find_or_create_product(products, kind)
       products.each do |tiny_product_data|
         next unless tiny_product_data.key?('produto')
-    
+
         product_data = tiny_product_data['produto']
         next if product_data['codigo'] == product_data['nome']
-    
+
         product = Product.find_or_create_by(sku: product_data['codigo'])
         assign_tiny_product_id(product, kind, product_data['id'])
       end

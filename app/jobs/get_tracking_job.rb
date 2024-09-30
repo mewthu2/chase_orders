@@ -28,7 +28,7 @@ class GetTrackingJob < ActiveJob::Base
 
     # Get order
     begin
-      order = Tiny::Orders.obtain_order(att.tiny_order_id)
+      order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), att.tiny_order_id)
     rescue StandardError => e
       attempt.update(error: e, status: :error, message: 'Erro na solicitação de pedido ao Tiny')
     end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_09_25_200322) do
+ActiveRecord::Schema[7.2].define(version: 2024_09_29_203726) do
   create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -31,6 +31,25 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_25_200322) do
     t.integer "id_nota_fiscal"
     t.integer "id_nota_tiny2"
     t.string "tracking"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "order_items", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "order_id", null: false
+    t.string "price"
+    t.integer "quantity"
+    t.integer "product_id"
+    t.string "sku"
+    t.boolean "canceled", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+  end
+
+  create_table "orders", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "kinds"
+    t.integer "tiny_order_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -96,6 +115,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_25_200322) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
+  add_foreign_key "order_items", "orders"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
 end

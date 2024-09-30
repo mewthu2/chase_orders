@@ -4,7 +4,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
   end
 
   def create_note
-    orders = Tiny::Orders.get_all_orders('faturado')
+    orders = Tiny::Orders.get_all_orders(ENV.fetch('TOKEN_TINY3_PRODUCTION'), 'faturado')
 
     orders[:pedidos].each do |order|
       p '2 segundos espera ai'
@@ -19,7 +19,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
       attempt.update(tiny_order_id: order[:pedido][:id])
 
       begin
-        selected_order = Tiny::Orders.obtain_order(order[:pedido][:id])
+        selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), order[:pedido][:id])
       rescue StandardError => e
         attempt.update(error: e, status: :error)
       end

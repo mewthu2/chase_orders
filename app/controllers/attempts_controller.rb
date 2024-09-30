@@ -20,7 +20,7 @@ class AttemptsController < ApplicationController
     begin
       case attempt.kinds
       when 'create_correios_order'
-        order = Tiny::Orders.obtain_order(attempt.tiny_order_id)
+        order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), attempt.tiny_order_id)
         CreateCorreiosLogOrdersJob.perform_now('one', order)
       when 'send_xml'
         SendXmlCorreiosLogJob.perform_now('one', attempt)

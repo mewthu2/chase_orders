@@ -1,53 +1,71 @@
 class Tiny::Orders
   class << self
-    def get_orders(situacao, page)
-      # Descrição	          Código
-      # Em aberto	          aberto
-      # Aprovado	          aprovado
-      # Preparando envio	  preparando_envio
-      # Faturado (atendido)	faturado
-      # Pronto para envio	  pronto_envio
-      # Enviado	            enviado
-      # Entregue	          entregue
-      # Não Entregue	      nao_entregue
-      # Cancelado	          cancelado
+    def get_all_orders(kind, situacao, function, pagina = nil)
+      case kind
+      when 'lagoa_seca'
+        token = ENV.fetch('TOKEN_TINY_PRODUCTION')
+      when 'bh_shopping'
+        token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      end
+
+      response = get_orders_response(situacao, token, pagina)
+
+      total = []
+
+      if response['numero_paginas'].present? && response['numero_paginas'].positive?
+        (1..response['numero_paginas']).each do |page_number|
+          total << get_orders_response(situacao, token, page_number)
+        end
+      else
+        total << response
+      end
+
+      case function
+      when 'update_orders'
+        total.each do |orders_list|
+          process_orders(token, orders_list['pedidos'], kind)
+        end
+      else
+        total
+      end
+    end
+
+    def process_orders(token, pedidos, kind)
+      pedidos.each do |pedido|
+        order = Order.find_or_create_by(kinds: kind,
+                                        tiny_order_id: pedido['pedido']['id'])
+
+        tiny_order = obtain_order(token, pedido['pedido']['id'])
+
+        print 'dormiu meio segundo'
+        sleep(0.5)
+        print 'acordou'
+
+        next unless tiny_order['pedido'].present?
+
+        tiny_order['pedido']['itens'].each do |oi|
+          print oi
+          OrderItem.find_or_create_by(order_id: order.id,
+                                      quantity: oi['item']['quantidade'],
+                                      price: oi['item']['valor_unitario'],
+                                      product_id: oi['item']['id_produto'],
+                                      sku: oi['item']['codigo'])
+        end
+      end
+    end
+
+    def get_orders_response(situacao, token, page)
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                                         query: { token:,
                                                   formato: 'json',
                                                   situacao:,
-                                                  dataInicialOcorrencia: (Date.today - 7.days).strftime('%d/%m/%Y'),
-                                                  dataFinalOcorrencia: Date.today.strftime('%d/%m/%Y'),
                                                   pagina: page }))
       response.with_indifferent_access[:retorno]
     end
 
-    def get_all_orders(situacao)
-      response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
-                                                  formato: 'json',
-                                                  situacao: }))
-      total = []
-      if response.with_indifferent_access[:retorno][:numero_paginas].present?
-        response.with_indifferent_access[:retorno][:numero_paginas].times do |re|
-          total << JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                           query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
-                                                    formato: 'json',
-                                                    situacao:,
-                                                    pagina: re }))
-        end
-        total.first.with_indifferent_access[:retorno]
-      else
-        response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                           query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
-                                                    formato: 'json',
-                                                    situacao: }))
-        response.with_indifferent_access[:retorno]
-      end
-    end
-
-    def obtain_order(order_id)
+    def obtain_order(token, order_id)
       response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PEDIDO'),
-                                         query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                                         query: { token:,
                                                   formato: 'json',
                                                   id: order_id }))
       response.with_indifferent_access[:retorno]
