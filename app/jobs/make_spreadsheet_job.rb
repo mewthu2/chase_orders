@@ -63,7 +63,7 @@ class MakeSpreadsheetJob < ApplicationJob
     tab = workbook.worksheets[0]
     tab.sheet_name = "Planilha Pedidos - (#{origin})"
 
-    header = ['order_number', 'date', 'price', 'quantity', 'SKU', 'canceled']
+    header = ['order_number', 'date', 'price', 'quantity', 'product_id', 'SKU', 'canceled']
     header.each_with_index { |data, col| tab.add_cell(0, col, data) }
 
     OrderItem.all.each_with_index do |order_item, row|
@@ -73,8 +73,9 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 1, order_item.created_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 2, order_item.price)
       tab.add_cell(row + 1, 3, order_item.quantity)
-      tab.add_cell(row + 1, 4, order_item.sku)
-      tab.add_cell(row + 1, 5, order_item.canceled? ? 'Sim' : 'Não')
+      tab.add_cell(row + 1, 4, order_item.product_id)
+      tab.add_cell(row + 1, 5, order_item.sku)
+      tab.add_cell(row + 1, 6, order_item.canceled? ? 'Sim' : 'Não')
     end
 
     clear_folder_and_save_xlsx(workbook, origin, 'order')
