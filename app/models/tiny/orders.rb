@@ -33,7 +33,7 @@ class Tiny::Orders
     def process_orders(token, pedidos, kind)
       pedidos.each do |pedido|
         order = Order.find_or_create_by(kinds: kind,
-                                        tiny_order_id: pedido['pedido']['id']
+                                        tiny_order_id: pedido['pedido']['id'],
                                         created_at: pedido['pedido']['data_pedido'])
 
         tiny_order = obtain_order(token, pedido['pedido']['id'])
