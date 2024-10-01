@@ -75,7 +75,7 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 3, order_item.quantity)
       tab.add_cell(row + 1, 4, order_item.product.present? ? order_item.product.shopify_product_id : '')
       tab.add_cell(row + 1, 5, order_item.sku)
-      tab.add_cell(row + 1, 6, order_item.canceled? ? 'Sim' : 'Não')
+      tab.add_cell(row + 1, 6, '')
     end
 
     clear_folder_and_save_xlsx(workbook, origin, 'order')
