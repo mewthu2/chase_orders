@@ -46,7 +46,7 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 6, product.created_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 7, product.updated_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 8, 'tiny')
-      tab.add_cell(row + 1, 9, 'Chase')
+      tab.add_cell(row + 1, 9, '')
       tab.add_cell(row + 1, 10, generate_permalink(product))
       tab.add_cell(row + 1, 11, fetch_categories)
       tab.add_cell(row + 1, 12, fetch_image)
@@ -73,7 +73,7 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 1, order_item.created_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 2, order_item.price)
       tab.add_cell(row + 1, 3, order_item.quantity)
-      tab.add_cell(row + 1, 4, order_item.product.shopify_product_id)
+      tab.add_cell(row + 1, 4, order_item.product.present? ? order_item.product.shopify_product_id : '')
       tab.add_cell(row + 1, 5, order_item.sku)
       tab.add_cell(row + 1, 6, order_item.canceled? ? 'Sim' : 'Não')
     end
