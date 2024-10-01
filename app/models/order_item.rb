@@ -2,6 +2,7 @@ class OrderItem < ApplicationRecord
   # Callbacks
   # Associacoes
   belongs_to :order
+  belongs_to :product
   # Validacoes
 
   # Escopos

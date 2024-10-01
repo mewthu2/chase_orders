@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_09_29_203726) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_01_154610) do
   create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -37,14 +37,16 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_29_203726) do
 
   create_table "order_items", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "order_id", null: false
+    t.bigint "product_id"
     t.string "price"
     t.integer "quantity"
-    t.integer "product_id"
+    t.integer "tiny_product_id"
     t.string "sku"
     t.boolean "canceled", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["product_id"], name: "index_order_items_on_product_id"
   end
 
   create_table "orders", charset: "utf8mb3", force: :cascade do |t|
@@ -116,6 +118,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_09_29_203726) do
   end
 
   add_foreign_key "order_items", "orders"
+  add_foreign_key "order_items", "products"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
 end

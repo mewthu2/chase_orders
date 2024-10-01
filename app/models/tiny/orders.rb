@@ -44,11 +44,14 @@ class Tiny::Orders
 
         next unless tiny_order['pedido'].present?
 
+        product = Product.find_by(sku: oi['item']['codigo'])
+
         tiny_order['pedido']['itens'].each do |oi|
           OrderItem.find_or_create_by(order_id: order.id,
                                       quantity: oi['item']['quantidade'],
                                       price: oi['item']['valor_unitario'],
-                                      product_id: oi['item']['id_produto'],
+                                      product_id: product.present? ? product.id : nil,
+                                      tiny_product_id: oi['item']['id_produto'],
                                       sku: oi['item']['codigo'])
         end
       end

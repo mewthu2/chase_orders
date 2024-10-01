@@ -73,7 +73,7 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 1, order_item.created_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 2, order_item.price)
       tab.add_cell(row + 1, 3, order_item.quantity)
-      tab.add_cell(row + 1, 4, order_item.product_id)
+      tab.add_cell(row + 1, 4, order_item.product.shopify_product_id)
       tab.add_cell(row + 1, 5, order_item.sku)
       tab.add_cell(row + 1, 6, order_item.canceled? ? 'Sim' : 'Não')
     end
