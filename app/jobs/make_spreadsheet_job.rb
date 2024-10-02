@@ -20,39 +20,19 @@ class MakeSpreadsheetJob < ApplicationJob
     header = ['product_id',
               'title',
               'SKU',
-              'regular_price',
               'price',
-              'stock_quantity',
               'created_at',
-              'updated_at',
-              'managing_stock',
-              'vendor',
-              'permalink',
-              'categories',
-              'image',
-              'brand',
-              'options',
-              'tags']
+              'stock_quantity']
 
     header.each_with_index { |data, col| tab.add_cell(0, col, data) }
 
     Product.all.each_with_index do |product, row|
-      tab.add_cell(row + 1, 0, product.id)
+      tab.add_cell(row + 1, 0, product.shopify_product_id)
       tab.add_cell(row + 1, 1, product.shopify_product_name)
       tab.add_cell(row + 1, 2, product.sku)
-      tab.add_cell(row + 1, 3, product.compare_at_price)
-      tab.add_cell(row + 1, 4, product.price)
+      tab.add_cell(row + 1, 3, product.price)
+      tab.add_cell(row + 1, 4, product.created_at.strftime('%d/%m/%Y'))
       tab.add_cell(row + 1, 5, calculate_stock_quantity(product, origin))
-      tab.add_cell(row + 1, 6, product.created_at.strftime('%d/%m/%Y'))
-      tab.add_cell(row + 1, 7, product.updated_at.strftime('%d/%m/%Y'))
-      tab.add_cell(row + 1, 8, 'tiny')
-      tab.add_cell(row + 1, 9, '')
-      tab.add_cell(row + 1, 10, generate_permalink(product))
-      tab.add_cell(row + 1, 11, fetch_categories)
-      tab.add_cell(row + 1, 12, fetch_image)
-      tab.add_cell(row + 1, 13, fetch_brand)
-      tab.add_cell(row + 1, 14, generate_options(product))
-      tab.add_cell(row + 1, 15, product.tags)
     end
 
     clear_folder_and_save_xlsx(workbook, origin, 'product')
@@ -63,7 +43,7 @@ class MakeSpreadsheetJob < ApplicationJob
     tab = workbook.worksheets[0]
     tab.sheet_name = "Planilha Pedidos - (#{origin})"
 
-    header = ['order_number', 'date', 'price', 'quantity', 'product_id', 'SKU', 'canceled']
+    header = ['order_number', 'date', 'price', 'quantity', 'product_id', 'SKU']
     header.each_with_index { |data, col| tab.add_cell(0, col, data) }
 
     OrderItem.all.each_with_index do |order_item, row|
@@ -75,7 +55,6 @@ class MakeSpreadsheetJob < ApplicationJob
       tab.add_cell(row + 1, 3, order_item.quantity)
       tab.add_cell(row + 1, 4, order_item.product.present? ? order_item.product.shopify_product_id : '')
       tab.add_cell(row + 1, 5, order_item.sku)
-      tab.add_cell(row + 1, 6, '')
     end
 
     clear_folder_and_save_xlsx(workbook, origin, 'order')

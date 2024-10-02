@@ -2,6 +2,108 @@ class Shopify::Products
   require 'shopify_api'
 
   class << self
+    def sync_shopify_data_on_product(function)
+      sync_methods = {
+        'shopify_product_id' => method(:update_product_with_shopify_id),
+        'price_and_title' => method(:update_product_with_price_and_title)
+      }
+
+      if sync_methods.key?(function)
+        Product.find_each(batch_size: 100) do |product|
+          sync_methods[function].call(product)
+        end
+      else
+        puts "Função não reconhecida: #{function}"
+      end
+    end
+
+    def update_product_with_price_and_title(product)
+      query = <<~GRAPHQL
+        query inventoryItem {
+          inventoryItem(id: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}") {
+            id
+            tracked
+            sku
+            variant {
+              id
+              price
+              compareAtPrice
+              product {
+                title
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      begin
+        response = client_shopify_graphql.query(query:)
+
+        if response.body['data'].present? && response.body['data']['inventoryItem'].present?
+          price = response.body['data']['inventoryItem']['variant']['price']
+          product_name = response.body['data']['inventoryItem']['variant']['product']['title']
+
+          if price
+            product.update(price:, shopify_product_name: product_name)
+            puts "Atualizado produto #{product.sku} com o preço: #{price} e nome: #{product_name}"
+          else
+            puts "Preço não encontrado para o produto #{product.sku}"
+          end
+        else
+          puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
+        end
+      rescue => e
+        puts "Erro ao buscar o preço do produto #{product.sku}: #{e.message}"
+      end
+    end
+    
+
+    def update_product_with_shopify_id(product)
+      query = <<-GRAPHQL
+        {
+          products(first: 1, query: "sku:#{product.sku}") {
+            edges {
+              node {
+                id
+                title
+                variants(first: 10) {
+                  edges {
+                    node {
+                      sku
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      begin
+        response = client_shopify_graphql.query(query:)
+        if response.body['data'].present? && response.body['data']['products']['edges'].any?
+          shopify_product_id = extract_shopify_product_id(response.body)
+          if shopify_product_id
+            product.update(shopify_product_id:)
+            puts "Atualizado produto #{product.sku} com Shopify ID: #{shopify_product_id}"
+          else
+            puts "Shopify ID não encontrado para o produto #{product.sku}"
+          end
+        else
+          puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
+        end
+      rescue => e
+        puts "Erro ao buscar o produto #{product.sku}: #{e.message}"
+      end
+    end
+
+    def extract_shopify_product_id(response_body)
+      product_edge = response_body['data']['products']['edges'].first
+      return unless product_edge
+
+      product_edge['node']['id'].match(/\d+$/)[0] if product_edge['node']['id'].present?
+    end
+
     def list_all_products(function)
       response = client_shopify_rest.get(path: 'products', query: { limit: 150 })
       process_inventory_items(response)
@@ -58,6 +160,14 @@ class Shopify::Products
       ShopifyAPI::Clients::Rest::Admin.new(session:)
     end
 
+    def client_shopify_graphql
+      session = ShopifyAPI::Auth::Session.new(
+        shop: 'chasebrasil.myshopify.com',
+        access_token: ENV.fetch('SHOPIFY_TOKEN')
+      )
+      ShopifyAPI::Clients::Graphql::Admin.new(session:)
+    end
+
     def update_or_create_by_product_data(products)
       products.each do |shopify_product_data|
         shopify_product_data['variants'].each do |variant_data|
@@ -65,7 +175,6 @@ class Shopify::Products
 
           product.assign_attributes(
             shopify_product_name: shopify_product_data['title'],
-            shopify_product_id: shopify_product_data['id'],
             cost: variant_data['cost'],
             sku: variant_data['sku'],
             price: variant_data['price'],
