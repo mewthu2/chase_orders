@@ -32,36 +32,54 @@ class Tiny::Orders
 
     def process_orders(token, pedidos, kind)
       pedidos.each do |pedido|
-        order = Order.find_or_create_by(kinds: kind,
-                                        tiny_order_id: pedido['pedido']['id'],
-                                        created_at: pedido['pedido']['data_pedido'])
+        order = Order.find_or_create_by(
+          kinds: kind,
+          tiny_order_id: pedido['pedido']['id'],
+          created_at: pedido['pedido']['data_pedido']
+        )
 
         tiny_order = obtain_order(token, pedido['pedido']['id'])
 
-        print 'dormiu meio segundo'
+        puts 'dormiu meio segundo'
         sleep(0.5)
-        print 'acordou'
+        puts 'acordou'
 
         next unless tiny_order['pedido'].present?
 
-        product = Product.find_by(sku: oi['item']['codigo'])
-
         tiny_order['pedido']['itens'].each do |oi|
-          OrderItem.find_or_create_by(order_id: order.id,
-                                      quantity: oi['item']['quantidade'],
-                                      price: oi['item']['valor_unitario'],
-                                      product_id: product.present? ? product.id : nil,
-                                      tiny_product_id: oi['item']['id_produto'],
-                                      sku: oi['item']['codigo'])
+          product = Product.find_by(sku: oi['item']['codigo'])
+
+          create_or_update_order_item(order, pedido, oi, product, kind)
         end
       end
     end
 
+    def create_or_update_order_item(order, pedido, oi, product, kind)
+      order_item = OrderItem.find_or_initialize_by(
+        order_id: order.id,
+        order_tiny_id: pedido['pedido']['id'],
+        sku: oi['item']['codigo']
+      )
+
+      order_item.assign_attributes(
+        quantity: oi['item']['quantidade'],
+        price: oi['item']['valor_unitario'],
+        product_id: product&.id,
+        tiny_product_id: oi['item']['id_produto']
+      )
+
+      order_item["order_date_#{kind}"] = pedido['pedido']['data_pedido']
+
+      order_item.save
+    end
+
     def get_orders_response(situacao, token, page)
+      ## fazer dataInicialOcorrencia
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
                                          query: { token:,
                                                   formato: 'json',
                                                   situacao:,
+                                                  dataInicialOcorrencia: '01/09/2024',
                                                   pagina: page }))
       response.with_indifferent_access[:retorno]
     end

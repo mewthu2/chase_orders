@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_01_154610) do
+ActiveRecord::Schema[7.2].define(version: 2024_10_02_035858) do
   create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -41,8 +41,11 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_01_154610) do
     t.string "price"
     t.integer "quantity"
     t.integer "tiny_product_id"
+    t.integer "order_tiny_id"
     t.string "sku"
     t.boolean "canceled", default: false
+    t.date "order_date_bh_shopping"
+    t.date "order_date_lagoa_seca"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id"], name: "index_order_items_on_order_id"
