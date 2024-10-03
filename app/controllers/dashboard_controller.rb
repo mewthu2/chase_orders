@@ -5,9 +5,9 @@ class DashboardController < ApplicationController
   def index
     orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
     ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map &:to_json
-    if orders[:numero_paginas].present? && orders[:numero_paginas] != 1 && orders['pedidos'].present?
+    if orders[0]['numero_paginas'].present? && orders[0]['numero_paginas'] != 1 && orders['pedidos'].present?
       @orders = []
-      orders[:numero_paginas].times do |page|
+      orders[0]['numero_paginas'].times do |page|
         page_orders = Tiny::Orders.get_orders_response('', 'faturado', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page)
         page_orders[:pedidos].each do |order|
           @orders << order
@@ -15,7 +15,7 @@ class DashboardController < ApplicationController
       end
       @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) }
     else
-      @all_orders = orders.deep_symbolize_keys[:pedidos]&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
+      @all_orders = orders[0]['pedidos']&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
     end
     ids_to_reject_emitions = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id)
     @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject_emitions)
