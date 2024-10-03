@@ -1,20 +1,21 @@
 class SyncProductsSituationJob < ActiveJob::Base
   def perform
-    sync_tiny_products('lagoa_seca')
-    sync_tiny_products('bh_shopping')
-    sync_tiny_product_stock
+    sync_tiny_products
+
     sync_shopify_products
+    sync_shopify_fields
   end
 
-  def sync_tiny_products(kind)
-    Tiny::Products.list_all_products(kind, 'A', 'update_products_situation', '')
+  def sync_tiny_products
+    Tiny::Products.list_all_products('lagoa_seca', '', 'update_products_situation', '')
   end
 
   def sync_shopify_products
     Shopify::Products.list_all_products('create_update_shopify_products')
   end
 
-  def sync_tiny_product_stock
-    Tiny::Products.assert_stock
+  def sync_shopify_fields
+    Shopify::Products.sync_shopify_data_on_product('shopify_product_id')
+    Shopify::Products.sync_shopify_data_on_product('price_and_title')
   end
 end

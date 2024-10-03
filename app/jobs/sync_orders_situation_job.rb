@@ -1,15 +1,14 @@
 class SyncOrdersSituationJob < ActiveJob::Base
   def perform
-    # sync_shopify_products
-    sync_shopify_fields
+    sync_tiny_orders_lagoa_seca
+    sync_tiny_orders_bh_shopping
   end
 
-  def sync_shopify_products
-    Shopify::Products.list_all_products('create_update_shopify_products')
+  def sync_tiny_orders_lagoa_seca
+    Tiny::Orders.get_all_orders('lagoa_seca', '', 'update_orders', '')
   end
 
-  def sync_shopify_fields
-    Shopify::Products.sync_shopify_data_on_product('shopify_product_id')
-    Shopify::Products.sync_shopify_data_on_product('price_and_title')
+  def sync_tiny_orders_bh_shopping
+    Tiny::Orders.get_all_orders('bh_shopping', '', 'update_orders', '')
   end
 end

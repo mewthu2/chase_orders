@@ -56,7 +56,6 @@ class Shopify::Products
         puts "Erro ao buscar o preço do produto #{product.sku}: #{e.message}"
       end
     end
-    
 
     def update_product_with_shopify_id(product)
       query = <<-GRAPHQL

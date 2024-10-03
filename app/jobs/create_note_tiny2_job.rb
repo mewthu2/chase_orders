@@ -4,7 +4,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
   end
 
   def create_note
-    orders = Tiny::Orders.get_all_orders(ENV.fetch('TOKEN_TINY3_PRODUCTION'), 'faturado')
+    orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
 
     orders[:pedidos].each do |order|
       p '2 segundos espera ai'

@@ -6,15 +6,17 @@ class Tiny::Orders
         token = ENV.fetch('TOKEN_TINY_PRODUCTION')
       when 'bh_shopping'
         token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      when 'tiny_3'
+        token = ENV.fetch('TOKEN_TINY3_PRODUCTION')
       end
 
-      response = get_orders_response(situacao, token, pagina)
+      response = get_orders_response(kind, situacao, token, pagina)
 
       total = []
 
       if response['numero_paginas'].present? && response['numero_paginas'].positive?
         (1..response['numero_paginas']).each do |page_number|
-          total << get_orders_response(situacao, token, page_number)
+          total << get_orders_response(kind, situacao, token, page_number)
         end
       else
         total << response
@@ -73,13 +75,12 @@ class Tiny::Orders
       order_item.save
     end
 
-    def get_orders_response(situacao, token, page)
-      ## fazer dataInicialOcorrencia
+    def get_orders_response(kind, situacao, token, page)
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
                                          query: { token:,
                                                   formato: 'json',
                                                   situacao:,
-                                                  dataInicialOcorrencia: '01/09/2024',
+                                                  dataInicialOcorrencia: kind == 'lagoa_seca' ? '01/09/2024' : '',
                                                   pagina: page }))
       response.with_indifferent_access[:retorno]
     end
