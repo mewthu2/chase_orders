@@ -65,7 +65,7 @@ class MakeSpreadsheetJob < ApplicationJob
         order = order_item.order
 
         csv << [
-          order.id,
+          order.tiny_order_id,
           origin == 'bh_shopping' ? order_item.order_date_bh_shopping.strftime('%d/%m/%Y') : order_item.order_date_lagoa_seca.strftime('%d/%m/%Y'),
           order_item.price,
           order_item.quantity,
