@@ -410,8 +410,8 @@ product_id,title,SKU,price,created_at,stock_quantity
 7420467839050,Long T-shirt Preto,LON-374-G,289.00,06/12/2023,2
 7420467839050,Long T-shirt Preto,LON-374-M,289.00,06/12/2023,2
 7420467839050,Long T-shirt Preto,LON-374-P,289.00,06/12/2023,3
-7223658512458,Meia Chase Classic - Branco,mei-clara-bran,69.00,24/07/2023,7
-7237760057418,Meia Chase Classic - Preto,MEI-122-U,69.00,10/08/2023,5
+7223658512458,Meia Chase Classic Branco,mei-clara-bran,69.00,24/07/2023,7
+7237760057418,Meia Chase Classic Preto,MEI-122-U,69.00,10/08/2023,5
 7588867735626,Moletom Gentle Black,MOL-466-G,349.95,17/04/2024,2
 7588867735626,Moletom Gentle Black,MOL-466-M,349.95,17/04/2024,6
 7588867735626,Moletom Gentle Black,MOL-466-P,349.95,17/04/2024,2
@@ -1202,3 +1202,5 @@ product_id,title,SKU,price,created_at,stock_quantity
 ,,25405327001828,,25/09/2024,0
 ,,25405327001891,,25/09/2024,0
 ,,25405327001892,,25/09/2024,0
+7802843103306,Meia Chase Low Preto,MEI-591-UN,69.00,07/10/2024,0
+7802843201610,Meia Chase Low Branco,MEI-592-UN,69.00,07/10/2024,0
