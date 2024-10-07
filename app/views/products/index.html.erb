@@ -31,7 +31,8 @@
           <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
           <th class="text-center"><%= Product.human_attribute_name :id %></th>
           <th class="text-center"><%= Product.human_attribute_name :sku %></th>
-          <th class="text-center"><%= Product.human_attribute_name :tiny_product_id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :tiny_lagoa_seca_product_id %></th>
+          <th class="text-center"><%= Product.human_attribute_name :tiny_bh_shopping_id %></th>
           <th class="text-center"><%= Product.human_attribute_name :shopify_product_id %></th>
           <th class="text-center"><%= Product.human_attribute_name :shopify_inventory_item_id %></th>
           <th class="text-center"><%= Product.human_attribute_name :shopify_product_name %></th>
@@ -51,8 +52,14 @@
             <td class="text-center"><%= product.id %></td>
             <td class="text-center"><%= product.sku %></td>
             <td class="text-center">
-              <%= product.tiny_product_id %> - 
-              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_PRODUCT_URL')%><%= product.tiny_product_id %>&deposito=true', '_blank');">
+              <%= product.tiny_bh_shopping_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_PRODUCT_URL')%><%= product.tiny_lagoa_seca_product_id %>&deposito=true', '_blank');">
+                Ver no Tiny
+              </span>
+            </td>
+             <td class="text-center">
+              <%= product.tiny_bh_shopping_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_PRODUCT_URL')%><%= product.tiny_bh_shopping_id %>&deposito=true', '_blank');">
                 Ver no Tiny
               </span>
             </td>
