@@ -5,7 +5,7 @@ class DashboardController < ApplicationController
   def index
     orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
     ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map &:to_json
-    if orders[0]['numero_paginas'].present? && orders[0]['numero_paginas'] != 1 && orders['pedidos'].present?
+    if orders[0]['numero_paginas'].present? && orders[0]['numero_paginas'] != 1 && orders[0]['pedidos'].present?
       @orders = []
       orders[0]['numero_paginas'].times do |page|
         page_orders = Tiny::Orders.get_orders_response('', 'faturado', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page)

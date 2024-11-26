@@ -5,10 +5,10 @@ default: &default
 
 development:
   <<: *default
-  host: <%= ENV['LOCAL_DATABASE_HOST'] %>
-  username: <%= ENV['LOCAL_DATABASE_USERNAME'] %>
-  password: <%= ENV['LOCAL_DATABASE_PASSWORD'] %>
-  database: <%= ENV['LOCAL_DATABASE_NAME'] %>
+  host: <%= ENV['PRODUCTION_DATABASE_HOST'] %>
+  username: <%= ENV['PRODUCTION_DATABASE_USERNAME'] %>
+  password: <%= ENV['PRODUCTION_DATABASE_PASSWORD'] %>
+  database: <%= ENV['PRODUCTION_DATABASE_NAME'] %>
 
 test:
   <<: *default
