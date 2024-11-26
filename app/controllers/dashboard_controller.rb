@@ -3,21 +3,23 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def index
-    orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
-    ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map &:to_json
-    if orders[0]['numero_paginas'].present? && orders[0]['numero_paginas'] != 1 && orders[0]['pedidos'].present?
-      @orders = []
-      orders[0]['numero_paginas'].times do |page|
+    orders_response = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
+    ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map(&:to_s)
+
+    @orders = []
+
+    if orders_response[0]['numero_paginas'].present? && orders_response[0]['numero_paginas'] > 1
+      (1..orders_response[0]['numero_paginas']).each do |page|
         page_orders = Tiny::Orders.get_orders_response('', 'faturado', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page)
-        page_orders[:pedidos].each do |order|
-          @orders << order
-        end
+        @orders += page_orders['pedidos'] if page_orders['pedidos'].present?
       end
-      @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id']) }
     else
-      @all_orders = orders[0]['pedidos']&.reject { |order| ids_to_reject.include?(order[:pedido][:id]) }
+      @orders = orders_response[0]['pedidos'] || []
     end
-    ids_to_reject_emitions = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id)
+
+    @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id'].to_s) }
+
+    ids_to_reject_emitions = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id).map(&:to_s)
     @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject_emitions)
   end
 
