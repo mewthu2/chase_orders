@@ -77,7 +77,6 @@ class Tiny::Orders
                                          query: { token:,
                                                   formato: 'json',
                                                   situacao:,
-                                                  dataInicialOcorrencia: kind == 'lagoa_seca' ? '01/09/2024' : '',
                                                   pagina: page }))
       response.with_indifferent_access[:retorno]
     end
