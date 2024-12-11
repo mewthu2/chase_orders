@@ -24,7 +24,7 @@ class ProductsController < ApplicationController
   def download
     type = params[:type]
     origin = params[:origin]
-    extension = params[:format] || 'xlsx'  # Verifica se foi passado o formato, padrão é 'xlsx'
+    extension = params[:format] || 'xlsx'
 
     filename = "planilha_#{type}_#{origin}.#{extension}"
     file_path = Rails.root.join('app', 'assets', 'planilhas', type, origin, filename)
