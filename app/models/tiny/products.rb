@@ -6,6 +6,8 @@ class Tiny::Products
         token = ENV.fetch('TOKEN_TINY_PRODUCTION')
       when 'bh_shopping'
         token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      when 'rj'
+        token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
       end
 
       response = get_products_response(situacao, token, pagina)

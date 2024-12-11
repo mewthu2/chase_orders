@@ -1,5 +1,5 @@
 class Order < ApplicationRecord
-  enum kinds: [:lagoa_seca, :bh_shopping]
+  enum kinds: [:lagoa_seca, :bh_shopping, :rj]
   # Callbacks
   # Associacoes
   has_many :order_items

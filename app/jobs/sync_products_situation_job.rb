@@ -8,6 +8,7 @@ class SyncProductsSituationJob < ActiveJob::Base
 
   def sync_tiny_products
     Tiny::Products.list_all_products('lagoa_seca', '', 'update_products_situation', '')
+    Tiny::Products.list_all_products('rj', '', 'update_products_situation', '')
   end
 
   def sync_shopify_products

@@ -6,27 +6,28 @@ class Tiny::Orders
         token = ENV.fetch('TOKEN_TINY_PRODUCTION')
       when 'bh_shopping'
         token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      when 'rj'
+        token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
       when 'tiny_3'
         token = ENV.fetch('TOKEN_TINY3_PRODUCTION')
       end
 
-      response = get_orders_response(kind, situacao, token, pagina)
+      response = get_orders_response(situacao, token, pagina)
 
       total = []
 
-      if response['numero_paginas'].present? && response['numero_paginas'].positive?
+      if response['numero_paginas'].present? && response['numero_paginas'] > 1
         (1..response['numero_paginas']).each do |page_number|
-          total << get_orders_response(kind, situacao, token, page_number)
+          page_response = get_orders_response(situacao, token, page_number)
+          total.concat(page_response['pedidos']) if page_response['pedidos'].present?
         end
-      else
-        total << response
+      elsif response['pedidos'].present?
+        total.concat(response['pedidos'])
       end
 
       case function
       when 'update_orders'
-        total.each do |orders_list|
-          process_orders(token, orders_list['pedidos'], kind)
-        end
+        process_orders(token, total, kind)
       else
         total
       end
@@ -67,12 +68,10 @@ class Tiny::Orders
         tiny_product_id: oi['item']['id_produto']
       )
 
-      order_item["order_date_#{kind}"] = pedido['pedido']['data_pedido']
-
       order_item.save
     end
 
-    def get_orders_response(kind, situacao, token, page)
+    def get_orders_response(situacao, token, page)
       response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
                                          query: { token:,
                                                   formato: 'json',

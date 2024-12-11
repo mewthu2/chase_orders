@@ -6,12 +6,15 @@ class CreateNoteTiny2Job < ActiveJob::Base
   def create_note
     orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
 
-    orders[0]['pedidos'].each do |order|
+    orders.each do |order|
       p '2 segundos espera ai'
       sleep(2.seconds)
       p 'Pronto, vamos'
 
-      next if Attempt.find_by(kinds: :create_note_tiny2, tiny_order_id: order[:pedido][:id], status: :success).present?
+      if Attempt.find_by(kinds: :create_note_tiny2, tiny_order_id: order[:pedido][:id], status: :success).present?
+        puts("Tentativa sucedida de criação de nota encontrada: #{order[:pedido][:id]}")
+        next
+      end
 
       puts('Não encontrei nenhuma tentativa sucedidade, bora')
       attempt = Attempt.create(kinds: :create_note_tiny2)

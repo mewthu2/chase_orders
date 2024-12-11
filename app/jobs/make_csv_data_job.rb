@@ -8,5 +8,7 @@ class MakeCsvDataJob < ApplicationJob
     MakeSpreadsheetJob.perform_now('lagoa_seca', 'order')
     MakeSpreadsheetJob.perform_now('bh_shopping', 'product')
     MakeSpreadsheetJob.perform_now('bh_shopping', 'order')
+    MakeSpreadsheetJob.perform_now('rj', 'product')
+    MakeSpreadsheetJob.perform_now('rj', 'order')
   end
 end

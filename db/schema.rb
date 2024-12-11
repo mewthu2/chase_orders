@@ -10,32 +10,32 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_10_02_035858) do
-  create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+ActiveRecord::Schema[7.2].define(version: 2024_12_11_130250) do
+  create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
     t.text "requisition"
     t.text "params"
+    t.text "xml_nota", size: :long
+    t.boolean "xml_sended", default: false
     t.string "error"
     t.string "status_code"
-    t.text "message"
+    t.text "message", size: :long
     t.string "exception"
     t.string "classification"
     t.string "cause"
     t.string "url"
     t.string "user"
     t.integer "tiny_order_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.integer "order_correios_id"
     t.integer "id_nota_fiscal"
-    t.text "xml_nota", size: :long
-    t.boolean "xml_sended", default: false
-    t.string "tracking"
     t.integer "id_nota_tiny2"
+    t.string "tracking"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
-  create_table "order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "order_items", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "order_id", null: false
     t.bigint "product_id"
     t.string "price"
@@ -46,20 +46,21 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_02_035858) do
     t.boolean "canceled", default: false
     t.date "order_date_bh_shopping"
     t.date "order_date_lagoa_seca"
+    t.date "order_date_rj"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["order_id"], name: "index_order_items_on_order_id"
     t.index ["product_id"], name: "index_order_items_on_product_id"
   end
 
-  create_table "orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "orders", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "kinds"
     t.integer "tiny_order_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
-  create_table "product_updates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "product_updates", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "product_id", null: false
     t.bigint "user_id", null: false
     t.bigint "kinds"
@@ -73,16 +74,15 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_02_035858) do
     t.index ["user_id"], name: "index_product_updates_on_user_id"
   end
 
-  create_table "products", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "products", charset: "utf8mb3", force: :cascade do |t|
     t.string "sku"
     t.string "tiny_lagoa_seca_product_id"
     t.integer "tiny_bh_shopping_id"
+    t.integer "tiny_rj_id"
     t.string "shopify_product_id"
     t.string "shopify_inventory_item_id"
     t.string "shopify_product_name"
     t.string "cost"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "price"
     t.string "compare_at_price"
     t.string "vendor"
@@ -92,9 +92,11 @@ ActiveRecord::Schema[7.2].define(version: 2024_10_02_035858) do
     t.string "stock_lagoa_seca"
     t.string "stock_bh_shopping"
     t.string "tags"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
-  create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "users", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.string "name"
     t.string "phone"
     t.string "email", default: "", null: false

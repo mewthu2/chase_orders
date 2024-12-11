@@ -36,7 +36,7 @@ class MakeSpreadsheetJob < ApplicationJob
           product.shopify_product_name,
           product.sku,
           product.price,
-          product.created_at.strftime('%d/%m/%Y'),
+          product.created_at&.strftime('%d/%m/%Y'),
           calculate_stock_quantity(product, origin)
         ]
       end
@@ -64,9 +64,18 @@ class MakeSpreadsheetJob < ApplicationJob
       OrderItem.joins(:order).where(order: { kinds: origin }).each do |order_item|
         order = order_item.order
 
+        case origin
+        when 'bh_shopping'
+          date = order_item.order_date_bh_shopping&.strftime('%d/%m/%Y')
+        when 'lagoa_seca'
+          date = order_item.order_date_lagoa_seca&.strftime('%d/%m/%Y')
+        when 'rj'
+          date = order_item.order_date_rj&.strftime('%d/%m/%Y')
+        end
+
         csv << [
           order.tiny_order_id,
-          origin == 'bh_shopping' ? order_item.order_date_bh_shopping.strftime('%d/%m/%Y') : order_item.order_date_lagoa_seca.strftime('%d/%m/%Y'),
+          date,
           order_item.price,
           order_item.quantity,
           order_item.product.present? ? order_item.product.shopify_product_id : '',
