@@ -12,13 +12,13 @@ class Tiny::Orders
         token = ENV.fetch('TOKEN_TINY3_PRODUCTION')
       end
 
-      response = get_orders_response(situacao, token, pagina)
+      response = get_orders_response(kind, situacao, token, pagina)
 
       total = []
 
       if response['numero_paginas'].present? && response['numero_paginas'] > 1
         (1..response['numero_paginas']).each do |page_number|
-          page_response = get_orders_response(situacao, token, page_number)
+          page_response = get_orders_response(kind, situacao, token, page_number)
           total.concat(page_response['pedidos']) if page_response['pedidos'].present?
         end
       elsif response['pedidos'].present?
@@ -49,12 +49,12 @@ class Tiny::Orders
         tiny_order['pedido']['itens'].each do |oi|
           product = Product.find_by(sku: oi['item']['codigo'])
 
-          create_or_update_order_item(order, pedido, oi, product, kind)
+          create_or_update_order_item(order, pedido, oi, product)
         end
       end
     end
 
-    def create_or_update_order_item(order, pedido, oi, product, kind)
+    def create_or_update_order_item(order, pedido, oi, product)
       order_item = OrderItem.find_or_initialize_by(
         order_id: order.id,
         order_tiny_id: pedido['pedido']['id'],
@@ -71,12 +71,21 @@ class Tiny::Orders
       order_item.save
     end
 
-    def get_orders_response(situacao, token, page)
-      response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token:,
-                                                  formato: 'json',
-                                                  situacao:,
-                                                  pagina: page }))
+    def get_orders_response(kind, situacao, token, page)
+      if kind == 'lagoa_seca'
+        response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
+                                           query: { token:,
+                                                    formato: 'json',
+                                                    situacao:,
+                                                    dataInicial: '01/09/2024',
+                                                    pagina: page }))
+      else
+        response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
+                                           query: { token:,
+                                                    formato: 'json',
+                                                    situacao:,
+                                                    pagina: page }))
+      end
       response.with_indifferent_access[:retorno]
     end
 
