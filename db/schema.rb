@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_12_11_130250) do
+ActiveRecord::Schema[7.2].define(version: 2024_12_12_145823) do
   create_table "attempts", charset: "utf8mb3", options: "ENGINE=InnoDB ROW_FORMAT=DYNAMIC", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -91,6 +91,7 @@ ActiveRecord::Schema[7.2].define(version: 2024_12_11_130250) do
     t.string "option3"
     t.string "stock_lagoa_seca"
     t.string "stock_bh_shopping"
+    t.integer "stock_rj"
     t.string "tags"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

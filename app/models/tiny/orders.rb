@@ -49,16 +49,17 @@ class Tiny::Orders
         tiny_order['pedido']['itens'].each do |oi|
           product = Product.find_by(sku: oi['item']['codigo'])
 
-          create_or_update_order_item(order, pedido, oi, product)
+          create_or_update_order_item(kind, order, pedido, oi, product)
         end
       end
     end
 
-    def create_or_update_order_item(order, pedido, oi, product)
+    def create_or_update_order_item(kind, order, pedido, oi, product)
       order_item = OrderItem.find_or_initialize_by(
         order_id: order.id,
         order_tiny_id: pedido['pedido']['id'],
-        sku: oi['item']['codigo']
+        sku: oi['item']['codigo'],
+        "order_date_#{kind}": pedido['pedido']['data_pedido']
       )
 
       order_item.assign_attributes(

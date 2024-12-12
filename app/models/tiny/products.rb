@@ -59,36 +59,7 @@ class Tiny::Products
                               })
     end
 
-    def assert_stock
-      token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
-      token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
-
-      update_stock_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
-      update_stock_for_products(Product.all, token_bh_shopping, 'bh_shopping')
-    end
-
     private
-
-    def update_stock_for_products(products, token, kind)
-      products.each do |product|
-        product_id = kind == 'lagoa_seca' ? product.tiny_lagoa_seca_product_id : product.tiny_bh_shopping_id
-        stock_data = obtain_stock(product_id, token)
-        stock_value = stock_data['status'] != 'Erro' && stock_data['produto'].key?('saldo') ? stock_data['produto']['saldo'] : nil
-
-        puts "Estoque - #{stock_value}"
-        puts "Tipo - #{kind}"
-
-        case kind
-        when 'lagoa_seca'
-          product.update(stock_lagoa_seca: stock_value)
-        when 'bh_shopping'
-          product.update(stock_bh_shopping: stock_value)
-        end
-
-        print 'Dormindo 2 segundos...'
-        sleep(1)
-      end
-    end
 
     def get_products_response(situacao, token, pagina = nil)
       response = JSON.parse(HTTParty.get(ENV.fetch('PRODUTOS_PESQUISA'),
@@ -116,13 +87,11 @@ class Tiny::Products
     def assign_tiny_product_id(product, kind, product_id)
       case kind
       when 'lagoa_seca'
-        if product.tiny_lagoa_seca_product_id.blank?
-          product.update!(tiny_lagoa_seca_product_id: product_id)
-        end
+        product.update!(tiny_lagoa_seca_product_id: product_id) if product.tiny_lagoa_seca_product_id.blank?
       when 'bh_shopping'
-        if product.tiny_bh_shopping_id.blank?
-          product.update!(tiny_bh_shopping_id: product_id)
-        end
+        product.update!(tiny_bh_shopping_id: product_id) if product.tiny_bh_shopping_id.blank?
+      when 'rj'
+        product.update!(tiny_rj_id: product_id) if product.tiny_rj_id.blank?
       end
     end
 
@@ -132,6 +101,8 @@ class Tiny::Products
         product.tiny_lagoa_seca_product_id.present?
       when 'bh_shopping'
         product.tiny_bh_shopping_id.present?
+      when 'rj'
+        product.tiny_rj_idpresent?
       else
         false
       end
