@@ -88,6 +88,13 @@ class MakeSpreadsheetJob < ApplicationJob
   end
 
   def calculate_stock_quantity(product, origin)
-    origin == 'lagoa_seca' ? product.stock_lagoa_seca.to_i : product.stock_bh_shopping.to_i
+    case origin
+    when 'lagoa_seca'
+      product.stock_lagoa_seca.to_i
+    when 'bh_shopping'
+      product.stock_bh_shopping.to_i
+    when 'rj'
+      product.stock_rj.to_i
+    end
   end
 end

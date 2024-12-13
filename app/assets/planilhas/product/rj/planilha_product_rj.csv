@@ -1,7 +1,7 @@
 product_id,title,SKU,price,created_at,stock_quantity
 7420468232266,Baby Look Branco,BAB-377-G,249.00,06/12/2023,0
-7420468232266,Baby Look Branco,BAB-377-M,249.00,06/12/2023,0
-7420468232266,Baby Look Branco,BAB-377-P,249.00,06/12/2023,0
+7420468232266,Baby Look Branco,BAB-377-M,249.00,06/12/2023,1
+7420468232266,Baby Look Branco,BAB-377-P,249.00,06/12/2023,1
 7515027963978,Baby Look Grey Lead,BAB-451-G,249.00,22/03/2024,0
 7515027963978,Baby Look Grey Lead,BAB-451-M,249.00,22/03/2024,0
 7515027963978,Baby Look Grey Lead,BAB-451-P,249.00,22/03/2024,0
@@ -10,7 +10,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7420468428874,Baby Look Nude,BAB-378-P,249.00,06/12/2023,0
 7420468101194,Baby Look Preto,BAB-376-G,249.00,06/12/2023,0
 7420468101194,Baby Look Preto,BAB-376-M,249.00,06/12/2023,0
-7420468101194,Baby Look Preto,BAB-376-P,249.00,06/12/2023,0
+7420468101194,Baby Look Preto,BAB-376-P,249.00,06/12/2023,1
 ,,25405327001831,,12/12/2024,0
 7101628383306,Boné Chase - Black,bon-cha-bla-u,149.00,17/03/2023,0
 7072689815626,Boné Chase - Mellow,bon-cha-mel,149.00,14/02/2023,0
@@ -24,14 +24,14 @@ product_id,title,SKU,price,created_at,stock_quantity
 7416241225802,Calcinha Heritage - White&Black,CAL-185-M,297.42,29/11/2023,0
 7416241225802,Calcinha Heritage - White&Black,CAL-185-P,297.42,29/11/2023,0
 7416239718474,Calcinha Summer Dust - Bronze Tan,CAL-179-G,220.15,29/11/2023,0
-7416239718474,Calcinha Summer Dust - Bronze Tan,CAL-179-M,220.15,29/11/2023,0
-7416239718474,Calcinha Summer Dust - Bronze Tan,CAL-179-P,220.15,29/11/2023,0
-7416240341066,Calcinha Summer Dust - Golden Tan,CAL-181-G,220.15,29/11/2023,0
-7416240341066,Calcinha Summer Dust - Golden Tan,CAL-181-M,220.15,29/11/2023,0
+7416239718474,Calcinha Summer Dust - Bronze Tan,CAL-179-M,220.15,29/11/2023,2
+7416239718474,Calcinha Summer Dust - Bronze Tan,CAL-179-P,220.15,29/11/2023,3
+7416240341066,Calcinha Summer Dust - Golden Tan,CAL-181-G,220.15,29/11/2023,1
+7416240341066,Calcinha Summer Dust - Golden Tan,CAL-181-M,220.15,29/11/2023,2
 7416240341066,Calcinha Summer Dust - Golden Tan,CAL-181-P,220.15,29/11/2023,0
 7416235196490,Calcinha Summer Dust - Onix,CAL-358-G,220.15,29/11/2023,0
 7416235196490,Calcinha Summer Dust - Onix,CAL-358-M,220.15,29/11/2023,0
-7416235196490,Calcinha Summer Dust - Onix,CAL-358-P,220.15,29/11/2023,0
+7416235196490,Calcinha Summer Dust - Onix,CAL-358-P,220.15,29/11/2023,1
 7416236212298,Calcinha Summer Dust - Pearls,CAL-360-G,220.15,29/11/2023,0
 7416236212298,Calcinha Summer Dust - Pearls,CAL-360-M,220.15,29/11/2023,0
 7416236212298,Calcinha Summer Dust - Pearls,CAL-360-P,220.15,29/11/2023,0
@@ -58,25 +58,25 @@ product_id,title,SKU,price,created_at,stock_quantity
 7849598419018,Chaser Shorts Mocha,CHA-635-P,299.00,10/12/2024,0
 7237653594186,Cropped Essential Bege,CRO-121-G,249.00,10/08/2023,0
 7237653594186,Cropped Essential Bege,CRO-121-M,249.00,10/08/2023,0
-7237653594186,Cropped Essential Bege,CRO-121-P,249.00,10/08/2023,0
-7484588294218,Cropped Essential Botanic Green,CRO-406-G,249.00,27/02/2024,0
-7484588294218,Cropped Essential Botanic Green,CRO-406-M,249.00,27/02/2024,0
-7484588294218,Cropped Essential Botanic Green,CRO-406-P,249.00,27/02/2024,0
+7237653594186,Cropped Essential Bege,CRO-121-P,249.00,10/08/2023,1
+7484588294218,Cropped Essential Botanic Green,CRO-406-G,249.00,27/02/2024,1
+7484588294218,Cropped Essential Botanic Green,CRO-406-M,249.00,27/02/2024,2
+7484588294218,Cropped Essential Botanic Green,CRO-406-P,249.00,27/02/2024,2
 6710308765770,Cropped Essential Branco,CRO-ESS-BRA-G,249.00,17/11/2021,0
-6710308765770,Cropped Essential Branco,CRO-ESS-BRA-M,249.00,17/11/2021,0
-6710308765770,Cropped Essential Branco,CRO-ESS-BRA-P,249.00,17/11/2021,0
+6710308765770,Cropped Essential Branco,CRO-ESS-BRA-M,249.00,17/11/2021,3
+6710308765770,Cropped Essential Branco,CRO-ESS-BRA-P,249.00,17/11/2021,5
 7484587802698,Cropped Essential Grey Lead,CRO-402-G,249.00,27/02/2024,0
-7484587802698,Cropped Essential Grey Lead,CRO-402-M,249.00,27/02/2024,0
+7484587802698,Cropped Essential Grey Lead,CRO-402-M,249.00,27/02/2024,1
 7484587802698,Cropped Essential Grey Lead,CRO-402-P,249.00,27/02/2024,0
 7484587835466,Cropped Essential Light Blue,CRO-403-G,249.00,27/02/2024,0
 7484587835466,Cropped Essential Light Blue,CRO-403-M,249.00,27/02/2024,0
-7484587835466,Cropped Essential Light Blue,CRO-403-P,249.00,27/02/2024,0
-7484587638858,Cropped Essential Light Pink,CRO-400-G,249.00,27/02/2024,0
-7484587638858,Cropped Essential Light Pink,CRO-400-M,249.00,27/02/2024,0
-7484587638858,Cropped Essential Light Pink,CRO-400-P,249.00,27/02/2024,0
+7484587835466,Cropped Essential Light Blue,CRO-403-P,249.00,27/02/2024,2
+7484587638858,Cropped Essential Light Pink,CRO-400-G,249.00,27/02/2024,1
+7484587638858,Cropped Essential Light Pink,CRO-400-M,249.00,27/02/2024,8
+7484587638858,Cropped Essential Light Pink,CRO-400-P,249.00,27/02/2024,6
 7484588163146,Cropped Essential Navarro blue,CRO-405-G,249.00,27/02/2024,0
-7484588163146,Cropped Essential Navarro blue,CRO-405-M,249.00,27/02/2024,0
-7484588163146,Cropped Essential Navarro blue,CRO-405-P,249.00,27/02/2024,0
+7484588163146,Cropped Essential Navarro blue,CRO-405-M,249.00,27/02/2024,2
+7484588163146,Cropped Essential Navarro blue,CRO-405-P,249.00,27/02/2024,1
 7237653168202,Cropped Essential Nude,CRO-119-G,249.00,10/08/2023,0
 7237653168202,Cropped Essential Nude,CRO-119-M,249.00,10/08/2023,0
 7237653168202,Cropped Essential Nude,CRO-119-P,249.00,10/08/2023,0
@@ -152,13 +152,13 @@ product_id,title,SKU,price,created_at,stock_quantity
 6756615618634,Legging Apex Seamless Sky,LEG107,203.92,18/01/2022,0
 6756615618634,Legging Apex Seamless Sky,LEG106,203.92,18/01/2022,0
 6687222628426,Legging Harmony Seamless Blue,LEG240,237.92,28/07/2022,0
-6687222628426,Legging Harmony Seamless Blue,LEG-HAR-BLU-M,237.92,18/10/2021,0
-6687222628426,Legging Harmony Seamless Blue,LEG-HAR-BLU-P,237.92,18/10/2021,0
+6687222628426,Legging Harmony Seamless Blue,LEG-HAR-BLU-M,237.92,18/10/2021,1
+6687222628426,Legging Harmony Seamless Blue,LEG-HAR-BLU-P,237.92,18/10/2021,4
 6687222595658,Legging Harmony Seamless Pink,LEG239,237.92,28/07/2022,0
 6687222595658,Legging Harmony Seamless Pink,LEG-HAR-PIN-M,237.92,18/10/2021,0
 6687222595658,Legging Harmony Seamless Pink,LEG-HAR-PIN-P,237.92,18/10/2021,0
 ,,25405327001840,,12/12/2024,0
-7796736950346,Legging Jockey Seamless Brown,LEG-568-G,359.00,25/09/2024,0
+7796736950346,Legging Jockey Seamless Brown,LEG-568-G,359.00,25/09/2024,-1
 7796736950346,Legging Jockey Seamless Brown,LEG-568-M,359.00,25/09/2024,0
 7796736950346,Legging Jockey Seamless Brown,LEG-568-P,359.00,25/09/2024,0
 ,,25405327001841,,12/12/2024,0
@@ -174,34 +174,34 @@ product_id,title,SKU,price,created_at,stock_quantity
 7045733744714,Legging Jockey Seamless Preto,leg-bol-pre-g,359.00,06/12/2022,0
 ,,LEG-BOL-PRE-GG,,12/12/2024,0
 7045733744714,Legging Jockey Seamless Preto,leg-bol-pre-m,359.00,06/12/2022,0
-7045733744714,Legging Jockey Seamless Preto,leg-bol-pre-p,359.00,06/12/2022,0
-7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-G,359.00,07/03/2024,0
-7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-M,359.00,07/03/2024,0
-7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-P,359.00,07/03/2024,0
+7045733744714,Legging Jockey Seamless Preto,leg-bol-pre-p,359.00,06/12/2022,5
+7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-G,359.00,07/03/2024,1
+7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-M,359.00,07/03/2024,5
+7495528742986,Legging Moon Dust Seamless Dark Matter,LEG-419-P,359.00,07/03/2024,3
 7495528808522,Legging Moon Dust Seamless Esmerald,LEG-420-G,359.00,07/03/2024,0
 7495528808522,Legging Moon Dust Seamless Esmerald,LEG-420-M,359.00,07/03/2024,0
 7495528808522,Legging Moon Dust Seamless Esmerald,LEG-420-P,359.00,07/03/2024,0
-7495528874058,Legging Moon Dust Seamless Nickel,LEG-421-G,359.00,07/03/2024,0
+7495528874058,Legging Moon Dust Seamless Nickel,LEG-421-G,359.00,07/03/2024,1
 7495528874058,Legging Moon Dust Seamless Nickel,LEG-421-M,359.00,07/03/2024,0
-7495528874058,Legging Moon Dust Seamless Nickel,LEG-421-P,359.00,07/03/2024,0
+7495528874058,Legging Moon Dust Seamless Nickel,LEG-421-P,359.00,07/03/2024,1
 ,,25405327001842,,12/12/2024,0
 7796720435274,Legging Outsider Seamless Alaska blue,LEG-517-G,349.00,25/09/2024,0
 7796720435274,Legging Outsider Seamless Alaska blue,LEG-517-M,349.00,25/09/2024,0
 7796720435274,Legging Outsider Seamless Alaska blue,LEG-517-P,349.00,25/09/2024,0
 6967004921930,Legging Outsider Seamless Azul de Lyons,LEG280,296.65,08/09/2022,0
-6967004921930,Legging Outsider Seamless Azul de Lyons,LEG279,296.65,08/09/2022,0
+6967004921930,Legging Outsider Seamless Azul de Lyons,LEG279,296.65,08/09/2022,2
 6967004921930,Legging Outsider Seamless Azul de Lyons,LEG278,296.65,08/09/2022,0
-6945991655498,Legging Outsider Seamless Azul Marinho,LEG264,349.00,17/08/2022,0
+6945991655498,Legging Outsider Seamless Azul Marinho,LEG264,349.00,17/08/2022,1
 6945991655498,Legging Outsider Seamless Azul Marinho,LEG263,349.00,17/08/2022,0
-6945991655498,Legging Outsider Seamless Azul Marinho,LEG262,349.00,17/08/2022,0
+6945991655498,Legging Outsider Seamless Azul Marinho,LEG262,349.00,17/08/2022,2
 7459360145482,Legging Outsider Seamless Brown,LEG-388-G,349.00,24/01/2024,0
 7459360145482,Legging Outsider Seamless Brown,LEG-388-M,349.00,24/01/2024,0
 7459360145482,Legging Outsider Seamless Brown,LEG-388-P,349.00,24/01/2024,0
 7819186896970,Legging Outsider Seamless Brownish,LEG-604-G,349.00,07/11/2024,0
-7819186896970,Legging Outsider Seamless Brownish,LEG-604-M,349.00,07/11/2024,0
-7819186896970,Legging Outsider Seamless Brownish,LEG-604-P,349.00,07/11/2024,0
+7819186896970,Legging Outsider Seamless Brownish,LEG-604-M,349.00,07/11/2024,16
+7819186896970,Legging Outsider Seamless Brownish,LEG-604-P,349.00,07/11/2024,19
 ,,25405327001782,,12/12/2024,0
-7770144047178,Legging Outsider Seamless Cayena,LEG-491-G,349.00,09/08/2024,0
+7770144047178,Legging Outsider Seamless Cayena,LEG-491-G,349.00,09/08/2024,1
 7770144047178,Legging Outsider Seamless Cayena,LEG-491-M,349.00,09/08/2024,0
 7770144047178,Legging Outsider Seamless Cayena,LEG-491-P,349.00,09/08/2024,0
 7459360309322,Legging Outsider Seamless Dark Brown,LEG-389-G,349.00,24/01/2024,0
@@ -221,31 +221,31 @@ product_id,title,SKU,price,created_at,stock_quantity
 6946026618954,Legging Outsider Seamless Jungle,LEG255,349.00,17/08/2022,0
 6946026618954,Legging Outsider Seamless Jungle,LEG254,349.00,17/08/2022,0
 6892867649610,Legging Outsider Seamless Lavinia,LEG178,349.00,15/06/2022,0
-6892867649610,Legging Outsider Seamless Lavinia,LEG177,349.00,15/06/2022,0
-6892867649610,Legging Outsider Seamless Lavinia,LEG176,349.00,15/06/2022,0
-6978390458442,Legging Outsider Seamless Magno,LEG211,349.00,21/09/2022,0
-6978390458442,Legging Outsider Seamless Magno,LEG210,349.00,21/09/2022,0
-6978390458442,Legging Outsider Seamless Magno,LEG209,349.00,21/09/2022,0
-7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-G,349.00,07/11/2024,0
-7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-M,349.00,07/11/2024,0
-7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-P,349.00,07/11/2024,0
+6892867649610,Legging Outsider Seamless Lavinia,LEG177,349.00,15/06/2022,1
+6892867649610,Legging Outsider Seamless Lavinia,LEG176,349.00,15/06/2022,3
+6978390458442,Legging Outsider Seamless Magno,LEG211,349.00,21/09/2022,4
+6978390458442,Legging Outsider Seamless Magno,LEG210,349.00,21/09/2022,5
+6978390458442,Legging Outsider Seamless Magno,LEG209,349.00,21/09/2022,-1
+7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-G,349.00,07/11/2024,-1
+7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-M,349.00,07/11/2024,-3
+7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-P,349.00,07/11/2024,-2
 6892867682378,Legging Outsider Seamless Nude,LEG186,349.00,15/06/2022,0
-6892867682378,Legging Outsider Seamless Nude,LEG185,349.00,15/06/2022,0
-6892867682378,Legging Outsider Seamless Nude,LEG184,349.00,15/06/2022,0
+6892867682378,Legging Outsider Seamless Nude,LEG185,349.00,15/06/2022,2
+6892867682378,Legging Outsider Seamless Nude,LEG184,349.00,15/06/2022,3
 7819257151562,Legging Outsider Seamless Nude Wheat,LEG-606-G,349.00,07/11/2024,0
 7819257151562,Legging Outsider Seamless Nude Wheat,LEG-606-M,349.00,07/11/2024,0
 7819257151562,Legging Outsider Seamless Nude Wheat,LEG-606-P,349.00,07/11/2024,0
-6910076190794,Legging Outsider Seamless Off White,LEG203,349.00,06/07/2022,0
-6910076190794,Legging Outsider Seamless Off White,LEG202,349.00,06/07/2022,0
+6910076190794,Legging Outsider Seamless Off White,LEG203,349.00,06/07/2022,1
+6910076190794,Legging Outsider Seamless Off White,LEG202,349.00,06/07/2022,10
 6910076190794,Legging Outsider Seamless Off White,LEG201,349.00,06/07/2022,0
 ,,25405327001844,,12/12/2024,0
 7796720238666,Legging Outsider Seamless Pickled beet,LEG-516-G,349.00,25/09/2024,0
 7796720238666,Legging Outsider Seamless Pickled beet,LEG-516-M,349.00,25/09/2024,0
 7796720238666,Legging Outsider Seamless Pickled beet,LEG-516-P,349.00,25/09/2024,0
-6967004987466,Legging Outsider Seamless Pistache,LEG288,296.65,08/09/2022,0
-6967004987466,Legging Outsider Seamless Pistache,LEG287,296.65,08/09/2022,0
-6967004987466,Legging Outsider Seamless Pistache,LEG286,296.65,08/09/2022,0
-6946026782794,Legging Outsider Seamless Preto,LEG248,349.00,17/08/2022,0
+6967004987466,Legging Outsider Seamless Pistache,LEG288,296.65,08/09/2022,3
+6967004987466,Legging Outsider Seamless Pistache,LEG287,296.65,08/09/2022,2
+6967004987466,Legging Outsider Seamless Pistache,LEG286,296.65,08/09/2022,3
+6946026782794,Legging Outsider Seamless Preto,LEG248,349.00,17/08/2022,8
 6946026782794,Legging Outsider Seamless Preto,LEG247,349.00,17/08/2022,0
 6946026782794,Legging Outsider Seamless Preto,LEG246,349.00,17/08/2022,0
 7396016390218,Legging Outsider Seamless Rockefeller,LEG-157-G,349.00,09/11/2023,0
@@ -261,16 +261,16 @@ product_id,title,SKU,price,created_at,stock_quantity
 6967004889162,Legging Outsider Seamless Spicy,LEG303,296.65,08/09/2022,0
 6967004889162,Legging Outsider Seamless Spicy,LEG302,296.65,08/09/2022,0
 7396016586826,Legging Outsider Seamless Vintage,LEG-158-G,296.65,09/11/2023,0
-7396016586826,Legging Outsider Seamless Vintage,LEG-158-M,296.65,09/11/2023,0
+7396016586826,Legging Outsider Seamless Vintage,LEG-158-M,296.65,09/11/2023,4
 7396016586826,Legging Outsider Seamless Vintage,LEG-158-P,296.65,09/11/2023,0
 7495529267274,Legging Print Seamless Cinnamon Caramel,LEG-423-G,279.65,07/03/2024,0
 7495529267274,Legging Print Seamless Cinnamon Caramel,LEG-423-M,279.65,07/03/2024,0
 7495529267274,Legging Print Seamless Cinnamon Caramel,LEG-423-P,279.65,07/03/2024,0
-7495529103434,Legging Print Seamless Grey Coffee,LEG-422-G,329.00,07/03/2024,0
-7495529103434,Legging Print Seamless Grey Coffee,LEG-422-M,329.00,07/03/2024,0
-7495529103434,Legging Print Seamless Grey Coffee,LEG-422-P,329.00,07/03/2024,0
-7055134130250,Legging Pure Seamless Alecrim,leg-pur-ale-g,349.00,19/12/2022,0
-7055134130250,Legging Pure Seamless Alecrim,leg-pur-ale-m,349.00,19/12/2022,0
+7495529103434,Legging Print Seamless Grey Coffee,LEG-422-G,329.00,07/03/2024,2
+7495529103434,Legging Print Seamless Grey Coffee,LEG-422-M,329.00,07/03/2024,3
+7495529103434,Legging Print Seamless Grey Coffee,LEG-422-P,329.00,07/03/2024,3
+7055134130250,Legging Pure Seamless Alecrim,leg-pur-ale-g,349.00,19/12/2022,5
+7055134130250,Legging Pure Seamless Alecrim,leg-pur-ale-m,349.00,19/12/2022,1
 7055134130250,Legging Pure Seamless Alecrim,leg-pur-ale-p,349.00,19/12/2022,0
 7254942941258,Legging Pure Seamless Azul Iznik,LEG-134-G,296.65,30/08/2023,0
 7254942941258,Legging Pure Seamless Azul Iznik,LEG-134-M,296.65,30/08/2023,0
@@ -279,12 +279,12 @@ product_id,title,SKU,price,created_at,stock_quantity
 7796727677002,Legging Pure Seamless Brown,LEG-548-G,349.00,25/09/2024,0
 7796727677002,Legging Pure Seamless Brown,LEG-548-M,349.00,25/09/2024,0
 7796727677002,Legging Pure Seamless Brown,LEG-548-P,349.00,25/09/2024,0
-7497519300682,Legging Pure Seamless Cherry,LEG-440-G,349.00,08/03/2024,0
-7497519300682,Legging Pure Seamless Cherry,LEG-440-M,349.00,08/03/2024,0
-7497519300682,Legging Pure Seamless Cherry,LEG-440-P,349.00,08/03/2024,0
-6856164671562,Legging Pure Seamless Coffee,LEG144,349.00,05/05/2022,0
-6856164671562,Legging Pure Seamless Coffee,LEG143,349.00,05/05/2022,0
-6856164671562,Legging Pure Seamless Coffee,LEG142,349.00,05/05/2022,0
+7497519300682,Legging Pure Seamless Cherry,LEG-440-G,349.00,08/03/2024,5
+7497519300682,Legging Pure Seamless Cherry,LEG-440-M,349.00,08/03/2024,4
+7497519300682,Legging Pure Seamless Cherry,LEG-440-P,349.00,08/03/2024,2
+6856164671562,Legging Pure Seamless Coffee,LEG144,349.00,05/05/2022,1
+6856164671562,Legging Pure Seamless Coffee,LEG143,349.00,05/05/2022,6
+6856164671562,Legging Pure Seamless Coffee,LEG142,349.00,05/05/2022,5
 ,,25405327001846,,12/12/2024,0
 7796723777610,Legging Pure Seamless Coronet Blue,LEG-527-G,349.00,25/09/2024,0
 7796723777610,Legging Pure Seamless Coronet Blue,LEG-527-M,349.00,25/09/2024,0
@@ -307,31 +307,31 @@ product_id,title,SKU,price,created_at,stock_quantity
 7796724236362,Legging Pure Seamless Gray Violet,LEG-530-M,349.00,25/09/2024,0
 7796724236362,Legging Pure Seamless Gray Violet,LEG-530-P,349.00,25/09/2024,0
 6849920925770,Legging Pure Seamless Jade,LEG128,349.00,03/05/2022,0
-6849920925770,Legging Pure Seamless Jade,LEG127,349.00,03/05/2022,0
+6849920925770,Legging Pure Seamless Jade,LEG127,349.00,03/05/2022,1
 6849920925770,Legging Pure Seamless Jade,LEG126,349.00,03/05/2022,0
-6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-G,349.00,17/11/2021,0
-6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-M,349.00,17/11/2021,0
-6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-P,349.00,17/11/2021,0
+6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-G,349.00,17/11/2021,9
+6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-M,349.00,17/11/2021,3
+6710315614282,Legging Pure Seamless Jungle,LEG-PUR-JUN-P,349.00,17/11/2021,6
 7045748916298,Legging Pure Seamless Laranja Bahia,leg-pure-bah-g,296.65,06/12/2022,0
 7045748916298,Legging Pure Seamless Laranja Bahia,leg-pure-bah-m,296.65,06/12/2022,0
-7045748916298,Legging Pure Seamless Laranja Bahia,leg-pure-bah-p,296.65,06/12/2022,0
+7045748916298,Legging Pure Seamless Laranja Bahia,leg-pure-bah-p,296.65,06/12/2022,3
 7254943072330,Legging Pure Seamless Lilac,LEG-135-G,349.00,30/08/2023,0
-7254943072330,Legging Pure Seamless Lilac,LEG-135-M,349.00,30/08/2023,0
+7254943072330,Legging Pure Seamless Lilac,LEG-135-M,349.00,30/08/2023,1
 7254943072330,Legging Pure Seamless Lilac,LEG-135-P,349.00,30/08/2023,0
 ,,25405327001849,,12/12/2024,0
 7796726595658,Legging Pure Seamless Misty Rose,LEG-543-G,349.00,25/09/2024,0
 7796726595658,Legging Pure Seamless Misty Rose,LEG-543-M,349.00,25/09/2024,0
 7796726595658,Legging Pure Seamless Misty Rose,LEG-543-P,349.00,25/09/2024,0
 7497519497290,Legging Pure Seamless Mulberry,LEG-441-G,349.00,08/03/2024,0
-7497519497290,Legging Pure Seamless Mulberry,LEG-441-M,349.00,08/03/2024,0
-7497519497290,Legging Pure Seamless Mulberry,LEG-441-P,349.00,08/03/2024,0
-6856164409418,Legging Pure Seamless Nickel,LEG136,296.65,05/05/2022,0
+7497519497290,Legging Pure Seamless Mulberry,LEG-441-M,349.00,08/03/2024,2
+7497519497290,Legging Pure Seamless Mulberry,LEG-441-P,349.00,08/03/2024,3
+6856164409418,Legging Pure Seamless Nickel,LEG136,296.65,05/05/2022,1
 6856164409418,Legging Pure Seamless Nickel,LEG135,296.65,05/05/2022,0
 6856164409418,Legging Pure Seamless Nickel,LEG134,296.65,05/05/2022,0
 7254942744650,Legging Pure Seamless Oak,LEG-133-G,349.00,30/08/2023,0
 7254942744650,Legging Pure Seamless Oak,LEG-133-M,349.00,30/08/2023,0
-7254942744650,Legging Pure Seamless Oak,LEG-133-P,349.00,30/08/2023,0
-7055136030794,Legging Pure Seamless Oceano,leg-pur-oce-g,349.00,19/12/2022,0
+7254942744650,Legging Pure Seamless Oak,LEG-133-P,349.00,30/08/2023,3
+7055136030794,Legging Pure Seamless Oceano,leg-pur-oce-g,349.00,19/12/2022,2
 7055136030794,Legging Pure Seamless Oceano,leg-pur-oce-m,349.00,19/12/2022,0
 7055136030794,Legging Pure Seamless Oceano,leg-pur-oce-p,349.00,19/12/2022,0
 6856165195850,Legging Pure Seamless Pancake,LEG152,349.00,05/05/2022,0
@@ -343,10 +343,10 @@ product_id,title,SKU,price,created_at,stock_quantity
 6687221907530,Legging Pure Seamless Preto,LEG-PUR-PRE-P,349.00,18/10/2021,0
 7045754126410,Legging Pure Seamless Retro,leg-pur-ret-g,296.65,06/12/2022,0
 7045754126410,Legging Pure Seamless Retro,leg-pur-ret-m,296.65,06/12/2022,0
-7045754126410,Legging Pure Seamless Retro,leg-pur-ret-p,296.65,06/12/2022,0
-6856165294154,Legging Pure Seamless Roze,LEG160,349.00,05/05/2022,0
+7045754126410,Legging Pure Seamless Retro,leg-pur-ret-p,296.65,06/12/2022,-1
+6856165294154,Legging Pure Seamless Roze,LEG160,349.00,05/05/2022,1
 ,,LEG-PUR-ROZ-GG,,12/12/2024,0
-6856165294154,Legging Pure Seamless Roze,LEG159,349.00,05/05/2022,0
+6856165294154,Legging Pure Seamless Roze,LEG159,349.00,05/05/2022,1
 6856165294154,Legging Pure Seamless Roze,LEG158,349.00,05/05/2022,0
 6856165457994,Legging Pure Seamless Sea,LEG168,296.65,05/05/2022,0
 6856165457994,Legging Pure Seamless Sea,LEG167,296.65,05/05/2022,0
@@ -359,7 +359,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7045768413258,Legging Pure Seamless Spicy,leg-pur-spi-m,296.65,06/12/2022,0
 7045768413258,Legging Pure Seamless Spicy,leg-pur-spi-p,296.65,06/12/2022,0
 7067199897674,Legging Pure Seamless Valência,leg-pur-val-g,349.00,31/01/2023,0
-7067199897674,Legging Pure Seamless Valência,leg-pur-val-m,349.00,31/01/2023,0
+7067199897674,Legging Pure Seamless Valência,leg-pur-val-m,349.00,31/01/2023,2
 7067199897674,Legging Pure Seamless Valência,leg-pur-val-p,349.00,31/01/2023,0
 ,,25405327001851,,12/12/2024,0
 7796724760650,Legging Pure Seamless Winery,LEG-535-G,349.00,25/09/2024,0
@@ -369,10 +369,10 @@ product_id,title,SKU,price,created_at,stock_quantity
 7796738785354,Legging Signature Seamless Amphora,LEG-580-G,349.00,25/09/2024,0
 7796738785354,Legging Signature Seamless Amphora,LEG-579-M,349.00,25/09/2024,0
 7796738785354,Legging Signature Seamless Amphora,LEG-579-P,349.00,25/09/2024,0
-7396014522442,Legging Signature Seamless Astral,LEG-154-G,349.00,09/11/2023,0
+7396014522442,Legging Signature Seamless Astral,LEG-154-G,349.00,09/11/2023,2
 7396014522442,Legging Signature Seamless Astral,LEG-154-M,349.00,09/11/2023,0
-7396014522442,Legging Signature Seamless Astral,LEG-154-P,349.00,09/11/2023,0
-7055529803850,Legging Signature Seamless Azul Marinho,leg-sig-azu-g,349.00,19/12/2022,0
+7396014522442,Legging Signature Seamless Astral,LEG-154-P,349.00,09/11/2023,3
+7055529803850,Legging Signature Seamless Azul Marinho,leg-sig-azu-g,349.00,19/12/2022,7
 7055529803850,Legging Signature Seamless Azul Marinho,leg-sig-azu-m,349.00,19/12/2022,0
 7055529803850,Legging Signature Seamless Azul Marinho,leg-sig-azu-p,349.00,19/12/2022,0
 ,,25405327001853,,12/12/2024,0
@@ -387,26 +387,26 @@ product_id,title,SKU,price,created_at,stock_quantity
 7497515434058,Legging Signature Seamless Dark Grey,LEG-434-M,349.00,08/03/2024,0
 7497515434058,Legging Signature Seamless Dark Grey,LEG-434-P,349.00,08/03/2024,0
 ,,25405327001823,,12/12/2024,0
-7776605175882,Legging Signature Seamless Frozen,LEG-505-G,349.00,22/08/2024,0
-7776605175882,Legging Signature Seamless Frozen,LEG-505-M,349.00,22/08/2024,0
+7776605175882,Legging Signature Seamless Frozen,LEG-505-G,349.00,22/08/2024,2
+7776605175882,Legging Signature Seamless Frozen,LEG-505-M,349.00,22/08/2024,1
 7776605175882,Legging Signature Seamless Frozen,LEG-505-P,349.00,22/08/2024,0
 7396014325834,Legging Signature Seamless Jambo,LEG-159-G,349.00,09/11/2023,0
 7396014325834,Legging Signature Seamless Jambo,LEG-159-M,349.00,09/11/2023,0
 7396014325834,Legging Signature Seamless Jambo,LEG-159-P,349.00,09/11/2023,0
 7055529672778,Legging Signature Seamless Jungle,leg-sig-jun-g,349.00,19/12/2022,0
 7055529672778,Legging Signature Seamless Jungle,leg-sig-jun-m,349.00,19/12/2022,0
-7055529672778,Legging Signature Seamless Jungle,leg-sig-jun-p,349.00,19/12/2022,0
-7497515958346,Legging Signature Seamless Morning Sky,LEG-435-G,349.00,08/03/2024,0
-7497515958346,Legging Signature Seamless Morning Sky,LEG-435-M,349.00,08/03/2024,0
+7055529672778,Legging Signature Seamless Jungle,leg-sig-jun-p,349.00,19/12/2022,4
+7497515958346,Legging Signature Seamless Morning Sky,LEG-435-G,349.00,08/03/2024,4
+7497515958346,Legging Signature Seamless Morning Sky,LEG-435-M,349.00,08/03/2024,2
 7497515958346,Legging Signature Seamless Morning Sky,LEG-435-P,349.00,08/03/2024,0
 ,,25405327001854,,12/12/2024,0
 7796739113034,Legging Signature Seamless Pink Lemonade,LEG-584-G,349.00,25/09/2024,0
 7796739113034,Legging Signature Seamless Pink Lemonade,LEG-584-M,349.00,25/09/2024,0
 7796739113034,Legging Signature Seamless Pink Lemonade,LEG-584-P,349.00,25/09/2024,0
-7055529377866,Legging Signature Seamless Preto,leg-sig-pre-g,349.00,19/12/2022,0
+7055529377866,Legging Signature Seamless Preto,leg-sig-pre-g,349.00,19/12/2022,8
 ,,LEG-SIG-PRE-GG,,12/12/2024,0
 7055529377866,Legging Signature Seamless Preto,leg-sig-pre-m,349.00,19/12/2022,0
-7055529377866,Legging Signature Seamless Preto,leg-sig-pre-p,349.00,19/12/2022,0
+7055529377866,Legging Signature Seamless Preto,leg-sig-pre-p,349.00,19/12/2022,9
 ,,25405327001786,,12/12/2024,0
 ,,LEG-492-G,,12/12/2024,0
 ,,LEG-492-M,,12/12/2024,0
@@ -425,8 +425,8 @@ product_id,title,SKU,price,created_at,stock_quantity
 7804995993674,Legging Stripe Seamless Butter,LEG-593-M,389.00,10/10/2024,0
 7804995993674,Legging Stripe Seamless Butter,LEG-593-P,389.00,10/10/2024,0
 7774610882634,Legging Stripe Seamless Explorer,LEG-503-G,389.00,16/08/2024,0
-7774610882634,Legging Stripe Seamless Explorer,LEG-503-M,389.00,16/08/2024,0
-7774610882634,Legging Stripe Seamless Explorer,LEG-503-P,389.00,16/08/2024,0
+7774610882634,Legging Stripe Seamless Explorer,LEG-503-M,389.00,16/08/2024,12
+7774610882634,Legging Stripe Seamless Explorer,LEG-503-P,389.00,16/08/2024,12
 ,,25405327001856,,12/12/2024,0
 7796734132298,Legging Stripe Seamless Gray Violet,LEG-562-G,389.00,25/09/2024,0
 7796734132298,Legging Stripe Seamless Gray Violet,LEG-562-M,389.00,25/09/2024,0
@@ -434,18 +434,18 @@ product_id,title,SKU,price,created_at,stock_quantity
 ,,25405327001790,,12/12/2024,0
 7770139918410,Legging Stripe Seamless Grey,LEG-487-G,389.00,09/08/2024,0
 7770139918410,Legging Stripe Seamless Grey,LEG-487-M,389.00,09/08/2024,0
-7770139918410,Legging Stripe Seamless Grey,LEG-487-P,389.00,09/08/2024,0
-7331631693898,Legging Stripe Seamless Off White,LEG-141-G,389.00,28/09/2023,0
-7331631693898,Legging Stripe Seamless Off White,LEG-141-M,389.00,28/09/2023,0
+7770139918410,Legging Stripe Seamless Grey,LEG-487-P,389.00,09/08/2024,10
+7331631693898,Legging Stripe Seamless Off White,LEG-141-G,389.00,28/09/2023,3
+7331631693898,Legging Stripe Seamless Off White,LEG-141-M,389.00,28/09/2023,-1
 7331631693898,Legging Stripe Seamless Off White,LEG-141-P,389.00,28/09/2023,0
 ,,25405327001857,,12/12/2024,0
 7796732854346,Legging Stripe Seamless Phantom Blue,LEG-558-G,389.00,25/09/2024,0
 7796732854346,Legging Stripe Seamless Phantom Blue,LEG-558-M,389.00,25/09/2024,0
 7796732854346,Legging Stripe Seamless Phantom Blue,LEG-557-P,389.00,25/09/2024,0
-7331631071306,Legging Stripe Seamless Preto,LEG-140-G,389.00,28/09/2023,0
+7331631071306,Legging Stripe Seamless Preto,LEG-140-G,389.00,28/09/2023,2
 7331631071306,Legging Stripe Seamless Preto,LEG-140-M,389.00,28/09/2023,0
 7331631071306,Legging Stripe Seamless Preto,LEG-140-P,389.00,28/09/2023,0
-7459363651658,Legging Stripe Seamless Red Oak,LEG-392-G,389.00,24/01/2024,0
+7459363651658,Legging Stripe Seamless Red Oak,LEG-392-G,389.00,24/01/2024,4
 7459363651658,Legging Stripe Seamless Red Oak,LEG-392-M,389.00,24/01/2024,0
 7459363651658,Legging Stripe Seamless Red Oak,LEG-392-P,389.00,24/01/2024,0
 6687221710922,Legging Track Seamless Cinza Claro,LEG192,203.92,28/07/2022,0
@@ -454,7 +454,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 6687221809226,Legging Track Seamless Cinza Escuro,LEG195,239.90,28/07/2022,0
 6687221809226,Legging Track Seamless Cinza Escuro,LEG-TRA-CES-M,239.90,18/10/2021,0
 6687221809226,Legging Track Seamless Cinza Escuro,LEG-TRA-CES-P,239.90,18/10/2021,0
-7420467970122,Long T-shirt Branco,LON-375-G,289.00,06/12/2023,0
+7420467970122,Long T-shirt Branco,LON-375-G,289.00,06/12/2023,5
 7420467970122,Long T-shirt Branco,LON-375-M,289.00,06/12/2023,0
 7420467970122,Long T-shirt Branco,LON-375-P,289.00,06/12/2023,0
 7420467839050,Long T-shirt Preto,LON-374-G,289.00,06/12/2023,0
@@ -513,21 +513,21 @@ product_id,title,SKU,price,created_at,stock_quantity
 7588869406794,Moletom Gentle Off White,MOL-467-G,349.95,17/04/2024,0
 7588869406794,Moletom Gentle Off White,MOL-467-M,349.95,17/04/2024,0
 7588869406794,Moletom Gentle Off White,MOL-467-P,349.95,17/04/2024,0
-7588871700554,Moletom Jogger Black,MOL-474-G,349.95,17/04/2024,0
-7588871700554,Moletom Jogger Black,MOL-474-M,349.95,17/04/2024,0
-7588871700554,Moletom Jogger Black,MOL-474-P,349.95,17/04/2024,0
+7588871700554,Moletom Jogger Black,MOL-474-G,349.95,17/04/2024,1
+7588871700554,Moletom Jogger Black,MOL-474-M,349.95,17/04/2024,1
+7588871700554,Moletom Jogger Black,MOL-474-P,349.95,17/04/2024,1
 7588871995466,Moletom Jogger Dark Brown,MOL-476-G,349.95,17/04/2024,0
 7588871995466,Moletom Jogger Dark Brown,MOL-476-M,349.95,17/04/2024,0
 7588871995466,Moletom Jogger Dark Brown,MOL-476-P,349.95,17/04/2024,0
-7588872061002,Moletom Jogger Light Pink,MOL-477-G,349.95,17/04/2024,0
+7588872061002,Moletom Jogger Light Pink,MOL-477-G,349.95,17/04/2024,1
 7588872061002,Moletom Jogger Light Pink,MOL-477-M,349.95,17/04/2024,0
 7588872061002,Moletom Jogger Light Pink,MOL-477-P,349.95,17/04/2024,0
-7588871864394,Moletom Jogger Off White,MOL-475-G,349.95,17/04/2024,0
+7588871864394,Moletom Jogger Off White,MOL-475-G,349.95,17/04/2024,1
 7588871864394,Moletom Jogger Off White,MOL-475-M,349.95,17/04/2024,0
-7588871864394,Moletom Jogger Off White,MOL-475-P,349.95,17/04/2024,0
-7588865704010,Moletom Straight Flare Black,MOL-462-G,349.95,17/04/2024,0
-7588865704010,Moletom Straight Flare Black,MOL-462-M,349.95,17/04/2024,0
-7588865704010,Moletom Straight Flare Black,MOL-462-P,349.95,17/04/2024,0
+7588871864394,Moletom Jogger Off White,MOL-475-P,349.95,17/04/2024,1
+7588865704010,Moletom Straight Flare Black,MOL-462-G,349.95,17/04/2024,1
+7588865704010,Moletom Straight Flare Black,MOL-462-M,349.95,17/04/2024,1
+7588865704010,Moletom Straight Flare Black,MOL-462-P,349.95,17/04/2024,2
 ,,Moletom Straight Dark Brown,,12/12/2024,0
 7588866916426,Moletom Straight Flare Dark Brown,MOL-464-G,349.95,17/04/2024,0
 7588866916426,Moletom Straight Flare Dark Brown,MOL-464-M,349.95,17/04/2024,0

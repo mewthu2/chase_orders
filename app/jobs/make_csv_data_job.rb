@@ -3,6 +3,7 @@ class MakeCsvDataJob < ApplicationJob
 
   def perform
     SyncProductsSituationJob.perform_now
+    Tiny::Products.assert_stock
     SyncOrdersSituationJob.perform_now
     MakeSpreadsheetJob.perform_now('lagoa_seca', 'product')
     MakeSpreadsheetJob.perform_now('lagoa_seca', 'order')

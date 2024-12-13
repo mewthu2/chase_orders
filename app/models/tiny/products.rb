@@ -59,7 +59,49 @@ class Tiny::Products
                               })
     end
 
+    def assert_stock
+      token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
+      token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+
+      update_stock_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
+      update_stock_for_products(Product.all, token_bh_shopping, 'bh_shopping')
+      update_stock_for_products(Product.all, token_rj, 'rj')
+    end
+
     private
+
+    def update_stock_for_products(products, token, kind)
+      products.each do |product|
+
+        case kind
+        when 'lagoa_seca'
+          product_id = product.tiny_lagoa_seca_product_id
+        when 'bh_shopping'
+          product_id = product.tiny_bh_shopping_id
+        when 'rj'
+          product_id = product.tiny_rj_id
+        end
+
+        stock_data = obtain_stock(product_id, token)
+        stock_value = stock_data['status'] != 'Erro' && stock_data['produto'].key?('saldo') ? stock_data['produto']['saldo'] : nil
+
+        puts "Estoque - #{stock_value}"
+        puts "Tipo - #{kind}"
+
+        case kind
+        when 'lagoa_seca'
+          product.update(stock_lagoa_seca: stock_value)
+        when 'bh_shopping'
+          product.update(stock_bh_shopping: stock_value)
+        when 'rj'
+          product.update(stock_rj: stock_value)
+        end
+
+        print 'Dormindo 2 segundos...'
+        sleep(1)
+      end
+    end
 
     def get_products_response(situacao, token, pagina = nil)
       response = JSON.parse(HTTParty.get(ENV.fetch('PRODUTOS_PESQUISA'),
