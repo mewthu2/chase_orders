@@ -230,7 +230,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-M,349.00,07/11/2024,-12
 7819186831434,Legging Outsider Seamless Middle Brown,LEG-603-P,349.00,07/11/2024,-8
 6892867682378,Legging Outsider Seamless Nude,LEG186,349.00,15/06/2022,1
-6892867682378,Legging Outsider Seamless Nude,LEG185,349.00,15/06/2022,-1
+6892867682378,Legging Outsider Seamless Nude,LEG185,349.00,15/06/2022,-2
 6892867682378,Legging Outsider Seamless Nude,LEG184,349.00,15/06/2022,1
 7819257151562,Legging Outsider Seamless Nude Wheat,LEG-606-G,349.00,07/11/2024,0
 7819257151562,Legging Outsider Seamless Nude Wheat,LEG-606-M,349.00,07/11/2024,-1
@@ -246,7 +246,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 6967004987466,Legging Outsider Seamless Pistache,LEG287,296.65,08/09/2022,-6
 6967004987466,Legging Outsider Seamless Pistache,LEG286,296.65,08/09/2022,-1
 6946026782794,Legging Outsider Seamless Preto,LEG248,349.00,17/08/2022,-3
-6946026782794,Legging Outsider Seamless Preto,LEG247,349.00,17/08/2022,-8
+6946026782794,Legging Outsider Seamless Preto,LEG247,349.00,17/08/2022,-10
 6946026782794,Legging Outsider Seamless Preto,LEG246,349.00,17/08/2022,-1
 7396016390218,Legging Outsider Seamless Rockefeller,LEG-157-G,349.00,09/11/2023,1
 7396016390218,Legging Outsider Seamless Rockefeller,LEG-157-M,349.00,09/11/2023,-1
@@ -537,7 +537,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7588867211338,Moletom Straight Flare Light Pink,MOL-465-P,349.95,17/04/2024,0
 ,,Moletom Straight Off White,,12/12/2024,0
 7588866621514,Moletom Straight Flare Off White,MOL-463-G,349.95,17/04/2024,-1
-7588866621514,Moletom Straight Flare Off White,MOL-463-M,349.95,17/04/2024,-2
+7588866621514,Moletom Straight Flare Off White,MOL-463-M,349.95,17/04/2024,-3
 7588866621514,Moletom Straight Flare Off White,MOL-463-P,349.95,17/04/2024,-4
 7588870127690,,The Hood Black,,12/12/2024,0
 7588870127690,Moletom The Hood Black,THE-470-G,349.95,17/04/2024,0
@@ -554,7 +554,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7588870389834,,The Hood Off White,,12/12/2024,0
 7588870389834,Moletom The Hood Off White,THE-471-G,349.95,17/04/2024,0
 7588870389834,Moletom The Hood Off White,THE-471-M,349.95,17/04/2024,0
-7588870389834,Moletom The Hood Off White,THE-471-P,349.95,17/04/2024,0
+7588870389834,Moletom The Hood Off White,THE-471-P,349.95,17/04/2024,-1
 ,,Polo Short Baby Blue,,12/12/2024,0
 7588862001226,Polo Court Baby Blue,POL-460-G,269.00,17/04/2024,0
 7588862001226,Polo Court Baby Blue,POL-460-M,269.00,17/04/2024,0
@@ -1037,7 +1037,7 @@ product_id,title,SKU,price,created_at,stock_quantity
 7819186274378,Top Outsider Seamless Middle Brown,TOP-602-M,289.00,07/11/2024,-12
 7819186274378,Top Outsider Seamless Middle Brown,TOP-602-P,289.00,07/11/2024,-9
 6892867813450,Top Outsider Seamless Nude,TOP190,289.00,15/06/2022,1
-6892867813450,Top Outsider Seamless Nude,TOP189,289.00,15/06/2022,-2
+6892867813450,Top Outsider Seamless Nude,TOP189,289.00,15/06/2022,-3
 6892867813450,Top Outsider Seamless Nude,TOP188,289.00,15/06/2022,0
 7819257249866,Top Outsider Seamless Nude Wheat,TOP-607-G,289.00,07/11/2024,0
 7819257249866,Top Outsider Seamless Nude Wheat,TOP-607-M,289.00,07/11/2024,0
@@ -1305,3 +1305,15 @@ product_id,title,SKU,price,created_at,stock_quantity
 7850558881866,Low Key Polo Light Blue,LOW-638-G,299.00,13/12/2024,0
 7850558881866,Low Key Polo Light Blue,LOW-638-M,299.00,13/12/2024,0
 7850558881866,Low Key Polo Light Blue,LOW-638-P,299.00,13/12/2024,0
+7852718587978,Legging Outsider Seamless Chumbo,LEG-640-P,349.00,16/12/2024,0
+7852718587978,Legging Outsider Seamless Chumbo,LEG-640-M,349.00,16/12/2024,0
+7852718587978,Legging Outsider Seamless Chumbo,LEG-640-G,349.00,16/12/2024,0
+7852738052170,Legging Pure Seamless Figo (cópia),LEG-645-P,349.00,16/12/2024,0
+7852738052170,Legging Pure Seamless Figo (cópia),LEG-645-M,349.00,16/12/2024,0
+7852738052170,Legging Pure Seamless Figo (cópia),LEG-646-G,349.00,16/12/2024,0
+7852734578762,Short Outsider Seamless Chumbo,SHO-642-P,289.00,16/12/2024,0
+7852734578762,Short Outsider Seamless Chumbo,SHO-642-M,289.00,16/12/2024,0
+7852734578762,Short Outsider Seamless Chumbo,SHO-642-G,289.00,16/12/2024,0
+7852735529034,Top Outsider Seamless Chumbo,TOP-644-P,245.65,16/12/2024,0
+7852735529034,Top Outsider Seamless Chumbo,TOP-644-M,245.65,16/12/2024,0
+7852735529034,Top Outsider Seamless Chumbo,TOP-644-G,245.65,16/12/2024,0
