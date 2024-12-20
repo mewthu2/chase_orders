@@ -23,7 +23,7 @@ Rails.application.routes.draw do
     collection do
       get :product_integration
   
-      get '/planilhas/:type/:origin/:filename', to: 'products#download', as: :download_planilha
+      get '/planilhas/:type/:origin', to: 'products#download', as: :download_planilha
     end
   end
 

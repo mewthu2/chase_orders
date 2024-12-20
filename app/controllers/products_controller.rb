@@ -24,19 +24,19 @@ class ProductsController < ApplicationController
   def download
     type = params[:type]
     origin = params[:origin]
-    extension = params[:format] || 'xlsx'
+    extension = 'csv'
 
-    filename = "planilha_#{type}_#{origin}.#{extension}"
-    file_path = Rails.root.join('app', 'assets', 'planilhas', type, origin, filename)
+    csv_content = MakeSpreadsheetJob.perform_now(origin, type)
 
-    if File.exist?(file_path)
+    if csv_content.present?
       mime_type = extension == 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      send_file(file_path, filename:, type: mime_type)
+      filename = "planilha_#{type}_#{origin}.#{extension}"
+
+      send_data csv_content, filename:, type: mime_type
     else
-      render plain: 'Arquivo não encontrado', status: :not_found
+      render plain: 'Erro ao gerar a planilha', status: :unprocessable_entity
     end
   end
-
 
   def product_integration
     redirect_to products_path, notice: 'Informações sincronizadas com sucesso.' if ProductIntegrationJob.perform_now('update_product_cost', Product.find(params[:product_id]), current_user)
