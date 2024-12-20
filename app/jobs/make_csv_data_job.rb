@@ -1,7 +1,7 @@
 class MakeCsvDataJob < ApplicationJob
   queue_as :default
 
-  def perform(kind)
+  def perform
     log_job('SyncProductsSituationJob') { SyncProductsSituationJob.perform_now }
     log_job('Tiny::Products.assert_stock') { Tiny::Products.assert_stock }
     log_job('SyncOrdersSituationJob') { SyncOrdersSituationJob.perform_now }
