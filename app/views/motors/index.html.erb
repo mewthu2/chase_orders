@@ -34,24 +34,39 @@
           <th class="text-center">End Time</th>
           <th class="text-center">Running Time (s)</th>
           <th class="text-center">Link</th>
+          <th class="text-center">Ações</th>
         </tr>
       </thead>
-      <tbody>
-        <% @motors.each do |motor| %>
-          <tr>
-            <td>
-
-            </td>
-            <td class="text-center"><%= motor.job_name %></td>
-            <td class="text-center"><%= motor.start_time.strftime('%d/%m/%Y %H:%M') %></td>
-            <td class="text-center"><%= motor.end_time ? motor.end_time.strftime('%d/%m/%Y %H:%M') : 'Ainda em progresso' %></td>
-            <td class="text-center"><%= motor.running_time %></td>
-            <td class="text-center">
-              <%= motor.link.present? ? link_to('Baixar CSV', motor.link, target: '_blank', class: 'btn btn-light btn-sm text-dark') : "<span class='badge bg-secondary'>Sem link</span>".html_safe %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
+        <tbody>
+          <% @motors.each do |motor| %>
+            <tr>
+            asdsada
+              <td class="text-center">
+                <% if motor.end_time.nil? %>
+                  <i class="fa fa-spinner fa-spin text-primary"></i>
+                <% else %>
+                  <i class="fa-solid fa-check text-success"></i>
+                <% end %>
+              </td>
+              <td class="text-center"><%= motor.job_name %></td>
+              <td class="text-center"><%= motor.start_time.strftime('%d/%m/%Y %H:%M') %></td>
+              <td class="text-center"><%= motor.end_time ? motor.end_time.strftime('%d/%m/%Y %H:%M') : 'Ainda em progresso' %></td>
+              <td class="text-center"><%= motor.running_time %></td>
+              <td class="text-center">
+                <%= motor.link.present? ? link_to('Baixar CSV', motor.link, target: '_blank', class: 'btn btn-light btn-sm text-dark') : "<span class='badge bg-secondary'>Sem link</span>".html_safe %>
+              </td>
+              <td class="text-center">
+                <% if motor.link.present? %>
+                  <button class="btn btn-light btn-sm text-dark" onclick="copyToClipboard('<%= motor.link %>')">
+                    <i class="fa fa-copy"></i> Copiar Link
+                  </button>
+                <% else %>
+                  <span class='badge bg-secondary'>Sem link</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
       <tfoot>
         <tr>
           <th colspan="12">
@@ -64,3 +79,15 @@
 </div>
 
 <%= will_paginate @motors, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+
+<script>
+  function copyToClipboard(link) {
+    const tempInput = document.createElement("input");
+    tempInput.value = link;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+    alert("Link copiado para a área de transferência!");
+  }
+</script>
