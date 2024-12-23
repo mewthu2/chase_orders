@@ -5,16 +5,27 @@ class MakeSpreadsheetJob < ApplicationJob
   require 'aws-sdk-s3'
 
   def perform(origin, kind)
-    case kind
-    when 'product'
-      csv_data = generate_product_csv(origin)
-    when 'order'
-      csv_data = generate_order_csv(origin)
-    else
-      raise ArgumentError, "Tipo inválido: #{kind}"
-    end
+    motor = Motor.find_or_initialize_by(job_name: "#{origin} - #{kind}")
 
-    save_to_s3(csv_data, origin, kind)
+    motor.start_time = Time.current
+    motor.end_time = nil
+    motor.save!
+
+    csv_data = case kind
+               when 'product'
+                 generate_product_csv(origin)
+               when 'order'
+                 generate_order_csv(origin)
+               else
+                 raise ArgumentError, "Tipo inválido: #{kind}"
+               end
+
+    s3_url = save_to_s3(csv_data, origin, kind)
+
+    motor.update!(
+      end_time: Time.current,
+      link: s3_url
+    )
   end
 
   private
