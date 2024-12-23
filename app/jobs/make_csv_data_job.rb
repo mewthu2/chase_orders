@@ -28,10 +28,12 @@ class MakeCsvDataJob < ApplicationJob
     Motor.find_or_create_by(job_name:) do |motor|
       motor.start_time = Time.now
       motor.running_time = 0
+      motor.end_time = nil
     end
   end
 
   def run_job_and_update_motor(motor)
+    motor.update(start_time: Time.now)
     yield
 
     if motor.end_time.present?
