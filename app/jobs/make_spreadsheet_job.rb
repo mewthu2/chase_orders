@@ -2,16 +2,19 @@ class MakeSpreadsheetJob < ApplicationJob
   queue_as :default
 
   require 'csv'
+  require 'aws-sdk-s3'
 
   def perform(origin, kind)
     case kind
     when 'product'
-      generate_product_csv(origin)
+      csv_data = generate_product_csv(origin)
     when 'order'
-      generate_order_csv(origin)
+      csv_data = generate_order_csv(origin)
     else
       raise ArgumentError, "Tipo inválido: #{kind}"
     end
+
+    save_to_s3(csv_data, origin, kind)
   end
 
   private
@@ -63,5 +66,32 @@ class MakeSpreadsheetJob < ApplicationJob
     when 'rj'
       product.stock_rj.to_i
     end
+  end
+
+  def save_to_s3(csv_data, origin, kind)
+    s3_client = Aws::S3::Client.new(
+      access_key_id: ENV.fetch('AWS_ACCESS_KEY_ID'),
+      secret_access_key: ENV.fetch('AWS_SECRET_ACCESS_KEY'),
+      region: 'us-east-1'
+    )
+
+    file_name = "#{origin}/#{kind}.csv"
+    bucket_name = ENV.fetch('AWS_BUCKET_NAME')
+
+    begin
+      s3_client.head_object(bucket: bucket_name, key: file_name)
+      s3_client.delete_object(bucket: bucket_name, key: file_name)
+    rescue Aws::S3::Errors::NotFound
+    end
+
+    s3_client.put_object(
+      bucket: bucket_name,
+      key: file_name,
+      body: csv_data,
+      content_type: 'text/csv'
+    )
+
+    signer = Aws::S3::Presigner.new(client: s3_client)
+    signer.presigned_url(:get_object, bucket: bucket_name, key: file_name, expires_in: 3600)
   end
 end

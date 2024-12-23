@@ -33,6 +33,9 @@ gem 'apexcharts'
 # Cocoon makes it easier to handle nested forms.
 gem 'cocoon'
 
+# Official AWS Ruby gem for Amazon Simple Storage Service (Amazon S3). This gem is part of the AWS SDK for Ruby.
+gem 'aws-sdk-s3'
+
 # will_paginate is a pagination library that integrates with Ruby on Rails, Sinatra, Hanami::View, and Sequel.
 gem 'will_paginate-bootstrap4'
 
