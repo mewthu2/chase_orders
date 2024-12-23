@@ -33,6 +33,12 @@ class MakeCsvDataJob < ApplicationJob
 
   def run_job_and_update_motor(motor)
     yield
-    motor.update(end_time: Time.now, running_time: (motor.end_time - motor.start_time).to_i)
+
+    if motor.end_time.present?
+      running_time = (motor.end_time - motor.start_time).to_i
+    else
+      running_time = 0
+    end
+    motor.update(end_time: Time.now, running_time:)
   end
 end
