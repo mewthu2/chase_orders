@@ -77,7 +77,7 @@ class MakeSpreadsheetJob < ApplicationJob
 
     file_name = "#{origin}/#{kind}.csv"
     bucket_name = ENV.fetch('AWS_BUCKET_NAME')
-
+    
     begin
       s3_client.head_object(bucket: bucket_name, key: file_name)
       s3_client.delete_object(bucket: bucket_name, key: file_name)
