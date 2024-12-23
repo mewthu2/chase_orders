@@ -2,9 +2,14 @@ class MakeCsvDataJob < ApplicationJob
   queue_as :default
 
   def perform
-    log_job('SyncProductsSituationJob') { log_motor_activity('SyncProductsSituationJob') { SyncProductsSituationJob.perform_now } }
-    log_job('Tiny::Products.assert_stock') { log_motor_activity('Tiny::Products.assert_stock') { Tiny::Products.assert_stock } }
-    log_job('SyncOrdersSituationJob') { log_motor_activity('SyncOrdersSituationJob') { SyncOrdersSituationJob.perform_now } }
+    motor = find_or_create_motor('Atualização de produtos')
+    log_job('SyncProductsSituationJob') { run_job_and_update_motor(motor) { SyncProductsSituationJob.perform_now } }
+
+    motor = find_or_create_motor('Atualização de estoque')
+    log_job('Tiny::Products.assert_stock') { run_job_and_update_motor(motor) { Tiny::Products.assert_stock } }
+
+    motor = find_or_create_motor('Atualização dos pedidos')
+    log_job('SyncOrdersSituationJob') { run_job_and_update_motor(motor) { SyncOrdersSituationJob.perform_now } }
   end
 
   private
@@ -19,22 +24,15 @@ class MakeCsvDataJob < ApplicationJob
     Rails.logger.info "=== Fim do #{job_name} (Tempo de execução: #{duration.round(2)} segundos) ==="
   end
 
-  def log_motor_activity(job_name)
-    motor = Motor.last
-
-    Rails.logger.info "=== Início do motor #{job_name} ==="
-    Rails.logger.info "Start Time: #{motor.start_time}"
-    Rails.logger.info "End Time: #{motor.end_time.nil? ? 'Ainda em progresso' : motor.end_time}"
-    Rails.logger.info "Running Time: #{motor.running_time} segundos"
-    Rails.logger.info "Link: #{motor.link.nil? ? 'Sem link' : motor.link}"
-
-    if motor.end_time.nil?
-      Rails.logger.info "Motor #{job_name} ainda está em execução..."
-    else
-      duration = motor.running_time
-      Rails.logger.info "=== Fim do motor #{job_name} (Tempo de execução: #{duration.round(2)} segundos) ==="
+  def find_or_create_motor(job_name)
+    Motor.find_or_create_by(job_name:) do |motor|
+      motor.start_time = Time.now
+      motor.running_time = 0
     end
+  end
 
+  def run_job_and_update_motor(motor)
     yield
+    motor.update(end_time: Time.now, running_time: (motor.end_time - motor.start_time).to_i)
   end
 end
