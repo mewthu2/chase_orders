@@ -70,14 +70,14 @@ class MakeSpreadsheetJob < ApplicationJob
 
   def save_to_s3(csv_data, origin, kind)
     s3_client = Aws::S3::Client.new(
-      access_key_id: ENV.fetch('AWS_ACCESS_KEY_ID'),
-      secret_access_key: ENV.fetch('AWS_SECRET_ACCESS_KEY'),
-      region: 'us-east-1'
+      access_key_id: ENV.fetch('BUCKETEER_AWS_ACCESS_KEY_ID'),
+      secret_access_key: ENV.fetch('BUCKETEER_AWS_SECRET_ACCESS_KEY'),
+      region: ENV.fetch('BUCKETEER_AWS_REGION')
     )
 
     file_name = "#{origin}/#{kind}.csv"
-    bucket_name = ENV.fetch('AWS_BUCKET_NAME')
-    
+    bucket_name = ENV.fetch('BUCKETEER_BUCKET_NAME')
+
     begin
       s3_client.head_object(bucket: bucket_name, key: file_name)
       s3_client.delete_object(bucket: bucket_name, key: file_name)
