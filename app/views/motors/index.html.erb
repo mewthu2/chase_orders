@@ -50,7 +50,7 @@
               <td class="text-center"><%= motor.job_name %></td>
               <td class="text-center"><%= motor.start_time.strftime('%d/%m/%Y %H:%M') %></td>
               <td class="text-center"><%= motor.end_time ? motor.end_time.strftime('%d/%m/%Y %H:%M') : 'Ainda em progresso' %></td>
-              <td class="text-center"><%= motor.running_time %></td>
+              <td class="text-center"><%= motor.formatted_running_time %></td>
               <td class="text-center">
                 <%= motor.link.present? ? link_to('Baixar CSV', motor.link, target: '_blank', class: 'btn btn-light btn-sm text-dark') : "<span class='badge bg-secondary'>Sem link</span>".html_safe %>
               </td>
