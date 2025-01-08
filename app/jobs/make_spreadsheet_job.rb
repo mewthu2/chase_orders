@@ -86,7 +86,7 @@ class MakeSpreadsheetJob < ApplicationJob
       region: ENV.fetch('BUCKETEER_AWS_REGION')
     )
 
-    file_name = "#{origin}/#{kind}.csv"
+    file_name = "public/#{origin}/#{kind}.csv"
     bucket_name = ENV.fetch('BUCKETEER_BUCKET_NAME')
 
     begin
@@ -99,7 +99,8 @@ class MakeSpreadsheetJob < ApplicationJob
       bucket: bucket_name,
       key: file_name,
       body: csv_data,
-      content_type: 'text/csv'
+      content_type: 'text/csv',
+      acl: 'public-read'
     )
 
     signer = Aws::S3::Presigner.new(client: s3_client)
