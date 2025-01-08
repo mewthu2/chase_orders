@@ -5,7 +5,7 @@ class DashboardController < ApplicationController
   def index
     ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map(&:to_s)
 
-    @orders = Tiny::Orders.get_all_orders('tiny_3', 'faturado', '', '')
+    @orders = Tiny::Orders.get_all_orders('tiny_3', 'enviado', '', '')
 
     @all_orders = @orders.reject { |order| ids_to_reject.include?(order['pedido']['id'].to_s) }
 
