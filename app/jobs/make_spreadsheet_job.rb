@@ -99,11 +99,9 @@ class MakeSpreadsheetJob < ApplicationJob
       bucket: bucket_name,
       key: file_name,
       body: csv_data,
-      content_type: 'text/csv',
-      acl: 'public-read'
+      content_type: 'text/csv'
     )
 
-    signer = Aws::S3::Presigner.new(client: s3_client)
-    signer.presigned_url(:get_object, bucket: bucket_name, key: file_name, expires_in: 3600)
-  end
+    "https://#{bucket_name}.s3.amazonaws.com/#{file_name}"
+  end  
 end
