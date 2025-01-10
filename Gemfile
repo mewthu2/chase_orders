@@ -13,7 +13,7 @@ gem 'mysql2'
 gem "shopify_api", "~> 13.3"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails'
+gem 'rails', '~> 7.2.0'
 
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'
