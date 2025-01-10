@@ -36,11 +36,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
       attempt.update(kinds: :create_note_tiny2,
                      id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal])
       unless invoice.present?
-        attempt.update(status: :success)
         attempt.update(message: 'Nota fiscal não encontrada')
-
-        attempt_emission = Attempt.create(kinds: :emission_invoice_tiny2, id_nota_tiny2: 0, id_nota_fiscal: 0, tiny_order_id: order[:pedido][:id])
-        attempt_emission.update(status: :success)
         next
       end
 
