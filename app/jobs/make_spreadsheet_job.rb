@@ -49,15 +49,20 @@ class MakeSpreadsheetJob < ApplicationJob
   def generate_order_csv(origin)
     CSV.generate(headers: true) do |csv|
       csv << ['order_number', 'date', 'price', 'quantity', 'product_id', 'SKU']
+
       OrderItem.joins(:order).where(order: { kinds: origin }).each do |order_item|
         order = order_item.order
+
         date = case origin
                when 'bh_shopping'
                  order_item.order_date_bh_shopping&.strftime('%d/%m/%Y')
                when 'lagoa_seca'
-                 date = order_item.order_date_lagoa_seca
-
-                 date.present? && date >= Date.new(2024, 9, 1) ? date.strftime('%d/%m/%Y') : nil
+                order_item.order_date_lagoa_seca&.then do |date|
+                  p "analizando #{date}"
+                  next if date < Date.new(2024, 9, 1)
+                  p date
+                  date.strftime('%d/%m/%Y')
+                end
                when 'rj'
                  order_item.order_date_rj&.strftime('%d/%m/%Y')
                end
@@ -69,7 +74,7 @@ class MakeSpreadsheetJob < ApplicationJob
           date,
           order_item.price,
           order_item.quantity,
-          order_item.product.present? ? order_item.product.shopify_product_id : '',
+          order_item.product&.shopify_product_id || '',
           order_item.sku
         ]
       end
