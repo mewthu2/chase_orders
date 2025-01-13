@@ -52,10 +52,18 @@ class MakeSpreadsheetJob < ApplicationJob
       OrderItem.joins(:order).where(order: { kinds: origin }).each do |order_item|
         order = order_item.order
         date = case origin
-               when 'bh_shopping' then order_item.order_date_bh_shopping&.strftime('%d/%m/%Y')
-               when 'lagoa_seca' then order_item.order_date_lagoa_seca&.strftime('%d/%m/%Y')
-               when 'rj' then order_item.order_date_rj&.strftime('%d/%m/%Y')
+               when 'bh_shopping'
+                 order_item.order_date_bh_shopping&.strftime('%d/%m/%Y')
+               when 'lagoa_seca'
+                 date = order_item.order_date_lagoa_seca
+
+                 date.present? && date >= Date.new(2024, 9, 1) ? date.strftime('%d/%m/%Y') : nil
+               when 'rj'
+                 order_item.order_date_rj&.strftime('%d/%m/%Y')
                end
+
+        next if origin == 'lagoa_seca' && date.nil?
+
         csv << [
           order.tiny_order_id,
           date,
