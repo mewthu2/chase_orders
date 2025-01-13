@@ -49,5 +49,4 @@ class EmitionNoteTiny2Job < ActiveJob::Base
   rescue StandardError => e
     attempt.update(status: :error, message: "Erro ao analisar resposta: #{e.message}")
   end
-  end
 end
