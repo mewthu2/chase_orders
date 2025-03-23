@@ -1,8 +1,79 @@
-module Shopify::Products
+class Shopify::Products
   require 'shopify_api'
   include ApplicationHelper
 
   module_function
+
+  def build_shopify_order(retorno)
+    query = <<~QUERY
+      mutation OrderCreate($order: OrderCreateOrderInput!, $options: OrderCreateOptionsInput) {
+        orderCreate(order: $order, options: $options) {
+          userErrors {
+            field
+            message
+          }
+          order {
+            id
+            totalTaxSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+            lineItems(first: 5) {
+              nodes {
+                variant {
+                  id
+                }
+                id
+                title
+                quantity
+                taxLines {
+                  title
+                  rate
+                  priceSet {
+                    shopMoney {
+                      amount
+                      currencyCode
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    QUERY
+
+    variables = {
+      order: {
+        currency: 'EUR',
+        lineItems: retorno['pedido']['itens'].map do |item|
+          {
+            'title' => item['item']['descricao'],
+            'priceSet' => { 'shopMoney' => { 'amount' => item['item']['valor_unitario'], 'currencyCode' => 'EUR' } },
+            'quantity' => item['item']['quantidade'],
+            'taxLines' => [
+              {
+                'priceSet' => { 'shopMoney' => { 'amount' => '13.5', 'currencyCode' => 'EUR' } },
+                'rate' => 0.06,
+                'title' => 'State tax'
+              }
+            ]
+          }
+        end,
+        'transactions' => [
+          {
+            'kind' => 'SALE',
+            'status' => 'SUCCESS',
+            'amountSet' => { 'shopMoney' => { 'amount' => retorno['pedido']['total_pedido'], 'currencyCode' => 'BRL' } }
+          }
+        ]
+      }
+    }
+
+    client_shopify_graphql.query(query:, variables:)
+  end
 
   def sync_shopify_data_on_product(function)
     sync_methods = {
@@ -16,6 +87,71 @@ module Shopify::Products
       end
     else
       puts "Função não reconhecida: #{function}"
+    end
+  end
+
+  def build_shopify_order_rest(response)
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: ENV.fetch('SHOPIFY_TOKEN')
+    )
+
+    pedido = response['pedido']
+
+    order = ShopifyAPI::Order.new(session:)
+
+    order.line_items = pedido['itens'].map do |item|
+      {
+        'title' => item['item']['descricao'],
+        'price' => item['item']['valor_unitario'].to_f,
+        'grams' => nil,
+        'quantity' => item['item']['quantidade'].to_i,
+        'tax_lines' => []
+      }
+    end
+
+    order.transactions = [
+      {
+        'kind' => 'sale',
+        'status' => 'success',
+        'amount' => pedido['total_pedido'].to_f
+      }
+    ]
+
+    cliente = pedido['cliente']
+    order.customer = {
+      'first_name' => cliente['nome'].split.first,
+      'last_name' => cliente['nome'].split.drop(1).join(' '),
+      'email' => cliente['email']
+    }
+
+    order.shipping_address = {
+      'address1' => cliente['endereco'],
+      'address2' => cliente['complemento'],
+      'city' => cliente['cidade'],
+      'province' => cliente['uf'],
+      'country' => 'BR',
+      'zip' => cliente['cep']
+    }
+    order.billing_address = order.shipping_address
+
+    order.total_tax = 0
+    order.currency = 'BRL'
+    order.note = pedido['obs']
+    order.created_at = pedido['data_pedido']
+    order.fulfillment_status = 'fulfilled'
+    order.shipping_lines = [
+      {
+        'price' => pedido['valor_frete'].to_f,
+        'title' => pedido['forma_envio'] || 'Standard Shipping'
+      }
+    ]
+
+    begin
+      order.save!
+      puts "Pedido criado com sucesso: #{order.id}"
+    rescue => e
+      puts "Erro ao criar o pedido: #{e.message}"
     end
   end
 

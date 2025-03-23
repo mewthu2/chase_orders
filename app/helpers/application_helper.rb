@@ -12,4 +12,20 @@ module ApplicationHelper
     # dia_da_semana >= 1 && dia_da_semana <= 5 && (hora_atual > 8 || (hora_atual == 8 && minutos_atual >= 0)) && hora_atual < 15
     true
   end
+
+  def client_shopify_graphql
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: ENV.fetch('SHOPIFY_TOKEN')
+    )
+    ShopifyAPI::Clients::Graphql::Admin.new(session:)
+  end
+
+  def client_shopify_rest
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: ENV.fetch('SHOPIFY_TOKEN')
+    )
+    ShopifyAPI::Clients::Rest::Admin.new(session:)
+  end
 end

@@ -1,5 +1,7 @@
-class Correios::Orders
-  def self.create_orders(params, attempt)
+module Correios::Orders
+  module_function
+
+  def create_orders(params, attempt)
     authentication = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
@@ -79,7 +81,7 @@ class Correios::Orders
     end
   end
 
-  def self.get_tracking(order_correios_id)
+  def get_tracking(order_correios_id)
     authentication = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
@@ -92,7 +94,7 @@ class Correios::Orders
     end
   end
 
-  def self.get_stock(item_code)
+  def get_stock(item_code)
     authentication = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
