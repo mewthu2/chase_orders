@@ -1,235 +1,113 @@
 <% title 'Geração de notas fiscais' %>
 
-<div class="container-fluid py-4">
-  <!-- Cabeçalho da página -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body d-flex align-items-center">
-          <i class="fa-solid fa-file-invoice fs-2 me-3 text-primary <%= verify_comercial_hour? == true ? 'fa-beat-fade' : '' %>"></i>
-          <div>
-            <h4 class="mb-0">Geração de notas fiscais</h4>
-            <div class="d-flex align-items-center mt-2">
-              <span class="badge <%= verify_comercial_hour? == true ? 'bg-success' : 'bg-danger' %> me-2">
-                <i class="fa-solid <%= verify_comercial_hour? == true ? 'fa-circle-check' : 'fa-circle-xmark' %> me-1"></i>
-                <%= verify_comercial_hour? == true ? 'Sistema Online' : 'Fora do Horário Comercial' %>
-              </span>
-              <span class="text-muted small">Acompanhamento de pedidos e emissão de NF-e</span>
-            </div>
-          </div>
-        </div>
-      </div>
+<div class="row">
+  <div class="col-lg-12 col-md-12 col-sm-12 col-12 bg-dark" style="border-radius:10px; margin: 5px;">
+    <div class="page-header">
+      <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Geração de notas fiscais </span></h5>
     </div>
-  </div>
-
-  <!-- Seção de Pedidos -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fa-solid fa-cart-shopping text-primary me-2"></i>
-              Fila de Pedidos
-            </h5>
-            <span class="badge bg-primary">
-              <i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : '' %> me-1"></i>
-              <%= verify_comercial_hour? == true ? 'Processando' : 'Pausado' %>
-            </span>
-          </div>
-        </div>
-        <div class="card-body p-0">
-          <% if @all_orders.present? %>
-            <div class="table-responsive">
-              <table class="table table-hover table-striped border-bottom" id="orders-table">
-                <thead class="table-light">
-                  <tr>
-                    <th width="60" class="text-center">Ações</th>
-                    <th class="text-center">ID</th>
-                    <th class="text-center">Número</th>
-                    <th class="text-center">Número E-commerce</th>
-                    <th class="text-center">Data Pedido</th>
-                    <th class="text-center">Data Prevista</th>
-                    <th class="text-center">Cliente</th>
-                    <th class="text-center">Valor</th>
-                    <th class="text-center">ID Vendedor</th>
-                    <th class="text-center">Vendedor</th>
-                    <th class="text-center">Situação</th>
-                    <th class="text-center">Código Rastreamento</th>
-                    <th class="text-center">URL Rastreamento</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @all_orders.each do |order| %>
-                  <tr>
-                    <td>
-                      <%= link_to verify_attempts_attempts_path(tiny_order_id: order[:pedido][:id]), class: 'btn btn-sm btn-outline-primary', method: :post, target: '_blank' do %>
-                        <i class="fa-solid fa-paperclip"></i>
-                      <% end %>
-                    </td>
-                    <td class="text-center">
-                      <div class="d-flex align-items-center justify-content-center">
-                        <span class="me-2"><%= order[:pedido][:id] %></span>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= order[:pedido][:id] %>', '_blank');">
-                          <i class="fa-solid fa-external-link-alt"></i>
-                        </button>
-                      </div>
-                    </td>
-                    <td class="text-center"><%= order[:pedido][:numero] %></td>
-                    <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
-                    <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
-                    <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
-                    <td class="text-center"><%= order[:pedido][:nome] %></td>
-                    <td class="text-center"><%= number_to_currency(order[:pedido][:valor]) %></td>
-                    <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
-                    <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
-                    <td class="text-center">
-                      <span class="badge bg-<%= order[:pedido][:situacao] == 'Aprovado' ? 'success' : 'secondary' %>">
-                        <%= order[:pedido][:situacao] %>
-                      </span>
-                    </td>
-                    <td class="text-center"><%= order[:pedido][:codigo_rastreamento].present? ? order[:pedido][:codigo_rastreamento] : '-' %></td>
-                    <td class="text-center">
-                      <% if order[:pedido][:url_rastreamento].present? %>
-                        <a href="<%= order[:pedido][:url_rastreamento] %>" target="_blank" class="btn btn-sm btn-outline-info">
-                          <i class="fa-solid fa-truck"></i> Rastrear
-                        </a>
-                      <% else %>
-                        -
-                      <% end %>
-                    </td>
-                  </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% else %>
-            <div class="alert alert-info m-3">
-              <i class="fa-solid fa-info-circle me-2"></i>
-              Sem resultados para a situação selecionada
-            </div>
-          <% end %>
-        </div>
+    <% if @all_orders.present? %>
+      <div class="card bg-secondary" style="overflow-x:scroll;">
+        <table class="table table-dark table-hover table-responsive" >
+          <thead>
+            <tr>
+              <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
+              <th class="text-center">id</th>
+              <th class="text-center">numero</th>
+              <th class="text-center">numero_ecommerce</th>
+              <th class="text-center">data_pedido</th>
+              <th class="text-center">data_prevista</th>
+              <th class="text-center">nome</th>
+              <th class="text-center">valor</th>
+              <th class="text-center">id_vendedor</th>
+              <th class="text-center">nome_vendedor</th>
+              <th class="text-center">situacao</th>
+              <th class="text-center">codigo_rastreamento</th>
+              <th class="text-center">url_rastreamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @all_orders.each do |order| %>
+            <tr>
+                <td>
+                  <span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: order[:pedido][:id]), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+                <td class="text-center" style="min-width:12em;">
+                  <%= order[:pedido][:id] %> -
+                  <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= order[:pedido][:id] %>', '_blank');">
+                    Ver no Tiny
+                  </span>
+                </td>
+                <td class="text-center"><%= order[:pedido][:numero] %></td>
+                <td class="text-center"><%= order[:pedido][:numero_ecommerce] %></td>
+                <td class="text-center"><%= order[:pedido][:data_pedido] %></td>
+                <td class="text-center"><%= order[:pedido][:data_prevista] %></td>
+                <td style="min-width:23em;" class="text-center"><%= order[:pedido][:nome] %></td>
+                <td class="text-center"><%= order[:pedido][:valor] %></td>
+                <td class="text-center"><%= order[:pedido][:id_vendedor] %></td>
+                <td class="text-center"><%= order[:pedido][:nome_vendedor] %></td>
+                <td class="text-center"><%= order[:pedido][:situacao] %></td>
+                <td class="text-center"><%= order[:pedido][:codigo_rastreamento] %></td>
+                <td class="text-center"><%= order[:pedido][:url_rastreamento] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot>
+            <tr>
+            
+            </tr>
+          </tfoot>
+        </table>
       </div>
-    </div>
-  </div>
-
-  <!-- Seção de Emissão de Notas Fiscais -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-              <i class="fa-solid fa-file-invoice text-primary me-2"></i>
-              Emissão de Notas Fiscais
-            </h5>
-            <span class="badge bg-primary">
-              <i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : '' %> me-1"></i>
-              <%= verify_comercial_hour? == true ? 'Processando' : 'Pausado' %>
-            </span>
-          </div>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover table-striped" id="attemps-table">
-              <thead class="table-light">
-                <tr>
-                  <th width="60" class="text-center">Ações</th>
-                  <th class="text-center">Pedido no Tiny</th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
-                  <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @emitions.each do |attempt| %>
-                  <tr>
-                    <td>
-                      <%= link_to verify_attempts_attempts_path(tiny_order_id: attempt.tiny_order_id), class: 'btn btn-sm btn-outline-primary', method: :post, target: '_blank' do %>
-                        <i class="fa-solid fa-paperclip"></i>
-                      <% end %>
-                    </td>
-                    <td class="text-center">
-                      <div class="d-flex align-items-center justify-content-center">
-                        <span class="me-2"><%= attempt.tiny_order_id %></span>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
-                          <i class="fa-solid fa-external-link-alt"></i>
-                        </button>
-                      </div>
-                    </td>
-                    <td class="text-center"><%= attempt.id_nota_tiny2 %></td>
-                    <td class="text-center">
-                      <span class="badge bg-<%= attempt.status == 'success' ? 'success' : (attempt.status == 'error' ? 'danger' : 'warning') %>">
-                        <%= attempt.status %>
-                      </span>
-                    </td>
-                    <td class="text-center"><%= attempt.status_code %></td>
-                    <td class="text-center">
-                      <% if attempt.error.present? %>
-                        <span class="text-danger"><%= attempt.error %></span>
-                      <% else %>
-                        <span class="badge bg-secondary">N/A</span>
-                      <% end %>
-                    </td>
-                    <td class="text-center"><%= attempt.message.present? ? attempt.message : "<span class='badge bg-secondary'>N/A</span>".html_safe %></td>
-                    <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <% else %>
+      <div class="alert alert-dark">
+        Sem resultados para a situação selecionada
       </div>
-    </div>
+    <% end %>
   </div>
 </div>
 
+<div class="row">
+  <div class="col-12">
+    <div class="page-header">
+      <h5><i class="fa-solid fa-spinner <%= verify_comercial_hour? == true ? 'fa-spin' : ' '%> text-info h5"></i> <span class="badge bg-<%= verify_comercial_hour? == true ? 'success' : 'danger '%>"><%= verify_comercial_hour? == true ? 'On' : 'Off - Fora do Horário Comercial'%></span> Fila -  <span class="badge bg-secondary"> Emissão de Notas Fiscais</span></h5>
+    </div>
+    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="attemps-table">
+      <thead>
+        <tr>
+          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
+          <th class="text-center"><%= 'Pedido no Tiny' %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
+          <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @emitions.each do |attempt| %>
+          <tr>
+            <td><span class="btn btn-secondary"><%= link_to verify_attempts_attempts_path(tiny_order_id: attempt.tiny_order_id), class: 'text-light', method: :post, target: '_blank' do %> <i class="fa-solid fa-paperclip"></i> <% end %></span></td>
+            <td class="text-center">
+              <%= attempt.tiny_order_id %> - 
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
+                Ver no Tiny
+              </span>
+            </td>
+            <td class="text-center"><%= attempt.id_nota_tiny2 %></td>
+            <td class="text-center"><%= attempt.status %></td>
+            <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
+            <td class="text-center"><%= attempt.error.present? ? attempt.error : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= attempt.message.present? ? attempt.message : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
+            <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+</div>  </div>
 <script>
   $(document).ready(function() {
-    $('#orders-table').DataTable({
-      language: {
-        url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-      },
-      responsive: true,
-      pageLength: 10,
-      order: [[1, 'desc']]
-    });
-    
-    $('#attemps-table').DataTable({
-      language: {
-        url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-      },
-      responsive: true,
-      pageLength: 10,
-      order: [[7, 'desc']]
+    $('.table').DataTable({
     });
   });
 </script>
-
-<style>
-  .table th {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  
-  .table td {
-    vertical-align: middle;
-  }
-  
-  .card {
-    border-radius: 0.5rem;
-  }
-  
-  .card-header {
-    border-bottom: 1px solid rgba(0,0,0,.125);
-  }
-  
-  .badge {
-    font-weight: 500;
-    padding: 0.5em 0.75em;
-  }
-</style>
