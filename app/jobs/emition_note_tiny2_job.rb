@@ -41,10 +41,10 @@ class EmitionNoteTiny2Job < ActiveJob::Base
     status = parsed_response.at_xpath('//status')&.text
     erros = parsed_response.xpath('//erros/erro').map(&:text).join('; ')
 
-    if status_processamento == '2' && status == 'Erro'
+    if status_processamento == '2' && status == 'Erro' && erros != 'Nota Fiscal não localizada, apenas notas pendentes ou rejeitadas podem ser enviadas'
       attempt.update(status: :error, message: "Erro na integração: #{erros}")
     else
-      attempt.update(status: :success)
+      attempt.update(status: :success, message: erros)
     end
   rescue StandardError => e
     attempt.update(status: :error, message: "Erro ao analisar resposta: #{e.message}")
