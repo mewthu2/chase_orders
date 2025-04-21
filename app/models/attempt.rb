@@ -14,6 +14,10 @@ class Attempt < ApplicationRecord
            attempts.message LIKE :valor OR
            attempts.id LIKE :valor', valor: "#{value}%")
   end
+
+  add_scope :by_shopify_order_id do |value|
+    where('tracking LIKE ?', "%#{value}%")
+  end
   # Metodos estaticos
   # Metodos publicos
   # Metodos GET
