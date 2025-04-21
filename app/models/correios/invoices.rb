@@ -1,4 +1,6 @@
-class Correios::Invoices
+module Correios::Invoices
+  module_function
+
   def self.send_xml_to_correios(attempt)
     headers = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
