@@ -10,7 +10,7 @@ gem 'rubyXL'
 gem 'mysql2'
 
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
-gem "shopify_api", "~> 13.3"
+gem "shopify_api"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem 'rails', '~> 7.2.0'

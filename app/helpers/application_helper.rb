@@ -16,7 +16,7 @@ module ApplicationHelper
   def client_shopify_graphql
     session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: ENV.fetch('SHOPIFY_TOKEN')
+      access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
     )
     ShopifyAPI::Clients::Graphql::Admin.new(session:)
   end
@@ -24,7 +24,7 @@ module ApplicationHelper
   def client_shopify_rest
     session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: ENV.fetch('SHOPIFY_TOKEN')
+      access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
     )
     ShopifyAPI::Clients::Rest::Admin.new(session:)
   end

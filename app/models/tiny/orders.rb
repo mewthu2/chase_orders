@@ -1,25 +1,25 @@
 module Tiny::Orders
   module_function
 
-  def get_all_orders(kind, situacao, function, pagina = nil)
+  def get_all_orders(kind, situacao, function, data)
     case kind
-    when 'lagoa_seca'
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION')
     when 'bh_shopping'
       token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+    when 'lagoa_seca'
+      token = ENV.fetch('TOKEN_TINY_PRODUCTION')
     when 'rj'
       token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
     when 'tiny_3'
       token = ENV.fetch('TOKEN_TINY3_PRODUCTION')
     end
 
-    response = get_orders_response(kind, situacao, token, pagina)
+    response = get_orders_response(kind, situacao, token, '', data)
 
     total = []
 
     if response['numero_paginas'].present? && response['numero_paginas'] > 1
       (1..response['numero_paginas']).each do |page_number|
-        page_response = get_orders_response(kind, situacao, token, page_number)
+        page_response = get_orders_response(kind, situacao, token, page_number, data)
         total.concat(page_response['pedidos']) if page_response['pedidos'].present?
       end
     elsif response['pedidos'].present?
@@ -29,9 +29,49 @@ module Tiny::Orders
     case function
     when 'update_orders'
       process_orders(token, total, kind)
-    else
+    when 'process_for_shopify'
+      process_for_shopify(total, kind)
       total
     end
+  end
+
+  def process_for_shopify(orders, kind)
+    orders.each do |order_data|
+      pedido = order_data['pedido']
+      tiny_order_id = pedido['id']
+
+      next unless should_process_order?(pedido, kind)
+
+      begin
+        sleep(1)
+        CreateShopifyOrdersFromTinyJob.perform_now(kind, tiny_order_id)
+        puts "[Tiny->Shopify] Pedido #{pedido['numero']} (#{tiny_order_id}) enfileirado"
+      rescue StandardError => e
+        handle_enqueue_error(pedido, kind, e)
+      end
+    end
+  end
+
+  def should_process_order?(pedido, kind)
+    return false unless pedido['situacao'] == 'Entregue'
+
+    !Attempt.where(
+      tiny_order_id: pedido['id'],
+      status: :success,
+      requisition: 'Pedido Shopify criado com sucesso'
+    ).where('tracking LIKE ?', "%kind:#{kind}%").exists?
+  end
+
+  def handle_enqueue_error(pedido, kind, error)
+    puts "[ERRO] Ao enfileirar pedido #{pedido['numero']}: #{error.message}"
+
+    Attempt.create(
+      tiny_order_id: pedido['id'],
+      status: Attempt.statuses[:failed],
+      error: error.message,
+      tracking: "#{kind}|enqueue_error",
+      classification: 'enqueue_error'
+    )
   end
 
   def process_orders(token, pedidos, kind)
@@ -73,22 +113,22 @@ module Tiny::Orders
     order_item.save
   end
 
-  def get_orders_response(kind, situacao, token, page)
-    if kind == 'lagoa_seca'
-      response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token:,
-                                                  formato: 'json',
-                                                  situacao:,
-                                                  dataInicial: '01/09/2024',
-                                                  pagina: page }))
-    else
-      response = JSON.parse(HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'),
-                                         query: { token:,
-                                                  formato: 'json',
-                                                  situacao:,
-                                                  pagina: page }))
-    end
-    response.with_indifferent_access[:retorno]
+  def get_orders_response(kind, situacao, token, page, data = nil)
+    base_query = {
+      token:,
+      formato: 'json',
+      situacao:,
+      pagina: page
+    }
+
+    base_query[:dataInicial] = if kind == 'lagoa_seca'
+                                 '01/09/2024'
+                               elsif data.present?
+                                 data
+                               end
+
+    response = HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'), query: base_query)
+    JSON.parse(response).with_indifferent_access[:retorno]
   end
 
   def obtain_order(token, order_id)
