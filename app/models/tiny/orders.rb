@@ -121,11 +121,12 @@ module Tiny::Orders
       pagina: page
     }
 
-    base_query[:dataInicial] = if kind == 'lagoa_seca'
-                                 '01/09/2024'
-                               elsif data.present?
-                                 data
-                               end
+    if kind == 'lagoa_seca'
+      base_query[:dataInicial] = '01/09/2024'
+      base_query[:marcadores] = 'PDV'
+    elsif data.present?
+      base_query[:dataInicial] = data
+    end
 
     response = HTTParty.get(ENV.fetch('PEDIDOS_PESQUISA'), query: base_query)
     JSON.parse(response).with_indifferent_access[:retorno]

@@ -8,7 +8,8 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
         @stock_client_id = 8158813257802
       when 'lagoa_seca'
-        token = ENV.fetch('BARRA_SHOPPING_TOKEN_APP')
+        token = ENV.fetch('TOKEN_TINY_PRODUCTION')
+        @stock_client_id = 8428671795274
       when 'rj'
         token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
         @stock_client_id = 8425771532362
