@@ -221,7 +221,20 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           send_receipt: false,
           send_fulfillment_receipt: false,
           line_items: draft_order['line_items'],
-          customer: { id: draft_order['customer'].present? ? draft_order['customer']['id'] : @stock_client_id },
+          customer: {
+            id: draft_order['customer'].present? ? draft_order['customer']['id'] : @stock_client_id,
+            email_marketing_consent: {
+              state: draft_order.dig('customer', 'email_marketing_consent', 'state') || 'not_subscribed',
+              opt_in_level: draft_order.dig('customer', 'email_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: draft_order.dig('customer', 'email_marketing_consent', 'consent_updated_at') || Time.now.iso8601
+            },
+            sms_marketing_consent: {
+              state: draft_order.dig('customer', 'sms_marketing_consent', 'state') || 'not_subscribed',
+              opt_in_level: draft_order.dig('customer', 'sms_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: draft_order.dig('customer', 'sms_marketing_consent', 'consent_updated_at') || Time.now.iso8601,
+              consent_collected_from: draft_order.dig('customer', 'sms_marketing_consent', 'consent_collected_from') || 'OTHER'
+            }
+          },
           shipping_address: draft_order['shipping_address'],
           billing_address: draft_order['billing_address'],
           note: draft_order['note'],
@@ -244,7 +257,6 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
                           end
         }
       }
-
       # Cria o pedido
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
