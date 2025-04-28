@@ -425,7 +425,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
   def find_variant_id_by_sku(session, sku)
     return nil if sku.empty?
-  
+
     query = <<~GRAPHQL
       query {
         productVariants(first: 1, query: "sku:#{sku}") {
@@ -438,11 +438,11 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         }
       }
     GRAPHQL
-  
+
     client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
     response = client.query(query: query)
-  
-    variant = response.body.dig("data", "productVariants", "edges", 0, "node")
-    variant ? variant["id"].split("/").last : nil
+
+    variant = response.body.dig('data', 'productVariants', 'edges', 0, 'node')
+    variant ? variant['id'].split('/').last : nil
   end
 end
