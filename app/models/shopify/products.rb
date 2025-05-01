@@ -4,6 +4,22 @@ module Shopify::Products
 
   module_function
 
+  def client_shopify_graphql
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+    )
+    ShopifyAPI::Clients::Graphql::Admin.new(session:)
+  end
+
+  def client_shopify_rest
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+    )
+    ShopifyAPI::Clients::Rest::Admin.new(session:)
+  end
+
   def sync_shopify_data_on_product(function)
     sync_methods = {
       'shopify_product_id' => method(:update_product_with_shopify_id),
@@ -54,7 +70,7 @@ module Shopify::Products
       else
         puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
       end
-    rescue => e
+    rescue StandardError => e
       puts "Erro ao buscar o preço do produto #{product.sku}: #{e.message}"
     end
   end
@@ -147,8 +163,6 @@ module Shopify::Products
     end
   end
 
-  private
-
   def search_inventory_item_info(inventory_item_ids)
     client_shopify_rest.get(path: 'inventory_items', query: { ids: inventory_item_ids })
   end
@@ -179,14 +193,23 @@ module Shopify::Products
   end
 
   def update_or_create_by_inventory_data(inventory_items)
-    inventory_items.each do |shopify_inventory_item_data|
-      product = Product.find_or_initialize_by(sku: shopify_inventory_item_data['sku'])
+    existing_products = Product.where(sku: inventory_items.map { |i| i['sku'] }).index_by(&:sku)
 
-      product.update(shopify_inventory_item_id: shopify_inventory_item_data['id'],
-                     cost: shopify_inventory_item_data['cost'],
-                     sku: shopify_inventory_item_data['sku'],
-                     created_at: shopify_inventory_item_data['created_at'],
-                     updated_at: shopify_inventory_item_data['updated_at'])
+    inventory_items.each do |item_data|
+      product = existing_products[item_data['sku']] || Product.new(sku: item_data['sku'])
+
+      next if product.persisted? &&
+        product.shopify_inventory_item_id == item_data['id'].to_s &&
+        product.cost == item_data['cost'] &&
+        product.sku == item_data['sku']
+
+      product.assign_attributes(
+        shopify_inventory_item_id: item_data['id'],
+        cost: item_data['cost'],
+        sku: item_data['sku']
+      )
+
+      product.save!
     end
   end
 end

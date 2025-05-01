@@ -41,13 +41,13 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
   def create_fulfilled_order(kind, response, tiny_order_id)
     case kind
     when 'bh_shopping'
-      location_id = 72286699594
+      location_id = ENV.fetch('LOCATION_BH_SHOPPING')
       access_token = ENV.fetch('BH_SHOPPING_TOKEN_APP')
     when 'rj'
-      location_id = 72287027274
+      location_id = ENV.fetch('LOCATION_BARRA_SHOPPING')
       access_token = ENV.fetch('BARRA_SHOPPING_TOKEN_APP')
     when 'lagoa_seca'
-      location_id = 72286994506
+      location_id = ENV.fetch('LOCATION_LAGOA_SECA')
       access_token = ENV.fetch('LAGOA_SECA_TOKEN_APP')
     end
 

@@ -73,10 +73,10 @@ class Shopify::Orders
 
       client_shopify_graphql.query(query:, variables:)
     end
-    
+
     def find_product_id_by_sku_graphql(client, sku)
       return nil if sku.empty?
-    
+
       query = <<~GRAPHQL
         query {
           productVariants(first: 1, query: "sku:#{sku}") {
@@ -88,11 +88,11 @@ class Shopify::Orders
           }
         }
       GRAPHQL
-    
-      response = client.query(query: query)
+
+      response = client.query(query:)
       variant = response.body.dig('data', 'productVariants', 'edges', 0, 'node')
       variant ? variant['id'] : nil
-    rescue => e
+    rescue StandardError => e
       puts "Erro ao buscar produto por SKU: #{e.message}"
       nil
     end
@@ -128,7 +128,6 @@ class Shopify::Orders
 
       order = ShopifyAPI::Order.new(session:)
 
-      # Build line items
       order.line_items = pedido['itens'].map do |item|
         sku = item.dig('item', 'codigo') || ''
         product_id = find_product_id_by_sku(session, sku)
@@ -157,20 +156,17 @@ class Shopify::Orders
         }
       ]
 
-      # Prepare customer data
       nome_completo = cliente['nome'] || 'Cliente Shopify'
       nomes = nome_completo.strip.split
       first_name = nomes.first
       last_name = nomes[1..].join(' ') if nomes.size > 1
 
-      # Generate unique phone number
       customer_phone = if cliente['fone'].present?
                         generate_unique_phone(cliente['fone'], session)
                       else
                         generate_unique_phone(nil, session)
                       end
 
-      # Build customer
       order.customer = {
         'first_name' => first_name || 'Cliente',
         'last_name' => last_name || '',
@@ -181,12 +177,9 @@ class Shopify::Orders
         'default_address' => build_address(cliente, customer_phone)
       }
 
-      # Build address
       endereco = build_address(cliente, customer_phone)
       order.shipping_address = endereco
       order.billing_address = endereco
-
-      # Set order details
 
       order.total_tax = 0
       order.subtotal_price = pedido['total_produtos'].to_f
@@ -200,11 +193,10 @@ class Shopify::Orders
       order.email = cliente['email'].present? ? cliente['email'] : "sememail_#{SecureRandom.hex(4)}@dominiofalso.com"
       order.phone = customer_phone
 
-      # Definir fulfillment status e data
       fulfillment_date = format_date(pedido['data_pedido']) || Time.now.iso8601
       if pedido['situacao'] == 'Entregue'
         order.fulfillment_status = 'fulfilled'
-        # Adicionar informações de fulfillment com a data do pedido
+
         order.fulfillments = [{
           'status' => 'success',
           'created_at' => fulfillment_date,
@@ -218,7 +210,6 @@ class Shopify::Orders
       order.financial_status = 'paid'
       order.tags = pedido['marcadores'].join(', ') if pedido['marcadores'].present?
 
-      # Add shipping if applicable
       if pedido['valor_frete'].to_f.positive?
         order.shipping_lines = [
           {
@@ -315,7 +306,9 @@ class Shopify::Orders
       )
 
       customers.empty?
-    rescue
+    rescue StandardError => e
+      puts "Erro ao verificar telefone: #{e.message}"
+      puts e.backtrace.join("\n")
       false
     end
 
@@ -353,16 +346,16 @@ class Shopify::Orders
           }
         }
       GRAPHQL
-    
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
-      response = client.query(query: query)
-    
-      variant = response.body.dig("data", "products", "edges", 0, "node", "variants", "edges")&.find do |v|
-        v.dig("node", "sku") == sku
+
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+      response = client.query(query:)
+
+      variant = response.body.dig('data', 'products', 'edges', 0, 'node', 'variants', 'edges')&.find do |v|
+        v.dig('node', 'sku') == sku
       end
-    
-      gid = variant&.dig("node", "product", "id")
-      gid&.split("/")&.last # retorna só o número, ex: "7796738523210"
+
+      gid = variant&.dig('node', 'product', 'id')
+      gid&.split('/')&.last
     end
 
     def update_product_with_price_and_title(product)
@@ -400,7 +393,7 @@ class Shopify::Orders
         else
           puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
         end
-      rescue => e
+      rescue StandardError => e
         puts "Erro ao buscar o preço do produto #{product.sku}: #{e.message}"
       end
     end
@@ -411,9 +404,8 @@ class Shopify::Orders
         access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
       )
 
-      # Formata a data para ISO8601
       processed_at = if new_date.is_a?(String)
-                      DateTime.strptime(new_date, "%d/%m/%Y").iso8601
+                      DateTime.strptime(new_date, '%d/%m/%Y').iso8601
                     else
                       new_date.iso8601
                     end
@@ -454,14 +446,14 @@ class Shopify::Orders
         client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
         response = client.query(query: mutation)
 
-        if response.body["errors"].present?
-          puts "Erro na mutação GraphQL: #{response.body["errors"]}"
+        if response.body['errors'].present?
+          puts "Erro na mutação GraphQL: #{response.body['errors']}"
           false
         else
           puts "Data processada armazenada em metafield: #{processed_at}"
           true
         end
-      rescue => e
+      rescue StandardError => e
         puts "Erro GraphQL: #{e.message}"
         false
       end
@@ -501,7 +493,7 @@ class Shopify::Orders
         else
           puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
         end
-      rescue => e
+      rescue StandardError => e
         puts "Erro ao buscar o produto #{product.sku}: #{e.message}"
       end
     end
@@ -555,8 +547,6 @@ class Shopify::Orders
       end
     end
 
-    private
-
     def search_inventory_item_info(inventory_item_ids)
       client_shopify_rest.get(path: 'inventory_items', query: { ids: inventory_item_ids })
     end
@@ -591,10 +581,10 @@ class Shopify::Orders
         product = Product.find_or_initialize_by(sku: shopify_inventory_item_data['sku'])
 
         product.update(shopify_inventory_item_id: shopify_inventory_item_data['id'],
-                      cost: shopify_inventory_item_data['cost'],
-                      sku: shopify_inventory_item_data['sku'],
-                      created_at: shopify_inventory_item_data['created_at'],
-                      updated_at: shopify_inventory_item_data['updated_at'])
+                       cost: shopify_inventory_item_data['cost'],
+                       sku: shopify_inventory_item_data['sku'],
+                       created_at: shopify_inventory_item_data['created_at'],
+                       updated_at: shopify_inventory_item_data['updated_at'])
       end
     end
   end

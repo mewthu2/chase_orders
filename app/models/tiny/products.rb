@@ -25,25 +25,25 @@ module Tiny::Products
     end
   end
 
-  def obtain_stock(product_id, token)
+  def self.obtain_stock(product_id, token)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_ESTOQUE'),
-                                       query: { token: token,
+                                       query: { token:,
                                                 formato: 'json',
                                                 id: product_id }))
     response.with_indifferent_access[:retorno]
   end
 
-  def find_product(product_id, token)
+  def self.find_product(product_id, token)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PRODUTO'),
-                                       query: { token: token,
+                                       query: { token:,
                                                 formato: 'json',
                                                 id: product_id }))
     response.with_indifferent_access[:retorno]
   end
 
-  def update_product(products, token)
+  def self.update_product(products, token)
     HTTParty.post(ENV.fetch('ALTERAR_PRODUTO'), body: {
-                                  token: token,
+                                  token:,
                                   formato: 'json',
                                   produto: products.to_json
                                 }, headers: {
@@ -52,7 +52,7 @@ module Tiny::Products
                                 })
   end
 
-  def assert_stock
+  def self.assert_stock
     token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
     token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
     token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
@@ -62,9 +62,7 @@ module Tiny::Products
     update_stock_for_products(Product.all, token_rj, 'rj')
   end
 
-  private
-
-  def update_stock_for_products(products, token, kind)
+  def self.update_stock_for_products(products, token, kind)
     products.each do |product|
       case kind
       when 'lagoa_seca'
@@ -95,18 +93,18 @@ module Tiny::Products
     end
   end
 
-  def get_products_response(situacao, token, pagina = nil)
+  def self.get_products_response(situacao, token, pagina = nil)
     response = JSON.parse(HTTParty.get(ENV.fetch('PRODUTOS_PESQUISA'),
                                        query: {
-                                        token: token,
+                                        token:,
                                         formato: 'json',
-                                        situacao: situacao,
-                                        pagina: pagina
+                                        situacao:,
+                                        pagina:
                                       }))
     response.with_indifferent_access[:retorno]
   end
 
-  def find_or_create_product(products, kind)
+  def self.find_or_create_product(products, kind)
     products.each do |tiny_product_data|
       next unless tiny_product_data.key?('produto')
 
@@ -118,7 +116,7 @@ module Tiny::Products
     end
   end
 
-  def assign_tiny_product_id(product, kind, product_id)
+  def self.assign_tiny_product_id(product, kind, product_id)
     case kind
     when 'lagoa_seca'
       product.update!(tiny_lagoa_seca_product_id: product_id) if product.tiny_lagoa_seca_product_id.blank?
@@ -129,7 +127,7 @@ module Tiny::Products
     end
   end
 
-  def product_exists?(product, kind)
+  def self.product_exists?(product, kind)
     case kind
     when 'lagoa_seca'
       product.tiny_lagoa_seca_product_id.present?
@@ -142,7 +140,7 @@ module Tiny::Products
     end
   end
 
-  def fetch_token_for_kind(kind)
+  def self.fetch_token_for_kind(kind)
     case kind
     when 'lagoa_seca'
       ENV.fetch('TOKEN_TINY_PRODUCTION')
@@ -150,6 +148,8 @@ module Tiny::Products
       ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
     when 'rj'
       ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+    when 'tiny_3'
+      ENV.fetch('TOKEN_TINY3_PRODUCTION')
     else
       raise "Unknown kind: #{kind}"
     end
