@@ -112,7 +112,6 @@
               <div class="row">
                 <% @kinds.each do |kind| %>
                   <% 
-                    # Define a classe de borda baseada no tipo
                     border_class = case kind
                       when 'rj' then 'border-primary'
                       when 'bh_shopping' then 'border-success'
@@ -120,7 +119,6 @@
                       else 'border-secondary'
                     end
                     
-                    # Define o ícone baseado no tipo
                     kind_icon = case kind
                       when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
                       when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
@@ -128,7 +126,6 @@
                       else '<i class="fas fa-tag me-1"></i>'
                     end
                     
-                    # Define a classe do badge baseada no tipo
                     badge_class = case kind
                       when 'rj' then 'bg-primary'
                       when 'bh_shopping' then 'bg-success'
@@ -316,10 +313,8 @@
     </div>
   </div>
 
-  <!-- Seção de Últimos Pedidos Migrados -->
   <% @kinds.each do |kind| %>
     <% 
-      # Define a classe de borda baseada no tipo
       border_class = case kind
         when 'rj' then 'border-primary'
         when 'bh_shopping' then 'border-success'
@@ -327,7 +322,6 @@
         else 'border-secondary'
       end
       
-      # Define o ícone baseado no tipo
       kind_icon = case kind
         when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
         when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
@@ -335,7 +329,6 @@
         else '<i class="fas fa-tag me-1"></i>'
       end
       
-      # Define a classe do badge baseada no tipo
       badge_class = case kind
         when 'rj' then 'bg-primary'
         when 'bh_shopping' then 'bg-success'
@@ -393,7 +386,13 @@
                             </a>
                           </div>
                         </td>
-                        <td><%= order.tiny_creation_date.strftime('%d/%m/%Y') if order.tiny_creation_date.present? %></td>
+                        <td>
+                          <% if order.tiny_creation_date.present? %>
+                            <%= order.tiny_creation_date.is_a?(String) ? order.tiny_creation_date : order.tiny_creation_date.strftime('%d/%m/%Y') %>
+                          <% else %>
+                            <span class="badge bg-secondary">Não disponível</span>
+                          <% end %>
+                        </td>
                         <td><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
                         <td>
                           <span class="badge bg-secondary"><%= order.order_items.count %> itens</span>

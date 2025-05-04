@@ -8,7 +8,6 @@ class HomeController < ApplicationController
     @week_ago = 7.days.ago.to_date
     @month_ago = 30.days.ago.to_date
     
-    # Carregar todos os dados necessários em uma única consulta
     load_dashboard_data
     
     prepare_chart_data
@@ -19,22 +18,18 @@ class HomeController < ApplicationController
   private
   
   def load_dashboard_data
-    # Consulta base para todos os pedidos
     base_orders = Order.all
     
-    # Contagens gerais - uma única consulta
     @total_orders = base_orders.count
     @total_migrated = base_orders.where.not(shopify_order_id: nil).count
     @total_not_migrated = @total_orders - @total_migrated
     @migration_percentage = @total_orders > 0 ? (@total_migrated.to_f / @total_orders * 100).round : 0
     
-    # Inicializar hashes para estatísticas
     @today_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
     @week_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
     @month_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
     @kinds_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0, migrated_today: 0, migrated_week: 0, migrated_month: 0, last_migrated: nil } }
     
-    # Consulta para estatísticas por período e tipo - evita múltiplas consultas no banco
     stats_query = base_orders
       .select("
         kinds,
@@ -49,18 +44,15 @@ class HomeController < ApplicationController
       ")
       .group(:kinds)
     
-    # Consulta para obter a última data de migração por tipo
     last_migrated_query = base_orders
       .where.not(shopify_order_id: nil)
       .select("kinds, MAX(updated_at) as last_migrated")
       .group(:kinds)
       .index_by(&:kinds)
     
-    # Processar resultados da consulta
     stats_query.each do |stat|
       kind = stat.kinds
       
-      # Estatísticas gerais por tipo
       @kinds_stats[kind][:total] = stat.total_count
       @kinds_stats[kind][:migrated] = stat.migrated_count
       @kinds_stats[kind][:not_migrated] = stat.total_count - stat.migrated_count
@@ -70,7 +62,6 @@ class HomeController < ApplicationController
       @kinds_stats[kind][:migrated_month] = stat.month_migrated
       @kinds_stats[kind][:last_migrated] = last_migrated_query[kind]&.last_migrated if last_migrated_query[kind]
       
-      # Estatísticas por período
       @today_stats[kind][:total] = stat.today_total
       @today_stats[kind][:migrated] = stat.today_migrated
       @today_stats[kind][:not_migrated] = stat.today_total - stat.today_migrated
@@ -87,7 +78,6 @@ class HomeController < ApplicationController
       @month_stats[kind][:migration_percentage] = stat.month_total > 0 ? (stat.month_migrated.to_f / stat.month_total * 100).round : 0
     end
     
-    # Consulta para estatísticas totais por período
     total_stats_query = base_orders
       .select("
         COUNT(CASE WHEN DATE(tiny_creation_date) = '#{@today}' THEN 1 END) as today_total,
@@ -99,7 +89,6 @@ class HomeController < ApplicationController
       ")
       .first
     
-    # Processar resultados para totais
     @today_stats['total'][:total] = total_stats_query.today_total
     @today_stats['total'][:migrated] = total_stats_query.today_migrated
     @today_stats['total'][:not_migrated] = total_stats_query.today_total - total_stats_query.today_migrated
@@ -118,7 +107,7 @@ class HomeController < ApplicationController
   
   def prepare_chart_data
     @daily_migration_data = get_daily_migration_data
-    
+
     @kind_comparison_data = {
       categories: @kinds.map { |kind| kind_display_name(kind) },
       series: [
@@ -137,12 +126,11 @@ class HomeController < ApplicationController
       ]
     }
   end
-  
+
   def get_daily_migration_data
     date_range = (@month_ago..@today)
     formatted_dates = date_range.map { |date| date.strftime('%d/%m') }
-    
-    # Consulta única para obter dados de migração diária por tipo
+
     daily_data = Order
       .select("
         kinds,
@@ -150,10 +138,9 @@ class HomeController < ApplicationController
         COUNT(CASE WHEN shopify_order_id IS NOT NULL THEN 1 END) as migrated_count
       ")
       .where(tiny_creation_date: @month_ago.beginning_of_day..@today.end_of_day)
-      .group(:kinds, "DATE(tiny_creation_date)")
-      .order("DATE(tiny_creation_date)")
-    
-    # Organizar dados por tipo e data
+      .group(:kinds, 'DATE(tiny_creation_date)')
+      .order('DATE(tiny_creation_date)')
+
     data_by_kind_and_date = {}
     @kinds.each do |kind|
       data_by_kind_and_date[kind] = {}
@@ -161,46 +148,37 @@ class HomeController < ApplicationController
         data_by_kind_and_date[kind][date.strftime('%d/%m')] = 0
       end
     end
-    
+
     daily_data.each do |data|
       formatted_date = data.migration_date.strftime('%d/%m')
       data_by_kind_and_date[data.kinds][formatted_date] = data.migrated_count if data_by_kind_and_date[data.kinds]
     end
-    
-    # Preparar séries para o gráfico
+
     series = @kinds.map do |kind|
       {
         name: kind_display_name(kind),
         data: formatted_dates.map { |date| data_by_kind_and_date[kind][date] || 0 }
       }
     end
-    
+
     {
       dates: formatted_dates,
-      series: series
+      series:
     }
   end
-  
+
   def load_recent_migrated_orders
-    # Carregar pedidos recentes com eager loading para evitar N+1
     @recent_migrated_orders = {}
-    
-    # Uma única consulta para todos os tipos, com limit por tipo
-    recent_orders = Order
-      .select("*, ROW_NUMBER() OVER (PARTITION BY kinds ORDER BY tiny_creation_date DESC) as row_num")
-      .where(kinds: @kinds)
-      .where.not(shopify_order_id: nil)
-      .includes(:order_items)
-    
-    # Filtrar os 5 mais recentes de cada tipo
-    filtered_orders = recent_orders.select { |o| o.row_num <= 5 }
-    
-    # Organizar por tipo
+
     @kinds.each do |kind|
-      @recent_migrated_orders[kind] = filtered_orders.select { |o| o.kinds == kind }.sort_by(&:tiny_creation_date).reverse
+      @recent_migrated_orders[kind] = Order.where(kinds: kind)
+                                           .where.not(shopify_order_id: nil)
+                                           .includes(:order_items)
+                                           .order(tiny_creation_date: :desc)
+                                           .limit(5)
     end
   end
-  
+
   def kind_display_name(kind)
     case kind
     when 'rj'
