@@ -64,6 +64,16 @@
                   </td>
                 </tr>
                 <tr>
+                  <th class="ps-0 text-white">Data Tiny:</th>
+                  <td>
+                    <% if @order.tiny_creation_date.present? %>
+                      <span class="badge bg-info text-dark"><%= @order.tiny_creation_date.strftime('%d/%m/%Y') %></span>
+                    <% else %>
+                      <span class="badge bg-secondary">Não disponível</span>
+                    <% end %>
+                  </td>
+                </tr>
+                <tr>
                   <th class="ps-0 text-white">Tags:</th>
                   <td>
                     <% if @order.tags.present? %>

@@ -2,182 +2,123 @@ class HomeController < ApplicationController
   def index
     redirect_to new_user_session_path and return unless current_user
     
-    # Definir os tipos de pedidos
     @kinds = ['rj', 'bh_shopping', 'lagoa_seca']
     
-    # Calcular datas para os períodos
-    @today_start = Date.today.beginning_of_day
-    @today_end = Date.today.end_of_day
-    @week_start = 7.days.ago.beginning_of_day
-    @month_start = 30.days.ago.beginning_of_day
+    @today = Date.today
+    @week_ago = 7.days.ago.to_date
+    @month_ago = 30.days.ago.to_date
     
-    # Carregar todos os dados necessários em consultas otimizadas
+    # Carregar todos os dados necessários em uma única consulta
     load_dashboard_data
     
-    # Preparar dados para os gráficos ApexCharts
     prepare_chart_data
     
-    # Carregar os últimos pedidos migrados para cada tipo
     load_recent_migrated_orders
   end
   
   private
   
   def load_dashboard_data
-    # Consulta única para obter contagens totais
-    @total_orders = Order.count
-    @total_migrated = Order.where.not(shopify_order_id: nil).count
-    @total_not_migrated = Order.where(shopify_order_id: nil).count
+    # Consulta base para todos os pedidos
+    base_orders = Order.all
+    
+    # Contagens gerais - uma única consulta
+    @total_orders = base_orders.count
+    @total_migrated = base_orders.where.not(shopify_order_id: nil).count
+    @total_not_migrated = @total_orders - @total_migrated
     @migration_percentage = @total_orders > 0 ? (@total_migrated.to_f / @total_orders * 100).round : 0
     
-    # Inicializar estatísticas
-    @today_stats = {}
-    @week_stats = {}
-    @month_stats = {}
+    # Inicializar hashes para estatísticas
+    @today_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
+    @week_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
+    @month_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0 } }
+    @kinds_stats = Hash.new { |h, k| h[k] = { total: 0, migrated: 0, not_migrated: 0, migration_percentage: 0, migrated_today: 0, migrated_week: 0, migrated_month: 0, last_migrated: nil } }
     
-    # Calcular estatísticas para cada tipo e período
-    @kinds.each do |kind|
-      # Estatísticas para hoje
-      today_scope = Order.where(kinds: kind).where(created_at: @today_start..@today_end)
-      today_total = today_scope.count
-      today_migrated = today_scope.where.not(shopify_order_id: nil).count
-      today_not_migrated = today_total - today_migrated
-      today_percentage = today_total > 0 ? (today_migrated.to_f / today_total * 100).round : 0
+    # Consulta para estatísticas por período e tipo - evita múltiplas consultas no banco
+    stats_query = base_orders
+      .select("
+        kinds,
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN shopify_order_id IS NOT NULL THEN 1 END) as migrated_count,
+        COUNT(CASE WHEN DATE(tiny_creation_date) = '#{@today}' THEN 1 END) as today_total,
+        COUNT(CASE WHEN DATE(tiny_creation_date) = '#{@today}' AND shopify_order_id IS NOT NULL THEN 1 END) as today_migrated,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@week_ago}' THEN 1 END) as week_total,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@week_ago}' AND shopify_order_id IS NOT NULL THEN 1 END) as week_migrated,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@month_ago}' THEN 1 END) as month_total,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@month_ago}' AND shopify_order_id IS NOT NULL THEN 1 END) as month_migrated
+      ")
+      .group(:kinds)
+    
+    # Consulta para obter a última data de migração por tipo
+    last_migrated_query = base_orders
+      .where.not(shopify_order_id: nil)
+      .select("kinds, MAX(updated_at) as last_migrated")
+      .group(:kinds)
+      .index_by(&:kinds)
+    
+    # Processar resultados da consulta
+    stats_query.each do |stat|
+      kind = stat.kinds
       
-      @today_stats[kind] = {
-        total: today_total,
-        migrated: today_migrated,
-        not_migrated: today_not_migrated,
-        migration_percentage: today_percentage
-      }
+      # Estatísticas gerais por tipo
+      @kinds_stats[kind][:total] = stat.total_count
+      @kinds_stats[kind][:migrated] = stat.migrated_count
+      @kinds_stats[kind][:not_migrated] = stat.total_count - stat.migrated_count
+      @kinds_stats[kind][:migration_percentage] = stat.total_count > 0 ? (stat.migrated_count.to_f / stat.total_count * 100).round : 0
+      @kinds_stats[kind][:migrated_today] = stat.today_migrated
+      @kinds_stats[kind][:migrated_week] = stat.week_migrated
+      @kinds_stats[kind][:migrated_month] = stat.month_migrated
+      @kinds_stats[kind][:last_migrated] = last_migrated_query[kind]&.last_migrated if last_migrated_query[kind]
       
-      # Estatísticas para a semana
-      week_scope = Order.where(kinds: kind).where(created_at: @week_start..@today_end)
-      week_total = week_scope.count
-      week_migrated = week_scope.where.not(shopify_order_id: nil).count
-      week_not_migrated = week_total - week_migrated
-      week_percentage = week_total > 0 ? (week_migrated.to_f / week_total * 100).round : 0
+      # Estatísticas por período
+      @today_stats[kind][:total] = stat.today_total
+      @today_stats[kind][:migrated] = stat.today_migrated
+      @today_stats[kind][:not_migrated] = stat.today_total - stat.today_migrated
+      @today_stats[kind][:migration_percentage] = stat.today_total > 0 ? (stat.today_migrated.to_f / stat.today_total * 100).round : 0
       
-      @week_stats[kind] = {
-        total: week_total,
-        migrated: week_migrated,
-        not_migrated: week_not_migrated,
-        migration_percentage: week_percentage
-      }
+      @week_stats[kind][:total] = stat.week_total
+      @week_stats[kind][:migrated] = stat.week_migrated
+      @week_stats[kind][:not_migrated] = stat.week_total - stat.week_migrated
+      @week_stats[kind][:migration_percentage] = stat.week_total > 0 ? (stat.week_migrated.to_f / stat.week_total * 100).round : 0
       
-      # Estatísticas para o mês
-      month_scope = Order.where(kinds: kind).where(created_at: @month_start..@today_end)
-      month_total = month_scope.count
-      month_migrated = month_scope.where.not(shopify_order_id: nil).count
-      month_not_migrated = month_total - month_migrated
-      month_percentage = month_total > 0 ? (month_migrated.to_f / month_total * 100).round : 0
-      
-      @month_stats[kind] = {
-        total: month_total,
-        migrated: month_migrated,
-        not_migrated: month_not_migrated,
-        migration_percentage: month_percentage
-      }
+      @month_stats[kind][:total] = stat.month_total
+      @month_stats[kind][:migrated] = stat.month_migrated
+      @month_stats[kind][:not_migrated] = stat.month_total - stat.month_migrated
+      @month_stats[kind][:migration_percentage] = stat.month_total > 0 ? (stat.month_migrated.to_f / stat.month_total * 100).round : 0
     end
     
-    # Calcular totais gerais para cada período
-    today_total_scope = Order.where(created_at: @today_start..@today_end)
-    today_total = today_total_scope.count
-    today_migrated = today_total_scope.where.not(shopify_order_id: nil).count
-    today_not_migrated = today_total - today_migrated
-    today_percentage = today_total > 0 ? (today_migrated.to_f / today_total * 100).round : 0
+    # Consulta para estatísticas totais por período
+    total_stats_query = base_orders
+      .select("
+        COUNT(CASE WHEN DATE(tiny_creation_date) = '#{@today}' THEN 1 END) as today_total,
+        COUNT(CASE WHEN DATE(tiny_creation_date) = '#{@today}' AND shopify_order_id IS NOT NULL THEN 1 END) as today_migrated,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@week_ago}' THEN 1 END) as week_total,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@week_ago}' AND shopify_order_id IS NOT NULL THEN 1 END) as week_migrated,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@month_ago}' THEN 1 END) as month_total,
+        COUNT(CASE WHEN tiny_creation_date >= '#{@month_ago}' AND shopify_order_id IS NOT NULL THEN 1 END) as month_migrated
+      ")
+      .first
     
-    @today_stats['total'] = {
-      total: today_total,
-      migrated: today_migrated,
-      not_migrated: today_not_migrated,
-      migration_percentage: today_percentage
-    }
+    # Processar resultados para totais
+    @today_stats['total'][:total] = total_stats_query.today_total
+    @today_stats['total'][:migrated] = total_stats_query.today_migrated
+    @today_stats['total'][:not_migrated] = total_stats_query.today_total - total_stats_query.today_migrated
+    @today_stats['total'][:migration_percentage] = total_stats_query.today_total > 0 ? (total_stats_query.today_migrated.to_f / total_stats_query.today_total * 100).round : 0
     
-    week_total_scope = Order.where(created_at: @week_start..@today_end)
-    week_total = week_total_scope.count
-    week_migrated = week_total_scope.where.not(shopify_order_id: nil).count
-    week_not_migrated = week_total - week_migrated
-    week_percentage = week_total > 0 ? (week_migrated.to_f / week_total * 100).round : 0
+    @week_stats['total'][:total] = total_stats_query.week_total
+    @week_stats['total'][:migrated] = total_stats_query.week_migrated
+    @week_stats['total'][:not_migrated] = total_stats_query.week_total - total_stats_query.week_migrated
+    @week_stats['total'][:migration_percentage] = total_stats_query.week_total > 0 ? (total_stats_query.week_migrated.to_f / total_stats_query.week_total * 100).round : 0
     
-    @week_stats['total'] = {
-      total: week_total,
-      migrated: week_migrated,
-      not_migrated: week_not_migrated,
-      migration_percentage: week_percentage
-    }
-    
-    month_total_scope = Order.where(created_at: @month_start..@today_end)
-    month_total = month_total_scope.count
-    month_migrated = month_total_scope.where.not(shopify_order_id: nil).count
-    month_not_migrated = month_total - month_migrated
-    month_percentage = month_total > 0 ? (month_migrated.to_f / month_total * 100).round : 0
-    
-    @month_stats['total'] = {
-      total: month_total,
-      migrated: month_migrated,
-      not_migrated: month_not_migrated,
-      migration_percentage: month_percentage
-    }
-    
-    # Calcular estatísticas adicionais para cada tipo
-    @kinds_stats = {}
-    
-    @kinds.each do |kind|
-      # Contagem total para este tipo
-      total = Order.where(kinds: kind).count
-      
-      # Contagem de pedidos migrados para este tipo
-      migrated = Order.where(kinds: kind).where.not(shopify_order_id: nil).count
-      
-      # Contagem de pedidos não migrados para este tipo
-      not_migrated = Order.where(kinds: kind).where(shopify_order_id: nil).count
-      
-      # Porcentagem de migração
-      migration_percentage = total > 0 ? (migrated.to_f / total * 100).round : 0
-      
-      # Pedidos migrados hoje
-      migrated_today = Order.where(kinds: kind)
-                            .where.not(shopify_order_id: nil)
-                            .where(created_at: @today_start..@today_end)
-                            .count
-      
-      # Pedidos migrados esta semana
-      migrated_week = Order.where(kinds: kind)
-                           .where.not(shopify_order_id: nil)
-                           .where(created_at: @week_start..@today_end)
-                           .count
-      
-      # Pedidos migrados este mês
-      migrated_month = Order.where(kinds: kind)
-                            .where.not(shopify_order_id: nil)
-                            .where(created_at: @month_start..@today_end)
-                            .count
-      
-      # Data da última migração
-      last_migrated = Order.where(kinds: kind)
-                           .where.not(shopify_order_id: nil)
-                           .order(updated_at: :desc)
-                           .first&.updated_at
-      
-      @kinds_stats[kind] = {
-        total: total,
-        migrated: migrated,
-        not_migrated: not_migrated,
-        migration_percentage: migration_percentage,
-        migrated_today: migrated_today,
-        migrated_week: migrated_week,
-        migrated_month: migrated_month,
-        last_migrated: last_migrated
-      }
-    end
+    @month_stats['total'][:total] = total_stats_query.month_total
+    @month_stats['total'][:migrated] = total_stats_query.month_migrated
+    @month_stats['total'][:not_migrated] = total_stats_query.month_total - total_stats_query.month_migrated
+    @month_stats['total'][:migration_percentage] = total_stats_query.month_total > 0 ? (total_stats_query.month_migrated.to_f / total_stats_query.month_total * 100).round : 0
   end
   
   def prepare_chart_data
-    # Dados para o gráfico de linha (últimos 30 dias)
     @daily_migration_data = get_daily_migration_data
     
-    # Dados para o gráfico de barras (comparação por tipo)
     @kind_comparison_data = {
       categories: @kinds.map { |kind| kind_display_name(kind) },
       series: [
@@ -198,43 +139,39 @@ class HomeController < ApplicationController
   end
   
   def get_daily_migration_data
-    # Gerar array de datas para os últimos 30 dias
-    dates = []
-    date_range = (@month_start.to_date..@today_end.to_date)
-    
-    # Inicializar contagens para cada kind
-    migrated_counts = {}
-    @kinds.each do |kind|
-      migrated_counts[kind] = {}
-      date_range.each do |date|
-        migrated_counts[kind][date.strftime('%d/%m')] = 0
-      end
-    end
-    
-    # Consulta otimizada para obter contagens diárias por kind
-    @kinds.each do |kind|
-      date_range.each do |date|
-        day_start = date.beginning_of_day
-        day_end = date.end_of_day
-        
-        # Contar pedidos migrados para este kind neste dia
-        count = Order.where(kinds: kind)
-                     .where.not(shopify_order_id: nil)
-                     .where(created_at: day_start..day_end)
-                     .count
-        
-        migrated_counts[kind][date.strftime('%d/%m')] = count
-      end
-    end
-    
-    # Formatar datas para o eixo X
+    date_range = (@month_ago..@today)
     formatted_dates = date_range.map { |date| date.strftime('%d/%m') }
     
-    # Formatar dados para ApexCharts
+    # Consulta única para obter dados de migração diária por tipo
+    daily_data = Order
+      .select("
+        kinds,
+        DATE(tiny_creation_date) as migration_date,
+        COUNT(CASE WHEN shopify_order_id IS NOT NULL THEN 1 END) as migrated_count
+      ")
+      .where(tiny_creation_date: @month_ago.beginning_of_day..@today.end_of_day)
+      .group(:kinds, "DATE(tiny_creation_date)")
+      .order("DATE(tiny_creation_date)")
+    
+    # Organizar dados por tipo e data
+    data_by_kind_and_date = {}
+    @kinds.each do |kind|
+      data_by_kind_and_date[kind] = {}
+      date_range.each do |date|
+        data_by_kind_and_date[kind][date.strftime('%d/%m')] = 0
+      end
+    end
+    
+    daily_data.each do |data|
+      formatted_date = data.migration_date.strftime('%d/%m')
+      data_by_kind_and_date[data.kinds][formatted_date] = data.migrated_count if data_by_kind_and_date[data.kinds]
+    end
+    
+    # Preparar séries para o gráfico
     series = @kinds.map do |kind|
       {
         name: kind_display_name(kind),
-        data: formatted_dates.map { |date| migrated_counts[kind][date] }
+        data: formatted_dates.map { |date| data_by_kind_and_date[kind][date] || 0 }
       }
     end
     
@@ -245,15 +182,22 @@ class HomeController < ApplicationController
   end
   
   def load_recent_migrated_orders
+    # Carregar pedidos recentes com eager loading para evitar N+1
     @recent_migrated_orders = {}
     
+    # Uma única consulta para todos os tipos, com limit por tipo
+    recent_orders = Order
+      .select("*, ROW_NUMBER() OVER (PARTITION BY kinds ORDER BY tiny_creation_date DESC) as row_num")
+      .where(kinds: @kinds)
+      .where.not(shopify_order_id: nil)
+      .includes(:order_items)
+    
+    # Filtrar os 5 mais recentes de cada tipo
+    filtered_orders = recent_orders.select { |o| o.row_num <= 5 }
+    
+    # Organizar por tipo
     @kinds.each do |kind|
-      # Buscar os últimos 5 pedidos migrados para este tipo
-      @recent_migrated_orders[kind] = Order.where(kinds: kind)
-                                          .where.not(shopify_order_id: nil)
-                                          .order(updated_at: :desc)
-                                          .limit(5)
-                                          .includes(:order_items) # Eager loading para evitar N+1
+      @recent_migrated_orders[kind] = filtered_orders.select { |o| o.kinds == kind }.sort_by(&:tiny_creation_date).reverse
     end
   end
   

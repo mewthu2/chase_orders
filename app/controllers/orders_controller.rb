@@ -5,10 +5,8 @@ class OrdersController < ApplicationController
   def index
     @orders = Order.includes(:order_items)
 
-    # Filtro por kind
     @orders = @orders.where(kinds: params[:kind]) if params[:kind].present?
     
-    # Filtros de integração
     if params[:has_tiny] == "1"
       @orders = @orders.where.not(tiny_order_id: nil)
     end
@@ -21,34 +19,35 @@ class OrdersController < ApplicationController
       @orders = @orders.where(shopify_order_id: nil)
     end
     
-    # Filtros de pesquisa
+    if params[:start_date].present? && params[:end_date].present?
+      start_date = Date.parse(params[:start_date]) rescue nil
+      end_date = Date.parse(params[:end_date]) rescue nil
+    
+      if start_date && end_date
+        @orders = @orders.where(tiny_creation_date: start_date.beginning_of_day..end_date.end_of_day)
+      end
+    end
+  
     @orders = @orders.where('tiny_order_id LIKE ?', "%#{params[:tiny_order_id]}%") if params[:tiny_order_id].present?
     @orders = @orders.where('shopify_order_id LIKE ?', "%#{params[:shopify_order_id]}%") if params[:shopify_order_id].present?
     @orders = @orders.where('tags LIKE ?', "%#{params[:tags]}%") if params[:tags].present?
 
-    @orders = @orders.order(created_at: :desc)
+    @orders = @orders.order(tiny_creation_date: :desc)
     @orders = @orders.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
     
-    # Estatísticas para os tipos de pedidos
     @kind_stats = {}
     
-    # Definimos os três tipos conhecidos
     kinds = ['rj', 'bh_shopping', 'lagoa_seca']
     
     kinds.each do |kind|
-      # Contagem total para este kind
       total = Order.where(kinds: kind).count
       
-      # Contagem de pedidos com Tiny para este kind
       tiny_count = Order.where(kinds: kind).where.not(tiny_order_id: nil).count
       
-      # Contagem de pedidos com Shopify para este kind
       shopify_count = Order.where(kinds: kind).where.not(shopify_order_id: nil).count
       
-      # Contagem de pedidos sem Shopify para este kind
       without_shopify_count = Order.where(kinds: kind, shopify_order_id: nil).count
       
-      # Armazena as estatísticas
       @kind_stats[kind] = {
         total: total,
         tiny: tiny_count,
@@ -61,7 +60,6 @@ class OrdersController < ApplicationController
   end
 
   def show
-    # @order já está definido pelo before_action :set_order
   rescue ActiveRecord::RecordNotFound
     redirect_to orders_path, alert: 'Pedido não encontrado.'
   end

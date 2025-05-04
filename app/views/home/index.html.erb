@@ -359,7 +359,7 @@
                     <th class="text-white">ID</th>
                     <th class="text-white">ID Tiny</th>
                     <th class="text-white">ID Shopify</th>
-                    <th class="text-white">Data de Criação</th>
+                    <th class="text-white">Data Tiny</th>
                     <th class="text-white">Data de Migração</th>
                     <th class="text-white">Itens</th>
                     <th class="text-white">Tags</th>
@@ -386,14 +386,14 @@
                         </td>
                         <td>
                           <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-dark"><%= order.shopify_order_id %></span>
+                            <span class="badge bg-success text-white"><%= order.shopify_order_id %></span>
                             <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= order.shopify_order_id %>" 
-                               target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                               target="_blank" class="btn btn-sm btn-outline-success" title="Ver no Shopify">
                               <i class="fas fa-external-link-alt"></i>
                             </a>
                           </div>
                         </td>
-                        <td><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                        <td><%= order.tiny_creation_date.strftime('%d/%m/%Y') if order.tiny_creation_date.present? %></td>
                         <td><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
                         <td>
                           <span class="badge bg-secondary"><%= order.order_items.count %> itens</span>

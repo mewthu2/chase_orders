@@ -81,7 +81,7 @@ module Tiny::Orders
         tiny_order_id: pedido['pedido']['id']
       )
 
-      order.update(tags: pedido['pedido']['nome_vendedor']) if pedido['pedido']['nome_vendedor'].present?
+      order.update(tags: pedido['pedido']['nome_vendedor'], tiny_creation_date: pedido['pedido']['data_pedido']) if pedido['pedido']['nome_vendedor'].present?
 
       attempt = Attempt.where(
         kinds: 'transfer_tiny_to_shopify_order',
