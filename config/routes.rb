@@ -29,6 +29,8 @@ Rails.application.routes.draw do
 
   resources :motors, only: [:index]
 
+  resources :orders
+
   resources :attempts, only: [:index] do
     collection do
       get :reprocess

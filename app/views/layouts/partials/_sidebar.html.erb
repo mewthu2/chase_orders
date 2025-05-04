@@ -19,6 +19,22 @@
             <% end %>
           </div>
         </div>
+
+        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-pedidos" role="button" aria-expanded="false" aria-controls="collase-pedidos">
+          <i class="justify-content-center fa-solid fa-truck"></i> <span class="name-button"> Pedidos </span><i class="fa fa-angle-down arrow"></i>
+        </a>
+
+        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-pedidos">
+          <div class="mb-3 col-icon"> 
+            <%= link_to orders_path, class: 'text-light link' do %>
+              <i class="fa-solid fa-clipboard-check text-info"></i>
+              <span class="name-col">
+                Conferência de Pedidos
+              </span>
+            <% end %>
+          </div>
+        </div>
+
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-shopify" role="button" aria-expanded="false" aria-controls="collase-dashboard">
           <i class="justify-content-center fab fa-shopify"></i> <span class="name-button"> Shopify </span><i class="fa fa-angle-down arrow"></i>
         </a>

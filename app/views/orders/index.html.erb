@@ -1,0 +1,383 @@
+<div class="container-fluid py-4">
+  <% title 'Pedidos' %>
+
+  <%= render 'layouts/partials/messages' %>
+
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card bg-black border border-primary h-100 shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-map-marker-alt me-2"></i>Rio de Janeiro
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-white mb-0"><%= @kind_stats['rj'][:total] %></h3>
+            <span class="badge bg-primary">rj</span>
+          </div>
+          
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-white">Integração</small>
+              <small class="text-white"><%= @kind_stats['rj'][:shopify_percent] %>% com Shopify</small>
+            </div>
+            <div class="progress bg-dark">
+              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['rj'][:shopify_percent] %>%" 
+                   aria-valuenow="<%= @kind_stats['rj'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+          
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
+                <div class="text-white"><%= @kind_stats['rj'][:tiny] %></div>
+                <small class="text-muted">Tiny</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
+                <div class="text-white"><%= @kind_stats['rj'][:shopify] %></div>
+                <small class="text-muted">Shopify</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div>
+                <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="text-white"><%= @kind_stats['rj'][:without_shopify] %></div>
+                <small class="text-muted">Sem Shopify</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-3">
+            <%= link_to orders_path(kind: 'rj'), class: 'btn btn-sm btn-primary w-100' do %>
+              <i class="fas fa-filter me-1"></i> Filtrar
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card bg-black border border-success h-100 shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-store me-2"></i>BH Shopping
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-white mb-0"><%= @kind_stats['bh_shopping'][:total] %></h3>
+            <span class="badge bg-success">bh_shopping</span>
+          </div>
+          
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-white">Integração</small>
+              <small class="text-white"><%= @kind_stats['bh_shopping'][:shopify_percent] %>% com Shopify</small>
+            </div>
+            <div class="progress bg-dark">
+              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['bh_shopping'][:shopify_percent] %>%" 
+                   aria-valuenow="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+          
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
+                <div class="text-white"><%= @kind_stats['bh_shopping'][:tiny] %></div>
+                <small class="text-muted">Tiny</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
+                <div class="text-white"><%= @kind_stats['bh_shopping'][:shopify] %></div>
+                <small class="text-muted">Shopify</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div>
+                <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="text-white"><%= @kind_stats['bh_shopping'][:without_shopify] %></div>
+                <small class="text-muted">Sem Shopify</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-3">
+            <%= link_to orders_path(kind: 'bh_shopping'), class: 'btn btn-sm btn-success w-100' do %>
+              <i class="fas fa-filter me-1"></i> Filtrar
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card bg-black border border-warning h-100 shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-water me-2"></i>Lagoa Seca
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-white mb-0"><%= @kind_stats['lagoa_seca'][:total] %></h3>
+            <span class="badge bg-warning text-dark">lagoa_seca</span>
+          </div>
+          
+          <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <small class="text-white">Integração</small>
+              <small class="text-white"><%= @kind_stats['lagoa_seca'][:shopify_percent] %>% com Shopify</small>
+            </div>
+            <div class="progress bg-dark">
+              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['lagoa_seca'][:shopify_percent] %>%" 
+                   aria-valuenow="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+          
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
+                <div class="text-white"><%= @kind_stats['lagoa_seca'][:tiny] %></div>
+                <small class="text-muted">Tiny</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="border-end border-secondary">
+                <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
+                <div class="text-white"><%= @kind_stats['lagoa_seca'][:shopify] %></div>
+                <small class="text-muted">Shopify</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div>
+                <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="text-white"><%= @kind_stats['lagoa_seca'][:without_shopify] %></div>
+                <small class="text-muted">Sem Shopify</small>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-3">
+            <%= link_to orders_path(kind: 'lagoa_seca'), class: 'btn btn-sm btn-warning text-dark w-100' do %>
+              <i class="fas fa-filter me-1"></i> Filtrar
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%= form_tag(orders_path, method: 'get') do %>
+    <div class="card bg-black border border-dark shadow-sm mb-4">
+      <div class="card-header bg-dark">
+        <h5 class="text-white mb-0">Pesquisa avançada</h5>
+      </div>
+      <div class="card-body bg-black">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label for="kind" class="form-label text-white">Tipo</label>
+            <%= select_tag :kind, options_for_select([
+              ['Todos', ''],
+              ['Rio de Janeiro', 'rj'],
+              ['BH Shopping', 'bh_shopping'],
+              ['Lagoa Seca', 'lagoa_seca']
+            ], params[:kind]), class: 'form-select bg-dark text-white border-secondary' %>
+          </div>
+          <div class="col-md-3">
+            <label for="tiny_order_id" class="form-label text-white">ID Tiny</label>
+            <%= text_field_tag :tiny_order_id, params[:tiny_order_id], class: 'form-control bg-dark text-white border-secondary', placeholder: 'ID do pedido no Tiny' %>
+          </div>
+          <div class="col-md-3">
+            <label for="shopify_order_id" class="form-label text-white">ID Shopify</label>
+            <%= text_field_tag :shopify_order_id, params[:shopify_order_id], class: 'form-control bg-dark text-white border-secondary', placeholder: 'ID do pedido no Shopify' %>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label text-white d-block">Filtros adicionais</label>
+            <div class="form-check form-switch">
+              <%= check_box_tag :without_shopify, "1", params[:without_shopify] == "1", class: 'form-check-input', id: 'without_shopify' %>
+              <label class="form-check-label text-white" for="without_shopify">Apenas sem Shopify</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-black border-top border-dark d-flex justify-content-between">
+        <%= link_to orders_path, class: 'btn btn-secondary' do %>
+          <i class="fas fa-undo me-1"></i> Limpar filtros
+        <% end %>
+        <%= button_tag class: 'btn btn-light', name: '' do %>
+          <i class="fa fa-search me-1"></i> Pesquisar
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" id="orders-table">
+              <thead class="bg-dark">
+                <tr>
+                  <th width="60" class="text-center"><i class="fa fa-cog"></i></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :id %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :kinds %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :tiny_order_id %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :shopify_order_id %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :tags %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :created_at %></th>
+                  <th class="text-center text-white"><%= Order.human_attribute_name :updated_at %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @orders.each do |order| %>
+                  <% 
+                    # Define a classe de borda baseada no tipo
+                    border_class = case order.kinds
+                      when 'rj' then 'border-primary'
+                      when 'bh_shopping' then 'border-success'
+                      when 'lagoa_seca' then 'border-warning'
+                      else 'border-secondary'
+                    end
+                    
+                    # Define o ícone baseado no tipo
+                    kind_icon = case order.kinds
+                      when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+                      when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+                      when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+                      else '<i class="fas fa-tag me-1"></i>'
+                    end
+                    
+                    # Define a classe do badge baseada no tipo
+                    badge_class = case order.kinds
+                      when 'rj' then 'bg-primary'
+                      when 'bh_shopping' then 'bg-success'
+                      when 'lagoa_seca' then 'bg-warning text-dark'
+                      else 'bg-secondary'
+                    end
+                  %>
+                  <tr class="border-start <%= border_class %> border-5">
+                    <td class="text-center">
+                      <%= link_to order_path(order), class: 'btn btn-sm btn-light', target: '_blank', title: 'Ver detalhes' do %>
+                        <i class="fas fa-eye"></i>
+                      <% end %>
+                    </td>
+                    <td class="text-center"><span class="badge bg-dark"><%= order.id %></span></td>
+                    <td class="text-center">
+                      <span class="badge <%= badge_class %>">
+                        <%= kind_icon.html_safe %> <%= order.kinds %>
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <div class="d-flex align-items-center justify-content-center gap-2">
+                        <span class="badge bg-dark"><%= order.tiny_order_id %></span>
+                        <% if order.tiny_order_id.present? %>
+                          <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
+                             target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                        <% end %>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <div class="d-flex align-items-center justify-content-center gap-2">
+                        <% if order.shopify_order_id.present? %>
+                          <span class="badge bg-dark"><%= order.shopify_order_id %></span>
+                          <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://your-store.myshopify.com/admin/orders/') %><%= order.shopify_order_id %>" 
+                             target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                        <% else %>
+                          <span class="badge bg-danger">Sem Shopify</span>
+                        <% end %>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <% if order.tags.present? %>
+                        <% order.tags.split(',').each do |tag| %>
+                          <span class="badge bg-info text-dark"><%= tag.strip %></span>
+                        <% end %>
+                      <% else %>
+                        <span class="badge bg-secondary">Sem tags</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center"><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                    <td class="text-center"><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="bg-dark">
+                <tr>
+                  <td colspan="8" class="text-center py-3 text-white">
+                    <%= page_entries_info @orders %>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-12 d-flex justify-content-center">
+      <%= will_paginate @orders, list_classes: %w[pagination pagination-sm], inner_window: 1, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-item.active .page-link {
+      background-color: #f8f9fa;
+      border-color: #f8f9fa;
+      color: #212529;
+    }
+    
+    .form-select option {
+      background-color: #212529;
+      color: #f8f9fa;
+    }
+    
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .form-check-input:checked {
+      background-color: #dc3545;
+      border-color: #dc3545;
+    }
+    
+    .border-5 {
+      border-width: 5px !important;
+    }
+  </style>
+<% end %>

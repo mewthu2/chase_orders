@@ -81,6 +81,19 @@ module Tiny::Orders
         tiny_order_id: pedido['pedido']['id']
       )
 
+      order.update(tags: pedido['pedido']['nome_vendedor']) if pedido['pedido']['nome_vendedor'].present?
+
+      attempt = Attempt.where(
+        kinds: 'transfer_tiny_to_shopify_order',
+        status: 'success',
+        tiny_order_id: pedido['pedido']['id']
+      ).where('tracking LIKE ?', "%kind:#{kind}%").first
+
+      if attempt&.params.present?
+        params = JSON.parse(attempt.params) rescue {}
+        order.update(shopify_order_id: params['shopify_order_id']) if params['shopify_order_id'].present?
+      end
+
       tiny_order = obtain_order(token, pedido['pedido']['id'])
 
       sleep(0.5)

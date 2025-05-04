@@ -1,0 +1,270 @@
+<% title "Detalhes do Pedido ##{@order.id}" %>
+
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <%= link_to orders_path, class: 'btn btn-light me-2' do %>
+            <i class="fas fa-arrow-left me-1"></i> Voltar
+          <% end %>
+          <button class="btn btn-light" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4 g-4">
+    <div class="col-lg-6">
+      <div class="card bg-black border border-dark h-100 shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-info-circle me-2"></i>Informações do Pedido
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-dark table-borderless mb-0">
+              <tbody>
+                <tr>
+                  <th class="ps-0 text-white" style="width: 150px;">ID:</th>
+                  <td><span class="badge bg-dark"><%= @order.id %></span></td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">Tipo:</th>
+                  <td><span class="badge bg-secondary"><%= @order.kinds %></span></td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">ID Tiny:</th>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge bg-dark"><%= @order.tiny_order_id %></span>
+                      <% if @order.tiny_order_id.present? %>
+                        <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= @order.tiny_order_id %>" 
+                           target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
+                          <i class="fas fa-external-link-alt"></i> Tiny
+                        </a>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">ID Shopify:</th>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <% if @order.shopify_order_id.present? %>
+                        <span class="badge bg-dark"><%= @order.shopify_order_id %></span>
+                        <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://your-store.myshopify.com/admin/orders/') %><%= @order.shopify_order_id %>" 
+                           target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                          <i class="fas fa-external-link-alt"></i> Shopify
+                        </a>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">Tags:</th>
+                  <td>
+                    <% if @order.tags.present? %>
+                      <% @order.tags.split(',').each do |tag| %>
+                        <span class="badge bg-info text-dark me-1"><%= tag.strip %></span>
+                      <% end %>
+                    <% else %>
+                      <span class="badge bg-secondary">Sem tags</span>
+                    <% end %>
+                  </td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">Criado em:</th>
+                  <td><%= @order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                </tr>
+                <tr>
+                  <th class="ps-0 text-white">Atualizado em:</th>
+                  <td><%= @order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-6">
+      <div class="card bg-black border border-dark h-100 shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>Dados Adicionais
+          </h5>
+        </div>
+        <div class="card-body">
+          <!-- Adicione aqui outros dados relevantes do pedido -->
+          <% if @order.respond_to?(:customer_name) && @order.customer_name.present? %>
+            <div class="mb-4">
+              <h6 class="text-white border-bottom border-secondary pb-2 mb-3">
+                <i class="fas fa-user me-2"></i>Informações do Cliente
+              </h6>
+              <div class="table-responsive">
+                <table class="table table-dark table-borderless mb-0">
+                  <tbody>
+                    <tr>
+                      <th class="ps-0 text-white" style="width: 150px;">Nome:</th>
+                      <td><%= @order.customer_name %></td>
+                    </tr>
+                    <% if @order.respond_to?(:customer_email) && @order.customer_email.present? %>
+                      <tr>
+                        <th class="ps-0 text-white">Email:</th>
+                        <td><a href="mailto:<%= @order.customer_email %>" class="text-white"><%= @order.customer_email %></a></td>
+                      </tr>
+                    <% end %>
+                    <% if @order.respond_to?(:customer_phone) && @order.customer_phone.present? %>
+                      <tr>
+                        <th class="ps-0 text-white">Telefone:</th>
+                        <td><%= @order.customer_phone %></td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <% end %>
+          
+          <% if @order.respond_to?(:notes) && @order.notes.present? %>
+            <div class="mb-3">
+              <h6 class="text-white border-bottom border-secondary pb-2 mb-3">
+                <i class="fas fa-sticky-note me-2"></i>Observações
+              </h6>
+              <div class="p-3 bg-dark border border-secondary rounded">
+                <%= simple_format(@order.notes) %>
+              </div>
+            </div>
+          <% else %>
+            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+              <i class="fas fa-clipboard text-secondary mb-3" style="font-size: 3rem;"></i>
+              <p>Nenhuma informação adicional disponível para este pedido.</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-box-open me-2"></i>Itens do Pedido
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="text-white">ID</th>
+                  <th class="text-white">Produto</th>
+                  <th class="text-center text-white">Quantidade</th>
+                  <th class="text-end text-white">Preço</th>
+                  <th class="text-end text-white">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if @order.order_items.any? %>
+                  <% @order.order_items.each do |item| %>
+                    <tr>
+                      <td><span class="badge bg-dark"><%= item.id %></span></td>
+                      <td><%= item.respond_to?(:product_name) ? item.product_name : "Produto ##{item.id}" %></td>
+                      <td class="text-center">
+                        <span class="badge bg-secondary"><%= item.respond_to?(:quantity) ? item.quantity : 1 %></span>
+                      </td>
+                      <td class="text-end"><%= number_to_currency(item.respond_to?(:price) ? item.price : 0) %></td>
+                      <td class="text-end"><%= number_to_currency(item.respond_to?(:total) ? item.total : 0) %></td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="5" class="text-center py-4">
+                      <i class="fas fa-box-open text-secondary mb-3" style="font-size: 2rem;"></i>
+                      <p class="mb-0">Nenhum item encontrado para este pedido.</p>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <% if @order.order_items.any? && @order.respond_to?(:total) %>
+                <tfoot class="bg-dark">
+                  <tr>
+                    <th colspan="4" class="text-end text-white">Total do Pedido:</th>
+                    <th class="text-end"><%= number_to_currency(@order.total) %></th>
+                  </tr>
+                </tfoot>
+              <% end %>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    @media print {
+      .btn, .no-print {
+        display: none !important;
+      }
+      
+      body {
+        background-color: white !important;
+        color: black !important;
+      }
+      
+      .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+      }
+      
+      .card-header, .card-body, .table {
+        background-color: white !important;
+        color: black !important;
+      }
+      
+      .table td, .table th {
+        border-color: #ddd !important;
+      }
+      
+      .badge {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+        border: 1px solid #ddd !important;
+      }
+      
+      .border-secondary {
+        border-color: #ddd !important;
+      }
+      
+      .text-white {
+        color: #212529 !important;
+      }
+    }
+  </style>
+<% end %>
