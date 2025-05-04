@@ -5,12 +5,9 @@
     <div class="col-12">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <%= link_to orders_path, class: 'btn btn-light me-2' do %>
+          <%= link_to orders_path, class: 'btn btn-dark me-2' do %>
             <i class="fas fa-arrow-left me-1"></i> Voltar
           <% end %>
-          <button class="btn btn-light" onclick="window.print()">
-            <i class="fas fa-print me-1"></i> Imprimir
-          </button>
         </div>
       </div>
     </div>
@@ -55,13 +52,13 @@
                   <td>
                     <div class="d-flex align-items-center gap-2">
                       <% if @order.shopify_order_id.present? %>
-                        <span class="badge bg-dark"><%= @order.shopify_order_id %></span>
-                        <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://your-store.myshopify.com/admin/orders/') %><%= @order.shopify_order_id %>" 
-                           target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                        <span class="badge bg-success text-white px-3 py-2" style="font-size: 0.9rem;"><%= @order.shopify_order_id %></span>
+                        <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= @order.shopify_order_id %>" 
+                           target="_blank" class="btn btn-sm btn-outline-success" title="Ver no Shopify">
                           <i class="fas fa-external-link-alt"></i> Shopify
                         </a>
                       <% else %>
-                        <span class="badge bg-secondary">Não disponível</span>
+                        <span class="badge bg-danger text-white px-3 py-2" style="font-size: 0.9rem;">Não disponível</span>
                       <% end %>
                     </div>
                   </td>
@@ -265,6 +262,84 @@
       .text-white {
         color: #212529 !important;
       }
+    }
+
+    /* Melhorias para os badges e botões */
+    .badge {
+      font-size: 0.85rem;
+      padding: 0.35rem 0.65rem;
+    }
+    
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-sm:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Melhorias para as tabelas */
+    .table-dark th {
+      font-weight: 600;
+      color: #e9ecef;
+    }
+    
+    .table-dark td {
+      color: #ced4da;
+    }
+    
+    /* Efeito hover para links externos */
+    a[target="_blank"] {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    a[target="_blank"]:hover {
+      transform: translateY(-2px);
+    }
+    
+    /* Melhorias para os cards */
+    .card {
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .card-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Estilos específicos para o ID Shopify */
+    .badge.bg-success {
+      background-color: #198754 !important;
+      color: white !important;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge.bg-danger {
+      background-color: #dc3545 !important;
+      color: white !important;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    
+    .btn-outline-success {
+      color: #198754;
+      border-color: #198754;
+      background-color: transparent;
+    }
+    
+    .btn-outline-success:hover {
+      color: white;
+      background-color: #198754;
     }
   </style>
 <% end %>

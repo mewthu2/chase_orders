@@ -5,13 +5,26 @@ class OrdersController < ApplicationController
   def index
     @orders = Order.includes(:order_items)
 
+    # Filtro por kind
     @orders = @orders.where(kinds: params[:kind]) if params[:kind].present?
+    
+    # Filtros de integração
+    if params[:has_tiny] == "1"
+      @orders = @orders.where.not(tiny_order_id: nil)
+    end
+    
+    if params[:has_shopify] == "1"
+      @orders = @orders.where.not(shopify_order_id: nil)
+    end
+    
+    if params[:without_shopify] == "1"
+      @orders = @orders.where(shopify_order_id: nil)
+    end
+    
+    # Filtros de pesquisa
     @orders = @orders.where('tiny_order_id LIKE ?', "%#{params[:tiny_order_id]}%") if params[:tiny_order_id].present?
     @orders = @orders.where('shopify_order_id LIKE ?', "%#{params[:shopify_order_id]}%") if params[:shopify_order_id].present?
     @orders = @orders.where('tags LIKE ?', "%#{params[:tags]}%") if params[:tags].present?
-    
-    # Filtro para pedidos sem shopify_order_id
-    @orders = @orders.where(shopify_order_id: nil) if params[:without_shopify] == "1"
 
     @orders = @orders.order(created_at: :desc)
     @orders = @orders.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))

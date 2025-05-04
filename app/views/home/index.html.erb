@@ -1,3 +1,485 @@
-<% title 'Home' %>
+<div class="container-fluid py-4">
+  <% title 'Dashboard' %>
 
-<%= render 'layouts/partials/messages' %>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard de Migração de Pedidos
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="card bg-black border border-info mb-4 h-100 shadow">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-white mb-0">
+                      <i class="fas fa-chart-pie me-2"></i>Visão Geral
+                    </h5>
+                    <span class="badge bg-info text-dark">Total</span>
+                  </div>
+                  <div class="text-center mb-4">
+                    <div class="display-4 text-white mb-0"><%= @total_migrated %> / <%= @total_orders %></div>
+                    <small class="text-muted">Pedidos migrados para o Shopify</small>
+                  </div>
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                      <small class="text-white">Progresso de Migração</small>
+                      <small class="text-white"><%= @migration_percentage %>%</small>
+                    </div>
+                    <div class="progress bg-dark">
+                      <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" 
+                           style="width: <%= @migration_percentage %>%"
+                           aria-valuenow="<%= @migration_percentage %>" 
+                           aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                  </div>
+                  
+                  <div class="row mt-4">
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h3 class="text-white mb-0"><%= @total_migrated %></h3>
+                        <small class="text-success">Migrados</small>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="text-center">
+                        <h3 class="text-white mb-0"><%= @total_not_migrated %></h3>
+                        <small class="text-danger">Pendentes</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-8">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="card bg-black border border-primary mb-4 shadow">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-white mb-0">
+                          <i class="fas fa-calendar-day me-2"></i>Hoje
+                        </h6>
+                        <span class="badge bg-primary"><%= @today_stats['total'][:migrated] %></span>
+                      </div>
+                      <div class="text-center">
+                        <div class="h3 text-white mb-0"><%= @today_stats['total'][:migration_percentage] %>%</div>
+                        <small class="text-muted">Taxa de migração</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="card bg-black border border-success mb-4 shadow">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-white mb-0">
+                          <i class="fas fa-calendar-week me-2"></i>7 Dias
+                        </h6>
+                        <span class="badge bg-success"><%= @week_stats['total'][:migrated] %></span>
+                      </div>
+                      <div class="text-center">
+                        <div class="h3 text-white mb-0"><%= @week_stats['total'][:migration_percentage] %>%</div>
+                        <small class="text-muted">Taxa de migração</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="card bg-black border border-warning mb-4 shadow">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-white mb-0">
+                          <i class="fas fa-calendar-alt me-2"></i>30 Dias
+                        </h6>
+                        <span class="badge bg-warning text-dark"><%= @month_stats['total'][:migrated] %></span>
+                      </div>
+                      <div class="text-center">
+                        <div class="h3 text-white mb-0"><%= @month_stats['total'][:migration_percentage] %>%</div>
+                        <small class="text-muted">Taxa de migração</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <% @kinds.each do |kind| %>
+                  <% 
+                    # Define a classe de borda baseada no tipo
+                    border_class = case kind
+                      when 'rj' then 'border-primary'
+                      when 'bh_shopping' then 'border-success'
+                      when 'lagoa_seca' then 'border-warning'
+                      else 'border-secondary'
+                    end
+                    
+                    # Define o ícone baseado no tipo
+                    kind_icon = case kind
+                      when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+                      when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+                      when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+                      else '<i class="fas fa-tag me-1"></i>'
+                    end
+                    
+                    # Define a classe do badge baseada no tipo
+                    badge_class = case kind
+                      when 'rj' then 'bg-primary'
+                      when 'bh_shopping' then 'bg-success'
+                      when 'lagoa_seca' then 'bg-warning text-dark'
+                      else 'bg-secondary'
+                    end
+                  %>
+                  <div class="col-md-4">
+                    <div class="card bg-black <%= border_class %> mb-4 shadow">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <h6 class="text-white mb-0">
+                            <%= kind_icon.html_safe %> <%= kind_display_name(kind) %>
+                          </h6>
+                          <span class="badge <%= badge_class %>"><%= @kinds_stats[kind][:migrated] %> / <%= @kinds_stats[kind][:total] %></span>
+                        </div>
+                        
+                        <div class="mb-2">
+                          <div class="d-flex justify-content-between mb-1">
+                            <small class="text-white">Progresso</small>
+                            <small class="text-white"><%= @kinds_stats[kind][:migration_percentage] %>%</small>
+                          </div>
+                          <div class="progress bg-dark">
+                            <div class="progress-bar <%= badge_class %> progress-bar-striped progress-bar-animated" role="progressbar" 
+                                 style="width: <%= @kinds_stats[kind][:migration_percentage] %>%"
+                                 aria-valuenow="<%= @kinds_stats[kind][:migration_percentage] %>" 
+                                 aria-valuemin="0" aria-valuemax="100"></div>
+                          </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                          <div class="d-flex justify-content-between text-white">
+                            <small><i class="fas fa-calendar-day me-1"></i> Hoje:</small>
+                            <small><%= @kinds_stats[kind][:migrated_today] %></small>
+                          </div>
+                          <div class="d-flex justify-content-between text-white">
+                            <small><i class="fas fa-calendar-week me-1"></i> 7 dias:</small>
+                            <small><%= @kinds_stats[kind][:migrated_week] %></small>
+                          </div>
+                          <div class="d-flex justify-content-between text-white">
+                            <small><i class="fas fa-calendar-alt me-1"></i> 30 dias:</small>
+                            <small><%= @kinds_stats[kind][:migrated_month] %></small>
+                          </div>
+                          <div class="d-flex justify-content-between text-white">
+                            <small><i class="fas fa-clock me-1"></i> Última:</small>
+                            <small><%= @kinds_stats[kind][:last_migrated] ? @kinds_stats[kind][:last_migrated].strftime('%d/%m/%Y %H:%M') : 'N/A' %></small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-chart-line me-2"></i>Tendência de Migração (Últimos 30 dias)
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= line_chart @daily_migration_data[:series], 
+  id: 'migration-trend-chart', 
+  height: '350px', 
+  colors: ['#0d6efd', '#198754', '#ffc107'],
+  title: 'Pedidos Migrados por Dia',
+  xtitle: 'Data',
+  ytitle: 'Pedidos Migrados',
+  xtype: 'category',
+  suffix: " pedidos",
+  library: {
+    chart: {
+      background: '#121212',
+      toolbar: { show: true },
+      zoom: { enabled: true }
+    },
+    grid: {
+      borderColor: '#343a40',
+      row: {
+        colors: ['#1a1a1a', 'transparent'],
+        opacity: 0.2
+      }
+    },
+    markers: { size: 4 },
+    stroke: { curve: 'smooth', width: 3 },
+    xaxis: {
+      categories: @daily_migration_data[:dates],
+      labels: { style: { colors: '#f8f9fa' } },
+      title: {
+        text: 'Data',
+        style: { color: '#f8f9fa' }
+      }
+    },
+    yaxis: {
+      title: {
+        text: 'Pedidos Migrados',
+        style: { color: '#f8f9fa' }
+      },
+      labels: { style: { colors: '#f8f9fa' } }
+    },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'right',
+      floating: true,
+      offsetY: -25,
+      offsetX: -5,
+      labels: { colors: '#f8f9fa' }
+    },
+    tooltip: { theme: 'dark' }
+  }
+%>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-chart-bar me-2"></i>Comparação por Período
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= column_chart @kind_comparison_data[:series],
+  id: 'comparison-chart',
+  height: '350px',
+  colors: ['#0d6efd', '#198754', '#ffc107'],
+  title: 'Comparação de Pedidos Migrados por Período',
+  xtitle: 'Tipo de Pedido',
+  ytitle: 'Pedidos Migrados',
+  suffix: " pedidos",
+  library: {
+    chart: {
+      background: '#121212',
+      toolbar: { show: true }
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '55%',
+        borderRadius: 5
+      }
+    },
+    dataLabels: { enabled: false },
+    xaxis: {
+      categories: @kind_comparison_data[:categories],
+      labels: { style: { colors: '#f8f9fa' } },
+      title: {
+        text: 'Tipo de Pedido',
+        style: { color: '#f8f9fa' }
+      }
+    },
+    yaxis: {
+      title: {
+        text: 'Pedidos Migrados',
+        style: { color: '#f8f9fa' }
+      },
+      labels: { style: { colors: '#f8f9fa' } }
+    },
+    grid: { borderColor: '#343a40' },
+    legend: {
+      position: 'top',
+      horizontalAlign: 'right',
+      offsetY: -25,
+      offsetX: -5,
+      labels: { colors: '#f8f9fa' }
+    },
+    tooltip: {
+      theme: 'dark'
+    }
+  }
+%>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seção de Últimos Pedidos Migrados -->
+  <% @kinds.each do |kind| %>
+    <% 
+      # Define a classe de borda baseada no tipo
+      border_class = case kind
+        when 'rj' then 'border-primary'
+        when 'bh_shopping' then 'border-success'
+        when 'lagoa_seca' then 'border-warning'
+        else 'border-secondary'
+      end
+      
+      # Define o ícone baseado no tipo
+      kind_icon = case kind
+        when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+        when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+        when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+        else '<i class="fas fa-tag me-1"></i>'
+      end
+      
+      # Define a classe do badge baseada no tipo
+      badge_class = case kind
+        when 'rj' then 'bg-primary'
+        when 'bh_shopping' then 'bg-success'
+        when 'lagoa_seca' then 'bg-warning text-dark'
+        else 'bg-secondary'
+      end
+    %>
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card bg-black <%= border_class %> shadow">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <%= kind_icon.html_safe %> Últimos Pedidos Migrados - <%= kind_display_name(kind) %>
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle mb-0">
+                <thead class="bg-dark">
+                  <tr>
+                    <th class="text-white">ID</th>
+                    <th class="text-white">ID Tiny</th>
+                    <th class="text-white">ID Shopify</th>
+                    <th class="text-white">Data de Criação</th>
+                    <th class="text-white">Data de Migração</th>
+                    <th class="text-white">Itens</th>
+                    <th class="text-white">Tags</th>
+                    <th class="text-center text-white">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if @recent_migrated_orders[kind].any? %>
+                    <% @recent_migrated_orders[kind].each do |order| %>
+                      <tr>
+                        <td><span class="badge bg-dark"><%= order.id %></span></td>
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <% if order.tiny_order_id.present? %>
+                              <span class="badge bg-dark"><%= order.tiny_order_id %></span>
+                              <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
+                                 target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
+                                <i class="fas fa-external-link-alt"></i>
+                              </a>
+                            <% else %>
+                              <span class="badge bg-secondary">Não disponível</span>
+                            <% end %>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark"><%= order.shopify_order_id %></span>
+                            <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= order.shopify_order_id %>" 
+                               target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                              <i class="fas fa-external-link-alt"></i>
+                            </a>
+                          </div>
+                        </td>
+                        <td><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                        <td><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+                        <td>
+                          <span class="badge bg-secondary"><%= order.order_items.count %> itens</span>
+                        </td>
+                        <td>
+                          <% if order.tags.present? %>
+                            <% order.tags.split(',').each do |tag| %>
+                              <span class="badge bg-info text-dark"><%= tag.strip %></span>
+                            <% end %>
+                          <% else %>
+                            <span class="badge bg-secondary">Sem tags</span>
+                          <% end %>
+                        </td>
+                        <td class="text-center">
+                          <%= link_to order_path(order), class: 'btn btn-sm btn-light', target: '_blank', title: 'Ver detalhes' do %>
+                            <i class="fas fa-eye"></i>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  <% else %>
+                    <tr>
+                      <td colspan="8" class="text-center py-4">
+                        <i class="fas fa-info-circle text-secondary mb-3" style="font-size: 2rem;"></i>
+                        <p class="mb-0">Nenhum pedido migrado encontrado para <%= kind_display_name(kind) %>.</p>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .progress {
+      height: 8px;
+      border-radius: 4px;
+    }
+    
+    .progress-bar-striped {
+      background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+      background-size: 1rem 1rem;
+    }
+    
+    .progress-bar-animated {
+      animation: progress-bar-stripes 1s linear infinite;
+    }
+    
+    @keyframes progress-bar-stripes {
+      0% {
+        background-position: 1rem 0;
+      }
+      100% {
+        background-position: 0 0;
+      }
+    }
+    
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+  </style>
+<% end %>

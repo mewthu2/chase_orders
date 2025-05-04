@@ -23,28 +23,37 @@
               <small class="text-white"><%= @kind_stats['rj'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['rj'][:shopify_percent] %>%" 
-                   aria-valuenow="<%= @kind_stats['rj'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
+                   style="width: 0%"
+                   data-progress="<%= @kind_stats['rj'][:shopify_percent] %>" 
+                   aria-valuenow="<%= @kind_stats['rj'][:shopify_percent] %>" 
+                   aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
           
           <div class="row text-center">
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="rj" data-filter="tiny" 
+                   data-url="<%= orders_path(kind: 'rj', has_tiny: 1) %>">
                 <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
                 <div class="text-white"><%= @kind_stats['rj'][:tiny] %></div>
                 <small class="text-muted">Tiny</small>
               </div>
             </div>
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="rj" data-filter="shopify" 
+                   data-url="<%= orders_path(kind: 'rj', has_shopify: 1) %>">
                 <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
                 <div class="text-white"><%= @kind_stats['rj'][:shopify] %></div>
                 <small class="text-muted">Shopify</small>
               </div>
             </div>
             <div class="col-4">
-              <div>
+              <div class="counter-link" 
+                   data-kind="rj" data-filter="without_shopify" 
+                   data-url="<%= orders_path(kind: 'rj', without_shopify: 1) %>">
                 <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
                 <div class="text-white"><%= @kind_stats['rj'][:without_shopify] %></div>
                 <small class="text-muted">Sem Shopify</small>
@@ -80,28 +89,37 @@
               <small class="text-white"><%= @kind_stats['bh_shopping'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['bh_shopping'][:shopify_percent] %>%" 
-                   aria-valuenow="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
+                   style="width: 0%"
+                   data-progress="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" 
+                   aria-valuenow="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" 
+                   aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
           
           <div class="row text-center">
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="bh_shopping" data-filter="tiny" 
+                   data-url="<%= orders_path(kind: 'bh_shopping', has_tiny: 1) %>">
                 <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
                 <div class="text-white"><%= @kind_stats['bh_shopping'][:tiny] %></div>
                 <small class="text-muted">Tiny</small>
               </div>
             </div>
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="bh_shopping" data-filter="shopify" 
+                   data-url="<%= orders_path(kind: 'bh_shopping', has_shopify: 1) %>">
                 <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
                 <div class="text-white"><%= @kind_stats['bh_shopping'][:shopify] %></div>
                 <small class="text-muted">Shopify</small>
               </div>
             </div>
             <div class="col-4">
-              <div>
+              <div class="counter-link" 
+                   data-kind="bh_shopping" data-filter="without_shopify" 
+                   data-url="<%= orders_path(kind: 'bh_shopping', without_shopify: 1) %>">
                 <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
                 <div class="text-white"><%= @kind_stats['bh_shopping'][:without_shopify] %></div>
                 <small class="text-muted">Sem Shopify</small>
@@ -137,28 +155,37 @@
               <small class="text-white"><%= @kind_stats['lagoa_seca'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success" role="progressbar" style="width: <%= @kind_stats['lagoa_seca'][:shopify_percent] %>%" 
-                   aria-valuenow="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" aria-valuemin="0" aria-valuemax="100"></div>
+              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
+                   style="width: 0%"
+                   data-progress="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" 
+                   aria-valuenow="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" 
+                   aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
           
           <div class="row text-center">
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="lagoa_seca" data-filter="tiny" 
+                   data-url="<%= orders_path(kind: 'lagoa_seca', has_tiny: 1) %>">
                 <div class="text-primary"><i class="fas fa-shopping-basket"></i></div>
                 <div class="text-white"><%= @kind_stats['lagoa_seca'][:tiny] %></div>
                 <small class="text-muted">Tiny</small>
               </div>
             </div>
             <div class="col-4">
-              <div class="border-end border-secondary">
+              <div class="border-end border-secondary counter-link" 
+                   data-kind="lagoa_seca" data-filter="shopify" 
+                   data-url="<%= orders_path(kind: 'lagoa_seca', has_shopify: 1) %>">
                 <div class="text-success"><i class="fas fa-shopping-cart"></i></div>
                 <div class="text-white"><%= @kind_stats['lagoa_seca'][:shopify] %></div>
                 <small class="text-muted">Shopify</small>
               </div>
             </div>
             <div class="col-4">
-              <div>
+              <div class="counter-link" 
+                   data-kind="lagoa_seca" data-filter="without_shopify" 
+                   data-url="<%= orders_path(kind: 'lagoa_seca', without_shopify: 1) %>">
                 <div class="text-danger"><i class="fas fa-exclamation-circle"></i></div>
                 <div class="text-white"><%= @kind_stats['lagoa_seca'][:without_shopify] %></div>
                 <small class="text-muted">Sem Shopify</small>
@@ -205,6 +232,10 @@
             <div class="form-check form-switch">
               <%= check_box_tag :without_shopify, "1", params[:without_shopify] == "1", class: 'form-check-input', id: 'without_shopify' %>
               <label class="form-check-label text-white" for="without_shopify">Apenas sem Shopify</label>
+            </div>
+            <div class="form-check form-switch">
+              <%= check_box_tag :has_shopify, "1", params[:has_shopify] == "1", class: 'form-check-input', id: 'has_shopify' %>
+              <label class="form-check-label text-white" for="has_shopify">Apenas com Shopify</label>
             </div>
           </div>
         </div>
@@ -279,12 +310,14 @@
                     </td>
                     <td class="text-center">
                       <div class="d-flex align-items-center justify-content-center gap-2">
-                        <span class="badge bg-dark"><%= order.tiny_order_id %></span>
                         <% if order.tiny_order_id.present? %>
+                          <span class="badge bg-dark"><%= order.tiny_order_id %></span>
                           <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
                              target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
                             <i class="fas fa-external-link-alt"></i>
                           </a>
+                        <% else %>
+                          <span class="badge bg-secondary">Não disponível</span>
                         <% end %>
                       </div>
                     </td>
@@ -292,7 +325,7 @@
                       <div class="d-flex align-items-center justify-content-center gap-2">
                         <% if order.shopify_order_id.present? %>
                           <span class="badge bg-dark"><%= order.shopify_order_id %></span>
-                          <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://your-store.myshopify.com/admin/orders/') %><%= order.shopify_order_id %>" 
+                          <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= order.shopify_order_id %>" 
                              target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
                             <i class="fas fa-external-link-alt"></i>
                           </a>
@@ -371,13 +404,85 @@
       background-color: #121212 !important;
     }
     
+    /* Estilo para o switch */
     .form-check-input:checked {
       background-color: #dc3545;
       border-color: #dc3545;
     }
     
+    /* Estilo para as bordas coloridas nas linhas da tabela */
     .border-5 {
       border-width: 5px !important;
     }
+    
+    /* Estilos para os contadores clicáveis */
+    .counter-link {
+      cursor: pointer;
+      padding: 8px 0;
+      transition: all 0.3s ease;
+    }
+
+    .counter-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    /* Estilo para o segundo switch */
+    #has_shopify:checked {
+      background-color: #198754;
+      border-color: #198754;
+    }
+
+    /* Estilo para a barra de progresso */
+    .progress {
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      transition: width 0s;
+    }
+
+    .progress-bar-striped {
+      background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+      background-size: 1rem 1rem;
+    }
   </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inicializa as barras de progresso com animação
+      setTimeout(function() {
+        document.querySelectorAll('.progress-bar').forEach(function(bar) {
+          const progress = bar.getAttribute('data-progress');
+          bar.style.transition = 'width 1s ease-in-out';
+          bar.style.width = progress + '%';
+        });
+      }, 500);
+      
+      // Adiciona evento de clique aos contadores
+      document.querySelectorAll('.counter-link').forEach(function(counter) {
+        counter.addEventListener('click', function() {
+          const url = this.getAttribute('data-url');
+          window.location.href = url;
+        });
+      });
+      
+      // Verifica se os switches são mutuamente exclusivos
+      document.getElementById('without_shopify').addEventListener('change', function() {
+        if (this.checked) {
+          document.getElementById('has_shopify').checked = false;
+        }
+      });
+      
+      document.getElementById('has_shopify').addEventListener('change', function() {
+        if (this.checked) {
+          document.getElementById('without_shopify').checked = false;
+        }
+      });
+    });
+  </script>
 <% end %>
