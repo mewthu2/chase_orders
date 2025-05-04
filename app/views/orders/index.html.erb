@@ -355,7 +355,13 @@
                         <span class="badge bg-secondary">Sem tags</span>
                       <% end %>
                     </td>
-                    <td class="text-center"><%= order.tiny_creation_date.strftime('%d/%m/%Y') if order.tiny_creation_date.present? %></td>
+                    <td class="text-center">
+                      <% if order.tiny_creation_date.present? %>
+                        <%= order.tiny_creation_date.is_a?(String) ? order.tiny_creation_date : order.tiny_creation_date.strftime('%d/%m/%Y') %>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
                     <td class="text-center"><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
                   </tr>
                 <% end %>
