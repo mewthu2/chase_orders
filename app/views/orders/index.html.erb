@@ -13,14 +13,14 @@
         </div>
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="text-white mb-0"><%= @kind_stats['rj'][:total] %></h3>
-            <span class="badge bg-primary">rj</span>
+            <h3 class="text-white mb-0 counter-link" data-url="<%= orders_path(kind: 'rj') %>"><%= @kind_stats['rj'][:total] %></h3>
+            <a href="<%= orders_path(kind: 'rj') %>" class="badge bg-primary text-decoration-none">rj</a>
           </div>
           
           <div class="mb-3">
             <div class="d-flex justify-content-between mb-1">
               <small class="text-white">Integração</small>
-              <small class="text-white"><%= @kind_stats['rj'][:shopify_percent] %>% com Shopify</small>
+              <small class="text-white counter-link" data-url="<%= orders_path(kind: 'rj', has_shopify: 1) %>"><%= @kind_stats['rj'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
               <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
@@ -79,14 +79,14 @@
         </div>
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="text-white mb-0"><%= @kind_stats['bh_shopping'][:total] %></h3>
-            <span class="badge bg-success">bh_shopping</span>
+            <h3 class="text-white mb-0 counter-link" data-url="<%= orders_path(kind: 'bh_shopping') %>"><%= @kind_stats['bh_shopping'][:total] %></h3>
+            <a href="<%= orders_path(kind: 'bh_shopping') %>" class="badge bg-success text-decoration-none">bh_shopping</a>
           </div>
           
           <div class="mb-3">
             <div class="d-flex justify-content-between mb-1">
               <small class="text-white">Integração</small>
-              <small class="text-white"><%= @kind_stats['bh_shopping'][:shopify_percent] %>% com Shopify</small>
+              <small class="text-white counter-link" data-url="<%= orders_path(kind: 'bh_shopping', has_shopify: 1) %>"><%= @kind_stats['bh_shopping'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
               <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
@@ -145,14 +145,14 @@
         </div>
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="text-white mb-0"><%= @kind_stats['lagoa_seca'][:total] %></h3>
-            <span class="badge bg-warning text-dark">lagoa_seca</span>
+            <h3 class="text-white mb-0 counter-link" data-url="<%= orders_path(kind: 'lagoa_seca') %>"><%= @kind_stats['lagoa_seca'][:total] %></h3>
+            <a href="<%= orders_path(kind: 'lagoa_seca') %>" class="badge bg-warning text-dark text-decoration-none">lagoa_seca</a>
           </div>
           
           <div class="mb-3">
             <div class="d-flex justify-content-between mb-1">
               <small class="text-white">Integração</small>
-              <small class="text-white"><%= @kind_stats['lagoa_seca'][:shopify_percent] %>% com Shopify</small>
+              <small class="text-white counter-link" data-url="<%= orders_path(kind: 'lagoa_seca', has_shopify: 1) %>"><%= @kind_stats['lagoa_seca'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
               <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
@@ -342,7 +342,7 @@
                             <i class="fas fa-external-link-alt"></i>
                           </a>
                         <% else %>
-                          <span class="badge bg-danger">Sem Shopify</span>
+                          <a href="<%= orders_path(without_shopify: 1) %>" class="badge bg-danger text-decoration-none">Sem Shopify</a>
                         <% end %>
                       </div>
                     </td>
@@ -440,6 +440,26 @@
     .counter-link:hover {
       background-color: rgba(255, 255, 255, 0.1);
       transform: translateY(-2px);
+    }
+
+    h3.counter-link, small.counter-link {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    h3.counter-link:hover, small.counter-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    a.badge {
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    a.badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
 
     #has_shopify:checked {

@@ -1,0 +1,637 @@
+<div class="container-fluid py-4">
+  <% title 'Ranking de Vendedores' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="text-white">
+          <i class="fas fa-trophy me-2"></i>Ranking de Vendedores
+        </h4>
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+            <i class="fas fa-filter me-1"></i> Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros Colapsáveis -->
+  <div class="collapse mb-4" id="filtersCollapse">
+    <div class="card bg-black border border-dark shadow">
+      <div class="card-header bg-dark">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-filter me-2"></i>Filtros
+        </h5>
+      </div>
+      <div class="card-body">
+        <form action="<%= ranking_sellers_dashboard_index_path %>" method="get">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="context" class="form-label text-white">Contexto</label>
+              <select name="context" id="context" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todos</option>
+                <option value="rj">Rio de Janeiro</option>
+                <option value="bh_shopping">BH Shopping</option>
+                <option value="lagoa_seca">Lagoa Seca</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="period" class="form-label text-white">Período</label>
+              <select name="period" id="period" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todo o período</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="90">Últimos 90 dias</option>
+                <option value="180">Últimos 180 dias</option>
+                <option value="365">Último ano</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="min_orders" class="form-label text-white">Mínimo de pedidos</label>
+              <input type="number" name="min_orders" id="min_orders" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 10">
+            </div>
+          </div>
+          <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Aplicar Filtros
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas Gerais -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card bg-black border border-info h-100 shadow">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-users me-2"></i>Vendedores
+            </h5>
+            <span class="badge bg-info text-dark"><%= @sellers_ranking.size %></span>
+          </div>
+          <div class="text-center">
+            <div class="display-4 text-white mb-0"><%= @sellers_ranking.size %></div>
+            <small class="text-muted">Vendedores ativos</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card bg-black border border-primary h-100 shadow">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-shopping-cart me-2"></i>Pedidos
+            </h5>
+            <span class="badge bg-primary"><%= @total_orders %></span>
+          </div>
+          <div class="text-center">
+            <div class="display-4 text-white mb-0"><%= @total_orders %></div>
+            <small class="text-muted">Total de pedidos</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card bg-black border border-success h-100 shadow">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-chart-line me-2"></i>Média Diária
+            </h5>
+            <span class="badge bg-success"><%= (@total_orders / @sellers_ranking.size.to_f).round(1) %></span>
+          </div>
+          <div class="text-center">
+            <div class="display-4 text-white mb-0"><%= (@total_orders / @sellers_ranking.size.to_f).round(1) %></div>
+            <small class="text-muted">Pedidos por vendedor</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas por Contexto -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-map-marked-alt me-2"></i>Estatísticas por Contexto
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <% ['rj', 'bh_shopping', 'lagoa_seca'].each do |kind| %>
+              <% 
+                context_name = case kind
+                  when 'rj' then 'Rio de Janeiro'
+                  when 'bh_shopping' then 'BH Shopping'
+                  when 'lagoa_seca' then 'Lagoa Seca'
+                end
+                
+                border_class = case kind
+                  when 'rj' then 'border-primary'
+                  when 'bh_shopping' then 'border-success'
+                  when 'lagoa_seca' then 'border-warning'
+                end
+                
+                icon_class = case kind
+                  when 'rj' then 'fas fa-map-marker-alt'
+                  when 'bh_shopping' then 'fas fa-store'
+                  when 'lagoa_seca' then 'fas fa-water'
+                end
+                
+                stats = @context_stats[kind]
+              %>
+              <div class="col-md-4">
+                <div class="card bg-black <%= border_class %> shadow">
+                  <div class="card-header bg-dark">
+                    <h5 class="text-white mb-0">
+                      <i class="<%= icon_class %> me-2"></i><%= context_name %>
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <div class="row text-center mb-3">
+                      <div class="col-6">
+                        <div class="border-end border-secondary">
+                          <h3 class="text-white mb-0"><%= stats[:total] %></h3>
+                          <small class="text-muted">Pedidos</small>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div>
+                          <h3 class="text-white mb-0"><%= stats[:sellers] %></h3>
+                          <small class="text-info">Vendedores</small>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <div class="d-flex justify-content-between text-white">
+                        <small><i class="fas fa-calculator me-1"></i> Média por vendedor:</small>
+                        <small><%= stats[:sellers] > 0 ? (stats[:total].to_f / stats[:sellers]).round(1) : 0 %></small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-chart-bar me-2"></i>Top 10 Vendedores
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= bar_chart [
+              {
+                name: 'Total de Pedidos',
+                data: @top_sellers_chart_data[:labels].zip(@top_sellers_chart_data[:series][0][:data]).to_h
+              }
+            ],
+            id: 'top-sellers-chart',
+            height: '350px',
+            colors: ['#0d6efd'],
+            title: 'Pedidos por Vendedor',
+            xtitle: 'Vendedor',
+            ytitle: 'Quantidade de Pedidos',
+            library: {
+              chart: {
+                background: '#121212',
+                toolbar: { show: true }
+              },
+              plotOptions: {
+                bar: {
+                  horizontal: true,
+                  columnWidth: '70%',
+                  borderRadius: 5,
+                  dataLabels: {
+                    position: 'top'
+                  }
+                }
+              },
+              dataLabels: { 
+                enabled: true,
+                style: {
+                  fontSize: '12px',
+                  colors: ['#fff']
+                },
+                formatter: "function(val) { return val > 0 ? val : ''; }"
+              },
+              xaxis: {
+                categories: @top_sellers_chart_data[:labels],
+                labels: { style: { colors: '#f8f9fa' } },
+                title: {
+                  text: 'Vendedor',
+                  style: { color: '#f8f9fa' }
+                }
+              },
+              yaxis: {
+                title: {
+                  text: 'Quantidade de Pedidos',
+                  style: { color: '#f8f9fa' }
+                },
+                labels: { style: { colors: '#f8f9fa' } }
+              },
+              grid: { borderColor: '#343a40' },
+              legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                offsetY: -25,
+                offsetX: -5,
+                labels: { colors: '#f8f9fa' }
+              },
+              tooltip: {
+                theme: 'dark',
+                y: {
+                  formatter: "function(val) { return val + ' pedidos'; }"
+                }
+              }
+            }
+          %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos Adicionais -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-calendar-week me-2"></i>Distribuição por Dia da Semana
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= column_chart @weekday_distribution_data[:series],
+            id: 'weekday-distribution-chart',
+            height: '350px',
+            colors: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1'],
+            title: 'Pedidos por Dia da Semana (Top 5 Vendedores)',
+            xtitle: 'Dia da Semana',
+            ytitle: 'Quantidade de Pedidos',
+            library: {
+              chart: {
+                background: '#121212',
+                toolbar: { show: true }
+              },
+              plotOptions: {
+                bar: {
+                  columnWidth: '55%',
+                  borderRadius: 5,
+                  dataLabels: {
+                    position: 'top'
+                  }
+                }
+              },
+              dataLabels: { 
+                enabled: false
+              },
+              xaxis: {
+                categories: @weekday_distribution_data[:categories],
+                labels: { style: { colors: '#f8f9fa' } },
+                title: {
+                  text: 'Dia da Semana',
+                  style: { color: '#f8f9fa' }
+                }
+              },
+              yaxis: {
+                title: {
+                  text: 'Quantidade de Pedidos',
+                  style: { color: '#f8f9fa' }
+                },
+                labels: { style: { colors: '#f8f9fa' } }
+              },
+              grid: { borderColor: '#343a40' },
+              legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                offsetY: -25,
+                offsetX: -5,
+                labels: { colors: '#f8f9fa' }
+              },
+              tooltip: {
+                theme: 'dark',
+                y: {
+                  formatter: "function(val) { return val + ' pedidos'; }"
+                }
+              }
+            }
+          %>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-chart-line me-2"></i>Tendência Mensal
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= line_chart @monthly_trend_data[:series],
+            id: 'monthly-trend-chart',
+            height: '350px',
+            colors: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1'],
+            title: 'Tendência de Pedidos por Mês (Top 5 Vendedores)',
+            xtitle: 'Mês',
+            ytitle: 'Quantidade de Pedidos',
+            library: {
+              chart: {
+                background: '#121212',
+                toolbar: { show: true },
+                zoom: { enabled: true }
+              },
+              stroke: {
+                curve: 'smooth',
+                width: 3
+              },
+              markers: { size: 4 },
+              xaxis: {
+                categories: @monthly_trend_data[:categories],
+                labels: { 
+                  style: { colors: '#f8f9fa' },
+                  rotate: -45,
+                  rotateAlways: false
+                },
+                title: {
+                  text: 'Mês',
+                  style: { color: '#f8f9fa' }
+                }
+              },
+              yaxis: {
+                title: {
+                  text: 'Quantidade de Pedidos',
+                  style: { color: '#f8f9fa' }
+                },
+                labels: { style: { colors: '#f8f9fa' } }
+              },
+              grid: { borderColor: '#343a40' },
+              legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                offsetY: -25,
+                offsetX: -5,
+                labels: { colors: '#f8f9fa' }
+              },
+              tooltip: {
+                theme: 'dark',
+                y: {
+                  formatter: "function(val) { return val + ' pedidos'; }"
+                }
+              }
+            }
+          %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ranking de Vendedores em Cards -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-medal me-2"></i>Ranking Completo
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <% @sellers_ranking.each_with_index do |(seller_name, stats), index| %>
+              <% 
+                rank_class = case index
+                  when 0 then 'border-warning' # Ouro
+                  when 1 then 'border-light'   # Prata
+                  when 2 then 'border-danger'  # Bronze
+                  else 'border-secondary'
+                end
+                
+                rank_icon = case index
+                  when 0 then '<i class="fas fa-crown text-warning fa-2x"></i>'
+                  when 1 then '<i class="fas fa-medal text-light fa-2x"></i>'
+                  when 2 then '<i class="fas fa-award text-danger fa-2x"></i>'
+                  else "<span class=\"badge bg-dark rounded-circle p-2\">##{index + 1}</span>"
+                end
+                
+                best_weekday_name = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][stats[:best_weekday] || 0]
+              %>
+              <div class="col-md-4 mb-4">
+                <div class="card bg-black <%= rank_class %> h-100 shadow">
+                  <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                    <h5 class="text-white mb-0">
+                      <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-dark text-white me-2">
+                          <%= seller_name[0].upcase %>
+                        </div>
+                        <span class="fw-bold"><%= seller_name %></span>
+                      </div>
+                    </h5>
+                    <div class="text-center">
+                      <%= rank_icon.html_safe %>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="row text-center mb-3">
+                      <div class="col-6">
+                        <div class="border-end border-secondary">
+                          <h3 class="text-white mb-0">
+                            <a href="<%= orders_path(tags: seller_name) %>" class="text-white text-decoration-none">
+                              <%= stats[:total] %>
+                            </a>
+                          </h3>
+                          <small class="text-muted">Total de Pedidos</small>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div>
+                          <h3 class="text-white mb-0">
+                            <%= stats[:daily_average] %>
+                          </h3>
+                          <small class="text-info">Média Diária</small>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="row text-center mt-4">
+                      <div class="col-12">
+                        <div class="d-flex flex-column align-items-center">
+                          <i class="fas fa-calendar-day text-info mb-2"></i>
+                          <small class="text-muted d-block">Dia mais produtivo</small>
+                          <span class="badge bg-info text-dark"><%= best_weekday_name %></span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                      <h6 class="text-white border-bottom border-secondary pb-2 mb-2">Distribuição por Contexto</h6>
+                      <div class="row">
+                        <% ['rj', 'bh_shopping', 'lagoa_seca'].each do |kind| %>
+                          <% 
+                            kind_name = case kind
+                              when 'rj' then 'Rio de Janeiro'
+                              when 'bh_shopping' then 'BH Shopping'
+                              when 'lagoa_seca' then 'Lagoa Seca'
+                              else kind.titleize
+                            end
+                            
+                            kind_icon = case kind
+                              when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+                              when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+                              when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+                              else '<i class="fas fa-tag me-1"></i>'
+                            end
+                            
+                            kind_stats = stats[:by_kind][kind]
+                          %>
+                          <div class="col-12 mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <%= kind_icon.html_safe %> <%= kind_name %>
+                              </div>
+                              <div>
+                                <% if kind_stats && kind_stats[:total] > 0 %>
+                                  <a href="<%= orders_path(tags: seller_name, kind: kind) %>" class="text-white text-decoration-none">
+                                    <span class="badge bg-dark">
+                                      <%= kind_stats[:total] %> pedidos
+                                    </span>
+                                  </a>
+                                <% else %>
+                                  <span class="badge bg-secondary">-</span>
+                                <% end %>
+                              </div>
+                            </div>
+                          </div>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .fw-bold {
+      font-weight: 600;
+    }
+    
+    a.text-white {
+      transition: all 0.2s ease;
+    }
+
+    a.text-white:hover {
+      opacity: 0.8;
+      text-decoration: underline !important;
+    }
+
+    a.badge {
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+
+    a.badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .fa-crown, .fa-medal, .fa-award {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+    
+    .form-select, .form-control {
+      color-scheme: dark;
+    }
+    
+    .form-select option {
+      background-color: #212529;
+      color: #f8f9fa;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+      
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });
+  </script>
+<% end %>

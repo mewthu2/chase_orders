@@ -67,7 +67,7 @@
                   <th class="ps-0 text-white">Data Tiny:</th>
                   <td>
                     <% if @order.tiny_creation_date.present? %>
-                      <span class="badge bg-info text-dark"><%= @order.tiny_creation_date.strftime('%d/%m/%Y') %></span>
+                      <span class="badge bg-info text-dark"><%= @order.tiny_creation_date.is_a?(String) ? @order.tiny_creation_date : @order.tiny_creation_date.strftime('%d/%m/%Y') %></span>
                     <% else %>
                       <span class="badge bg-secondary">Não disponível</span>
                     <% end %>
@@ -108,7 +108,6 @@
           </h5>
         </div>
         <div class="card-body">
-          <!-- Adicione aqui outros dados relevantes do pedido -->
           <% if @order.respond_to?(:customer_name) && @order.customer_name.present? %>
             <div class="mb-4">
               <h6 class="text-white border-bottom border-secondary pb-2 mb-3">
@@ -274,7 +273,6 @@
       }
     }
 
-    /* Melhorias para os badges e botões */
     .badge {
       font-size: 0.85rem;
       padding: 0.35rem 0.65rem;
@@ -291,7 +289,6 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     
-    /* Melhorias para as tabelas */
     .table-dark th {
       font-weight: 600;
       color: #e9ecef;
@@ -301,7 +298,6 @@
       color: #ced4da;
     }
     
-    /* Efeito hover para links externos */
     a[target="_blank"] {
       position: relative;
       transition: all 0.3s ease;
@@ -311,7 +307,6 @@
       transform: translateY(-2px);
     }
     
-    /* Melhorias para os cards */
     .card {
       overflow: hidden;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -326,7 +321,6 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Estilos específicos para o ID Shopify */
     .badge.bg-success {
       background-color: #198754 !important;
       color: white !important;

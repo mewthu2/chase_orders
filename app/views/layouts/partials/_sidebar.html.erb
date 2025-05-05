@@ -18,6 +18,14 @@
               </span>
             <% end %>
           </div>
+          <div class="mb-3 col-icon"> 
+            <%= link_to ranking_sellers_dashboard_index_path, class: 'text-light link' do %>
+              <i class="fa-solid fa-trophy text-info"></i>
+              <span class="name-col">
+                Ranking de Vendedores
+              </span>
+            <% end %>
+          </div>
         </div>
 
         <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-pedidos" role="button" aria-expanded="false" aria-controls="collase-pedidos">
@@ -71,21 +79,37 @@
 
         <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
           <div class="mb-3 col-icon"> 
+            <%= link_to attempts_path, class: 'text-light link' do %>
+              <i class="fas fa-list-check text-info"></i>
+              <span class="name-col">
+                Todas as Tentativas
+              </span>
+            <% end %>
+          </div>
+          
+          <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(kinds: :create_note_tiny2), class: 'text-light link' do %>
-              <i class="fa-solid fa-file-invoice text-info link"></i>
+              <i class="fas fa-sticky-note text-info"></i>
               <span class="name-col">
                 Criação de notas no Tiny 2
               </span>
             <% end %>
           </div>
-        </div>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
+          
           <div class="mb-3 col-icon"> 
             <%= link_to attempts_path(kinds: :emission_invoice_tiny2), class: 'text-light link' do %>
-              <i class="fa-solid fa-file-invoice text-info link"></i>
+              <i class="fas fa-file-invoice-dollar text-info"></i>
               <span class="name-col">
                 Emissão de notas no Tiny 2
+              </span>
+            <% end %>
+          </div>
+          
+          <div class="mb-3 col-icon"> 
+            <%= link_to attempts_path(kinds: :transfer_tiny_to_shopify_order), class: 'text-light link' do %>
+              <i class="fas fa-exchange-alt text-info"></i>
+              <span class="name-col">
+                Transferência Tiny para Shopify
               </span>
             <% end %>
           </div>

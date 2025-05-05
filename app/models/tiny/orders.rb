@@ -84,14 +84,16 @@ module Tiny::Orders
       order.update(tags: pedido['pedido']['nome_vendedor'], tiny_creation_date: pedido['pedido']['data_pedido']) if pedido['pedido']['nome_vendedor'].present?
 
       attempt = Attempt.where(
-        kinds: 'transfer_tiny_to_shopify_order',
-        status: 'success',
+        status: :success,
+        requisition: 'Pedido Shopify criado com sucesso',
         tiny_order_id: pedido['pedido']['id']
       ).where('tracking LIKE ?', "%kind:#{kind}%").first
 
-      if attempt&.params.present?
-        params = JSON.parse(attempt.params) rescue {}
-        order.update(shopify_order_id: params['shopify_order_id']) if params['shopify_order_id'].present?
+      if attempt&.tracking.present?
+        match = attempt.tracking.match(/shopify_order_id:(\d+)/)
+        shopify_order_id = match[1] if match
+
+        order.update(shopify_order_id:) if shopify_order_id.present?
       end
 
       tiny_order = obtain_order(token, pedido['pedido']['id'])

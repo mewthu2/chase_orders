@@ -4,9 +4,17 @@ class AttemptsController < ApplicationController
 
   def index
     @attempts = Attempt.search(params[:search])
-                       .where(status: params[:status] || ['success', 'fail', 'error'], kinds: params[:kinds])
-                       .order(created_at: :desc)
-                       .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+
+    if params[:status] == 'nil'
+      @attempts = @attempts.where(status: nil)
+    elsif params[:status].present?
+      @attempts = @attempts.where(status: params[:status])
+    end
+
+    @attempts = @attempts.where(kinds: params[:kinds]) if params[:kinds].present?
+
+    @attempts = @attempts.order(created_at: :desc)
+                         .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 
   def verify_attempts
@@ -28,14 +36,21 @@ class AttemptsController < ApplicationController
         InvoiceEmitionsJob.perform_now('one', attempt)
       when 'get_tracking'
         GetTrackingJob.perform_now('one', attempt)
+      when 'transfer_tiny_to_shopify_order'
+        TransferTinyToShopifyOrderJob.perform_now('one', attempt.tiny_order_id)
       end
+      redirect_to(attempts_path(kinds: attempt.kinds), notice: "Pedido #{attempt.tiny_order_id} reprocessado com sucesso.")
     rescue StandardError => e
-      redirect_to(root_path, alert: "Ocorreu um erro no reprocessamento: #{e}")
+      redirect_to(attempts_path(kinds: attempt.kinds), alert: "Ocorreu um erro no reprocessamento: #{e}")
     end
-    redirect_to(root_path, notice: "Pedido #{attempt.tiny_order_id} reprocessado, retorno: #{attempt.status_code} - #{attempt.message}")
   end
 
   private
 
   def load_form_references; end
+  
+  def params_per_page(per_page_param)
+    per_page = (per_page_param || 20).to_i
+    [10, 20, 50, 100].include?(per_page) ? per_page : 20
+  end
 end

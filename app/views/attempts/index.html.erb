@@ -1,102 +1,460 @@
-<div class="row">
-  <% case params[:kinds] %>
-  <% when 'create_correios_order' %>
-    <% title 'Tentativas de Criação de Pedidos nos Correios' %>
-  <% when 'send_xml' %>
-    <% title 'Tentativas de Envio de XML para os Pedidos nos Correios' %>
-  <% when 'emission_invoice' %>
-    <% title 'Tentativas de Emissão de Nota Fiscal no Tiny' %>
-  <% when 'get_tracking' %>
-    <% title 'Tentativas de solicitação de código de rastreio' %>
-  <% end %>
-</div>
-
-<div class="row d-flex justify-content-center">
-  <div class="btn-group mb-3" role="group">
-    <%= link_to attempts_path(kinds: params[:kinds], status: :success, search: params[:search]), class: 'btn btn-success text-light' do %> success <i class="fas fa-check"></i><% end %>
-    <%= link_to attempts_path(kinds: params[:kinds], status: :fail, search: params[:search]), class: 'btn btn-danger text-light' do %> fail <i class="fas fa-times"></i><% end %>
-    <%= link_to attempts_path(kinds: params[:kinds], status: :error, search: params[:search]), class: 'btn btn-secondary text-light' do %> error <i class="fa-solid fa-wrench"></i><% end %>
-  </div>
-</div>
-
-<%= form_tag(attempts_path, method: 'get') do %>
-  <div class="card mb-lg advanced-search-form bg-dark text-light" id="filters">
-    <%= hidden_field_tag :status, {}, value: params[:status] %>
-    <%= hidden_field_tag :kinds, {}, value: params[:kinds] %>
-    <div class="card-header text-info">
-      Pesquisa avançada
+<div class="container-fluid py-4">
+  <div class="row mb-3">
+    <div class="col-12">
+      <% case params[:kinds] %>
+      <% when 'create_note_tiny2' %>
+        <% title 'Tentativas de Criação de Nota no Tiny2' %>
+        <h4 class="text-white"><i class="fas fa-sticky-note me-2"></i>Tentativas de Criação de Nota no Tiny2</h4>
+      <% when 'emission_invoice_tiny2' %>
+        <% title 'Tentativas de Emissão de Nota Fiscal no Tiny2' %>
+        <h4 class="text-white"><i class="fas fa-file-invoice-dollar me-2"></i>Tentativas de Emissão de Nota Fiscal no Tiny2</h4>
+      <% when 'transfer_tiny_to_shopify_order' %>
+        <% title 'Tentativas de Transferência do Tiny para Shopify' %>
+        <h4 class="text-white"><i class="fas fa-exchange-alt me-2"></i>Tentativas de Transferência do Tiny para Shopify</h4>
+      <% else %>
+        <% title 'Todas as Tentativas' %>
+        <h4 class="text-white"><i class="fas fa-list-check me-2"></i>Todas as Tentativas</h4>
+      <% end %>
     </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-sm-12">
-          <%= label_tag :search, 'Procurar' %>
-          <%= text_field_tag :search, params[:search], class: 'form-control', placeholder: 'Pesquise por número pedido Tiny/Correios/Nota Fiscal ou por erro' %>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-filter me-2"></i>Filtros
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-12">
+              <h6 class="text-white mb-2">Tipo de Tentativa:</h6>
+              <div class="btn-group mb-3 flex-wrap" role="group">
+                <%= link_to attempts_path(status: params[:status], search: params[:search]), 
+                    class: "btn #{params[:kinds].blank? ? 'btn-primary' : 'btn-outline-primary'}" do %>
+                  <i class="fas fa-list-ul me-1"></i> Todos
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: 'create_note_tiny2', status: params[:status], search: params[:search]), 
+                    class: "btn #{params[:kinds] == 'create_note_tiny2' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+                  <i class="fas fa-sticky-note me-1"></i> Criação de Nota no Tiny2
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: 'emission_invoice_tiny2', status: params[:status], search: params[:search]), 
+                    class: "btn #{params[:kinds] == 'emission_invoice_tiny2' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+                  <i class="fas fa-file-invoice-dollar me-1"></i> Emissão de Nota Fiscal no Tiny2
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: 'transfer_tiny_to_shopify_order', status: params[:status], search: params[:search]), 
+                    class: "btn #{params[:kinds] == 'transfer_tiny_to_shopify_order' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+                  <i class="fas fa-exchange-alt me-1"></i> Transferência Tiny para Shopify
+                <% end %>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-12">
+              <h6 class="text-white mb-2">Status:</h6>
+              <div class="btn-group mb-3 flex-wrap" role="group">
+                <%= link_to attempts_path(kinds: params[:kinds], search: params[:search]), 
+                    class: "btn #{params[:status].blank? ? 'btn-info' : 'btn-outline-info'}" do %>
+                  <i class="fas fa-list-ul me-1"></i> Todos
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: params[:kinds], status: 'success', search: params[:search]), 
+                    class: "btn #{params[:status] == 'success' ? 'btn-success' : 'btn-outline-success'}" do %>
+                  <i class="fas fa-check me-1"></i> Success
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: params[:kinds], status: 'fail', search: params[:search]), 
+                    class: "btn #{params[:status] == 'fail' ? 'btn-danger' : 'btn-outline-danger'}" do %>
+                  <i class="fas fa-times me-1"></i> Fail
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: params[:kinds], status: 'error', search: params[:search]), 
+                    class: "btn #{params[:status] == 'error' ? 'btn-secondary' : 'btn-outline-secondary'}" do %>
+                  <i class="fas fa-wrench me-1"></i> Error
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: params[:kinds], status: 'processing', search: params[:search]), 
+                    class: "btn #{params[:status] == 'processing' ? 'btn-warning' : 'btn-outline-warning'}" do %>
+                  <i class="fas fa-spinner me-1"></i> Processing
+                <% end %>
+                
+                <%= link_to attempts_path(kinds: params[:kinds], status: 'nil', search: params[:search]), 
+                    class: "btn #{params[:status] == 'nil' ? 'btn-dark' : 'btn-outline-dark'}" do %>
+                  <i class="fas fa-question me-1"></i> Sem Status
+                <% end %>
+              </div>
+            </div>
+          </div>
+          
+          <%= form_tag(attempts_path, method: 'get', class: 'mt-3') do %>
+            <%= hidden_field_tag :status, params[:status] %>
+            <%= hidden_field_tag :kinds, params[:kinds] %>
+            <div class="row g-3">
+              <div class="col-md-10">
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-secondary text-white">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <%= text_field_tag :search, params[:search], class: 'form-control bg-dark text-white border-secondary', 
+                      placeholder: 'Pesquise por número pedido Tiny/Correios/Nota Fiscal ou por erro' %>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <%= button_tag class: 'btn btn-light w-100', name: '' do %>
+                  <i class="fa fa-search me-1"></i> Pesquisar
+                <% end %>
+              </div>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>
-    <div class="card-footer">
-      <%= button_tag class: 'btn btn-secondary text-info', name: '' do %><i class="fa fa-search text-info"></i> Pesquisar<% end %>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-list-check me-2"></i>Tentativas
+          </h5>
+          <span class="badge bg-primary"><%= @attempts.total_entries %> registros</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" id="attempts-table">
+              <thead class="bg-dark">
+                <tr>
+                  <th width="60" class="text-center"><i class="fa fa-cog"></i></th>
+                  <th class="text-center"><%= 'ID' %></th>
+                  <th class="text-center"><%= 'Pedido no Tiny' %></th>
+                  <th class="text-center"><%= 'Rastreio' %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
+                  <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
+                  <th class="text-center">Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @attempts.each do |attempt| %>
+                  <% 
+                    status_class = case attempt.status
+                      when 'success' then 'success'
+                      when 'fail' then 'danger'
+                      when 'error' then 'secondary'
+                      when 'processing' then 'warning'
+                      else 'dark'
+                    end
+                    
+                    status_icon = case attempt.status
+                      when 'success' then '<i class="fas fa-check"></i>'
+                      when 'fail' then '<i class="fas fa-times"></i>'
+                      when 'error' then '<i class="fas fa-wrench"></i>'
+                      when 'processing' then '<i class="fas fa-spinner fa-spin"></i>'
+                      else '<i class="fas fa-question"></i>'
+                    end
+                  %>
+                  <tr>
+                    <td class="text-center">
+                      <% if attempt.status == 'fail' || attempt.status == 'error' || attempt.status.nil? %>
+                        <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-sm btn-primary', title: 'Reprocessar' do %> 
+                          <i class="fas fa-sync-alt"></i>
+                        <% end %>
+                      <% end %>
+                    </td>
+                    <td class="text-center"><span class="badge bg-dark"><%= attempt.id %></span></td>
+                    <td class="text-center">
+                      <% if attempt.tiny_order_id.present? %>
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                          <span class="badge bg-dark"><%= attempt.tiny_order_id %></span>
+                          <a href="<%= ENV.fetch('TINY_SELLS_URL', '#') %>#edit/<%= attempt.tiny_order_id %>" 
+                             target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                        </div>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <% if attempt.tracking.present? %>
+                        <span class="badge bg-info text-dark"><%= truncate(attempt.tracking, length: 30) %></span>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <% if attempt.order_correios_id.present? %>
+                        <span class="badge bg-primary"><%= attempt.order_correios_id %></span>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <% if attempt.id_nota_fiscal.present? %>
+                        <span class="badge bg-success"><%= attempt.id_nota_fiscal %></span>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-dark"><%= attempt.kinds.humanize %></span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-<%= status_class %>">
+                        <%= status_icon.html_safe %> <%= attempt.status.present? ? attempt.status.humanize : 'Sem status' %>
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <% if attempt.status_code.present? %>
+                        <span class="badge bg-dark"><%= attempt.status_code %></span>
+                      <% else %>
+                        <span class="badge bg-secondary">N/A</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#attemptModal<%= attempt.id %>">
+                        <i class="fas fa-info-circle"></i> Detalhes
+                      </button>
+                      
+                      <!-- Modal para detalhes -->
+                      <div class="modal fade" id="attemptModal<%= attempt.id %>" tabindex="-1" aria-labelledby="attemptModalLabel<%= attempt.id %>" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                          <div class="modal-content bg-dark text-white">
+                            <div class="modal-header">
+                              <h5 class="modal-title" id="attemptModalLabel<%= attempt.id %>">
+                                Detalhes da Tentativa #<%= attempt.id %>
+                              </h5>
+                              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                              <div class="row mb-3">
+                                <div class="col-md-6">
+                                  <h6 class="text-info">Informações Básicas</h6>
+                                  <table class="table table-dark table-sm">
+                                    <tr>
+                                      <th>ID:</th>
+                                      <td><%= attempt.id %></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Tipo:</th>
+                                      <td><%= attempt.kinds.humanize %></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Status:</th>
+                                      <td><span class="badge bg-<%= status_class %>"><%= attempt.status.present? ? attempt.status.humanize : 'Sem status' %></span></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Código de Status:</th>
+                                      <td><%= attempt.status_code.present? ? attempt.status_code : 'N/A' %></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Data de Criação:</th>
+                                      <td><%= attempt.created_at.strftime('%d/%m/%Y %H:%M:%S') %></td>
+                                    </tr>
+                                  </table>
+                                </div>
+                                <div class="col-md-6">
+                                  <h6 class="text-info">Identificadores</h6>
+                                  <table class="table table-dark table-sm">
+                                    <tr>
+                                      <th>Pedido Tiny:</th>
+                                      <td>
+                                        <% if attempt.tiny_order_id.present? %>
+                                          <%= attempt.tiny_order_id %>
+                                          <a href="<%= ENV.fetch('TINY_SELLS_URL', '#') %>#edit/<%= attempt.tiny_order_id %>" 
+                                             target="_blank" class="btn btn-sm btn-primary ms-2">
+                                            <i class="fas fa-external-link-alt"></i> Ver no Tiny
+                                          </a>
+                                        <% else %>
+                                          N/A
+                                        <% end %>
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <th>Pedido Correios:</th>
+                                      <td><%= attempt.order_correios_id.present? ? attempt.order_correios_id : 'N/A' %></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Nota Fiscal:</th>
+                                      <td><%= attempt.id_nota_fiscal.present? ? attempt.id_nota_fiscal : 'N/A' %></td>
+                                    </tr>
+                                    <tr>
+                                      <th>Rastreio:</th>
+                                      <td><%= attempt.tracking.present? ? attempt.tracking : 'N/A' %></td>
+                                    </tr>
+                                  </table>
+                                </div>
+                              </div>
+                              
+                              <% if attempt.error.present? %>
+                                <div class="row mb-3">
+                                  <div class="col-12">
+                                    <h6 class="text-danger">Erro</h6>
+                                    <div class="bg-black p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                      <pre class="text-danger mb-0" style="white-space: pre-wrap;"><%= attempt.error %></pre>
+                                    </div>
+                                  </div>
+                                </div>
+                              <% end %>
+                              
+                              <% if attempt.message.present? %>
+                                <div class="row mb-3">
+                                  <div class="col-12">
+                                    <h6 class="text-info">Mensagem</h6>
+                                    <div class="bg-black p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                      <pre class="text-white mb-0" style="white-space: pre-wrap;"><%= attempt.message %></pre>
+                                    </div>
+                                  </div>
+                                </div>
+                              <% end %>
+                              
+                              <% if attempt.exception.present? %>
+                                <div class="row mb-3">
+                                  <div class="col-12">
+                                    <h6 class="text-warning">Exceção</h6>
+                                    <div class="bg-black p-3 rounded">
+                                      <code class="text-warning"><%= attempt.exception %></code>
+                                    </div>
+                                  </div>
+                                </div>
+                              <% end %>
+                              
+                              <% if attempt.classification.present? %>
+                                <div class="row mb-3">
+                                  <div class="col-12">
+                                    <h6 class="text-info">Classificação</h6>
+                                    <div class="bg-black p-3 rounded">
+                                      <span class="badge bg-info text-dark"><%= attempt.classification %></span>
+                                    </div>
+                                  </div>
+                                </div>
+                              <% end %>
+                            </div>
+                            <div class="modal-footer">
+                              <% if attempt.status == 'fail' || attempt.status == 'error' || attempt.status.nil? %>
+                                <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-primary' do %> 
+                                  <i class="fas fa-sync-alt me-1"></i> Reprocessar
+                                <% end %>
+                              <% end %>
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="bg-dark">
+                <tr>
+                  <td colspan="11" class="text-center py-3 text-white">
+                    <%= page_entries_info @attempts %>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-<% end %>
 
-<div class="row">
-  <div class="col-12">
-    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="attemps-table">
-      <thead>
-        <tr>
-          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
-          <th class="text-center"><%= 'ID' %></th>
-          <th class="text-center"><%= 'Pedido no Tiny' %></th>
-          <th class="text-center"><%= 'Rastreio' %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :order_correios_id %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :id_nota_fiscal %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
-          <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @attempts.each do |attempt| %>
-          <tr>
-            <td>
-              <% if params[:status] == 'success' %>
-                <%= link_to reprocess_attempts_path(attempt_id: attempt.id), class: 'btn btn-sm btn-secondary text-info' do %> 
-                  <i class="fa-solid fa-repeat"></i>
-                <% end %>
-              <% end %>
-            </td>
-            <td class="text-center"><%= attempt.id %></td>
-            <td class="text-center">
-              <%= attempt.tiny_order_id %> - 
-              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id %>', '_blank');">
-                Ver no Tiny
-              </span>
-            </td>
-            <td class="text-center"><%= attempt.tracking %></td>
-            <td class="text-center"><%= attempt.order_correios_id %></td>
-            <td class="text-center"><%= attempt.id_nota_fiscal %></td>
-            <td class="text-center"><%= attempt.kinds %></td>
-            <td class="text-center"><%= attempt.status %></td>
-            <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
-            <td class="text-center"><%= attempt.error.present? ? attempt.error : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
-            <td class="text-center"><%= attempt.message.present? ? attempt.message : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
-            <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-          </tr>
-        <% end %>
-      </tbody>
-      <tfoot>
-        <tr>
-          <th colspan="12">
-            <%= page_entries_info @attempts %>
-          </th>
-        </tr>
-      </tfoot>
-    </table>
+  <div class="row mt-4">
+    <div class="col-12 d-flex justify-content-center">
+      <%= will_paginate @attempts, list_classes: %w[pagination pagination-sm], inner_window: 1, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
+    </div>
   </div>
 </div>
 
-<%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-item.active .page-link {
+      background-color: #f8f9fa;
+      border-color: #f8f9fa;
+      color: #212529;
+    }
+    
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .btn-group .btn {
+      margin-right: 2px;
+      margin-bottom: 5px;
+    }
+    
+    .modal-content {
+      border: 1px solid #343a40;
+    }
+    
+    pre {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+    }
+    
+    .fa-spin {
+      animation: fa-spin 1.5s infinite linear;
+    }
+    
+    @keyframes fa-spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inicializar tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+      
+      // Ajustar altura máxima da tabela para dispositivos móveis
+      function adjustTableHeight() {
+        if (window.innerWidth < 768) {
+          document.querySelector('.table-responsive').style.maxHeight = '500px';
+        } else {
+          document.querySelector('.table-responsive').style.maxHeight = 'none';
+        }
+      }
+      
+      adjustTableHeight();
+      window.addEventListener('resize', adjustTableHeight);
+    });
+  </script>
+<% end %>
