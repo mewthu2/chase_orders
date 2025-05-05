@@ -23,9 +23,8 @@
               <small class="text-white counter-link" data-url="<%= orders_path(kind: 'rj', has_shopify: 1) %>"><%= @kind_stats['rj'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
-                   style="width: 0%"
-                   data-progress="<%= @kind_stats['rj'][:shopify_percent] %>" 
+              <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated " role="progressbar" 
+                   style="width: <%= @kind_stats['rj'][:shopify_percent] %>%"
                    aria-valuenow="<%= @kind_stats['rj'][:shopify_percent] %>" 
                    aria-valuemin="0" aria-valuemax="100"></div>
             </div>
@@ -89,9 +88,8 @@
               <small class="text-white counter-link" data-url="<%= orders_path(kind: 'bh_shopping', has_shopify: 1) %>"><%= @kind_stats['bh_shopping'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
-                   style="width: 0%"
-                   data-progress="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" 
+              <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" 
+                   style="width: <%= @kind_stats['bh_shopping'][:shopify_percent] %>%"
                    aria-valuenow="<%= @kind_stats['bh_shopping'][:shopify_percent] %>" 
                    aria-valuemin="0" aria-valuemax="100"></div>
             </div>
@@ -155,9 +153,8 @@
               <small class="text-white counter-link" data-url="<%= orders_path(kind: 'lagoa_seca', has_shopify: 1) %>"><%= @kind_stats['lagoa_seca'][:shopify_percent] %>% com Shopify</small>
             </div>
             <div class="progress bg-dark">
-              <div class="progress-bar bg-success progress-bar-striped" role="progressbar" 
-                   style="width: 0%"
-                   data-progress="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" 
+              <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" 
+                   style="width: <%= @kind_stats['lagoa_seca'][:shopify_percent] %>%"
                    aria-valuenow="<%= @kind_stats['lagoa_seca'][:shopify_percent] %>" 
                    aria-valuemin="0" aria-valuemax="100"></div>
             </div>
@@ -466,21 +463,6 @@
       background-color: #198754;
       border-color: #198754;
     }
-
-    .progress {
-      height: 10px;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-
-    .progress-bar {
-      transition: width 0s;
-    }
-
-    .progress-bar-striped {
-      background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-      background-size: 1rem 1rem;
-    }
     
     input[type="date"] {
       color-scheme: dark;
@@ -495,14 +477,6 @@
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-        document.querySelectorAll('.progress-bar').forEach(function(bar) {
-          const progress = bar.getAttribute('data-progress');
-          bar.style.transition = 'width 1s ease-in-out';
-          bar.style.width = progress + '%';
-        });
-      }, 500);
-      
       document.querySelectorAll('.counter-link').forEach(function(counter) {
         counter.addEventListener('click', function() {
           const url = this.getAttribute('data-url');
