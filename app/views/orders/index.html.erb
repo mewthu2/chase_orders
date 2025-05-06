@@ -321,7 +321,7 @@
                       <div class="d-flex align-items-center justify-content-center gap-2">
                         <% if order.tiny_order_id.present? %>
                           <span class="badge bg-dark"><%= order.tiny_order_id %></span>
-                          <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
+                          <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/vendas#edit/') %><%= order.tiny_order_id %>" 
                              target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
                             <i class="fas fa-external-link-alt"></i>
                           </a>

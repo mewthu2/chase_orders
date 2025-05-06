@@ -1,4 +1,6 @@
 class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
+  require 'resolv'
+
   def perform(kind, tiny_order_id)
     puts "Iniciando importação de pedido #{tiny_order_id} do Tiny (#{kind}) para Shopify..."
 
@@ -19,11 +21,10 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       create_fulfilled_order(kind, response, tiny_order_id)
 
     rescue StandardError => e
-      # Cria attempt de falha apenas se não existir nenhum attempt para este pedido
       unless Attempt.exists?(tiny_order_id:)
         Attempt.create(
+          status: :error,
           tiny_order_id:,
-          status: Attempt.statuses[:failed],
           error: e.message,
           exception: e.class.to_s,
           tracking: "#{kind}|error:#{e.class}",
@@ -59,19 +60,15 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
     pedido = response['pedido']
     cliente = pedido['cliente']
 
-    # Preparar dados do cliente
     nome_completo = cliente['nome'] || 'Cliente Shopify'
     nomes = nome_completo.strip.split
     @first_name = nomes.first
     @last_name = nomes[1..].join(' ') if nomes.size > 1
 
-    # Gerar telefone único
     customer_phone = cliente['fone'].present? ? generate_unique_phone(cliente['fone'], session) : ''
 
-    # Construir endereço
     endereco = build_address_graphql(cliente, customer_phone)
 
-    # Construir line items melhorados com variant_id
     line_items = pedido['itens'].map do |item|
       sku = item.dig('item', 'codigo') || ''
       variant_id = find_variant_id_by_sku(session, sku)
@@ -87,7 +84,6 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       line_item
     end
 
-    # Criar draft order
     draft_order = create_draft_order(
       session:,
       line_items:,
@@ -138,15 +134,9 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       }
     GRAPHQL
 
-    # Formatar CPF/CNPJ
     cpf_cnpj = cliente['cpf_cnpj'] || ''
-    formatted_cpf = if cpf_cnpj.gsub(/[^0-9]/, '').size == 11
-                      cpf_cnpj.gsub(/(\d{3})(\d{3})(\d{3})(\d{2})/, '\1.\2.\3-\4')
-                    else
-                      cpf_cnpj
-                    end
+    formatted_cpf = valid_cpf_or_blank(cpf_cnpj)
 
-    # Construir localized fields para CPF
     localized_fields = []
     if formatted_cpf.present?
       localized_fields << {
@@ -155,10 +145,9 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       }
     end
 
-    # Montar o input base
     input = {
       'lineItems' => line_items,
-      'email' => cliente['email'].presence || '',
+      'email' => valid_email_or_nil(cliente['email']),
       'phone' => format_phone_for_shopify(customer_phone),
       'shippingAddress' => endereco,
       'billingAddress' => endereco,
@@ -168,7 +157,6 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       'sourceName' => source_name
     }
 
-    # Adicionar desconto se houver
     if pedido['valor_desconto'].to_f.positive?
       input['appliedDiscount'] = {
         'value' => pedido['valor_desconto'].to_f,
@@ -177,19 +165,29 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       }
     end
 
-    # Enviar a mutation
     client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
-    response = client.query(query: mutation, variables: { input: })
 
-    if response.body['errors'] || response.body.dig('data', 'draftOrderCreate', 'userErrors').any?
-      puts "Erro ao criar draft order: #{response.body['errors'] || response.body.dig('data', 'draftOrderCreate', 'userErrors')}"
+    response = client.query(query: mutation, variables: { input: })
+    user_errors = response.body.dig('data', 'draftOrderCreate', 'userErrors') || []
+
+    if user_errors.any? { |err| err['field']&.include?('phone') && err['message'] == 'Phone is invalid' }
+      puts 'Telefone inválido detectado, removendo phone e tentando novamente...'
+
+      input['phone'] = ''
+
+      response = client.query(query: mutation, variables: { input: })
+      user_errors = response.body.dig('data', 'draftOrderCreate', 'userErrors') || []
+    end
+
+    if response.body['errors'] || user_errors.any?
+      puts "Erro ao criar draft order: #{response.body['errors'] || user_errors}"
       nil
     else
       draft_order = response.body.dig('data', 'draftOrderCreate', 'draftOrder')
       puts "Draft order criado: #{draft_order['name']}"
       draft_order
     end
-  end
+  end 
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
@@ -198,7 +196,6 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       attempt = Attempt.create(
         kinds: :transfer_tiny_to_shopify_order,
         tiny_order_id:,
-        status: Attempt.statuses[:processing],
         tracking: "kind:#{kind}|draft_order_id:#{draft_order_id}"
       )
 
@@ -246,7 +243,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
             {
               kind: 'sale',
               status: 'success',
-              amount: draft_order['total_price']
+              amount: draft_order['total_price'].to_f.zero? ? '0.01' : draft_order['total_price']
             }
           ],
           total_discounts: draft_order['applied_discount'] ? draft_order['applied_discount']['amount'] : '0.0',
@@ -392,12 +389,13 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
   def generate_unique_phone(base_phone, session)
     return base_phone if phone_unique?(base_phone, session)
 
+    base_phone = '99999999999' if base_phone.nil? || base_phone.empty?
     3.times do |i|
       unique_phone = if base_phone.end_with?('9')
-                        base_phone.gsub(/(\d{2})$/, (i + 1).to_s.rjust(2, '0'))
-                      else
-                        "#{base_phone}#{i + 1}"
-                      end
+                       base_phone.gsub(/(\d{2})$/, (i + 1).to_s.rjust(2, '0'))
+                     else
+                       "#{base_phone}#{i + 1}"
+                     end
 
       return unique_phone if phone_unique?(unique_phone, session)
     end
@@ -444,5 +442,30 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
     variant = response.body.dig('data', 'productVariants', 'edges', 0, 'node')
     variant ? variant['id'].split('/').last : nil
+  end
+
+  def valid_email_or_nil(email)
+    return nil unless email.present?
+
+    return nil unless email.match?(/\A[^@\s]+@([a-z0-9\-]+\.)+[a-z]{2,}\z/i)
+
+    domain = email.split('@')[1]
+    return nil if domain.blank?
+
+    begin
+      Resolv::DNS.open do |dns|
+        dns.getresource(domain, Resolv::DNS::Resource::IN::MX)
+        return email
+      end
+    rescue Resolv::ResolvError
+      nil
+    end
+  end
+
+  def valid_cpf_or_blank(value)
+    digits = value.to_s.gsub(/\D/, '')
+    return '' unless digits.size == 11
+
+    digits.gsub(/(\d{3})(\d{3})(\d{3})(\d{2})/, '\1.\2.\3-\4')
   end
 end

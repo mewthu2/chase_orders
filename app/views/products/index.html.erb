@@ -60,14 +60,14 @@
             <td class="text-center"><%= order.kinds %></td>
             <td class="text-center">
               <%= order.tiny_order_id %> - 
-              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>', '_blank');">
+              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/vendas#edit/=') %><%= order.tiny_order_id %>', '_blank');">
                 Ver no Tiny
               </span>
             </td>
             <td class="text-center">
               <% if order.shopify_order_id.present? %>
                 <%= order.shopify_order_id %> - 
-                <span class="badge bg-success" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://your-store.myshopify.com/admin/orders/') %><%= order.shopify_order_id %>', '_blank');">
+                <span class="badge bg-success" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/admin/orders/') %><%= order.shopify_order_id %>', '_blank');">
                   Ver no Shopify
                 </span>
               <% else %>
