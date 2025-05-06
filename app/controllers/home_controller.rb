@@ -106,30 +106,30 @@ class HomeController < ApplicationController
       
       @month_stats[kind][:migration_percentage] = @month_stats[kind][:total].positive? ? (@month_stats[kind][:migrated].to_f / @month_stats[kind][:total] * 100).round : 0
     end
-    
+
     @today_stats['total'][:migration_percentage] = @today_stats['total'][:total].positive? ? (@today_stats['total'][:migrated].to_f / @today_stats['total'][:total] * 100).round : 0
-    
+
     @week_stats['total'][:migration_percentage] = @week_stats['total'][:total].positive? ? (@week_stats['total'][:migrated].to_f / @week_stats['total'][:total] * 100).round : 0
-    
+
     @month_stats['total'][:migration_percentage] = @month_stats['total'][:total].positive? ? (@month_stats['total'][:migrated].to_f / @month_stats['total'][:total] * 100).round : 0
-    
+
     @kinds.each do |kind|
       last_migrated = Order.where(kinds: kind)
-                          .where.not(shopify_order_id: nil)
-                          .order(updated_at: :desc)
-                          .first
-                          
+                           .where.not(shopify_order_id: nil)
+                           .order(updated_at: :desc)
+                           .first
+
       @kinds_stats[kind][:last_migrated] = last_migrated.try(:updated_at)
     end
   end
-  
+
   def calculate_real_daily_averages
     @real_daily_averages = {}
-    
+
     @kinds.each do |kind|
       orders = Order.where(kinds: kind)
-                   .where.not(tiny_creation_date: [nil, ""])
-      
+                    .where.not(tiny_creation_date: [nil, ''])
+
       if orders.any?
         dates = orders.map do |order|
           if order.tiny_creation_date.is_a?(String)
@@ -142,11 +142,11 @@ class HomeController < ApplicationController
             order.tiny_creation_date.try(:to_date)
           end
         end.compact.sort
-        
+
         if dates.any?
           first_date = dates.first
           last_date = dates.last
-          
+
           days_span = (last_date - first_date).to_i + 1
           
           total_orders = orders.count
@@ -179,10 +179,10 @@ class HomeController < ApplicationController
       end
     end
   end
-  
+
   def prepare_chart_data
     @daily_migration_data = get_daily_migration_data
-    
+
     @status_distribution_data = {
       labels: @kinds.map { |kind| kind_display_name(kind) },
       series: [
@@ -196,24 +196,23 @@ class HomeController < ApplicationController
         }
       ]
     }
-    
+
     @weekday_distribution_data = get_weekday_distribution_data
-    
+
     @completion_forecast_data = calculate_completion_forecast
   end
-  
+
   def get_weekday_distribution_data
     weekdays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-    
+
     data_by_kind = {}
     @kinds.each do |kind|
       data_by_kind[kind] = Array.new(7, 0)
     end
-    
-    orders = Order
-      .where.not(tiny_creation_date: nil)
-      .select(:kinds, :tiny_creation_date)
-    
+
+    orders = Order.where.not(tiny_creation_date: nil)
+                  .select(:kinds, :tiny_creation_date)
+
     orders.each do |order|
       date = if order.tiny_creation_date.is_a?(String)
         begin
@@ -224,43 +223,40 @@ class HomeController < ApplicationController
       else
         order.tiny_creation_date.to_date
       end
-      
+
       wday = date.wday
-      
-      if data_by_kind[order.kinds]
-        data_by_kind[order.kinds][wday] += 1
-      end
+
+      data_by_kind[order.kinds][wday] += 1 if data_by_kind[order.kinds]
     end
-    
+
     series = @kinds.map do |kind|
       {
         name: kind_display_name(kind),
         data: data_by_kind[kind]
       }
     end
-    
+
     {
       categories: weekdays,
-      series: series
+      series:
     }
   end
-  
+
   def get_daily_migration_data
     date_range = (@month_ago..@today)
-    
-    formatted_dates = date_range.map do |date| 
+
+    formatted_dates = date_range.map do |date|
       {
         short: I18n.l(date, format: '%a, %d/%b'),
         full: I18n.l(date, format: '%d/%m'),
-        date: date
+        date:
       }
     end
-    
-    orders = Order
-      .where.not(tiny_creation_date: nil)
-      .where.not(shopify_order_id: nil)
-      .select(:kinds, :tiny_creation_date, :shopify_order_id)
-    
+
+    orders = Order.where.not(tiny_creation_date: nil)
+                  .where.not(shopify_order_id: nil)
+                  .select(:kinds, :tiny_creation_date, :shopify_order_id)
+
     data_by_kind_and_date = {}
     @kinds.each do |kind|
       data_by_kind_and_date[kind] = {}
@@ -268,7 +264,7 @@ class HomeController < ApplicationController
         data_by_kind_and_date[kind][date.strftime('%d/%m')] = 0
       end
     end
-    
+
     orders.each do |order|
       date = if order.tiny_creation_date.is_a?(String)
         begin
@@ -330,23 +326,21 @@ class HomeController < ApplicationController
         }
       ],
       daily_rates: daily_migration_rates,
-      completion_days: completion_days
+      completion_days:
     }
   end
-  
+
   def load_recent_migrated_orders
     @recent_migrated_orders = {}
-    
+
     @kinds.each do |kind|
-      @recent_migrated_orders[kind] = Order
-        .where(kinds: kind)
-        .where.not(shopify_order_id: nil)
-        .includes(:order_items)
-        .order(tiny_creation_date: :desc)
-        .limit(5)
+      @recent_migrated_orders[kind] = Order.where(kinds: kind)
+                                           .where.not(shopify_order_id: nil)
+                                           .includes(:order_items)
+                                           .last(5)
     end
   end
-  
+
   def kind_display_name(kind)
     case kind
     when 'rj'

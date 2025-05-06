@@ -1,65 +1,72 @@
 class ProductsController < ApplicationController
-  before_action :load_form_references, only: [:index]
-  before_action :set_product, only: %i[edit update]
-  skip_before_action :authenticate_user!, only: [:download]  # Ignora autenticação apenas para download
+  before_action :set_product, only: [:show, :edit, :update, :destroy]
 
+  # GET /products
   def index
-    @products = Product.search(params[:search])
-                       .order(updated_at: :asc)
-                       .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+    @products = Product.all
+  end
+
+  # GET /products/1
+  def show; end
+
+  # GET /products/new
+  def new
+    @product = Product.new
   end
 
   # GET /products/1/edit
   def edit; end
 
+  # POST /products
+  def create
+    @product = Product.new(product_params)
+
+    if @product.save
+      redirect_to @product, notice: 'Product was successfully created.'
+    else
+      render :new
+    end
+  end
+
   # PATCH/PUT /products/1
   def update
     if @product.update(product_params)
-      redirect_to products_path, notice: 'Produto atualizado com sucesso.'
+      redirect_to @product, notice: 'Product was successfully updated.'
     else
       render :edit
     end
   end
 
-  def download
-    type = params[:type]
-    origin = params[:origin]
-    extension = 'csv'
-
-    csv_content = MakeSpreadsheetJob.perform_now(origin, type)
-
-    if csv_content.present?
-      mime_type = extension == 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      filename = "planilha_#{type}_#{origin}.#{extension}"
-
-      send_data csv_content, filename:, type: mime_type
-    else
-      render plain: 'Erro ao gerar a planilha', status: :unprocessable_entity
-    end
-  end
-
-  def product_integration
-    redirect_to products_path, notice: 'Informações sincronizadas com sucesso.' if ProductIntegrationJob.perform_now('update_product_cost', Product.find(params[:product_id]), current_user)
+  # DELETE /products/1
+  def destroy
+    @product.destroy
+    redirect_to products_url, notice: 'Product was successfully destroyed.'
   end
 
   private
 
   def set_product
     @product = Product.find(params[:id])
-    @tiny_product = Tiny::Products.find_product(@product.tiny_product_id)
+
+    if @product.tiny_rj_id.present?
+      token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+      @tiny_product = Tiny::Products.find_product(@product.tiny_rj_id, token)
+    elsif @product.tiny_bh_shopping_id.present?
+      token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+      @tiny_product = Tiny::Products.find_product(@product.tiny_bh_shopping_id, token)
+    elsif @product.tiny_lagoa_seca_product_id.present?
+      token = ENV.fetch('TOKEN_TINY_PRODUCTION')
+      @tiny_product = Tiny::Products.find_product(@product.tiny_lagoa_seca_product_id, token)
+    else
+      @tiny_product = nil
+    end
   end
 
-  def load_form_references; end
-
   def product_params
-    params.require(:product)
-          .permit(:sku,
-                  :tiny_product_id,
-                  :shopify_product_id,
-                  :shopify_inventory_item_id,
-                  :shopify_product_name,
-                  :tiny_lagoa_seca_product_id,
-                  :tiny_bh_shopping_id,
-                  :cost)
+    params.require(:product).permit(
+      :sku, :shopify_product_name, :tiny_rj_id, :tiny_bh_shopping_id, 
+      :tiny_lagoa_seca_product_id, :shopify_product_id, :shopify_inventory_item_id, 
+      :cost, :price, :compare_at_price, :vendor, :tags
+    )
   end
 end

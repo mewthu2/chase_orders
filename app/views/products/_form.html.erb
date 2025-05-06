@@ -1,107 +1,359 @@
-<%= form_for(product, html: { autocomplete: 'off' }, data: { disabled: read_only }) do |form| %>
-  <div class="container bg-dark p-3">
-    <div class="page-header">
-      <h4> Editar Produto <small class="text-light"> Dados sobre o produto</small></h4>
-    </div>
+<div class="container-fluid py-4">
+  <% title "Editar Produto: #{@product.shopify_product_name}" %>
 
-    <div class="row">
-      <%= form.label :shopify_product_name, class: 'col-2 col-form-label text-right text-primary' %>
-      <div class="col-12">
-        <%= form.object.shopify_product_name&.html_safe %>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-3">
-        <%= form.label :sku %>
-        <%= form.text_field :sku, class: 'form-control' %>
-      </div>
-      <div class="col-3">
-        <%= form.label 'Tiny ID' %>
-        <%= form.text_field :tiny_product_id, class: 'form-control' %>
-      </div>
-      <div class="col-3">
-        <%= form.label 'Shopify ID' %>      
-        <%= form.text_field :shopify_product_id, class: 'form-control' %>
-      </div>
-      <div class="col-3">
-        <%= form.label 'inventory_id' %>
-        <%= form.text_field :shopify_inventory_item_id, class: 'form-control' %>
-      </div>
-    </div>
-    <div class="page-header">
-      <h4> Sincronização Tiny <small class="text-light"> Atributos que podem ser atualizados</small></h4>
-    </div>
-
-    <div class="row">
-      <div class="col-4">
-        <%= form.label :cost %>
-        <%= form.text_field :cost, class: 'form-control' %>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <%= link_to products_path, class: 'btn btn-dark me-2' do %>
+            <i class="fas fa-arrow-left me-1"></i> Voltar para Lista
+          <% end %>
+        </div>
+        <h4 class="text-white mb-0">
+          <i class="fas fa-edit me-2"></i>Editar Produto
+        </h4>
+        <div>
+          <% if @product.shopify_product_id.present? %>
+            <%= link_to "https://admin.shopify.com/store/#{ENV['SHOPIFY_STORE']}/products/#{@product.shopify_product_id}", 
+                target: "_blank", class: "btn btn-success me-2" do %>
+              <i class="fas fa-external-link-alt me-1"></i> Ver no Shopify
+            <% end %>
+          <% end %>
+          <%= link_to product_path(@product), class: 'btn btn-info' do %>
+            <i class="fas fa-eye me-1"></i> Visualizar
+          <% end %>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="container bg-light p-3">
-    <div class="page-header text-dark">
-      <h4> Produto no tiny <small class="text-muted"> Dados sobre o produto</small></h4>
-
-      <%= JSON.pretty_generate(@tiny_product).html_safe %>
-    </div>
-  </div>
-
-  <div class="container bg-dark mt-2 p-2">
-    <div class="page-header">
-      <h4> Histórico de atualizações <small class="text-light"> Atributos que foram atualizados no Tiny pelo sistema</small></h4>
-    </div>
-
-    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="attemps-table">
-      <thead>
-        <tr>
-          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
-          <th class="text-center"><%= 'ID' %></th>
-          <th class="text-center"><%= 'Produto no Tiny' %></th>
-          <th class="text-center"><%= 'Usuário' %></th>
-          <th class="text-center"><%= ProductUpdate.human_attribute_name :field %></th>
-          <th class="text-center"><%= ProductUpdate.human_attribute_name :original_value %></th>
-          <th class="text-center"><%= ProductUpdate.human_attribute_name :modified_value %></th>
-          <th class="text-center"><%= ProductUpdate.human_attribute_name :json_return %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% form.object.product_updates.each do |product_update| %>
-          <tr>
-            <td class="text-center">
-              <% if product_update.kinds == 'success' %>
-                <span class='badge bg-success'><i class='fas fa-check'></i></span>
-              <% else %>
-                <span class='badge bg-danger'><i class='fas fa-times'></i></span>
-              <% end %>
-            </td>
-            <td class="text-center"><%= product_update.id %></td>
-            <td class="text-center">
-              <%= product_update.product.tiny_product_id %> - 
-              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= product_update.product.tiny_product_id %>', '_blank');">
-                Ver no Tiny
-              </span>
-            </td>
-            <td class="text-center"><%= product_update.user.name %></td>
-            <td class="text-center"><%= product_update.field %></td>
-            <td class="text-center"><%= product_update.original_value %></td>
-            <td class="text-center"><%= product_update.modified_value %></td>
-            <td class="text-center"><%= product_update.json_return %></td>
-          </tr>
+  <% if @product.errors.any? %>
+    <div class="alert alert-danger mb-4">
+      <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Erros ao salvar o produto:</h5>
+      <ul class="mb-0">
+        <% @product.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
         <% end %>
-      </tbody>
-      <tfoot>
-      </tfoot>
-    </table>
-  </div>
+      </ul>
+    </div>
+  <% end %>
 
+  <%= form_with(model: @product, local: true) do |form| %>
+    <div class="row">
+      <!-- Coluna da esquerda - Imagem e informações básicas -->
+      <div class="col-md-4 mb-4">
+        <div class="card bg-black border border-dark shadow h-100">
+          <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-image me-2"></i>Imagem do Produto
+            </h5>
+          </div>
+          <div class="card-body text-center">
+            <div class="mb-4 product-image-container">
+              <% if @product.respond_to?(:image_url) && @product.image_url.present? %>
+                <%= image_tag @product.image_url, class: "img-fluid product-image", alt: @product.shopify_product_name %>
+              <% else %>
+                <div class="placeholder-image d-flex flex-column align-items-center justify-content-center">
+                  <i class="fas fa-image fa-5x text-secondary mb-3"></i>
+                  <p class="text-muted">Imagem não disponível</p>
+                  <small class="text-muted">A funcionalidade de imagens será implementada em breve</small>
+                </div>
+              <% end %>
+            </div>
 
-  <div class="panel-buttons bg-dark">
-    <%= link_to products_path, class: 'btn btn-secondary btn-lg' do %><i class="fa fa-undo"></i> Voltar <% end %>
-    <% unless read_only %>
-      <%= form.button class: 'btn btn-primary btn-lg', data: { disable_with: 'Salvando...' } do %><i class="fa fa-check"></i> Salvar <% end %>
-    <% end %>
-  </div>
+            <div class="product-info mt-4">
+              <h5 class="text-white mb-3"><%= @product.shopify_product_name %></h5>
+              <div class="d-flex justify-content-center mb-2">
+                <span class="badge bg-primary px-3 py-2 me-2"><%= @product.sku %></span>
+                <% if @product.price.present? %>
+                  <span class="badge bg-success px-3 py-2"><%= number_to_currency(@product.price) %></span>
+                <% end %>
+              </div>
+              <% if @product.shopify_product_id.present? %>
+                <div class="mt-3 text-muted">
+                  <small>ID Shopify: <%= @product.shopify_product_id %></small>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna central - Formulário principal -->
+      <div class="col-md-4 mb-4">
+        <div class="card bg-black border border-dark shadow h-100">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-edit me-2"></i>Informações do Produto
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <%= form.label :shopify_product_name, "Nome do Produto", class: 'form-label text-white' %>
+              <%= form.text_field :shopify_product_name, class: 'form-control bg-dark text-white border-secondary', readonly: true %>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :sku, "SKU", class: 'form-label text-white' %>
+              <%= form.text_field :sku, class: 'form-control bg-dark text-white border-secondary', readonly: true %>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :cost, "Custo (R$)", class: 'form-label text-white' %>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-white">R$</span>
+                <%= form.text_field :cost, class: 'form-control bg-dark text-white border-secondary', placeholder: '0,00' %>
+              </div>
+              <small class="form-text text-muted">Custo de aquisição do produto</small>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :price, "Preço de Venda", class: 'form-label text-white' %>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-white">R$</span>
+                <%= form.text_field :price, class: 'form-control bg-dark text-white border-secondary', readonly: true %>
+              </div>
+            </div>
+
+            <% if @product.respond_to?(:compare_at_price) && @product.compare_at_price.present? %>
+              <div class="mb-3">
+                <%= form.label :compare_at_price, "Preço Comparativo", class: 'form-label text-white' %>
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-secondary text-white">R$</span>
+                  <%= form.text_field :compare_at_price, class: 'form-control bg-dark text-white border-secondary', readonly: true %>
+                </div>
+              </div>
+            <% end %>
+
+            <% if @product.respond_to?(:vendor) && @product.vendor.present? %>
+              <div class="mb-3">
+                <%= form.label :vendor, "Fornecedor", class: 'form-label text-white' %>
+                <%= form.text_field :vendor, class: 'form-control bg-dark text-white border-secondary', readonly: true %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna da direita - IDs e Estoque -->
+      <div class="col-md-4 mb-4">
+        <div class="card bg-black border border-dark shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-tags me-2"></i>IDs do Tiny
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <%= form.label :tiny_rj_id, "ID Tiny (Rio de Janeiro)", class: 'form-label text-white' %>
+              <div class="input-group">
+                <%= form.text_field :tiny_rj_id, class: 'form-control bg-dark text-white border-secondary' %>
+                <% if @product.tiny_rj_id.present? %>
+                  <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= @product.tiny_rj_id %>" 
+                     target="_blank" class="btn btn-primary" title="Ver no Tiny">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :tiny_bh_shopping_id, "ID Tiny (BH Shopping)", class: 'form-label text-white' %>
+              <div class="input-group">
+                <%= form.text_field :tiny_bh_shopping_id, class: 'form-control bg-dark text-white border-secondary' %>
+                <% if @product.tiny_bh_shopping_id.present? %>
+                  <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= @product.tiny_bh_shopping_id %>" 
+                     target="_blank" class="btn btn-success" title="Ver no Tiny">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                <% end %>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :tiny_lagoa_seca_product_id, "ID Tiny (Lagoa Seca)", class: 'form-label text-white' %>
+              <div class="input-group">
+                <%= form.text_field :tiny_lagoa_seca_product_id, class: 'form-control bg-dark text-white border-secondary' %>
+                <% if @product.tiny_lagoa_seca_product_id.present? %>
+                  <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= @product.tiny_lagoa_seca_product_id %>" 
+                     target="_blank" class="btn btn-warning text-dark" title="Ver no Tiny">
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                <% end %>
+              </div>
+            </div>
+
+            <%= form.hidden_field :shopify_product_id %>
+            <%= form.hidden_field :shopify_inventory_item_id %>
+          </div>
+        </div>
+
+        <div class="card bg-black border border-dark shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-cubes me-2"></i>Estoque Atual
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-4">
+                <div class="border-end border-secondary">
+                  <div class="text-primary"><i class="fas fa-map-marker-alt"></i></div>
+                  <div class="text-white h4 mb-0"><%= @product.stock_rj || 0 %></div>
+                  <small class="text-muted">Rio de Janeiro</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="border-end border-secondary">
+                  <div class="text-success"><i class="fas fa-store"></i></div>
+                  <div class="text-white h4 mb-0"><%= @product.stock_bh_shopping || 0 %></div>
+                  <small class="text-muted">BH Shopping</small>
+                </div>
+              </div>
+              <div class="col-4">
+                <div>
+                  <div class="text-warning"><i class="fas fa-water"></i></div>
+                  <div class="text-white h4 mb-0"><%= @product.stock_lagoa_seca || 0 %></div>
+                  <small class="text-muted">Lagoa Seca</small>
+                </div>
+              </div>
+            </div>
+
+            <% if @product.price.present? && @product.cost.present? %>
+              <div class="mt-4 pt-3 border-top border-secondary">
+                <h6 class="text-white mb-3">Análise de Margem</h6>
+                <% 
+                  cost = @product.cost.to_f
+                  price = @product.price.to_f
+                  margin = cost > 0 ? ((price - cost) / price * 100).round(2) : 0
+                  margin_class = margin > 50 ? 'bg-success' : (margin > 30 ? 'bg-warning text-dark' : 'bg-danger')
+                %>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-white">Margem de Lucro:</span>
+                  <span class="badge <%= margin_class %> px-3 py-2"><%= number_to_percentage(margin, precision: 2) %></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-white">Lucro por unidade:</span>
+                  <span class="badge bg-info text-dark px-3 py-2"><%= number_to_currency(price - cost) %></span>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <%= form.submit "Salvar Alterações", class: 'btn btn-primary btn-lg' %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .form-control:focus {
+      background-color: #2c3034;
+      color: #fff;
+      border-color: #0d6efd;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .form-control:disabled, .form-control[readonly] {
+      background-color: #343a40;
+      opacity: 0.8;
+    }
+    
+    .product-image-container {
+      height: 250px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed #495057;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .product-image {
+      max-height: 100%;
+      max-width: 100%;
+      object-fit: contain;
+    }
+    
+    .placeholder-image {
+      height: 100%;
+      width: 100%;
+      padding: 20px;
+    }
+    
+    .btn {
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .card-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .border-secondary {
+      border-color: #495057 !important;
+    }
+    
+    .form-text {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+    
+    .badge {
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+      
+      const formatCurrency = (input) => {
+        let value = input.value.replace(/\D/g, '');
+        value = (parseFloat(value) / 100).toFixed(2).replace('.', ',');
+        if (value === 'NaN') value = '0,00';
+        input.value = value;
+      };
+
+      const costInput = document.querySelector('input[name="product[cost]"]');
+      if (costInput) {
+        costInput.addEventListener('blur', function() {
+          formatCurrency(this);
+        });
+      }
+    });
+  </script>
 <% end %>

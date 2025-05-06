@@ -1,94 +1,291 @@
-<div class="row">
-  <% title 'Pedidos' %>
-</div>
+<div class="container-fluid py-4">
+  <% title 'Produtos' %>
 
-<%= render 'layouts/partials/messages' %>
+  <%= render 'layouts/partials/messages' %>
 
-<%= form_tag(orders_path, method: 'get') do %>
-  <div class="card mb-lg advanced-search-form bg-dark text-light" id="filters">
-    <div class="card-header text-info">
-      Pesquisa avançada
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-sm-4">
-          <%= label_tag :kind, 'Tipo' %>
-          <%= select_tag :kind, options_for_select(@kinds, params[:kind]), include_blank: 'Todos', class: 'form-control' %>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-search me-2"></i>Pesquisa avançada
+          </h5>
         </div>
-        <div class="col-sm-4">
-          <%= label_tag :tiny_order_id, 'ID Tiny' %>
-          <%= text_field_tag :tiny_order_id, params[:tiny_order_id], class: 'form-control', placeholder: 'ID do pedido no Tiny' %>
-        </div>
-        <div class="col-sm-4">
-          <%= label_tag :shopify_order_id, 'ID Shopify' %>
-          <%= text_field_tag :shopify_order_id, params[:shopify_order_id], class: 'form-control', placeholder: 'ID do pedido no Shopify' %>
+        <div class="card-body bg-black">
+          <%= form_tag(products_path, method: 'get') do %>
+            <div class="row g-3">
+              <div class="col-md-12">
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-secondary text-white">
+                    <i class="fas fa-search"></i>
+                  </span>
+                  <%= text_field_tag :search, params[:search], class: 'form-control bg-dark text-white border-secondary', 
+                      placeholder: 'Pesquise por SKU, nome do produto ou ID' %>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 text-end">
+              <%= button_tag class: 'btn btn-light', name: '' do %>
+                <i class="fa fa-search me-1"></i> Pesquisar
+              <% end %>
+            </div>
+          <% end %>
         </div>
       </div>
     </div>
-    <div class="card-footer">
-      <%= button_tag class: 'btn btn-secondary text-info', name: '' do %><i class="fa fa-search text-info"></i> Pesquisar<% end %>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-box me-2"></i>Produtos
+          </h5>
+          <span class="badge bg-primary"><%= @products.respond_to?(:total_entries) ? @products.total_entries : @products.size %> registros</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" id="products-table">
+              <thead class="bg-dark">
+                <tr>
+                  <th width="60" class="text-center"><i class="fa fa-cog"></i></th>
+                  <th class="text-center"><%= Product.human_attribute_name :id %></th>
+                  <th class="text-center"><%= Product.human_attribute_name :sku %></th>
+                  <th class="text-center"><%= Product.human_attribute_name :shopify_product_name %></th>
+                  <th class="text-center">IDs Tiny</th>
+                  <th class="text-center"><%= Product.human_attribute_name :shopify_product_id %></th>
+                  <th class="text-center"><%= Product.human_attribute_name :cost %></th>
+                  <th class="text-center"><%= Product.human_attribute_name :updated_at %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @products.each do |product| %>
+                  <tr>
+                    <td class="text-center">
+                      <div class="btn-group" role="group">
+                        <%= link_to edit_product_path(product), class: 'btn btn-sm btn-light', title: 'Editar' do %>
+                          <i class="fas fa-edit"></i>
+                        <% end %>
+                        <%= link_to product_integration_products_path(product_id: product.id), 
+                            class: 'btn btn-sm btn-primary', title: 'Sincronizar', method: :post do %>
+                          <i class="fas fa-sync-alt"></i>
+                        <% end %>
+                      </div>
+                    </td>
+                    <td class="text-center"><span class="badge bg-dark"><%= product.id %></span></td>
+                    <td class="text-center"><%= product.sku %></td>
+                    <td><%= product.shopify_product_name %></td>
+                    <td class="text-center">
+                      <div class="d-flex flex-column align-items-center gap-1">
+                        <% if product.tiny_rj_id.present? %>
+                          <div class="d-flex align-items-center gap-1 mb-1">
+                            <span class="badge bg-primary">RJ: <%= product.tiny_rj_id %></span>
+                            <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= product.tiny_rj_id %>" 
+                               target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny (RJ)">
+                              <i class="fas fa-external-link-alt"></i>
+                            </a>
+                          </div>
+                        <% end %>
+                        
+                        <% if product.tiny_bh_shopping_id.present? %>
+                          <div class="d-flex align-items-center gap-1 mb-1">
+                            <span class="badge bg-success">BH: <%= product.tiny_bh_shopping_id %></span>
+                            <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= product.tiny_bh_shopping_id %>" 
+                               target="_blank" class="btn btn-sm btn-success" title="Ver no Tiny (BH)">
+                              <i class="fas fa-external-link-alt"></i>
+                            </a>
+                          </div>
+                        <% end %>
+                        
+                        <% if product.tiny_lagoa_seca_product_id.present? %>
+                          <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-warning text-dark">LS: <%= product.tiny_lagoa_seca_product_id %></span>
+                            <a href="<%= ENV.fetch('TINY_PRODUCT_URL', '#') %><%= product.tiny_lagoa_seca_product_id %>" 
+                               target="_blank" class="btn btn-sm btn-warning text-dark" title="Ver no Tiny (Lagoa Seca)">
+                              <i class="fas fa-external-link-alt"></i>
+                            </a>
+                          </div>
+                        <% end %>
+                        
+                        <% if !product.tiny_rj_id.present? && !product.tiny_bh_shopping_id.present? && !product.tiny_lagoa_seca_product_id.present? %>
+                          <span class="badge bg-secondary">Não disponível</span>
+                        <% end %>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      <% if product.shopify_product_id.present? %>
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                          <span class="badge bg-dark"><%= product.shopify_product_id %></span>
+                          <a href="<%= ENV.fetch('SHOPIFY_PRODUCT_URL', '#') %><%= product.shopify_product_id %>" 
+                             target="_blank" class="btn btn-sm btn-success" title="Ver no Shopify">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                        </div>
+                      <% else %>
+                        <span class="badge bg-secondary">Não disponível</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <% if product.cost.present? %>
+                        <span class="badge bg-success"><%= number_to_currency(product.cost) %></span>
+                      <% else %>
+                        <span class="badge bg-warning text-dark">Não definido</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center"><%= product.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="bg-dark">
+                <tr>
+                  <td colspan="8" class="text-center py-3 text-white">
+                    <% if @products.respond_to?(:total_entries) %>
+                      <%= page_entries_info @products %>
+                    <% else %>
+                      Exibindo <%= @products.size %> produtos
+                    <% end %>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-<% end %>
 
-<div class="row">
-  <div class="col-12">
-    <table class="table table-dark table-hover table-responsive" style="overflow-x: scroll;" id="orders-table">
-      <thead>
-        <tr>
-          <th width="50" class="text-center"><i class="fa fa-ellipsis-v"></i></th>
-          <th class="text-center"><%= Order.human_attribute_name :id %></th>
-          <th class="text-center"><%= Order.human_attribute_name :kinds %></th>
-          <th class="text-center"><%= Order.human_attribute_name :tiny_order_id %></th>
-          <th class="text-center"><%= Order.human_attribute_name :shopify_order_id %></th>
-          <th class="text-center"><%= Order.human_attribute_name :tags %></th>
-          <th class="text-center"><%= Order.human_attribute_name :created_at %></th>
-          <th class="text-center"><%= Order.human_attribute_name :updated_at %></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @orders.each do |order| %>
-          <tr>
-            <td>
-              <div class="btn-group" role="group" aria-label="Basic example">
-                <%= link_to order_path(order), class: 'btn btn-light btn-sm text-dark', target: '_blank' do %>
-                  <i class="fas fa-eye"></i>
-                <% end %>
+  <div class="row mt-4">
+    <div class="col-12 d-flex justify-content-center">
+      <% if @products.respond_to?(:total_entries) %>
+        <%= will_paginate @products, list_classes: %w[pagination pagination-sm], inner_window: 1, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
+      <% end %>
+    </div>
+  </div>
+  
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-download me-2"></i>Download de Planilhas
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <div class="card bg-black border border-primary h-100">
+                <div class="card-body">
+                  <h5 class="text-white mb-3">
+                    <i class="fas fa-file-csv me-2"></i>Produtos Tiny
+                  </h5>
+                  <p class="text-muted">Baixe a planilha com todos os produtos do Tiny.</p>
+                  <div class="d-grid gap-2">
+                    <%= link_to download_planilha_products_path(type: 'products', origin: 'tiny', format: 'csv'), class: 'btn btn-primary' do %>
+                      <i class="fas fa-download me-1"></i> Baixar CSV
+                    <% end %>
+                  </div>
+                </div>
               </div>
-            </td>
-            <td class="text-center"><%= order.id %></td>
-            <td class="text-center"><%= order.kinds %></td>
-            <td class="text-center">
-              <%= order.tiny_order_id %> - 
-              <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/vendas#edit/=') %><%= order.tiny_order_id %>', '_blank');">
-                Ver no Tiny
-              </span>
-            </td>
-            <td class="text-center">
-              <% if order.shopify_order_id.present? %>
-                <%= order.shopify_order_id %> - 
-                <span class="badge bg-success" style="cursor: pointer;" onclick="window.open('<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/admin/orders/') %><%= order.shopify_order_id %>', '_blank');">
-                  Ver no Shopify
-                </span>
-              <% else %>
-                <span class="badge bg-secondary">x</span>
-              <% end %>
-            </td>
-            <td class="text-center"><%= order.tags.present? ? order.tags : "<span class='badge bg-secondary'>x</span>".html_safe %></td>
-            <td class="text-center"><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-            <td class="text-center"><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
-          </tr>
-        <% end %>
-      </tbody>
-      <tfoot>
-        <tr>
-          <th colspan="8">
-            <%= page_entries_info @orders %>
-          </th>
-        </tr>
-      </tfoot>
-    </table>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+              <div class="card bg-black border border-success h-100">
+                <div class="card-body">
+                  <h5 class="text-white mb-3">
+                    <i class="fas fa-file-csv me-2"></i>Produtos Shopify
+                  </h5>
+                  <p class="text-muted">Baixe a planilha com todos os produtos do Shopify.</p>
+                  <div class="d-grid gap-2">
+                    <%= link_to download_planilha_products_path(type: 'products', origin: 'shopify', format: 'csv'), class: 'btn btn-success' do %>
+                      <i class="fas fa-download me-1"></i> Baixar CSV
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+              <div class="card bg-black border border-info h-100">
+                <div class="card-body">
+                  <h5 class="text-white mb-3">
+                    <i class="fas fa-file-csv me-2"></i>Produtos Integrados
+                  </h5>
+                  <p class="text-muted">Baixe a planilha com todos os produtos integrados.</p>
+                  <div class="d-grid gap-2">
+                    <%= link_to download_planilha_products_path(type: 'products', origin: 'integrated', format: 'csv'), class: 'btn btn-info' do %>
+                      <i class="fas fa-download me-1"></i> Baixar CSV
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<%= will_paginate @orders, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #f8f9fa;
+    }
+    
+    .pagination .page-item.active .page-link {
+      background-color: #f8f9fa;
+      border-color: #f8f9fa;
+      color: #212529;
+    }
+    
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-sm:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      });
+    });
+  </script>
+<% end %>
