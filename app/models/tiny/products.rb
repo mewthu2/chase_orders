@@ -20,6 +20,7 @@ module Tiny::Products
       total.each do |list_products|
         find_or_create_product(list_products['produtos'], kind)
       end
+      assert_stock
     else
       total
     end
