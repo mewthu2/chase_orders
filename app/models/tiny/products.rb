@@ -90,7 +90,7 @@ module Tiny::Products
       end
 
       print 'Dormindo 2 segundos...'
-      sleep(1)
+      sleep(0.5)
     end
   end
 
