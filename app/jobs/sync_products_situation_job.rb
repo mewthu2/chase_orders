@@ -82,8 +82,17 @@ class SyncProductsSituationJob < ActiveJob::Base
       }
     }
 
-    ShopifyAPI::GraphQL.client.query(mutation, variables:)
-  rescue StandardError => e
-    Rails.logger.error "Error updating inventory batch: #{e.message}"
+    session = ShopifyAPI::Context.active_session
+
+    begin
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+      response = client.query(query: mutation, variables:)
+
+      if response.body['errors'].present?
+        Rails.logger.error "Error updating inventory batch: #{response.body['errors']}"
+      end
+    rescue StandardError => e
+      Rails.logger.error "Error updating inventory batch: #{e.message}"
+    end
   end
 end

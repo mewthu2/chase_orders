@@ -191,7 +191,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
-  
+
     begin
       attempt = Attempt.create(
         kinds: :transfer_tiny_to_shopify_order,
@@ -217,7 +217,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       cliente_nome = pedido['cliente']['nome']
 
       if customer && (customer['first_name'].nil? || customer['last_name'].nil?)
-        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
+        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
         query = <<~GRAPHQL
           query {
             draftOrder(id: "gid://shopify/DraftOrder/#{draft_order_id}") {
@@ -271,17 +271,14 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
             if customer_edge
               existing_customer = customer_edge['node']
-              metafield_value = existing_customer.dig('metafields', 'edges')&.first&.dig('node', 'value')
 
-              if metafield_value == formatted_cpf_cnpj
-                customer = {
-                  'id' => existing_customer['id'].split('/').last.to_i,
-                  'first_name' => existing_customer['firstName'],
-                  'last_name' => existing_customer['lastName'],
-                  'email' => existing_customer['email'],
-                  'phone' => existing_customer['phone']
-                }
-              end
+              customer = {
+                'id' => existing_customer['id'].split('/').last.to_i,
+                'first_name' => existing_customer['firstName'],
+                'last_name' => existing_customer['lastName'],
+                'email' => existing_customer['email'],
+                'phone' => existing_customer['phone']
+              }
             end
           rescue StandardError => e
             puts "Erro ao buscar customer por metafield: #{e.message}"
