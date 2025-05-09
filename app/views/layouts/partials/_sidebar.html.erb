@@ -536,14 +536,20 @@
       sidebarOverlay.addEventListener('click', closeSidebar);
     }
     
-    // Fechar sidebar quando um link for clicado (em dispositivos móveis)
+    // Fechar sidebar apenas quando um link de navegação real for clicado (não em botões dropdown)
     const sidebarLinks = sidebar.querySelectorAll('a');
     sidebarLinks.forEach(link => {
-      link.addEventListener('click', function() {
-        if (window.innerWidth < 1000) {
-          closeSidebar();
-        }
-      });
+      // Verificar se o link NÃO é um botão dropdown
+      const isDropdownToggle = link.hasAttribute('data-bs-toggle') && link.getAttribute('data-bs-toggle') === 'collapse';
+      
+      // Adicionar event listener apenas para links de navegação reais
+      if (!isDropdownToggle) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth < 1000) {
+            closeSidebar();
+          }
+        });
+      }
     });
     
     // Ajustar sidebar ao redimensionar a janela
