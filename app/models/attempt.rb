@@ -5,7 +5,31 @@ class Attempt < ApplicationRecord
   # Associacoes
 
   # Validacoes
+  def self.retrigger_shopify_order(shopify_order_id)
+    attempt = Attempt.by_shopify_order_id(shopify_order_id).first
+    return puts 'Attempt não encontrado.' unless attempt
 
+    tiny_order_id = attempt.tiny_order_id
+    kind = attempt.tracking.match(/kind:(\w+)/)[1] rescue nil
+
+    return puts 'Kind não encontrado no tracking.' unless kind
+    return puts 'tiny_order_id não encontrado.' unless tiny_order_id
+
+    result = CreateShopifyOrdersFromTinyJob.perform_now(kind, tiny_order_id)
+
+    new_shopify_order_id = result['id'] rescue nil
+    return puts 'Erro ao criar pedido Shopify.' unless new_shopify_order_id
+
+    attempt.destroy
+
+    order = Order.find_by(tiny_order_id:)
+    if order
+      order.update(shopify_order_id: new_shopify_order_id)
+      puts "Pedido atualizado com o novo shopify_order_id: #{new_shopify_order_id}"
+    else
+      puts "Order não encontrada com tiny_order_id: #{tiny_order_id}"
+    end
+  end
   # Escopos
   add_scope :search do |value|
     where('attempts.tiny_order_id LIKE :valor OR
