@@ -191,7 +191,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
-
+  
     begin
       attempt = Attempt.create(
         kinds: :transfer_tiny_to_shopify_order,
@@ -217,7 +217,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       cliente_nome = pedido['cliente']['nome']
 
       if customer && (customer['first_name'].nil? || customer['last_name'].nil?)
-        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
         query = <<~GRAPHQL
           query {
             draftOrder(id: "gid://shopify/DraftOrder/#{draft_order_id}") {
@@ -271,14 +271,17 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
             if customer_edge
               existing_customer = customer_edge['node']
+              metafield_value = existing_customer.dig('metafields', 'edges')&.first&.dig('node', 'value')
 
-              customer = {
-                'id' => existing_customer['id'].split('/').last.to_i,
-                'first_name' => existing_customer['firstName'],
-                'last_name' => existing_customer['lastName'],
-                'email' => existing_customer['email'],
-                'phone' => existing_customer['phone']
-              }
+              if metafield_value == formatted_cpf_cnpj
+                customer = {
+                  'id' => existing_customer['id'].split('/').last.to_i,
+                  'first_name' => existing_customer['firstName'],
+                  'last_name' => existing_customer['lastName'],
+                  'email' => existing_customer['email'],
+                  'phone' => existing_customer['phone']
+                }
+              end
             end
           rescue StandardError => e
             puts "Erro ao buscar customer por metafield: #{e.message}"
@@ -307,39 +310,25 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         end
       end
 
-      order_email = customer.present? ? customer&.dig('email') || draft_order['email'] : ''
-      order_customer = customer.present? ? customer['id'] : @stock_client_id
-
-      transactions = if draft_order['total_price'].to_f.zero?
-                       []
-                     else
-                       [
-                         {
-                           kind: 'sale',
-                           status: 'success',
-                           amount: draft_order['total_price']
-                         }
-                       ]
-                     end
       # 3. Preparar dados do pedido
       order_data = {
         order: {
-          email: order_email,
+          email: draft_order['email'] || customer&.dig('email'),
           send_receipt: false,
           send_fulfillment_receipt: false,
           line_items: draft_order['line_items'],
           customer: {
-            id: order_customer,
+            id: customer['id'],
             email_marketing_consent: {
-              state: customer&.dig('email_marketing_consent', 'state') || 'subscribed',
-              opt_in_level: customer&.dig('email_marketing_consent', 'opt_in_level') || 'single_opt_in',
-              consent_updated_at: customer&.dig('email_marketing_consent', 'consent_updated_at') || Time.now.iso8601
+              state: customer.dig('email_marketing_consent', 'state') || 'not_subscribed',
+              opt_in_level: customer.dig('email_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: customer.dig('email_marketing_consent', 'consent_updated_at') || Time.now.iso8601
             },
             sms_marketing_consent: {
-              state: customer&.dig('sms_marketing_consent', 'state') || 'subscribed',
-              opt_in_level: customer&.dig('sms_marketing_consent', 'opt_in_level') || 'single_opt_in',
-              consent_updated_at: customer&.dig('sms_marketing_consent', 'consent_updated_at') || Time.now.iso8601,
-              consent_collected_from: customer&.dig('sms_marketing_consent', 'consent_collected_from') || 'OTHER'
+              state: customer.dig('sms_marketing_consent', 'state') || 'not_subscribed',
+              opt_in_level: customer.dig('sms_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: customer.dig('sms_marketing_consent', 'consent_updated_at') || Time.now.iso8601,
+              consent_collected_from: customer.dig('sms_marketing_consent', 'consent_collected_from') || 'OTHER'
             }
           },
           shipping_address: draft_order['shipping_address'],
@@ -349,7 +338,13 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           source_name: kind,
           created_at: Time.strptime("#{pedido['data_pedido']} #{Time.now.strftime('%H:%M:%S %z')}", '%d/%m/%Y %H:%M:%S %z').iso8601,
           financial_status: 'paid',
-          transactions:,
+          transactions: [
+            {
+              kind: 'sale',
+              status: 'success',
+              amount: draft_order['total_price'].to_f.zero? ? '0.01' : draft_order['total_price']
+            }
+          ],
           total_discounts: draft_order['applied_discount'] ? draft_order['applied_discount']['amount'] : '0.0',
           subtotal_price: if draft_order['applied_discount']
                             draft_order['subtotal_price'].to_f - draft_order['applied_discount']['amount'].to_f
