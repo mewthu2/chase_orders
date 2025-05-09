@@ -29,7 +29,6 @@
   <body>
     <div class="wrapper" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>)">
       <% if current_user.present? %>
-        <%= render 'layouts/partials/header' %>
         <%= render 'layouts/partials/sidebar' %>
       <% end %>
       <%= render 'layouts/partials/content' %>

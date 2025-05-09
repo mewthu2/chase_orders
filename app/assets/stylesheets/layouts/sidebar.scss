@@ -8,9 +8,7 @@ aside.left-menu {
   opacity: 1;
   background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #000000 20px ), repeating-linear-gradient( #13143155, #131431 );
 }
-aside.left-menu .aside-inner {
-  margin-top: 45px;
-}
+
 @media only screen and (max-width: 768px) {
   aside.left-menu {
     margin-top: -45px;

@@ -1,175 +1,247 @@
-<div class="login">
-  <div class="main">
-    <div class="d1"></div>
-    <div class="d2"></div>
-    <div class="d3"></div>
-    <div class="d4"></div>
-  </div>
-  <div class="row d-flex justify-content-center" style="z-index: 99999; position: relative;">
-    <div class="col-10 col-sm-4 col-md-4 col-lg-4 mt-4 mb-4">
-      <%= image_tag 'admin/chase-logo', class: 'luminoso', style: 'width:100%; height: 100%;' %>
+<div class="login-container">
+  <!-- Login card -->
+  <div class="login-card">
+    <div class="logo-container">
+      <%= image_tag 'admin/chase-logo', class: 'logo-image' %>
     </div>
-    <h2 class="d-flex justify-content-center" style="color: lightblue;">Acompanhamento de pedidos</h2>
-  </div>
-  <div class="row d-flex justify-content-center" style="z-index: 99999; position: relative;">
-    <div class="col-12 col-sm-4 col-md-4 col-lg-4">
+    
+    <h2 class="login-title">Painel Administrativo</h2>
+    
+    <div class="login-form">
       <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
-        <div class="field">
-          <%= f.label 'Seu e-mail:' %><br />
+        <div class="form-group">
+          <%= f.label 'Seu e-mail:', class: 'form-label' %>
           <div class="input-group">
             <div class="input-group-text"><i class="fas fa-envelope"></i></div>
-            <%= f.email_field :email, autofocus: true, autocomplete: "email", class: 'form-control' %>
+            <%= f.email_field :email, autofocus: true, autocomplete: "email", class: 'form-control', placeholder: 'Digite seu e-mail' %>
           </div>
         </div>
 
-        <div class="field">
-          <%= f.label 'Sua senha:' %><br />
+        <div class="form-group">
+          <%= f.label 'Sua senha:', class: 'form-label' %>
           <div class="input-group">
             <div class="input-group-text"><i class="fas fa-lock"></i></div>
-            <%= f.password_field :password, autocomplete: "current-password", class: 'form-control' %>
+            <%= f.password_field :password, autocomplete: "current-password", class: 'form-control', placeholder: 'Digite sua senha' %>
           </div>
         </div>
 
         <% if devise_mapping.rememberable? %>
-          <div class="field">
-            <%= f.check_box :remember_me %>
-            <%= f.label :remember_me %>
+          <div class="form-check">
+            <%= f.check_box :remember_me, class: 'form-check-input' %>
+            <%= f.label :remember_me, 'Lembrar de mim', class: 'form-check-label' %>
           </div>
         <% end %>
 
-        <div class="actions">
-          <%= f.submit "Logar", class: 'btn btn-primary w-100' %>
+        <div class="form-actions">
+          <%= f.submit "Entrar", class: 'btn btn-login' %>
         </div>
       <% end %>
     </div>
+    
+    <div class="login-footer">
+      <p>© <%= Date.today.year %> Chase Brasil. Todos os direitos reservados.</p>
+    </div>
   </div>
 </div>
+
 <style>
-  @media (max-width: 999px) {
-    .main {
-      display: none;
+  /* Base styles */
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #121212;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* Login container */
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Login card */
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    background-color: rgba(18, 18, 18, 0.85);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    padding: 2.5rem;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.8s ease-out;
+    margin: 0;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Logo */
+  .logo-container {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .logo-image {
+    width: 180px;
+    height: auto;
+    box-shadow: 0 0 25px 8px rgba(0, 191, 255, 0.3);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .logo-image:hover {
+    box-shadow: 0 0 30px 10px rgba(0, 191, 255, 0.4);
+    transform: scale(1.02);
+  }
+  
+  /* Title */
+  .login-title {
+    color: #00bfff;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-weight: 500;
+    font-size: 1.8rem;
+    text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+  }
+  
+  /* Form */
+  .login-form {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+  }
+  
+  .input-group {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .input-group:focus-within {
+    box-shadow: 0 0 0 2px rgba(0, 191, 255, 0.5);
+  }
+  
+  .input-group-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    background-color: #1e1e1e;
+    color: #00bfff;
+    border: none;
+  }
+  
+  .form-control {
+    flex: 1;
+    padding: 12px 15px;
+    background-color: #2a2a2a;
+    border: none;
+    color: #ffffff;
+    font-size: 1rem;
+    outline: none;
+  }
+  
+  .form-control::placeholder {
+    color: #888888;
+  }
+  
+  .form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-check-input {
+    margin-right: 0.5rem;
+    accent-color: #00bfff;
+  }
+  
+  .form-check-label {
+    color: #cccccc;
+    font-size: 0.9rem;
+  }
+  
+  /* Button */
+  .btn-login {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #0088cc, #00bfff);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 191, 255, 0.3);
+  }
+  
+  .btn-login:hover {
+    background: linear-gradient(135deg, #00bfff, #0088cc);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 191, 255, 0.4);
+  }
+  
+  .btn-login:active {
+    transform: translateY(1px);
+  }
+  
+  /* Footer */
+  .login-footer {
+    text-align: center;
+    margin-top: 2rem;
+    color: #666666;
+    font-size: 0.8rem;
+  }
+  
+  /* Responsive styles */
+  @media (max-width: 768px) {
+    .login-card {
+      padding: 2rem;
+    }
+    
+    .logo-image {
+      width: 150px;
+    }
+    
+    .login-title {
+      font-size: 1.5rem;
     }
   }
-  .main {
-    margin-left: -19em !important;
+  
+  @media (max-width: 576px) {
+    .login-card {
+      padding: 1.5rem;
+      margin: 1rem;
+    }
+    
+    .logo-image {
+      width: 120px;
+    }
+    
+    .login-title {
+      font-size: 1.3rem;
+    }
   }
-  .login {
-    margin-left: -19em !important;
-    margin-top: 4em !important;
-  }
-
-  .wrapper {
-        background-image: repeating-radial-gradient(circle at 0px 0px, transparent 0px, rgb(0, 0, 0) 20px), repeating-linear-gradient(rgba(19, 20, 49, 0.333), rgb(19, 20, 49));
-  }
-
-  .luminoso {
-    box-shadow: 0 0 21px 7px rgba(255, 255, 255, 0.7);
-  }
-
- .d1 {
-  position: absolute;
-  background-image: url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80);
-  background-size: 2700px 1500px;
-
-  height: 30vh;
-  width: 15vw;
-
-  background-position: 0 50%;
-
-  box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.8);
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  animation: dd1 10s 1, dd12 10s 1;
-  animation-delay: 4s, 14s;
-}
-.d2 {
-  position: absolute;
-  background-image: url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80);
-  background-size: 2700px 1500px;
-
-  height: 50vh;
-  width: 25vw;
-
-  background-position: -10vw 50%;
-  left: 10vw;
-
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  animation: dd2 10s 2;
-  animation-delay: 4s;
-}
-.d3 {
-  position: absolute;
-  background-image: url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80);
-  background-size: 2700px 1500px;
-  overflow: hidden;
-
-  height: 100vh;
-  width: 40vw;
-  left: 25vw;
-  box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.8);
-  background-position: -35vw 50%;
-
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 3;
-  animation: dd3 10s 2;
-  animation-delay: 4s;
-}
-.d4 {
-  position: absolute;
-  overflow: hidden;
-  background-image: url(https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80);
-  background-size: 2700px 1500px;
-
-  height: 80vh;
-  width: 25vw;
-  left: 60vw;
-  background-position: -70vw 50%;
-
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  animation: dd4 10s 2;
-  animation-delay: 4s;
-}
-
-@keyframes dd1 {
-  0% {
-  }
-  50% {
-    width: 95vw;
-  }
-}
-@keyframes dd12 {
-  0% {
-  }
-  50% {
-    background-position: Calc(0vw - 40px) 50%;
-  }
-}
-@keyframes dd2 {
-  0% {
-  }
-  50% {
-    background-position: Calc(-10vw - 40px) 50%;
-  }
-}
-@keyframes dd3 {
-  0% {
-  }
-  50% {
-    background-position: Calc(-35vw - 40px) 50%;
-  }
-}
-@keyframes dd4 {
-  0% {
-  }
-  50% {
-    background-position: Calc(-70vw - 40px) 50%;
-  }
-}
+  .wrapper > section:not(.sem-menu) { margin-left: 0 !important; margin-top: 0 !important; }
 
 </style>
