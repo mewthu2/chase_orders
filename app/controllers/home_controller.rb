@@ -316,7 +316,7 @@ class HomeController < ApplicationController
       days_to_complete = (remaining_orders / daily_migration_rates[kind]).ceil
       completion_days[kind] = days_to_complete
     end
-    
+
     {
       labels: @kinds.map { |kind| kind_display_name(kind) },
       series: [

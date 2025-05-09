@@ -4,7 +4,7 @@ class Order < ApplicationRecord
   # Associacoes
   has_many :order_items
   # Validacoes
-
+  
   # Escopos
   # Metodos estaticos
   # Metodos publicos
