@@ -310,6 +310,17 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       order_email = customer.present? ? customer&.dig('email') || draft_order['email'] : ''
       order_customer = customer.present? ? customer['id'] : @stock_client_id
 
+      transactions = if draft_order['total_price'].to_f.zero?
+                       []
+                     else
+                       [
+                         {
+                           kind: 'sale',
+                           status: 'success',
+                           amount: draft_order['total_price']
+                         }
+                       ]
+                     end
       # 3. Preparar dados do pedido
       order_data = {
         order: {
@@ -338,13 +349,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           source_name: kind,
           created_at: Time.strptime("#{pedido['data_pedido']} #{Time.now.strftime('%H:%M:%S %z')}", '%d/%m/%Y %H:%M:%S %z').iso8601,
           financial_status: 'paid',
-          transactions: [
-            {
-              kind: 'sale',
-              status: 'success',
-              amount: draft_order['total_price'].to_f.zero? ? '0.01' : draft_order['total_price']
-            }
-          ],
+          transactions:,
           total_discounts: draft_order['applied_discount'] ? draft_order['applied_discount']['amount'] : '0.0',
           subtotal_price: if draft_order['applied_discount']
                             draft_order['subtotal_price'].to_f - draft_order['applied_discount']['amount'].to_f
