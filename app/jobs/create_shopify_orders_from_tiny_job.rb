@@ -191,7 +191,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
-  
+
     begin
       attempt = Attempt.create(
         kinds: :transfer_tiny_to_shopify_order,
@@ -199,7 +199,6 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         tracking: "kind:#{kind}|draft_order_id:#{draft_order_id}"
       )
 
-      # 1. Obter o draft order
       response = client.get(path: "draft_orders/#{draft_order_id}.json")
       draft_order = response.body['draft_order']
 
@@ -212,123 +211,34 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         return puts('Draft order not found')
       end
 
-      # 2. Verificar e corrigir customer se necessário
-      customer = draft_order['customer']
-      cliente_nome = pedido['cliente']['nome']
+      total_price = draft_order['total_price'].to_f
 
-      if customer && (customer['first_name'].nil? || customer['last_name'].nil?)
-        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
-        query = <<~GRAPHQL
-          query {
-            draftOrder(id: "gid://shopify/DraftOrder/#{draft_order_id}") {
-              localizedFields(first: 10) {
-                edges {
-                  node {
-                    key
-                    value
-                  }
-                }
-              }
-            }
-          }
-        GRAPHQL
-
-        graphql_response = graphql_client.query(query:)
-        localized_fields = graphql_response.body.dig('data', 'draftOrder', 'localizedFields', 'edges') || []
-
-        cpf_cnpj = localized_fields.find { |edge| edge.dig('node', 'key') == 'TAX_CREDENTIAL_BR' }&.dig('node', 'value')
-
-        if cpf_cnpj.present?
-          formatted_cpf_cnpj = cpf_cnpj.gsub(/[^0-9]/, '')
-
-          begin
-            metafield_query = <<~GRAPHQL
-              query {
-                customers(first: 1, query: "metafield.tax.credential_br:#{formatted_cpf_cnpj}") {
-                  edges {
-                    node {
-                      id
-                      firstName
-                      lastName
-                      email
-                      phone
-                      metafields(namespace: "tax", first: 1) {
-                        edges {
-                          node {
-                            key
-                            value
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            GRAPHQL
-
-            metafield_response = graphql_client.query(query: metafield_query)
-            customer_edge = metafield_response.body.dig('data', 'customers', 'edges')&.first
-
-            if customer_edge
-              existing_customer = customer_edge['node']
-              metafield_value = existing_customer.dig('metafields', 'edges')&.first&.dig('node', 'value')
-
-              if metafield_value == formatted_cpf_cnpj
-                customer = {
-                  'id' => existing_customer['id'].split('/').last.to_i,
-                  'first_name' => existing_customer['firstName'],
-                  'last_name' => existing_customer['lastName'],
-                  'email' => existing_customer['email'],
-                  'phone' => existing_customer['phone']
-                }
-              end
-            end
-          rescue StandardError => e
-            puts "Erro ao buscar customer por metafield: #{e.message}"
-          end
-        end
-
-        if customer['first_name'].nil? || customer['last_name'].nil?
-          nome_quebrado = cliente_nome.to_s.split(' ', 2)
-          first_name = nome_quebrado[0] || ''
-          last_name = nome_quebrado[1] || cliente_nome || ''
-
-          client.put(
-            path: "customers/#{customer['id']}.json",
-            body: {
-              customer: {
-                first_name:,
-                last_name:,
-                id: customer['id']
-              }
-            }
-          )
-          puts "Customer #{customer['id']} atualizado com nome: #{first_name} #{last_name}"
-
-          customer['first_name'] = first_name
-          customer['last_name'] = last_name
-        end
-      end
-
-      # 3. Preparar dados do pedido
+      transactions = total_price.zero? ? [] : [
+        {
+          kind: 'sale',
+          status: 'success',
+          amount: draft_order['total_price']
+        }
+      ]
+      # Prepara dados do pedido
       order_data = {
         order: {
-          email: draft_order['email'] || customer&.dig('email'),
+          email: draft_order['email'],
           send_receipt: false,
           send_fulfillment_receipt: false,
           line_items: draft_order['line_items'],
           customer: {
-            id: customer['id'],
+            id: draft_order['customer'].present? ? draft_order['customer']['id'] : @stock_client_id,
             email_marketing_consent: {
-              state: customer.dig('email_marketing_consent', 'state') || 'not_subscribed',
-              opt_in_level: customer.dig('email_marketing_consent', 'opt_in_level') || 'single_opt_in',
-              consent_updated_at: customer.dig('email_marketing_consent', 'consent_updated_at') || Time.now.iso8601
+              state: draft_order.dig('customer', 'email_marketing_consent', 'state') || 'subscribed',
+              opt_in_level: draft_order.dig('customer', 'email_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: draft_order.dig('customer', 'email_marketing_consent', 'consent_updated_at') || Time.now.iso8601
             },
             sms_marketing_consent: {
-              state: customer.dig('sms_marketing_consent', 'state') || 'not_subscribed',
-              opt_in_level: customer.dig('sms_marketing_consent', 'opt_in_level') || 'single_opt_in',
-              consent_updated_at: customer.dig('sms_marketing_consent', 'consent_updated_at') || Time.now.iso8601,
-              consent_collected_from: customer.dig('sms_marketing_consent', 'consent_collected_from') || 'OTHER'
+              state: draft_order.dig('customer', 'sms_marketing_consent', 'state') || 'subscribed',
+              opt_in_level: draft_order.dig('customer', 'sms_marketing_consent', 'opt_in_level') || 'single_opt_in',
+              consent_updated_at: draft_order.dig('customer', 'sms_marketing_consent', 'consent_updated_at') || Time.now.iso8601,
+              consent_collected_from: draft_order.dig('customer', 'sms_marketing_consent', 'consent_collected_from') || 'OTHER'
             }
           },
           shipping_address: draft_order['shipping_address'],
@@ -338,13 +248,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           source_name: kind,
           created_at: Time.strptime("#{pedido['data_pedido']} #{Time.now.strftime('%H:%M:%S %z')}", '%d/%m/%Y %H:%M:%S %z').iso8601,
           financial_status: 'paid',
-          transactions: [
-            {
-              kind: 'sale',
-              status: 'success',
-              amount: draft_order['total_price'].to_f.zero? ? '0.01' : draft_order['total_price']
-            }
-          ],
+          transactions:,
           total_discounts: draft_order['applied_discount'] ? draft_order['applied_discount']['amount'] : '0.0',
           subtotal_price: if draft_order['applied_discount']
                             draft_order['subtotal_price'].to_f - draft_order['applied_discount']['amount'].to_f
@@ -353,8 +257,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
                           end
         }
       }
-
-      # 4. Criar o pedido
+      # Cria o pedido
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
       puts "Order created successfully: #{order['id']}"
@@ -411,6 +314,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         end
       end
 
+      # Atualiza attempt com sucesso
       attempt.update(
         status: Attempt.statuses[:success],
         requisition: 'Pedido Shopify criado com sucesso',
@@ -427,8 +331,8 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         'draft_order_id' => draft_order_id,
         'location_id' => location_id
       }
-  
     rescue ShopifyAPI::Errors::HttpResponseError => e
+      # Atualiza attempt com falha
       if attempt
         attempt.update(
           status: Attempt.statuses[:failed],
@@ -439,7 +343,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         )
       else
         Attempt.create(
-          tiny_order_id: tiny_order_id,
+          tiny_order_id:,
           status: Attempt.statuses[:failed],
           error: e.message,
           exception: e.class.to_s,
