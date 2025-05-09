@@ -191,18 +191,18 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
-
+  
     begin
       attempt = Attempt.create(
         kinds: :transfer_tiny_to_shopify_order,
         tiny_order_id:,
         tracking: "kind:#{kind}|draft_order_id:#{draft_order_id}"
       )
-
+  
       # 1. Obter o draft order
       response = client.get(path: "draft_orders/#{draft_order_id}.json")
       draft_order = response.body['draft_order']
-
+  
       unless draft_order
         attempt.update(
           status: Attempt.statuses[:failed],
@@ -211,111 +211,72 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
         )
         return puts('Draft order not found')
       end
-
+  
       # 2. Verificar e corrigir customer se necessário
       customer = draft_order['customer']
       cliente_nome = pedido['cliente']['nome']
-
-      if customer && (customer['first_name'].nil? || customer['last_name'].nil?)
-        graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
-        query = <<~GRAPHQL
-          query {
-            draftOrder(id: "gid://shopify/DraftOrder/#{draft_order_id}") {
-              localizedFields(first: 10) {
-                edges {
-                  node {
-                    key
-                    value
-                  }
-                }
-              }
-            }
+  
+      # Configuração do customer padrão (stock_client_id)
+      stock_client_id = ENV['SHOPIFY_STOCK_CLIENT_ID'] || 'gid://shopify/Customer/123456789' # Substitua pelo ID real
+  
+      unless customer
+        customer = {
+          'id' => stock_client_id.split('/').last.to_i,
+          'first_name' => 'Cliente',
+          'last_name' => 'Genérico',
+          'email' => 'nao-responda@loja.com',
+          'email_marketing_consent' => {
+            'state' => 'not_subscribed',
+            'opt_in_level' => 'single_opt_in'
+          },
+          'sms_marketing_consent' => {
+            'state' => 'not_subscribed',
+            'opt_in_level' => 'single_opt_in'
           }
-        GRAPHQL
-
-        graphql_response = graphql_client.query(query:)
-        localized_fields = graphql_response.body.dig('data', 'draftOrder', 'localizedFields', 'edges') || []
-
-        cpf_cnpj = localized_fields.find { |edge| edge.dig('node', 'key') == 'TAX_CREDENTIAL_BR' }&.dig('node', 'value')
-
-        if cpf_cnpj.present?
-          formatted_cpf_cnpj = cpf_cnpj.gsub(/[^0-9]/, '')
-
+        }
+      end
+  
+      # Verificar e corrigir nome do customer se necessário
+      if customer['first_name'].nil? || customer['last_name'].nil?
+        nome_quebrado = cliente_nome.to_s.split(' ', 2)
+        first_name = nome_quebrado[0] || ''
+        last_name = nome_quebrado[1] || cliente_nome || ''
+  
+        # Só atualiza se não for o cliente genérico
+        unless customer['id'] == stock_client_id.split('/').last.to_i
           begin
-            metafield_query = <<~GRAPHQL
-              query {
-                customers(first: 1, query: "metafield.tax.credential_br:#{formatted_cpf_cnpj}") {
-                  edges {
-                    node {
-                      id
-                      firstName
-                      lastName
-                      email
-                      phone
-                      metafields(namespace: "tax", first: 1) {
-                        edges {
-                          node {
-                            key
-                            value
-                          }
-                        }
-                      }
-                    }
-                  }
+            client.put(
+              path: "customers/#{customer['id']}.json",
+              body: {
+                customer: {
+                  first_name: first_name,
+                  last_name: last_name,
+                  id: customer['id']
                 }
               }
-            GRAPHQL
-
-            metafield_response = graphql_client.query(query: metafield_query)
-            customer_edge = metafield_response.body.dig('data', 'customers', 'edges')&.first
-
-            if customer_edge
-              existing_customer = customer_edge['node']
-
-              customer = {
-                'id' => existing_customer['id'].split('/').last.to_i,
-                'first_name' => existing_customer['firstName'],
-                'last_name' => existing_customer['lastName'],
-                'email' => existing_customer['email'],
-                'phone' => existing_customer['phone']
-              }
-            end
+            )
+            puts "Customer #{customer['id']} atualizado com nome: #{first_name} #{last_name}"
           rescue StandardError => e
-            puts "Erro ao buscar customer por metafield: #{e.message}"
+            puts "Erro ao atualizar customer: #{e.message}"
           end
         end
-
-        if customer['first_name'].nil? || customer['last_name'].nil?
-          nome_quebrado = cliente_nome.to_s.split(' ', 2)
-          first_name = nome_quebrado[0] || ''
-          last_name = nome_quebrado[1] || cliente_nome || ''
-
-          client.put(
-            path: "customers/#{customer['id']}.json",
-            body: {
-              customer: {
-                first_name:,
-                last_name:,
-                id: customer['id']
-              }
-            }
-          )
-          puts "Customer #{customer['id']} atualizado com nome: #{first_name} #{last_name}"
-
-          customer['first_name'] = first_name
-          customer['last_name'] = last_name
-        end
+  
+        customer['first_name'] = first_name
+        customer['last_name'] = last_name
       end
-
+  
       # 3. Preparar dados do pedido
       order_data = {
         order: {
-          email: draft_order['email'] || customer&.dig('email'),
+          email: draft_order['email'] || customer['email'],
           send_receipt: false,
           send_fulfillment_receipt: false,
           line_items: draft_order['line_items'],
           customer: {
             id: customer['id'],
+            first_name: customer['first_name'],
+            last_name: customer['last_name'],
+            email: customer['email'],
             email_marketing_consent: {
               state: customer.dig('email_marketing_consent', 'state') || 'not_subscribed',
               opt_in_level: customer.dig('email_marketing_consent', 'opt_in_level') || 'single_opt_in',
@@ -350,17 +311,18 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
                           end
         }
       }
-
+  
+      # Restante do código permanece igual...
       # 4. Criar o pedido
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
       puts "Order created successfully: #{order['id']}"
-
+  
       if location_id
         begin
           fulfillment_orders_response = client.get(path: "orders/#{order['id']}/fulfillment_orders.json")
           fulfillment_orders = fulfillment_orders_response.body['fulfillment_orders']
-
+  
           fulfillment_orders.each do |fo|
             if fo['assigned_location_id'] != location_id && fo['supported_actions'].include?('move')
               begin
@@ -377,7 +339,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
                 puts "Erro ao mover fulfillment_order #{fo['id']}: #{e.message}"
               end
             end
-
+  
             begin
               client.post(
                 path: 'fulfillments.json',
@@ -394,7 +356,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
                         fulfillment_order_id: fo['id']
                       }
                     ],
-                    location_id:
+                    location_id: location_id
                   }
                 }
               )
@@ -407,18 +369,18 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           puts "Erro ao buscar fulfillment_orders: #{e.message}"
         end
       end
-
+  
       attempt.update(
         status: Attempt.statuses[:success],
         requisition: 'Pedido Shopify criado com sucesso',
         params: {
           shopify_order_id: order['id'],
-          draft_order_id:,
-          location_id:
+          draft_order_id: draft_order_id,
+          location_id: location_id
         }.to_json,
         tracking: "kind:#{kind}|shopify_order_id:#{order['id']}"
       )
-
+  
       {
         'id' => order['id'],
         'draft_order_id' => draft_order_id,
