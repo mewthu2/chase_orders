@@ -283,6 +283,17 @@
           </div>
         </div>
         <div class="card-body p-0">
+          <% if @job_running %>
+            <div class="alert alert-info m-3 mb-0">
+              <div class="d-flex align-items-center">
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <div>
+                  <strong>Atualização em andamento!</strong> Os dados exibidos podem não refletir as informações mais recentes.
+                  <small class="d-block mt-1">A página será atualizada automaticamente quando o processo for concluído.</small>
+                </div>
+              </div>
+            </div>
+          <% end %>
           <div class="table-responsive">
             <table class="table table-dark table-hover align-middle mb-0 product-table" id="products-table">
               <thead class="bg-dark text-white">
@@ -299,19 +310,7 @@
                 </tr>
               </thead>
               <tbody>
-                <% if @job_running %>
-                  <tr>
-                    <td colspan="9" class="text-center py-5">
-                      <div class="d-flex flex-column align-items-center">
-                        <div class="loading-animation mb-3">
-                          <div class="lds-ripple"><div></div><div></div></div>
-                        </div>
-                        <h5 class="text-white">Atualizando produtos...</h5>
-                        <p class="text-muted">Os dados estão sendo atualizados. Por favor, aguarde.</p>
-                      </div>
-                    </td>
-                  </tr>
-                <% elsif @products.empty? %>
+                <% if @products.empty? %>
                   <tr>
                     <td colspan="9" class="text-center py-5">
                       <div class="d-flex flex-column align-items-center">
@@ -323,7 +322,7 @@
                   </tr>
                 <% else %>
                   <% @products.each do |product| %>
-                    <tr class="product-row">
+                    <tr class="product-row <%= @job_running && product.updated_at > (Time.now - 5.minutes) ? 'updating-row' : '' %>">
                       <td class="text-center">
                         <div class="d-flex justify-content-center">
                           <%= link_to edit_product_path(product), 
@@ -427,7 +426,14 @@
                       </td>
                       <td class="text-center">
                         <%= product.updated_at.strftime('%d/%m/%Y %H:%M') %>
-                        <% if product_motor && product.updated_at > product_motor.start_time %>
+                        <% if @job_running && product.updated_at > (Time.now - 5.minutes) %>
+                          <span class="badge bg-info px-2 py-1 ms-1 pulse-badge" 
+                                data-bs-toggle="tooltip" 
+                                data-bs-placement="top" 
+                                title="Atualizado recentemente">
+                            <i class="fas fa-sync-alt"></i>
+                          </span>
+                        <% elsif product_motor && product.updated_at > product_motor.start_time %>
                           <span class="badge bg-info px-2 py-1 ms-1" 
                                 data-bs-toggle="tooltip" 
                                 data-bs-placement="top" 
@@ -660,6 +666,32 @@
     .sortable.desc .fa-sort:before {
       content: "\f0dd";
     }
+    
+    .updating-row {
+      background-color: rgba(13, 110, 253, 0.05) !important;
+    }
+    
+    .pulse-badge {
+      animation: pulse-animation 2s infinite;
+    }
+    
+    @keyframes pulse-animation {
+      0% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+      }
+    }
+    
+    .alert-info {
+      background-color: rgba(13, 202, 240, 0.1);
+      border-color: rgba(13, 202, 240, 0.2);
+      color: #0dcaf0;
+    }
   </style>
 <% end %>
 
@@ -694,7 +726,11 @@
           this.style.backgroundColor = '#242424';
         });
         row.addEventListener('mouseleave', function() {
-          this.style.backgroundColor = '';
+          if (this.classList.contains('updating-row')) {
+            this.style.backgroundColor = 'rgba(13, 110, 253, 0.05)';
+          } else {
+            this.style.backgroundColor = '';
+          }
         });
       });
       
