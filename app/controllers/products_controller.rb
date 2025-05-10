@@ -1,72 +1,116 @@
 class ProductsController < ApplicationController
-  before_action :set_product, only: [:show, :edit, :update, :destroy]
-
-  # GET /products
   def index
-    @products = Product.all
+    @products = filter_products
+    @motors = Motor.where(job_name: "Atualização de produtos").order(id: :desc).limit(1)
+    @job_running = check_if_job_running
   end
-
-  # GET /products/1
-  def show; end
-
-  # GET /products/new
-  def new
-    @product = Product.new
+  
+  def run_product_update
+    SyncProductsSituationJob.perform_later
+    flash[:notice] = "Atualização de produtos iniciada com sucesso!"
+    redirect_to products_path
   end
-
-  # GET /products/1/edit
-  def edit; end
-
-  # POST /products
-  def create
-    @product = Product.new(product_params)
-
-    if @product.save
-      redirect_to @product, notice: 'Product was successfully created.'
-    else
-      render :new
-    end
-  end
-
-  # PATCH/PUT /products/1
-  def update
-    if @product.update(product_params)
-      redirect_to @product, notice: 'Product was successfully updated.'
-    else
-      render :edit
-    end
-  end
-
-  # DELETE /products/1
-  def destroy
-    @product.destroy
-    redirect_to products_url, notice: 'Product was successfully destroyed.'
-  end
-
+  
   private
-
-  def set_product
-    @product = Product.find(params[:id])
-
-    if @product.tiny_rj_id.present?
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
-      @tiny_product = Tiny::Products.find_product(@product.tiny_rj_id, token)
-    elsif @product.tiny_bh_shopping_id.present?
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
-      @tiny_product = Tiny::Products.find_product(@product.tiny_bh_shopping_id, token)
-    elsif @product.tiny_lagoa_seca_product_id.present?
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION')
-      @tiny_product = Tiny::Products.find_product(@product.tiny_lagoa_seca_product_id, token)
-    else
-      @tiny_product = nil
+  
+  def filter_products
+    products = Product.all
+    
+    if params[:search].present?
+      search_term = "%#{params[:search]}%"
+      products = products.where("sku ILIKE ? OR shopify_product_name ILIKE ? OR id::text LIKE ? OR shopify_product_id LIKE ?", 
+                               search_term, search_term, search_term, search_term)
     end
+    
+    if params[:price_min].present?
+      products = products.where("price::float >= ?", params[:price_min].to_f)
+    end
+    
+    if params[:price_max].present?
+      products = products.where("price::float <= ?", params[:price_max].to_f)
+    end
+    
+    if params[:cost_min].present?
+      products = products.where("cost::float >= ?", params[:cost_min].to_f)
+    end
+    
+    if params[:cost_max].present?
+      products = products.where("cost::float <= ?", params[:cost_max].to_f)
+    end
+    
+    if params[:stock_rj].present?
+      case params[:stock_rj]
+      when 'in_stock'
+        products = products.where("stock_rj::integer > 0")
+      when 'out_of_stock'
+        products = products.where("stock_rj::integer = 0 OR stock_rj IS NULL")
+      when 'low_stock'
+        products = products.where("stock_rj::integer > 0 AND stock_rj::integer <= 3")
+      end
+    end
+    
+    if params[:stock_bh].present?
+      case params[:stock_bh]
+      when 'in_stock'
+        products = products.where("stock_bh_shopping::integer > 0")
+      when 'out_of_stock'
+        products = products.where("stock_bh_shopping::integer = 0 OR stock_bh_shopping IS NULL")
+      when 'low_stock'
+        products = products.where("stock_bh_shopping::integer > 0 AND stock_bh_shopping::integer <= 3")
+      end
+    end
+    
+    if params[:stock_ls].present?
+      case params[:stock_ls]
+      when 'in_stock'
+        products = products.where("stock_lagoa_seca::integer > 0")
+      when 'out_of_stock'
+        products = products.where("stock_lagoa_seca::integer = 0 OR stock_lagoa_seca IS NULL")
+      when 'low_stock'
+        products = products.where("stock_lagoa_seca::integer > 0 AND stock_lagoa_seca::integer <= 3")
+      end
+    end
+    
+    if params[:platform].present?
+      case params[:platform]
+      when 'shopify'
+        products = products.where.not(shopify_product_id: nil)
+      when 'tiny_rj'
+        products = products.where.not(tiny_rj_id: nil)
+      when 'tiny_bh'
+        products = products.where.not(tiny_bh_shopping_id: nil)
+      when 'tiny_ls'
+        products = products.where.not(tiny_lagoa_seca_product_id: nil)
+      end
+    end
+    
+    if params[:sort].present?
+      direction = params[:direction] == 'desc' ? 'DESC' : 'ASC'
+      case params[:sort]
+      when 'id'
+        products = products.order("id #{direction}")
+      when 'sku'
+        products = products.order("sku #{direction}")
+      when 'name'
+        products = products.order("shopify_product_name #{direction}")
+      when 'cost'
+        products = products.order("cost::float #{direction} NULLS LAST")
+      when 'price'
+        products = products.order("price::float #{direction} NULLS LAST")
+      when 'updated_at'
+        products = products.order("updated_at #{direction}")
+      end
+    else
+      products = products.order(updated_at: :desc)
+    end
+    
+    products
   end
-
-  def product_params
-    params.require(:product).permit(
-      :sku, :shopify_product_name, :tiny_rj_id, :tiny_bh_shopping_id, 
-      :tiny_lagoa_seca_product_id, :shopify_product_id, :shopify_inventory_item_id, 
-      :cost, :price, :compare_at_price, :vendor, :tags
-    )
+  
+  def check_if_job_running
+    motor = Motor.where(job_name: "Atualização de produtos").order(id: :desc).first
+    return false unless motor
+    
+    motor.start_time.present? && (motor.end_time.blank? || motor.running_time.blank?)
   end
 end

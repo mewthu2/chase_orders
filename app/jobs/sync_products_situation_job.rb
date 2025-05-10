@@ -8,10 +8,20 @@ class SyncProductsSituationJob < ActiveJob::Base
   BATCH_SIZE = 200
 
   def perform
-    sync_tiny_products
-    sync_shopify_products
-    sync_shopify_fields
-    sync_shopify_inventory_by_location
+    motor = start_motor_tracking
+
+    begin
+      sync_tiny_products
+      sync_shopify_products
+      sync_shopify_fields
+      sync_shopify_inventory_by_location
+
+      finish_motor_tracking(motor)
+    rescue StandardError => e
+      Rails.logger.error("Error in SyncProductsSituationJob: #{e.message}")
+      finish_motor_tracking(motor, error: e.message)
+      raise e
+    end
   end
 
   def sync_tiny_products
@@ -37,6 +47,25 @@ class SyncProductsSituationJob < ActiveJob::Base
   end
 
   private
+
+  def start_motor_tracking
+    motor = Motor.find_or_initialize_by(job_name: 'Atualização de produtos')
+    motor.start_time = Time.current
+    motor.end_time = nil
+    motor.running_time = nil
+    motor.save!
+    motor
+  end
+
+  def finish_motor_tracking(motor, error: nil)
+    return unless motor.present?
+
+    end_time = Time.current
+    motor.end_time = end_time
+    motor.running_time = (end_time - motor.start_time).to_i
+    motor.link = error.present? ? "Error: #{error}" : nil
+    motor.save!
+  end
 
   def update_inventory_for_location(tiny_location, shopify_location_id)
     stock_field = :"stock_#{tiny_location}"

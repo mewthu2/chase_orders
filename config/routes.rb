@@ -17,9 +17,7 @@ Rails.application.routes.draw do
 
   resources :products do
     collection do
-      get :product_integration
-  
-      get '/planilhas/:type/:origin', to: 'products#download', as: :download_planilha
+      post :run_product_update
     end
   end
 
