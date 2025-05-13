@@ -24,7 +24,7 @@ module Shopify::Products
     sync_methods = {
       'shopify_product_id' => method(:update_product_with_shopify_id),
       'price_and_title' => method(:update_product_with_price_and_title),
-      'variant_id' => method(:update_product_with_variant_id)
+      'variant_id' => method(:update_product_with_variant_id)  # Nova entrada para variant_id
     }
 
     if sync_methods.key?(function)
@@ -110,11 +110,12 @@ module Shopify::Products
       else
         puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
       end
-    rescue StandardError => e
+    rescue => e
       puts "Erro ao buscar o produto #{product.sku}: #{e.message}"
     end
   end
 
+  # Novo método para sincronizar o variant_id
   def update_product_with_variant_id(product)
     query = <<~GRAPHQL
       query inventoryItem {
@@ -134,6 +135,7 @@ module Shopify::Products
       if response.body['data'].present? && response.body['data']['inventoryItem'].present?
         variant_gid = response.body['data']['inventoryItem']['variant']['id']
 
+        # Extrair o ID numérico do GID (formato: gid://shopify/ProductVariant/12345678)
         variant_id = variant_gid.match(/ProductVariant\/(\d+)/)&.[](1)
 
         if variant_id
@@ -148,116 +150,6 @@ module Shopify::Products
     rescue StandardError => e
       puts "Erro ao buscar o variant_id do produto #{product.sku}: #{e.message}"
     end
-  end
-
-  def update_shopify_cost_from_local_database
-    success_count = 0
-    error_count = 0
-    skipped_count = 0
-
-    Product.find_each(batch_size: 100) do |product|
-      if product.shopify_variant_id.blank?
-        puts "Pulando produto #{product.sku}: shopify_variant_id não encontrado"
-        skipped_count += 1
-        next
-      end
-
-      if product.cost.blank?
-        puts "Pulando produto #{product.sku}: cost não definido"
-        skipped_count += 1
-        next
-      end
-
-      begin
-        # Primeiro, precisamos obter o inventory_item_id associado à variante
-        query = <<~GRAPHQL
-          {
-            productVariant(id: "gid://shopify/ProductVariant/#{product.shopify_variant_id}") {
-              inventoryItem {
-                id
-              }
-            }
-          }
-        GRAPHQL
-
-        response = client_shopify_graphql.query(query:)
-        
-        if response.body['data'].present? && 
-          response.body['data']['productVariant'].present? && 
-          response.body['data']['productVariant']['inventoryItem'].present?
-          
-          inventory_item_gid = response.body['data']['productVariant']['inventoryItem']['id']
-          
-          # Agora atualizamos o custo do inventory item
-          mutation = <<~GRAPHQL
-            mutation inventoryItemUpdate($inventoryItemId: ID!, $cost: Money!) {
-              inventoryItemUpdate(
-                id: $inventoryItemId,
-                input: {
-                  cost: $cost
-                }
-              ) {
-                inventoryItem {
-                  id
-                  cost
-                }
-                userErrors {
-                  field
-                  message
-                }
-              }
-            }
-          GRAPHQL
-
-          variables = {
-            inventoryItemId: inventory_item_gid,
-            cost: product.cost.to_s
-          }
-
-          update_response = client_shopify_graphql.query(
-            query: mutation,
-            variables: variables
-          )
-
-          if update_response.body['data'] && 
-            update_response.body['data']['inventoryItemUpdate'] && 
-            update_response.body['data']['inventoryItemUpdate']['userErrors'].empty?
-            
-            updated_cost = update_response.body['data']['inventoryItemUpdate']['inventoryItem']['cost']
-            puts "Atualizado com sucesso o custo do produto #{product.sku} para #{updated_cost} no Shopify"
-            success_count += 1
-          else
-            errors = update_response.body['data']['inventoryItemUpdate']['userErrors']
-            puts "Erro ao atualizar o custo do produto #{product.sku}: #{errors.map { |e| e['message'] }.join(', ')}"
-            error_count += 1
-          end
-        else
-          puts "Não foi possível encontrar o inventoryItem para o produto #{product.sku} com variant_id #{product.shopify_variant_id}"
-          error_count += 1
-        end
-      rescue StandardError => e
-        puts "Erro ao processar o produto #{product.sku}: #{e.message}"
-        error_count += 1
-      end
-    end
-
-    total = success_count + error_count + skipped_count
-    
-    puts "Resumo da atualização de custos:"
-    puts "  Sucesso: #{success_count} produtos"
-    puts "  Erros: #{error_count} produtos"
-    puts "  Pulados: #{skipped_count} produtos"
-    puts "Total processado: #{total} produtos"
-    
-    # Retornar estatísticas para uso no job
-    {
-      stats: {
-        success: success_count,
-        errors: error_count,
-        skipped: skipped_count,
-        total: total
-      }
-    }
   end
 
   def extract_shopify_product_id(response_body)
@@ -356,12 +248,6 @@ module Shopify::Products
       )
 
       product.save!
-    end
-  end
-
-  def sync_shopify_fields
-    %w[shopify_product_id price_and_title variant_id].each do |action|
-      Shopify::Products.sync_shopify_data_on_product(action)
     end
   end
 end
