@@ -15,6 +15,7 @@ class SyncProductsSituationJob < ActiveJob::Base
       sync_shopify_products
       sync_shopify_fields
       sync_shopify_inventory_by_location
+      # sync_shopify_costs
 
       finish_motor_tracking(motor)
     rescue StandardError => e
@@ -35,7 +36,7 @@ class SyncProductsSituationJob < ActiveJob::Base
   end
 
   def sync_shopify_fields
-    %w[shopify_product_id price_and_title].each do |action|
+    %w[shopify_product_id price_and_title variant_id].each do |action|
       Shopify::Products.sync_shopify_data_on_product(action)
     end
   end
@@ -44,6 +45,26 @@ class SyncProductsSituationJob < ActiveJob::Base
     SHOPIFY_LOCATION_IDS.each do |tiny_location, shopify_location_id|
       update_inventory_for_location(tiny_location, shopify_location_id)
     end
+  end
+
+  def sync_shopify_costs
+    Rails.logger.info('Iniciando sincronização de custos com o Shopify')
+
+    start_time = Time.current
+    result = Shopify::Products.update_shopify_cost_from_local_database
+    end_time = Time.current
+
+    duration = (end_time - start_time).to_i
+    Rails.logger.info("Sincronização de custos concluída em #{duration} segundos")
+
+    return unless result.is_a?(Hash) && result[:stats].present?
+
+    stats = result[:stats]
+    Rails.logger.info('Estatísticas de sincronização de custos: ' \
+                      "Sucesso: #{stats[:success]}, " \
+                      "Erros: #{stats[:errors]}, " \
+                      "Pulados: #{stats[:skipped]}, " \
+                      "Total: #{stats[:total]}")
   end
 
   private
@@ -60,7 +81,7 @@ class SyncProductsSituationJob < ActiveJob::Base
 
   def finish_motor_tracking(motor, error: nil)
     return unless motor.present?
-  
+
     end_time = Time.current
     motor.end_time = end_time
     motor.running_time = (end_time - motor.start_time).to_i

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_12_033357) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_13_050549) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -94,6 +94,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_12_033357) do
     t.integer "tiny_bh_shopping_id"
     t.integer "tiny_rj_id"
     t.string "shopify_product_id"
+    t.string "shopify_variant_id"
     t.string "shopify_inventory_item_id"
     t.string "shopify_product_name"
     t.string "cost"
