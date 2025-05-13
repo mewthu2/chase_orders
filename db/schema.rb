@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_04_211402) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_12_033357) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -41,6 +41,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_04_211402) do
     t.datetime "end_time"
     t.integer "running_time"
     t.text "link"
+    t.string "step"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

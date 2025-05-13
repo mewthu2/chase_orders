@@ -21,6 +21,7 @@ module Tiny::Products
         find_or_create_product(list_products['produtos'], kind)
       end
       assert_stock
+      assert_cost
     else
       total
     end
@@ -51,6 +52,45 @@ module Tiny::Products
                                   'Cookie' => '__cf_bm=b7051RRfkZC9AV_x5yhIR1YwwFKbCBPhyfHyy6UkYiA-1714414033-1.0.1.1-yM8S6uVPTUHPbqgBucg.8Ar9U5shYRd5zAGggCvd88XerAZtCE9ti1Whloyh5bUX2DNyQQN92b7G1gORyv2Dmw',
                                   'Content-Type' => 'application/x-www-form-urlencoded'
                                 })
+  end
+
+  def self.assert_cost
+    token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
+    token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+    token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+
+    update_cost_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
+    update_cost_for_products(Product.all, token_bh_shopping, 'bh_shopping')
+    update_cost_for_products(Product.all, token_rj, 'rj')
+  end
+
+  def self.update_cost_for_products(products, token, kind)
+    products.each do |product|
+      case kind
+      when 'lagoa_seca'
+        product_id = product.tiny_lagoa_seca_product_id
+      when 'bh_shopping'
+        product_id = product.tiny_bh_shopping_id
+      when 'rj'
+        product_id = product.tiny_rj_id
+      end
+
+      next unless product_id.present?
+
+      product_data = find_product(product_id, token)
+      cost_data = product_data['produtos'].first['produto'] rescue nil
+
+      next unless cost_data&.key?('preco_custo_medio')
+
+      cost_value = cost_data['preco_custo_medio'].to_f
+      puts "Custo médio - #{cost_value}"
+      puts "Tipo - #{kind}"
+
+      product.update(cost: cost_value) if cost_value.positive?
+
+      print 'Dormindo 2 segundos...'
+      sleep(0.5)
+    end
   end
 
   def self.assert_stock

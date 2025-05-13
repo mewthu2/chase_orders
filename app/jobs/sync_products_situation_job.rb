@@ -53,17 +53,19 @@ class SyncProductsSituationJob < ActiveJob::Base
     motor.start_time = Time.current
     motor.end_time = nil
     motor.running_time = nil
+    motor.step = 'started'
     motor.save!
     motor
   end
 
   def finish_motor_tracking(motor, error: nil)
     return unless motor.present?
-
+  
     end_time = Time.current
     motor.end_time = end_time
     motor.running_time = (end_time - motor.start_time).to_i
     motor.link = error.present? ? "Error: #{error}" : nil
+    motor.step = error.present? ? 'error' : 'finished'
     motor.save!
   end
 
@@ -117,9 +119,7 @@ class SyncProductsSituationJob < ActiveJob::Base
       client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
       response = client.query(query: mutation, variables:)
 
-      if response.body['errors'].present?
-        Rails.logger.error "Error updating inventory batch: #{response.body['errors']}"
-      end
+      Rails.logger.error "Error updating inventory batch: #{response.body['errors']}" if response.body['errors'].present?
     rescue StandardError => e
       Rails.logger.error "Error updating inventory batch: #{e.message}"
     end
