@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_13_050549) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_14_020938) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -93,6 +93,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_13_050549) do
     t.string "tiny_lagoa_seca_product_id"
     t.integer "tiny_bh_shopping_id"
     t.integer "tiny_rj_id"
+    t.string "tiny_2_id"
     t.string "shopify_product_id"
     t.string "shopify_variant_id"
     t.string "shopify_inventory_item_id"
@@ -109,6 +110,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_13_050549) do
     t.string "stock_lagoa_seca"
     t.string "stock_bh_shopping"
     t.integer "stock_rj"
+    t.string "stock_tiny_2"
     t.string "tags"
   end
 

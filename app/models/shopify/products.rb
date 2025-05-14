@@ -24,7 +24,8 @@ module Shopify::Products
     sync_methods = {
       'shopify_product_id' => method(:update_product_with_shopify_id),
       'price_and_title' => method(:update_product_with_price_and_title),
-      'variant_id' => method(:update_product_with_variant_id)  # Nova entrada para variant_id
+      'variant_id' => method(:update_product_with_variant_id),
+      'cost' => method(:update_product_variant_cost)
     }
 
     if sync_methods.key?(function)
@@ -110,12 +111,65 @@ module Shopify::Products
       else
         puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
       end
-    rescue => e
+    rescue StandardError => e
       puts "Erro ao buscar o produto #{product.sku}: #{e.message}"
     end
   end
 
-  # Novo método para sincronizar o variant_id
+  def update_product_variant_cost(product)
+    return unless product.shopify_inventory_item_id.present?
+
+    unless product.cost.to_f.positive?
+      Rails.logger.info "Custo inválido ou zero para #{product.sku}. Nenhuma atualização realizada."
+      return
+    end
+
+    query = <<~GRAPHQL
+      mutation($id: ID!, $input: InventoryItemInput!) {
+        inventoryItemUpdate(id: $id, input: $input) {
+          inventoryItem {
+            id
+            unitCost {
+              amount
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = {
+      id: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}",
+      input: {
+        cost: product.cost.to_f,
+        tracked: true,
+        countryCodeOfOrigin: 'BR'
+      }
+    }
+
+    begin
+      response = client_shopify_graphql.query(
+        query:,
+        variables:
+      )
+
+      if response.body['errors']
+        Rails.logger.error "Erro GraphQL: #{response.body['errors']}"
+      elsif user_errors == response.body.dig('data', 'inventoryItemUpdate', 'userErrors').presence
+        Rails.logger.error "Erros na mutation: #{user_errors}"
+      else
+        updated_cost = response.body.dig('data', 'inventoryItemUpdate', 'inventoryItem', 'unitCost', 'amount')
+        Rails.logger.info "Custo atualizado para #{updated_cost} no item de inventário #{product.shopify_inventory_item_id}"
+      end
+
+    rescue StandardError => e
+      Rails.logger.error "Erro ao processar #{product.sku}: #{e.message}\n#{e.backtrace.join("\n")}"
+    end
+  end
+
   def update_product_with_variant_id(product)
     query = <<~GRAPHQL
       query inventoryItem {
@@ -135,7 +189,6 @@ module Shopify::Products
       if response.body['data'].present? && response.body['data']['inventoryItem'].present?
         variant_gid = response.body['data']['inventoryItem']['variant']['id']
 
-        # Extrair o ID numérico do GID (formato: gid://shopify/ProductVariant/12345678)
         variant_id = variant_gid.match(/ProductVariant\/(\d+)/)&.[](1)
 
         if variant_id
@@ -212,7 +265,6 @@ module Shopify::Products
 
         product.assign_attributes(
           shopify_product_name: shopify_product_data['title'],
-          cost: variant_data['cost'],
           sku: variant_data['sku'],
           price: variant_data['price'],
           option1: variant_data['option1'],
@@ -243,11 +295,66 @@ module Shopify::Products
 
       product.assign_attributes(
         shopify_inventory_item_id: item_data['id'],
-        cost: item_data['cost'],
         sku: item_data['sku']
       )
 
       product.save!
+    end
+  end
+
+  def update_inventory_for_location(tiny_location, shopify_location_id)
+    stock_field = :"stock_#{tiny_location}"
+
+    Product.where.not(shopify_inventory_item_id: nil)
+           .where("#{stock_field} IS NOT NULL")
+           .in_batches(of: BATCH_SIZE) do |batch|
+
+      quantities = batch.map do |product|
+        {
+          inventoryItemId: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}",
+          locationId: "gid://shopify/Location/#{shopify_location_id}",
+          quantity: product.send(stock_field).to_i
+        }
+      end
+
+      update_inventory_items_batch(quantities)
+    end
+  end
+
+  def update_inventory_items_batch(quantities)
+    return if quantities.empty?
+
+    mutation = <<~GRAPHQL
+      mutation($input: InventorySetQuantitiesInput!) {
+        inventorySetQuantities(input: $input) {
+          inventoryAdjustmentGroup {
+            id
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = {
+      input: {
+        ignoreCompareQuantity: true,
+        reason: 'stock sync',
+        quantities:
+      }
+    }
+
+    session = ShopifyAPI::Context.active_session
+
+    begin
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+      response = client.query(query: mutation, variables:)
+
+      Rails.logger.error "Error updating inventory batch: #{response.body['errors']}" if response.body['errors'].present?
+    rescue StandardError => e
+      Rails.logger.error "Error updating inventory batch: #{e.message}"
     end
   end
 end

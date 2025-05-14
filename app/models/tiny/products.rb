@@ -21,7 +21,7 @@ module Tiny::Products
         find_or_create_product(list_products['produtos'], kind)
       end
       assert_stock
-      assert_cost
+      assert_cost if kind == 'tiny_2'
     else
       total
     end
@@ -55,26 +55,14 @@ module Tiny::Products
   end
 
   def self.assert_cost
-    token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
-    token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
-    token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+    token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
 
-    update_cost_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
-    update_cost_for_products(Product.all, token_bh_shopping, 'bh_shopping')
-    update_cost_for_products(Product.all, token_rj, 'rj')
+    update_cost_for_products(Product.all, token_tiny2, 'tiny_2')
   end
 
   def self.update_cost_for_products(products, token, kind)
     products.each do |product|
-      case kind
-      when 'lagoa_seca'
-        product_id = product.tiny_lagoa_seca_product_id
-      when 'bh_shopping'
-        product_id = product.tiny_bh_shopping_id
-      when 'rj'
-        product_id = product.tiny_rj_id
-      end
-
+      product_id = product.tiny_2_id
       next unless product_id.present?
 
       product_data = find_product(product_id, token)
@@ -97,10 +85,12 @@ module Tiny::Products
     token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
     token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
     token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+    token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
 
     update_stock_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
     update_stock_for_products(Product.all, token_bh_shopping, 'bh_shopping')
     update_stock_for_products(Product.all, token_rj, 'rj')
+    update_stock_for_products(Product.all, token_tiny2, 'token_tiny_2')
   end
 
   def self.update_stock_for_products(products, token, kind)
@@ -165,19 +155,8 @@ module Tiny::Products
       product.update!(tiny_bh_shopping_id: product_id) if product.tiny_bh_shopping_id.blank?
     when 'rj'
       product.update!(tiny_rj_id: product_id) if product.tiny_rj_id.blank?
-    end
-  end
-
-  def self.product_exists?(product, kind)
-    case kind
-    when 'lagoa_seca'
-      product.tiny_lagoa_seca_product_id.present?
-    when 'bh_shopping'
-      product.tiny_bh_shopping_id.present?
-    when 'rj'
-      product.tiny_rj_id.present?
-    else
-      false
+    when 'tiny_2'
+      product.update!(tiny_2_id: product_id) if product.tiny_2_id.blank?
     end
   end
 
@@ -191,6 +170,8 @@ module Tiny::Products
       ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
     when 'tiny_3'
       ENV.fetch('TOKEN_TINY3_PRODUCTION')
+    when 'tiny_2'
+      ENV.fetch('TOKEN_TINY2_PRODUCTION')
     else
       raise "Unknown kind: #{kind}"
     end
