@@ -17,7 +17,7 @@ class SyncProductsSituationJob < ActiveJob::Base
     begin
       sync_tiny_products(location)
       sync_shopify_products
-      Tiny::Products.list_all_products('tiny_2', '', 'update_products_situation', '')
+      Tiny::Products.list_all_products('tiny_2', '', 'update_products_situation', '') if location == :rj
       sync_shopify_fields
       sync_shopify_inventory(location)
       sync_shopify_costs
