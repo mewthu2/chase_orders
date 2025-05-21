@@ -1,5 +1,5 @@
 class SyncProductsSituationJob < ActiveJob::Base
-  SHOPIFY_LOCATION_IDS = {
+  LOCATIONS = {
     lagoa_seca: ENV.fetch('LOCATION_LAGOA_SECA'),
     bh_shopping: ENV.fetch('LOCATION_BH_SHOPPING'),
     rj: ENV.fetch('LOCATION_BARRA_SHOPPING')
@@ -7,29 +7,33 @@ class SyncProductsSituationJob < ActiveJob::Base
 
   BATCH_SIZE = 200
 
-  def perform
-    motor = start_motor_tracking
+  def perform(location)
+    unless LOCATIONS.key?(location.to_sym)
+      raise ArgumentError, "Invalid location: #{location}. Valid options are: #{LOCATIONS.keys.join(', ')}"
+    end
+
+    motor = start_motor_tracking(location)
 
     begin
-      sync_tiny_products
+      sync_tiny_products(location)
       sync_shopify_products
+      Tiny::Products.list_all_products('tiny_2', '', 'update_products_situation', '')
       sync_shopify_fields
-      sync_shopify_inventory_by_location
+      sync_shopify_inventory(location)
       sync_shopify_costs
 
       finish_motor_tracking(motor)
     rescue StandardError => e
-      Rails.logger.error("Error in SyncProductsSituationJob: #{e.message}")
+      Rails.logger.error("Error in SyncProductsSituationJob for #{location}: #{e.message}\n#{e.backtrace.join("\n")}")
       finish_motor_tracking(motor, error: e.message)
       raise e
     end
   end
 
-  def sync_tiny_products
-    SHOPIFY_LOCATION_IDS.each_key do |location|
-      Tiny::Products.list_all_products(location.to_s, '', 'update_products_situation', '')
-    end
-    Tiny::Products.list_all_products('tiny_2', '', 'update_products_situation', '')
+  private
+
+  def sync_tiny_products(location)
+    Tiny::Products.list_all_products(location.to_s, '', 'update_products_situation', '')
   end
 
   def sync_shopify_products
@@ -42,16 +46,13 @@ class SyncProductsSituationJob < ActiveJob::Base
     end
   end
 
-  def sync_shopify_inventory_by_location
-    SHOPIFY_LOCATION_IDS.each do |tiny_location, shopify_location_id|
-      Shopify::Products.update_inventory_for_location(tiny_location, shopify_location_id)
-    end
+  def sync_shopify_inventory(location)
+    shopify_location_id = LOCATIONS[location.to_sym]
+    Shopify::Products.update_inventory_for_location(location, shopify_location_id)
   end
 
-  private
-
-  def start_motor_tracking
-    motor = Motor.find_or_initialize_by(job_name: 'Atualização de produtos')
+  def start_motor_tracking(location)
+    motor = Motor.find_or_initialize_by(job_name: "Atualização de produtos - #{location}")
     motor.start_time = Time.current
     motor.end_time = nil
     motor.running_time = nil
@@ -63,9 +64,8 @@ class SyncProductsSituationJob < ActiveJob::Base
   def finish_motor_tracking(motor, error: nil)
     return unless motor.present?
 
-    end_time = Time.current
-    motor.end_time = end_time
-    motor.running_time = (end_time - motor.start_time).to_i
+    motor.end_time = Time.current
+    motor.running_time = (motor.end_time - motor.start_time).to_i
     motor.link = error.present? ? "Error: #{error}" : nil
     motor.step = error.present? ? 'error' : 'finished'
     motor.save!
