@@ -151,7 +151,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       'phone' => format_phone_for_shopify(customer_phone),
       'shippingAddress' => endereco,
       'billingAddress' => endereco,
-      'note' => cliente['obs'] || '',
+      'note' => "#{cliente['forma_pagamento']} - #{cliente['meio_pagamento']}" || '',
       'tags' => pedido['nome_vendedor'],
       'localizedFields' => localized_fields,
       'sourceName' => source_name
