@@ -305,25 +305,35 @@ module Shopify::Products
   def update_inventory_for_location(tiny_location, shopify_location_id)
     stock_field = :"stock_#{tiny_location}"
 
-    Product.where.not(shopify_inventory_item_id: nil)
-           .where("#{stock_field} IS NOT NULL")
-           .in_batches(of: BATCH_SIZE) do |batch|
+    products = Product.where.not(shopify_inventory_item_id: nil)
+                      .where("#{stock_field} IS NOT NULL")
 
-      quantities = batch.map do |product|
-        {
-          inventoryItemId: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}",
-          locationId: "gid://shopify/Location/#{shopify_location_id}",
-          quantity: product.send(stock_field).to_i
-        }
-      end
+    access_token = case tiny_location
+                   when 'bh_shopping'
+                     ENV.fetch('BH_SHOPPING_TOKEN_APP')
+                   when 'rj'
+                     ENV.fetch('BARRA_SHOPPING_TOKEN_APP')
+                   when 'lagoa_seca'
+                     ENV.fetch('LAGOA_SECA_TOKEN_APP')
+                   else
+                     raise "Token não definido para a localização: #{tiny_location}"
+                   end
 
-      update_inventory_items_batch(quantities)
+    products.each do |product|
+      inventory_item_id = "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}"
+      location_id = "gid://shopify/Location/#{shopify_location_id}"
+      quantity = product.send(stock_field).to_i
+
+      update_inventory_quantity(
+        access_token,
+        inventory_item_id:,
+        location_id:,
+        quantity:
+      )
     end
   end
 
-  def update_inventory_items_batch(quantities)
-    return if quantities.empty?
-
+  def update_inventory_quantity(access_token, inventory_item_id:, location_id:, quantity:)
     mutation = <<~GRAPHQL
       mutation($input: InventorySetQuantitiesInput!) {
         inventorySetQuantities(input: $input) {
@@ -340,21 +350,40 @@ module Shopify::Products
 
     variables = {
       input: {
+        name: 'available',
+        reason: 'correction',
         ignoreCompareQuantity: true,
-        reason: 'stock sync',
-        quantities:
+        quantities: [
+          {
+            inventoryItemId: inventory_item_id,
+            locationId: location_id,
+            quantity:
+          }
+        ]
       }
     }
 
-    session = ShopifyAPI::Context.active_session
+    session = ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token:
+    )
 
     begin
       client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
       response = client.query(query: mutation, variables:)
 
-      Rails.logger.error "Error updating inventory batch: #{response.body['errors']}" if response.body['errors'].present?
+      if response.body['errors'].present?
+        Rails.logger.error "GraphQL error: #{response.body['errors']}"
+        puts 'Erro ao atualizar o produto'
+      elsif response.body.dig('data', 'inventorySetQuantities', 'userErrors').present?
+        Rails.logger.error "User error: #{response.body.dig('data', 'inventorySetQuantities', 'userErrors')}"
+        puts 'Erro do usuário ao atualizar o produto'
+      else
+        putss 'Produto atualizado com sucesso'
+      end
     rescue StandardError => e
-      Rails.logger.error "Error updating inventory batch: #{e.message}"
+      Rails.logger.error "Exception: #{e.message}"
+      puts 'Erro de exceção ao atualizar o produto'
     end
   end
 end
