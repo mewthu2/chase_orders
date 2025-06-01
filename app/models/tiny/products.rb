@@ -60,7 +60,7 @@ module Tiny::Products
   def self.assert_cost
     token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
 
-    products = Product.select(:id, :tiny_2_id, :cost)
+    products = Product.select(:id, :tiny_2_id, :cost, :updated_at)
                       .where('updated_at < ?', 24.hours.ago)
                       .where.not(tiny_2_id: nil)
 
@@ -91,8 +91,8 @@ module Tiny::Products
   def self.assert_stock(kind)
     token = fetch_token_for_kind(kind)
 
-    products = Product.select(:id, :tiny_lagoa_seca_product_id, :tiny_bh_shopping_id, :tiny_rj_id, 
-                              :stock_lagoa_seca, :stock_bh_shopping, :stock_rj)
+    products = Product.select(:id, :tiny_lagoa_seca_product_id, :tiny_bh_shopping_id, :tiny_rj_id,
+                              :stock_lagoa_seca, :stock_bh_shopping, :stock_rj, :updated_at)
                       .where('updated_at < ?', 24.hours.ago)
 
     update_stock_for_products(products, token, kind)
