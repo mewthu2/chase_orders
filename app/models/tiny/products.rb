@@ -57,40 +57,46 @@ module Tiny::Products
   def self.assert_cost
     token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
 
-    update_cost_for_products(Product.all, token_tiny2, 'tiny_2')
+    products = Product.select(:id, :tiny_2_id, :cost)
+                      .where('updated_at < ?', 24.hours.ago)
+                      .where.not(tiny_2_id: nil)
+
+    update_cost_for_products(products, token_tiny2, 'tiny_2')
   end
 
   def self.update_cost_for_products(products, token, kind)
-    products.where('updated_at < ?', 24.hours.ago).each do |product|
-      product_id = product.tiny_2_id
-      next unless product_id.present?
-
-      product_data = find_product(product_id, token)
-      cost_data = product_data['produtos'].first['produto'] rescue nil
+    products.find_each(batch_size: 100) do |product|
+      product_data = find_product(product.tiny_2_id, token)
+      cost_data = product_data.dig('produtos', 0, 'produto') if product_data
 
       next unless cost_data&.key?('preco_custo_medio')
 
       cost_value = cost_data['preco_custo_medio'].to_f
-      puts "Custo médio - #{cost_value}"
-      puts "Tipo - #{kind}"
 
-      product.update(cost: cost_value) if cost_value.positive?
+      if cost_value.positive?
+        puts "Atualizando produto #{product.id} | Custo médio: #{cost_value} | Tipo: #{kind}"
+        product.update_columns(cost: cost_value)
+      end
 
-      print 'Dormindo 2 segundos...'
       sleep(0.5)
+    rescue StandardErrore => e
+      Rails.logger.error "Erro ao atualizar custo do produto #{product.id}: #{e.message}"
+      next
     end
   end
 
   def self.assert_stock(kind)
     token = fetch_token_for_kind(kind)
 
-    update_stock_for_products(Product.all, token, kind)
+    products = Product.select(:id, :tiny_lagoa_seca_product_id, :tiny_bh_shopping_id, :tiny_rj_id, 
+                              :stock_lagoa_seca, :stock_bh_shopping, :stock_rj)
+                      .where('updated_at < ?', 24.hours.ago)
+
+    update_stock_for_products(products, token, kind)
   end
 
   def self.update_stock_for_products(products, token, kind)
-    filtered_products = products.where('updated_at < ?', 24.hours.ago)
-
-    filtered_products.each do |product|
+    products.each do |product|
       case kind
       when 'lagoa_seca'
         product_id = product.tiny_lagoa_seca_product_id
