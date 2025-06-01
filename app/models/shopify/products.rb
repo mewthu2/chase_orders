@@ -307,6 +307,7 @@ module Shopify::Products
 
     products = Product.where.not(shopify_inventory_item_id: nil)
                       .where("#{stock_field} IS NOT NULL")
+                      .where('updated_at < ?', 24.hours.ago)
 
     access_token = case tiny_location
                    when 'bh_shopping'

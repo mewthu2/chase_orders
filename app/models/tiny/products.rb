@@ -20,7 +20,7 @@ module Tiny::Products
       total.each do |list_products|
         find_or_create_product(list_products['produtos'], kind)
       end
-      assert_stock
+      assert_stock(kind)
       assert_cost if kind == 'tiny_2'
     else
       total
@@ -61,7 +61,7 @@ module Tiny::Products
   end
 
   def self.update_cost_for_products(products, token, kind)
-    products.each do |product|
+    products.where('updated_at < ?', 24.hours.ago).each do |product|
       product_id = product.tiny_2_id
       next unless product_id.present?
 
@@ -82,20 +82,13 @@ module Tiny::Products
   end
 
   def self.assert_stock
-    token_lagoa_seca = ENV.fetch('TOKEN_TINY_PRODUCTION')
-    token_bh_shopping = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
-    token_rj = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
-    token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
+    token = fetch_token_for_kind(kind)
 
-    update_stock_for_products(Product.all, token_lagoa_seca, 'lagoa_seca')
-    update_stock_for_products(Product.all, token_bh_shopping, 'bh_shopping')
-    update_stock_for_products(Product.all, token_rj, 'rj')
-    update_stock_for_products(Product.all, token_tiny2, 'token_tiny_2')
+    update_stock_for_products(Product.all, token, kind)
   end
 
   def self.update_stock_for_products(products, token, kind)
-    six_hours_ago = 24.hours.ago
-    filtered_products = products.where('updated_at < ?', six_hours_ago)
+    filtered_products = products.where('updated_at < ?', 24.hours.ago)
 
     filtered_products.each do |product|
       case kind

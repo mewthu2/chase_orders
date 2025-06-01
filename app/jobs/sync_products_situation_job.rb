@@ -1,4 +1,6 @@
 class SyncProductsSituationJob < ActiveJob::Base
+  queue_as :products
+
   LOCATIONS = {
     lagoa_seca: ENV.fetch('LOCATION_LAGOA_SECA'),
     bh_shopping: ENV.fetch('LOCATION_BH_SHOPPING'),
@@ -7,20 +9,30 @@ class SyncProductsSituationJob < ActiveJob::Base
 
   BATCH_SIZE = 200
 
+  # Synchronizes the situation of products across Tiny and Shopify for a given location.
+  # @param location [Symbol] The location to synchronize products for. Valid options are :lagoa_seca, :bh_shopping, and :rj.
+  # @raise [ArgumentError] If the provided location is invalid.
+  # @return [void]
   def perform(location)
-    unless LOCATIONS.key?(location.to_sym)
-      raise ArgumentError, "Invalid location: #{location}. Valid options are: #{LOCATIONS.keys.join(', ')}"
-    end
+    LOCATIONS.key?(location.to_sym) || raise(ArgumentError, "Invalid location '#{location}'. Valid locations are: #{LOCATIONS.keys.join(', ')}.")
 
     motor = start_motor_tracking(location)
 
     begin
+      # Synchronize products from Tiny
       sync_tiny_products(location)
+
+      # Synchronize products from Shopify
       sync_shopify_products
+
+      # Update Tiny products for rj only
       Tiny::Products.list_all_products('tiny_2', '', 'update_products_situation', '') if location == :rj
+
+      # Synchronize Shopify fields
       sync_shopify_fields
+
+      # Update Shopify inventory for the specified location
       sync_shopify_inventory(location)
-      sync_shopify_costs
 
       finish_motor_tracking(motor)
     rescue StandardError => e
