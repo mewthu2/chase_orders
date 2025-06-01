@@ -158,8 +158,6 @@ module Shopify::Products
 
       if response.body['errors']
         Rails.logger.error "Erro GraphQL: #{response.body['errors']}"
-      elsif user_errors == response.body.dig('data', 'inventoryItemUpdate', 'userErrors').presence
-        Rails.logger.error "Erros na mutation: #{user_errors}"
       else
         updated_cost = response.body.dig('data', 'inventoryItemUpdate', 'inventoryItem', 'unitCost', 'amount')
         Rails.logger.info "Custo atualizado para #{updated_cost} no item de inventário #{product.shopify_inventory_item_id}"
