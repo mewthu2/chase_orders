@@ -4,27 +4,30 @@ module Tiny::Products
   def list_all_products(kind, situacao, function, pagina = nil)
     token = fetch_token_for_kind(kind)
 
-    response = get_products_response(situacao, token, pagina)
-    total = []
+    initial_response = get_products_response(situacao, token, pagina)
+    total = [initial_response]
 
-    if response['numero_paginas'].present? && response['numero_paginas'].positive?
-      (1..response[:numero_paginas]).each do |page_number|
-        total << get_products_response(situacao, token, page_number)
+    if initial_response['numero_paginas'].to_i > 1
+      total += (2..initial_response['numero_paginas']).map do |page_number|
+        get_products_response(situacao, token, page_number)
       end
-    else
-      total << response
     end
 
     case function
     when 'update_products_situation'
       total.each do |list_products|
-        find_or_create_product(list_products['produtos'], kind)
+        find_or_create_products(list_products['produtos'], kind) if list_products['produtos'].present?
       end
+
       assert_stock(kind)
       assert_cost if kind == 'tiny_2'
+
+      { status: :success, processed_products: total.sum { |r| r['produtos']&.size || 0 } }
     else
       total
     end
+  rescue StandardError => e
+    { status: :error, message: e.message }
   end
 
   def self.obtain_stock(product_id, token)
@@ -137,29 +140,39 @@ module Tiny::Products
     response.with_indifferent_access[:retorno]
   end
 
-  def self.find_or_create_product(products, kind)
+  def self.find_or_create_products(products, kind)
+    return unless products.present?
+
+    product_codes = products.filter_map do |tiny_product_data|
+      product_data = tiny_product_data['produto'] rescue next
+      product_data['codigo'] if product_data['codigo'] != product_data['nome']
+    end.compact
+
+    existing_products = Product.where(sku: product_codes).index_by(&:sku)
+
     products.each do |tiny_product_data|
       next unless tiny_product_data.key?('produto')
 
       product_data = tiny_product_data['produto']
       next if product_data['codigo'] == product_data['nome']
 
-      product = Product.find_or_create_by(sku: product_data['codigo'])
+      product = existing_products[product_data['codigo']] || Product.create!(sku: product_data['codigo'])
       assign_tiny_product_id(product, kind, product_data['id'])
     end
   end
 
   def self.assign_tiny_product_id(product, kind, product_id)
-    case kind
-    when 'lagoa_seca'
-      product.update!(tiny_lagoa_seca_product_id: product_id) if product.tiny_lagoa_seca_product_id.blank?
-    when 'bh_shopping'
-      product.update!(tiny_bh_shopping_id: product_id) if product.tiny_bh_shopping_id.blank?
-    when 'rj'
-      product.update!(tiny_rj_id: product_id) if product.tiny_rj_id.blank?
-    when 'tiny_2'
-      product.update!(tiny_2_id: product_id) if product.tiny_2_id.blank?
-    end
+    field_mapping = {
+      'lagoa_seca' => :tiny_lagoa_seca_product_id,
+      'bh_shopping' => :tiny_bh_shopping_id,
+      'rj' => :tiny_rj_id,
+      'tiny_2' => :tiny_2_id
+    }
+
+    field = field_mapping[kind]
+    return unless field
+
+    product.update!(field => product_id) if product[field].blank?
   end
 
   def self.fetch_token_for_kind(kind)
