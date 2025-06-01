@@ -81,7 +81,7 @@ module Tiny::Products
     end
   end
 
-  def self.assert_stock
+  def self.assert_stock(kind)
     token = fetch_token_for_kind(kind)
 
     update_stock_for_products(Product.all, token, kind)
