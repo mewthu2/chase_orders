@@ -94,7 +94,10 @@ module Tiny::Products
   end
 
   def self.update_stock_for_products(products, token, kind)
-    products.each do |product|
+    six_hours_ago = 24.hours.ago
+    filtered_products = products.where('updated_at < ?', six_hours_ago)
+
+    filtered_products.each do |product|
       case kind
       when 'lagoa_seca'
         product_id = product.tiny_lagoa_seca_product_id
@@ -119,7 +122,7 @@ module Tiny::Products
         product.update(stock_rj: stock_value)
       end
 
-      print 'Dormindo 2 segundos...'
+      print 'Dormindo 0.5 segundos...'
       sleep(0.5)
     end
   end
