@@ -29,7 +29,7 @@ module Shopify::Products
     }
 
     if sync_methods.key?(function)
-      Product.find_each(batch_size: 100) do |product|
+      Product.where('updated_at < ?', 24.hours.ago).find_each(batch_size: 100) do |product|
         sync_methods[function].call(product)
       end
     else
