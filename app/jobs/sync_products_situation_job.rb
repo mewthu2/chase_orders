@@ -32,7 +32,7 @@ class SyncProductsSituationJob < ActiveJob::Base
       sync_shopify_fields
 
       # Update Shopify inventory for the specified location
-      sync_shopify_inventory(location)
+      sync_shopify_inventory(location) if location.present?
 
       finish_motor_tracking(motor)
     rescue StandardError => e
