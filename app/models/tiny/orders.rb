@@ -32,6 +32,8 @@ module Tiny::Orders
     when 'process_for_shopify'
       process_for_shopify(total, kind)
       total
+    else
+      total
     end
   end
 
