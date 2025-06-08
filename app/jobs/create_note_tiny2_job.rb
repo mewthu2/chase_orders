@@ -4,7 +4,9 @@ class CreateNoteTiny2Job < ActiveJob::Base
   end
 
   def create_note
-    orders = Tiny::Orders.get_all_orders('tiny_3', 'Enviado', '', '')
+    start_date = Time.new - 1.month
+
+    orders = Tiny::Orders.get_all_orders('tiny_3', 'Preparando Envio', '', start_date)
 
     orders.each do |order|
       p '2 segundos espera ai'
