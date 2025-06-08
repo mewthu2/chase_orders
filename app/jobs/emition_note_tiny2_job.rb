@@ -6,9 +6,14 @@ class EmitionNoteTiny2Job < ActiveJob::Base
   private
 
   def emission_tiny2
-    ids_to_reject = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id)
+    start_date = Time.new - 2.weeks
 
-    Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject).each do |att|
+    ids_to_reject = Attempt.select(:tiny_order_id)
+                           .where(kinds: :emission_invoice_tiny2, status: :success)
+                           .where('created_at >= ?', start_date)
+
+    Attempt.where(kinds: :create_note_tiny2, status: :success)
+           .where.not(tiny_order_id: ids_to_reject).each do |att|
       attempt = Attempt.create(
         kinds: :emission_invoice_tiny2,
         id_nota_tiny2: att.id_nota_tiny2,

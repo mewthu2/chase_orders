@@ -3,14 +3,27 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def index
-    ids_to_reject = Attempt.where(kinds: :create_note_tiny2, status: :success).pluck(:tiny_order_id).map(&:to_s)
+    start_date = Time.new - 1.month
 
-    @orders = Tiny::Orders.get_all_orders('tiny_3', 'enviado', '', '')
+    ids_to_reject = Attempt.select(:tiny_order_id)
+                           .where(kinds: :create_note_tiny2, status: :success)
+                           .where('created_at >= ?', start_date)
+                           .map(&:to_s)
 
-    @all_orders = @orders&.reject { |order| ids_to_reject.include?(order['pedido']['id'].to_s) }
+    @orders = Tiny::Orders.get_all_orders('tiny_3', 'enviado', '', start_date)
 
-    ids_to_reject_emitions = Attempt.where(kinds: :emission_invoice_tiny2, status: :success).pluck(:tiny_order_id).map(&:to_s)
-    @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success).where.not(tiny_order_id: ids_to_reject_emitions)
+    @all_orders = @orders&.reject do |order|
+      ids_to_reject.include?(order['pedido']['id'].to_s)
+    end
+
+    ids_to_reject_emitions = Attempt.select(:tiny_order_id)
+                                    .where(kinds: :emission_invoice_tiny2, status: :success)
+                                    .where('created_at >= ?', start_date)
+                                    .map(&:to_s)
+
+    @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success)
+                       .where('created_at >= ?', start_date)
+                       .where.not(tiny_order_id: ids_to_reject_emitions)
   end
 
   def invoice_emition
@@ -45,40 +58,33 @@ class DashboardController < ApplicationController
       end
 
       sellers_stats[seller_name][:by_kind][order.kinds][:total] += 1
-      if order.shopify_order_id.present?
-        sellers_stats[seller_name][:by_kind][order.kinds][:migrated] += 1
-      end
+      sellers_stats[seller_name][:by_kind][order.kinds][:migrated] += 1 if order.shopify_order_id.present?
 
       date = if order.tiny_creation_date.is_a?(String)
-        begin
-          Date.strptime(order.tiny_creation_date, '%d/%m/%Y')
-        rescue
-          nil
-        end
-      else
-        order.tiny_creation_date.try(:to_date)
-      end
+               Date.strptime(order.tiny_creation_date, '%d/%m/%Y')
+             else
+               order.tiny_creation_date.try(:to_date)
+             end
 
-      if date.present?
-        month_key = date.strftime('%Y-%m')
-        sellers_stats[seller_name][:by_month][month_key][:total] += 1
-        if order.shopify_order_id.present?
-          sellers_stats[seller_name][:by_month][month_key][:migrated] += 1
-        end
+      next unless date.present?
 
-        wday = date.wday
-        sellers_stats[seller_name][:by_weekday][wday] += 1
-      end
+      month_key = date.strftime('%Y-%m')
+
+      sellers_stats[seller_name][:by_month][month_key][:total] += 1
+      sellers_stats[seller_name][:by_month][month_key][:migrated] += 1 if order.shopify_order_id.present?
+
+      wday = date.wday
+      sellers_stats[seller_name][:by_weekday][wday] += 1
     end
 
     sellers_stats.each do |seller, stats|
       stats[:migration_percentage] = stats[:total].positive? ? (stats[:migrated].to_f / stats[:total] * 100).round : 0
 
-      stats[:by_kind].each do |kind, kind_stats|
+      stats[:by_kind].each_value do |kind_stats|
         kind_stats[:migration_percentage] = kind_stats[:total].positive? ? (kind_stats[:migrated].to_f / kind_stats[:total] * 100).round : 0
       end
 
-      stats[:by_month].each do |month, month_stats|
+      stats[:by_month].each_value do |month_stats|
         month_stats[:migration_percentage] = month_stats[:total].positive? ? (month_stats[:migrated].to_f / month_stats[:total] * 100).round : 0
       end
 

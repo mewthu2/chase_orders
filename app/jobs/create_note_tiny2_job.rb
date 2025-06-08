@@ -4,7 +4,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
   end
 
   def create_note
-    orders = Tiny::Orders.get_all_orders('tiny_3', 'enviado', '', '')
+    orders = Tiny::Orders.get_all_orders('tiny_3', 'Enviado', '', '')
 
     orders.each do |order|
       p '2 segundos espera ai'
@@ -33,8 +33,11 @@ class CreateNoteTiny2Job < ActiveJob::Base
         attempt.update(error: e, status: :error)
       end
 
-      attempt.update(kinds: :create_note_tiny2,
-                     id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal])
+      attempt.update(
+        kinds: :create_note_tiny2,
+        id_nota_fiscal: selected_order[:pedido]&.dig(:id_nota_fiscal)
+      )
+
       unless invoice.present?
         attempt.update(message: 'Nota fiscal não encontrada')
         next
