@@ -10,7 +10,7 @@ class DashboardController < ApplicationController
                            .where('created_at >= ?', start_date)
                            .map(&:to_s)
 
-    @orders = Tiny::Orders.get_all_orders('tiny_3', 'enviado', '', start_date)
+    @orders = Tiny::Orders.get_all_orders('tiny_3', 'Preparando Envio', '', start_date)
 
     @all_orders = @orders&.reject do |order|
       ids_to_reject.include?(order['pedido']['id'].to_s)
