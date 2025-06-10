@@ -18,7 +18,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       end
 
       response = Tiny::Orders.obtain_order(token, tiny_order_id)
-      create_fulfilled_order(kind, response, tiny_order_id)
+      create_fulfilled_order(kind, response, tiny_order_id, token)
 
     rescue StandardError => e
       unless Attempt.exists?(tiny_order_id:)
@@ -39,7 +39,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
     end
   end
 
-  def create_fulfilled_order(kind, response, tiny_order_id)
+  def create_fulfilled_order(kind, response, tiny_order_id, token)
     case kind
     when 'bh_shopping'
       location_id = ENV.fetch('LOCATION_BH_SHOPPING')
@@ -65,7 +65,11 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
     @first_name = nomes.first
     @last_name = nomes[1..].join(' ') if nomes.size > 1
 
-    customer_phone = cliente['fone'].present? ? generate_unique_phone(cliente['fone'], session) : ''
+    if cliente['fone'].present?
+      customer_phone = cliente['fone'].present? ? generate_unique_phone(cliente['fone'], session) : ''
+    else
+      customer_phone = Tiny::Contacts.find_contact_and_get_phone(token, cliente['cpf_cnpj'], cliente['nome'])
+    end
 
     endereco = build_address_graphql(cliente, customer_phone)
 
