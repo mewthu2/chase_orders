@@ -231,7 +231,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           send_receipt: false,
           send_fulfillment_receipt: false,
           line_items: draft_order['line_items'],
-          customer: if draft_order['customer'].present?
+          customer: if draft_order['customer'].present? && customer_data['id'] != @stock_client_id
                       customer_data = draft_order['customer'].dup
                       customer_data['first_name'] ||= @first_name
                       customer_data['last_name'] ||= @last_name
