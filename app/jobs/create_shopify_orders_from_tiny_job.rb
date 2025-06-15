@@ -381,7 +381,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
   end
 
   def build_address_graphql(cliente, phone = nil)
-    phone ||= format_phone_number(cliente['fone'])
+    phone ||= format_phone_for_shopify(cliente['fone'])
 
     endereco = cliente['endereco'].presence || 'Sem endereço'
     numero = cliente['numero'].presence || '101'
