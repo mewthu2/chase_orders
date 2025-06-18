@@ -1,6 +1,10 @@
 class DashboardController < ApplicationController
+  skip_before_action :authenticate_user!, only: [:dalila]
   before_action :load_form_references, only: [:index]
   protect_from_forgery except: :modal_test
+
+  def dalila
+  end
 
   def index
     start_date = Time.new - 1.month

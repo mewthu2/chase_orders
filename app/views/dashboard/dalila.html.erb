@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Um Convite Especial para Dalila 💕</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .wrapper > section:not(.sem-menu) {
+            margin-left: 0px !important;
+        }
+        aside {
+          display: none !important;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(10px);
+        }
+
+        .title {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .message {
+            font-size: 1.1em;
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 182, 193, 0.1);
+            border-radius: 15px;
+            border-left: 4px solid #ff69b4;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            min-height: 80px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .btn-yes {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-yes:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-no {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+            box-shadow: 0 5px 15px rgba(116, 185, 255, 0.4);
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+
+        .btn-no:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(116, 185, 255, 0.6);
+        }
+
+        .btn-no.running {
+            animation: runAway 0.5s ease-out;
+        }
+
+        @keyframes runAway {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.8) rotate(10deg); }
+            100% { transform: scale(1); }
+        }
+
+        .success-message {
+            display: none;
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .emoji {
+            font-size: 2em;
+            margin: 0 10px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            .title {
+                font-size: 2em;
+            }
+            
+            .buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+
+        .sparkle {
+            position: absolute;
+            color: #ffd700;
+            font-size: 16px;
+            pointer-events: none;
+            animation: sparkle 1s ease-out forwards;
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 1; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    
+    
+    <div class="container">
+        <h1 class="title">Oi, Dalila! <span class="emoji">💕</span></h1>
+        <p class="subtitle">Tenho uma pergunta especial para você...</p>
+        
+        <div class="message">
+            <p>Que tal sairmos juntos na <strong>sexta-feira à noite</strong>? 🌙</p>
+            <p>Podemos jantar em um lugar legal, conversar e nos divertir!</p>
+            <p>O que você acha? <span class="emoji">😊</span></p>
+        </div>
+        
+        <div class="buttons" id="buttonsContainer">
+            <button class="btn btn-yes" id="btnYes">
+                <span class="emoji">💖</span> SIM!
+            </button>
+            <button class="btn btn-no" id="btnNo">
+                <span class="emoji">😅</span> Não
+            </button>
+        </div>
+        
+        <div class="success-message" id="successMessage">
+            <h2><span class="emoji">🎉</span> Que maravilha! <span class="emoji">🎉</span></h2>
+            <p>Mal posso esperar pela nossa sexta-feira especial!</p>
+            <p>Vou te chamar para combinarmos os detalhes! <span class="emoji">😍</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Funcionalidade dos botões
+        const btnYes = document.getElementById('btnYes');
+        const btnNo = document.getElementById('btnNo');
+        const buttonsContainer = document.getElementById('buttonsContainer');
+        const successMessage = document.getElementById('successMessage');
+
+        let noClickCount = 0;
+        const noMessages = [
+            "Tem certeza? 🥺",
+            "Pensa melhor... 😢",
+            "Vai ser divertido! 😊",
+            "Por favor? 🙏",
+            "Última chance! 💔"
+        ];
+
+        btnYes.addEventListener('click', function() {
+            // Criar efeito de fogos
+            createSparkles(this);
+            
+            setTimeout(() => {
+                buttonsContainer.style.display = 'none';
+                successMessage.style.display = 'block';
+            }, 500);
+        });
+
+        btnNo.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Adicionar classe de animação
+            this.classList.add('running');
+            
+            // Mover o botão para uma posição aleatória
+            const container = buttonsContainer.getBoundingClientRect();
+            const button = this.getBoundingClientRect();
+            
+            const maxX = container.width - button.width;
+            const maxY = container.height - button.height;
+            
+            const newX = Math.random() * maxX;
+            const newY = Math.random() * maxY;
+            
+            this.style.left = newX + 'px';
+            this.style.top = newY + 'px';
+            
+            // Mudar o texto do botão
+            if (noClickCount < noMessages.length) {
+                this.innerHTML = `<span class="emoji">😅</span> ${noMessages[noClickCount]}`;
+                noClickCount++;
+            }
+            
+            // Remover classe de animação
+            setTimeout(() => {
+                this.classList.remove('running');
+            }, 500);
+            
+            // Fazer o botão "Sim" crescer um pouco
+            btnYes.style.transform = 'scale(' + (1 + noClickCount * 0.1) + ')';
+        });
+
+        function createSparkles(element) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 12; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.innerHTML = '✨';
+                sparkle.style.left = centerX + (Math.random() - 0.5) * 100 + 'px';
+                sparkle.style.top = centerY + (Math.random() - 0.5) * 100 + 'px';
+                document.body.appendChild(sparkle);
+                
+                setTimeout(() => {
+                    sparkle.remove();
+                }, 1000);
+            }
+        }
+
+        // Posicionar o botão "Não" inicialmente
+        btnNo.style.position = 'relative';
+    </script>
+</body>
+</html>

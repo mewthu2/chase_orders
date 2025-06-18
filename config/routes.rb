@@ -12,6 +12,7 @@ Rails.application.routes.draw do
     collection do
       get :invoice_emition
       get :ranking_sellers
+      get :dalila
     end
   end
 
