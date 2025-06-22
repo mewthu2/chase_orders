@@ -1,10 +1,7 @@
 class DashboardController < ApplicationController
-  skip_before_action :authenticate_user!, only: [:dalila]
-  before_action :load_form_references, only: [:index]
+  before_action :authenticate_user!
+  before_action :admin_only!
   protect_from_forgery except: :modal_test
-
-  def dalila
-  end
 
   def index
     start_date = Time.new - 1.month
@@ -150,84 +147,6 @@ class DashboardController < ApplicationController
     prepare_chart_data
   end
 
-  def prepare_chart_data
-    top_sellers = @sellers_ranking.first(10)
-
-    @top_sellers_chart_data = {
-      labels: top_sellers.map { |seller, _| seller },
-      series: [
-        {
-          name: 'Migrados',
-          data: top_sellers.map { |_, stats| stats[:migrated] }
-        },
-        {
-          name: 'Pendentes',
-          data: top_sellers.map { |_, stats| stats[:not_migrated] }
-        }
-      ]
-    }
-
-    @sellers_distribution_data = {
-      labels: top_sellers.map { |seller, _| seller },
-      series: top_sellers.map { |_, stats| stats[:total] }
-    }
-
-    @sellers_efficiency_data = {
-      labels: top_sellers.map { |seller, _| seller },
-      series: [
-        {
-          name: 'Taxa de Migração',
-          data: top_sellers.map { |_, stats| stats[:migration_percentage] }
-        }
-      ]
-    }
-
-    @context_distribution_data = {
-      labels: ['Rio de Janeiro', 'BH Shopping', 'Lagoa Seca'],
-      series: [
-        {
-          name: 'Migrados',
-          data: ['rj', 'bh_shopping', 'lagoa_seca'].map { |kind| @context_stats[kind][:migrated] }
-        },
-        {
-          name: 'Pendentes',
-          data: ['rj', 'bh_shopping', 'lagoa_seca'].map { |kind| @context_stats[kind][:not_migrated] }
-        }
-      ]
-    }
-
-    weekdays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-
-    top5_sellers = @sellers_ranking.first(5)
-
-    @weekday_distribution_data = {
-      categories: weekdays,
-      series: top5_sellers.map do |seller, stats|
-        {
-          name: seller,
-          data: stats[:by_weekday]
-        }
-      end
-    }
-
-    all_months = @sellers_ranking.flat_map { |_, stats| stats[:by_month].keys }.uniq.sort.last(12)
-
-    formatted_months = all_months.map do |month|
-      year, month_num = month.split('-')
-      Date.new(year.to_i, month_num.to_i, 1).strftime('%b/%Y')
-    end
-
-    @monthly_trend_data = {
-      categories: formatted_months,
-      series: top5_sellers.map do |seller, stats|
-        {
-          name: seller,
-          data: all_months.map { |month| stats[:by_month][month] ? stats[:by_month][month][:total] : 0 }
-        }
-      end
-    }
-  end
-
   private
 
   def prepare_chart_data
@@ -308,5 +227,9 @@ class DashboardController < ApplicationController
     }
   end
 
-  def load_form_references; end
+  def admin_only!
+    unless current_user&.admin?
+      redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
+    end
+  end
 end

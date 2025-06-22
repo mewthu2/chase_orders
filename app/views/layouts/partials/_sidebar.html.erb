@@ -1,541 +1,385 @@
-<button id="sidebar-toggle" class="sidebar-toggle-btn">
-  <i class="fas fa-bars"></i>
-</button>
+<nav class="top-navigation">
+  <div class="nav-carousel-container">
+    <div class="nav-brand">
+      <%= image_tag "admin/chase-logo.png", alt: "ChaseOrders", class: "nav-logo" %>
+    </div>
+    
+    <div class="nav-carousel" id="navCarousel">
+      <div class="nav-items">
+        <div class="nav-item">
+          <%= link_to root_path, class: "nav-link #{'active' if current_page?(root_path)}", title: "Home" do %>
+            <i class="fas fa-home"></i>
+            <span class="nav-text">Home</span>
+          <% end %>
+        </div>
 
-<div id="sidebar-overlay" class="sidebar-overlay"></div>
+        <div class="nav-item">
+          <%= link_to edit_user_path(current_user), class: "nav-link #{'active' if current_page?(edit_user_path(current_user))}", title: "Meu Perfil" do %>
+            <i class="fas fa-user-edit"></i>
+            <span class="nav-text">Perfil</span>
+          <% end %>
+        </div>
 
-<aside class="left-menu" id="sidebar">
-  <div class="sidebar-header-mobile">
-    <button id="sidebar-close" class="sidebar-close-btn">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
+        <% if current_user&.profile_id == 1 %>
+          <div class="nav-item">
+            <%= link_to dashboard_index_path, class: "nav-link #{'active' if current_page?(dashboard_index_path)}", title: "Dashboard" do %>
+              <i class="fas fa-tachometer-alt"></i>
+              <span class="nav-text">Dashboard</span>
+            <% end %>
+          </div>
 
-  <div class="aside-inner">
-    <div class="sidebar-header">
-      <div class="logo-container">
-        <%= image_tag 'admin/chase-logo', class: 'sidebar-logo' %>
+          <div class="nav-item">
+            <%= link_to users_path, class: "nav-link #{'active' if controller_name == 'users'}", title: "Usuários" do %>
+              <i class="fas fa-users"></i>
+              <span class="nav-text">Usuários</span>
+            <% end %>
+          </div>
+
+          <div class="nav-item">
+            <%= link_to products_path, class: "nav-link #{'active' if current_page?(products_path)}", title: "Produtos" do %>
+              <i class="fas fa-box"></i>
+              <span class="nav-text">Produtos</span>
+            <% end %>
+          </div>
+
+          <div class="nav-item">
+            <%= link_to logs_path, class: "nav-link #{'active' if current_page?(logs_path)}", title: "Logs" do %>
+              <i class="fas fa-history"></i>
+              <span class="nav-text">Logs</span>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if current_user&.profile_id == 1 || current_user&.profile_id == 2 %>
+          <div class="nav-item">
+            <%= link_to discounts_path, class: "nav-link #{'active' if current_page?(discounts_path)}", title: "Cupons" do %>
+              <i class="fas fa-tags"></i>
+              <span class="nav-text">Cupons</span>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </div>
     
-    <div class="user-section px-3 py-3 mb-3">
-      <% if current_user %>
-        <div class="user-profile-card">
-          <div class="user-info d-flex align-items-center mb-3">
-            <div class="user-avatar-large">
-              <i class="fas fa-user"></i>
-            </div>
-            <div class="user-details ms-2">
-              <div class="user-name"><%= current_user.email.split('@').first %></div>
-              <div class="user-email text-muted"><%= current_user.email %></div>
-            </div>
-          </div>
-          
-          <div class="user-actions">
-            <a href="/" class="user-action-btn home-btn">
-              <i class="fas fa-home me-2"></i>
-              <span>Home</span>
-            </a>
-            
-            <%= link_to destroy_user_session_path, method: :delete, class: 'user-action-btn logout-btn' do %>
-              <i class="fas fa-sign-out-alt me-2"></i>
-              <span>Sair</span>
-            <% end %>
-          </div>
-        </div>
+    <div class="nav-user">
+      <div class="user-info">
+        <span class="user-name"><%= current_user.name %></span>
+        <span class="user-role">
+          <% case current_user.profile_id
+             when 1 %>
+            Admin
+          <% when 2 %>
+            Gerente
+          <% else %>
+            Usuário
+          <% end %>
+        </span>
+      </div>
+      <%= link_to destroy_user_session_path, method: :delete, 
+          class: 'logout-btn',
+          data: { confirm: 'Tem certeza que deseja sair?' },
+          title: 'Sair' do %>
+        <i class="fas fa-sign-out-alt"></i>
       <% end %>
     </div>
-    
-    <hr class="sidebar-divider my-1">
-    
-    <div class="flex-shrink-0 p-3 text-white">
-      <ul class="nav nav-pills flex-column mb-auto">
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-dashboard" role="button" aria-expanded="false" aria-controls="collase-dashboard">
-          <i class="justify-content-center fa-regular fa-concierge-bell"></i> <span class="name-button"> Dashboard </span><i class="fa fa-angle-down arrow"></i>
-        </a>
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-dashboard">
-          <div class="mb-3 col-icon"> 
-            <%= link_to dashboard_index_path, class: 'text-light link' do %>
-              <i class="fa-solid fa-binoculars text-info"></i>
-              <span class="name-col">
-                Geração de notas fiscais
-              </span>
-            <% end %>
-          </div>
-          <div class="mb-3 col-icon"> 
-            <%= link_to ranking_sellers_dashboard_index_path, class: 'text-light link' do %>
-              <i class="fa-solid fa-trophy text-info"></i>
-              <span class="name-col">
-                Ranking de Vendedores
-              </span>
-            <% end %>
-          </div>
-        </div>
-
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-pedidos" role="button" aria-expanded="false" aria-controls="collase-pedidos">
-          <i class="justify-content-center fa-solid fa-truck"></i> <span class="name-button"> Pedidos </span><i class="fa fa-angle-down arrow"></i>
-        </a>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-pedidos">
-          <div class="mb-3 col-icon"> 
-            <%= link_to orders_path, class: 'text-light link' do %>
-              <i class="fa-solid fa-clipboard-check text-info"></i>
-              <span class="name-col">
-                Conferência de Pedidos
-              </span>
-            <% end %>
-          </div>
-        </div>
-
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-produtos" role="button" aria-expanded="false" aria-controls="collase-produtos">
-          <i class="justify-content-center fa-solid fa-box"></i> <span class="name-button"> Produtos </span><i class="fa fa-angle-down arrow"></i>
-        </a>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-produtos">
-          <div class="mb-3 col-icon"> 
-            <%= link_to products_path, class: 'text-light link' do %>
-              <i class="fa-solid fa-boxes-stacked text-info"></i>
-              <span class="name-col">
-                Catálogo de Produtos
-              </span>
-            <% end %>
-          </div>
-        </div>
-
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-motors" role="button" aria-expanded="false" aria-controls="collase-motors">
-          <i class="justify-content-center fa-solid fa-gear"></i> <span class="name-button"> Motores </span><i class="fa fa-angle-down arrow"></i>
-        </a>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-motors">
-          <div class="mb-3 col-icon"> 
-            <%= link_to motors_path, class: 'text-light link' do %>
-              <i class="fa-solid fa-file-invoice text-info link"></i>
-              <span class="name-col">
-                Acompanhamento motores
-              </span>
-            <% end %>
-          </div>
-        </div>
-
-        <a class="btn btn-dark text-info mb-3" data-bs-toggle="collapse" href="#collase-attempts" role="button" aria-expanded="false" aria-controls="collase-attempts">
-          <i class="fa-regular fa-hourglass"></i> <span class="name-button">Histórico de Tentativas </span> <i class="fa fa-angle-down arrow"></i>
-        </a>
-
-        <div class="justify-content-center flex-column mb-auto collapse mb-3" id="collase-attempts">
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path, class: 'text-light link' do %>
-              <i class="fas fa-list-check text-info"></i>
-              <span class="name-col">
-                Todas as Tentativas
-              </span>
-            <% end %>
-          </div>
-          
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(kinds: :create_note_tiny2), class: 'text-light link' do %>
-              <i class="fas fa-sticky-note text-info"></i>
-              <span class="name-col">
-                Criação de notas no Tiny 2
-              </span>
-            <% end %>
-          </div>
-          
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(kinds: :emission_invoice_tiny2), class: 'text-light link' do %>
-              <i class="fas fa-file-invoice-dollar text-info"></i>
-              <span class="name-col">
-                Emissão de notas no Tiny 2
-              </span>
-            <% end %>
-          </div>
-          
-          <div class="mb-3 col-icon"> 
-            <%= link_to attempts_path(kinds: :transfer_tiny_to_shopify_order), class: 'text-light link' do %>
-              <i class="fas fa-exchange-alt text-info"></i>
-              <span class="name-col">
-                Transferência Tiny para Shopify
-              </span>
-            <% end %>
-          </div>
-        </div>
-      </ul>
-    </div>
   </div>
-  
-  <hr class="sidebar-divider">
-  
-  <div class="sidebar-footer p-2">
-    <div class="d-flex justify-content-center logo-chase">
-      <small class="text-light"> Chase Brasil <i class="fas fa-registered"></i></small>
-    </div>
-  </div>
-</aside>
+</nav>
 
 <style>
-  .left-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 250px;
-    background-color: #121212;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
-    overflow-y: auto;
-    overflow-x: hidden;
-    z-index: 1040;
-  }
-  
-  .aside-inner {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .sidebar-header {
-    padding: 1.5rem 1rem;
-    text-align: center;
-  }
-  
-  .sidebar-logo {
-    max-width: 150px;
-    height: auto;
-    transition: all 0.3s ease;
-  }
-  
-  .btn {
-    text-align: left;
-    position: relative;
-    transition: all 0.2s ease;
-  }
-  
-  .btn:hover {
-    background-color: rgba(0, 191, 255, 0.05) !important;
-  }
-  
-  .arrow {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: transform 0.3s ease;
-  }
-  
-  [aria-expanded="true"] .arrow {
-    transform: translateY(-50%) rotate(180deg);
-  }
-  
-  .link {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 1rem;
-    margin-left: 1.5rem;
-    border-radius: 0.25rem;
-    text-decoration: none;
-    transition: all 0.3s ease;
-  }
-  
-  .link:hover {
-    background-color: rgba(0, 191, 255, 0.05);
-    transform: translateY(-1px);
-  }
-  
-  .name-col {
-    margin-left: 0.75rem;
-  }
-  
-  .sidebar-divider {
-    margin: 0.5rem 1rem;
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .user-section {
-    padding: 1rem;
-  }
-  
-  .user-avatar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: rgba(0, 191, 255, 0.2);
-    color: #00bfff;
-    margin-right: 0.5rem;
-  }
-  
-  .logo-chase {
-    margin-top: 1rem;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-  }
-  
-  .logo-chase:hover {
-    opacity: 1;
-  }
-  
-  .sidebar-footer {
-    margin-top: auto;
-  }
-  
-  .sidebar-toggle-btn {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    z-index: 1030;
-    background-color: #121212;
-    color: #00bfff;
-    border: none;
-    border-radius: 4px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    display: none;
-  }
-  
-  .sidebar-toggle-btn:hover {
-    background-color: #1a1a1a;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  }
-  
-  .sidebar-header-mobile {
-    display: none;
-    padding: 15px;
-    text-align: right;
-  }
-  
-  .sidebar-close-btn {
-    background-color: transparent;
-    color: #f8f9fa;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-  }
-  
-  .sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1035;
-    display: none;
-  }
-  
-  @media (max-width: 999px) {
-    .sidebar-toggle-btn,
-    .sidebar-header-mobile {
-      display: block;
-    }
-    
-    .left-menu {
-      transform: translateX(-100%);
-      width: 250px !important;
-      box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .left-menu.show {
-      transform: translateX(0);
-    }
-    
-    .sidebar-overlay.show {
-      display: block;
-    }
-    
-    .col-icon {
-      display: flex;
-      justify-content: flex-start;
-    }
-    
-    .name-col {
-      display: block;
-    }
-    
-    .name-button,
-    .logo-chase {
-      display: block !important;
-    }
-    
-    .wrapper > section:not(.sem-menu) {
-      margin-left: 0 !important;
-    }
-    
-    .navbar-header .navbar-brand .brand-logo,
-    .navbar-header .navbar-brand {
-      width: 205px !important;
-    }
-    
-    .wrapper > section > .content-wrapper .row {
-      margin-top: -7px !important;
-    }
-    
-    .user-avatar {
-      margin-right: 0.5rem;
-    }
-    
-    .sidebar-header {
-      padding: 1rem;
-    }
-    
-    .sidebar-logo {
-      max-width: 120px;
-    }
-  }
-  
-  @media (min-width: 1000px) {
-    .left-menu {
-      width: 250px;
-    }
-    
-    .wrapper > section:not(.sem-menu) {
-      margin-left: 250px;
-    }
-  }
+.top-navigation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid #2d3748;
+  z-index: 1050;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
 
-  .user-section {
-    background-color: rgba(0, 191, 255, 0.05);
-    border-radius: 8px;
-    margin: 0 0.5rem;
-  }
+.nav-carousel-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 1rem;
+  gap: 1rem;
+}
 
-  .user-profile-card {
-    width: 100%;
-  }
+.nav-brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
 
-  .user-avatar-large {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 45px;
+.nav-logo {
+  height: 35px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+.nav-carousel {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+.nav-items {
+  display: flex;
+  gap: 0.5rem;
+  min-width: max-content;
+  align-items: center;
+}
+
+.nav-item {
+  flex-shrink: 0;
+}
+
+.nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  color: #a0aec0;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  min-width: 70px;
+  height: 50px;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: #ffffff;
+  background-color: rgba(66, 153, 225, 0.1);
+  transform: translateY(-2px);
+}
+
+.nav-link.active {
+  color: #ffffff;
+  background-color: rgba(66, 153, 225, 0.2);
+  border: 1px solid #4299e1;
+}
+
+.nav-link i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.nav-text {
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-user {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.user-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+
+.user-role {
+  color: #a0aec0;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.logout-btn {
+  color: #a0aec0;
+  text-decoration: none;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.logout-btn:hover {
+  color: #ffffff;
+  background-color: #e53e3e;
+  transform: scale(1.1);
+}
+
+.wrapper {
+  margin-top: 70px !important;
+  margin-left: 0 !important;
+  width: 100% !important;
+  min-height: calc(100vh - 70px);
+}
+
+/* Scrollbar personalizada para o carousel */
+.nav-carousel::-webkit-scrollbar {
+  height: 3px;
+}
+
+.nav-carousel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-carousel::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 2px;
+}
+
+.nav-carousel::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .nav-carousel-container {
+    padding: 0 0.5rem;
+    gap: 0.5rem;
+  }
+  
+  .nav-logo {
+    height: 30px;
+    max-width: 100px;
+  }
+  
+  .nav-link {
+    min-width: 60px;
     height: 45px;
-    border-radius: 50%;
-    background-color: rgba(0, 191, 255, 0.2);
-    color: #00bfff;
-    font-size: 1.2rem;
-    box-shadow: 0 2px 10px rgba(0, 191, 255, 0.2);
+    padding: 0.25rem 0.75rem;
   }
-
-  .user-details {
-    overflow: hidden;
+  
+  .nav-link i {
+    font-size: 1rem;
   }
-
-  .user-name {
-    color: #f8f9fa;
-    font-weight: 600;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  
+  .nav-text {
+    font-size: 0.65rem;
   }
-
-  .user-email {
-    font-size: 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  
+  .user-info {
+    display: none;
   }
-
-  .user-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .user-action-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-radius: 6px;
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-  }
-
-  .home-btn {
-    background-color: rgba(0, 191, 255, 0.1);
-    color: #00bfff;
-  }
-
-  .home-btn:hover {
-    background-color: rgba(0, 191, 255, 0.2);
-    color: #00bfff;
-    transform: translateY(-2px);
-  }
-
+  
   .logout-btn {
-    background-color: rgba(220, 53, 69, 0.1);
-    color: #dc3545;
+    padding: 0.375rem;
+    font-size: 1rem;
   }
+}
 
-  .logout-btn:hover {
-    background-color: rgba(220, 53, 69, 0.2);
-    color: #dc3545;
-    transform: translateY(-2px);
+@media (max-width: 480px) {
+  .nav-carousel-container {
+    gap: 0.25rem;
   }
+  
+  .nav-logo {
+    height: 25px;
+    max-width: 80px;
+  }
+  
+  .nav-link {
+    min-width: 50px;
+    height: 40px;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .nav-text {
+    font-size: 0.6rem;
+  }
+}
+
+/* Animação suave para o scroll */
+.nav-carousel {
+  scroll-behavior: smooth;
+}
+
+/* Indicador visual para scroll */
+.nav-carousel::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, rgba(26, 26, 46, 0.8), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.nav-carousel:hover::after {
+  opacity: 1;
+}
 </style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const sidebarClose = document.getElementById('sidebar-close');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    
-    function openSidebar() {
-      sidebar.classList.add('show');
-      sidebarOverlay.classList.add('show');
-      document.body.style.overflow = 'hidden';
+document.addEventListener('DOMContentLoaded', function() {
+  const carousel = document.getElementById('navCarousel');
+  
+  if (!carousel) return;
+  
+  // Auto-scroll para o item ativo
+  const activeItem = carousel.querySelector('.nav-link.active');
+  if (activeItem) {
+    setTimeout(() => {
+      activeItem.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }, 100);
+  }
+  
+  // Scroll suave com mouse wheel
+  carousel.addEventListener('wheel', function(e) {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      carousel.scrollLeft += e.deltaY;
     }
-    
-    function closeSidebar() {
-      sidebar.classList.remove('show');
-      sidebarOverlay.classList.remove('show');
-      document.body.style.overflow = '';
-    }
-    
-    if (sidebarToggle) {
-      sidebarToggle.addEventListener('click', openSidebar);
-    }
-    
-    if (sidebarClose) {
-      sidebarClose.addEventListener('click', closeSidebar);
-    }
-    
-    if (sidebarOverlay) {
-      sidebarOverlay.addEventListener('click', closeSidebar);
-    }
-    
-    const sidebarLinks = sidebar.querySelectorAll('a');
-    sidebarLinks.forEach(link => {
-      const isDropdownToggle = link.hasAttribute('data-bs-toggle') && link.getAttribute('data-bs-toggle') === 'collapse';
-      
-      if (!isDropdownToggle) {
-        link.addEventListener('click', function() {
-          if (window.innerWidth < 1000) {
-            closeSidebar();
-          }
-        });
-      }
-    });
-    
-    window.addEventListener('resize', function() {
-      if (window.innerWidth >= 1000) {
-        sidebar.classList.remove('show');
-        sidebarOverlay.classList.remove('show');
-        document.body.style.overflow = '';
-      }
-    });
   });
+  
+  // Touch/swipe support para mobile
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+  
+  carousel.addEventListener('mousedown', function(e) {
+    isDown = true;
+    startX = e.pageX - carousel.offsetLeft;
+    scrollLeft = carousel.scrollLeft;
+    carousel.style.cursor = 'grabbing';
+  });
+  
+  carousel.addEventListener('mouseleave', function() {
+    isDown = false;
+    carousel.style.cursor = 'grab';
+  });
+  
+  carousel.addEventListener('mouseup', function() {
+    isDown = false;
+    carousel.style.cursor = 'grab';
+  });
+  
+  carousel.addEventListener('mousemove', function(e) {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - carousel.offsetLeft;
+    const walk = (x - startX) * 2;
+    carousel.scrollLeft = scrollLeft - walk;
+  });
+});
 </script>

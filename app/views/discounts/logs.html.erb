@@ -1,0 +1,205 @@
+<div class="container-fluid py-4">
+  <% title 'Logs do Sistema' %>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-history me-2"></i>Logs do Sistema
+          </h5>
+          <span class="badge bg-info">
+            <%= @total_count %> registros
+          </span>
+        </div>
+        
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="text-white">Data/Hora</th>
+                  <th class="text-white">Usuário</th>
+                  <th class="text-white">Ação</th>
+                  <th class="text-white">Recurso</th>
+                  <th class="text-white">Nome</th>
+                  <th class="text-white">Status</th>
+                  <th class="text-white">IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if @logs.any? %>
+                  <% @logs.each do |log| %>
+                    <tr>
+                      <td>
+                        <span class="text-white">
+                          <%= log.created_at.strftime('%d/%m/%Y') %>
+                        </span>
+                        <br>
+                        <small class="text-muted">
+                          <%= log.created_at.strftime('%H:%M:%S') %>
+                        </small>
+                      </td>
+                      <td>
+                        <span class="badge bg-primary">
+                          <%= log.user&.name || 'Sistema' %>
+                        </span>
+                      </td>
+                      <td>
+                        <% 
+                          action_class = case log.action_type
+                            when 'activate' then 'bg-success'
+                            when 'deactivate' then 'bg-danger'
+                            when 'search' then 'bg-info'
+                            when 'update_dates' then 'bg-warning text-dark'
+                            else 'bg-secondary'
+                          end
+                          
+                          action_icon = case log.action_type
+                            when 'activate' then 'fas fa-play'
+                            when 'deactivate' then 'fas fa-stop'
+                            when 'search' then 'fas fa-search'
+                            when 'update_dates' then 'fas fa-calendar'
+                            else 'fas fa-cog'
+                          end
+                          
+                          action_text = case log.action_type
+                            when 'activate' then 'Ativação'
+                            when 'deactivate' then 'Desativação'
+                            when 'search' then 'Busca'
+                            when 'update_dates' then 'Atualização'
+                            else log.action_type.humanize
+                          end
+                        %>
+                        <span class="badge <%= action_class %>">
+                          <i class="<%= action_icon %> me-1"></i>
+                          <%= action_text %>
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge bg-dark">
+                          <%= log.resource_type.humanize %>
+                        </span>
+                      </td>
+                      <td>
+                        <% if log.resource_name.present? %>
+                          <code class="text-warning"><%= log.resource_name %></code>
+                        <% else %>
+                          <span class="text-muted">-</span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if log.success %>
+                          <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Sucesso
+                          </span>
+                        <% else %>
+                          <span class="badge bg-danger">
+                            <i class="fas fa-times me-1"></i>Erro
+                          </span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <small class="text-muted font-monospace">
+                          <%= log.ip_address %>
+                        </small>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="7" class="text-center py-5">
+                      <i class="fas fa-inbox text-secondary mb-3" style="font-size: 3rem;"></i>
+                      <p class="text-muted mb-0">Nenhum log encontrado.</p>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <% if @total_pages > 1 %>
+          <div class="card-footer bg-dark">
+            <nav aria-label="Navegação de logs">
+              <ul class="pagination pagination-dark justify-content-center mb-0">
+                <li class="page-item <%= 'disabled' unless @prev_page %>">
+                  <% if @prev_page %>
+                    <%= link_to logs_path(page: @prev_page), class: 'page-link' do %>
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    <% end %>
+                  <% else %>
+                    <span class="page-link">
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    </span>
+                  <% end %>
+                </li>
+                
+                <% 
+                  start_page = [@page - 2, 1].max
+                  end_page = [start_page + 4, @total_pages].min
+                  start_page = [end_page - 4, 1].max
+                %>
+                
+                <% (start_page..end_page).each do |page_num| %>
+                  <li class="page-item <%= 'active' if page_num == @page %>">
+                    <%= link_to logs_path(page: page_num), class: 'page-link' do %>
+                      <%= page_num %>
+                    <% end %>
+                  </li>
+                <% end %>
+                
+                <li class="page-item <%= 'disabled' unless @next_page %>">
+                  <% if @next_page %>
+                    <%= link_to logs_path(page: @next_page), class: 'page-link' do %>
+                      Próxima <i class="fas fa-chevron-right"></i>
+                    <% end %>
+                  <% else %>
+                    <span class="page-link">
+                      Próxima <i class="fas fa-chevron-right"></i>
+                    </span>
+                  <% end %>
+                </li>
+              </ul>
+            </nav>
+            
+            <div class="text-center mt-3">
+              <small class="text-muted">
+                Página <%= @page %> de <%= @total_pages %> 
+                (mostrando <%= @logs.count %> de <%= @total_count %> registros)
+              </small>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    .pagination-dark .page-link {
+      background-color: #343a40;
+      border-color: #495057;
+      color: #f8f9fa;
+    }
+    
+    .pagination-dark .page-link:hover {
+      background-color: #495057;
+      border-color: #6c757d;
+      color: #fff;
+    }
+    
+    .pagination-dark .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: #fff;
+    }
+    
+    .pagination-dark .page-item.disabled .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #6c757d;
+    }
+  </style>
+<% end %>

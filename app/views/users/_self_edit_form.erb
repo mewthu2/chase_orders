@@ -1,0 +1,192 @@
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-user-edit me-2"></i>
+            Editar Meu Perfil
+          </h5>
+        </div>
+        
+        <div class="card-body bg-black">
+          <%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
+            <% if @user.errors.any? %>
+              <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Erros encontrados:</h6>
+                <ul class="mb-0">
+                  <% @user.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="row g-4">
+              <div class="col-md-4">
+                <label class="form-label text-white">Nome *</label>
+                <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
+                <div class="invalid-feedback">
+                  Por favor, informe o nome.
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label text-white">Email *</label>
+                <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
+                <div class="invalid-feedback">
+                  Por favor, informe um email válido.
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label text-white">Telefone</label>
+                <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
+              </div>
+            </div>
+
+            <div class="row g-4 mt-2">
+              <div class="col-md-4">
+                <label class="form-label text-white">Nova Senha (deixe em branco para manter)</label>
+                <%= form.password_field :password, class: 'form-control bg-dark text-white border-secondary', 
+                    autocomplete: 'new-password' %>
+                <small class="text-muted">Mínimo 6 caracteres</small>
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label text-white">Confirmar Nova Senha</label>
+                <%= form.password_field :password_confirmation, class: 'form-control bg-dark text-white border-secondary', 
+                    autocomplete: 'new-password' %>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label text-white">Perfil</label>
+                <div class="input-group">
+                  <input type="text" class="form-control bg-dark text-white border-secondary" 
+                         value="<%= case @user.profile_id
+                                     when 1 then 'Administrador'
+                                     when 2 then 'Gerente'
+                                     else 'Usuário'
+                                     end %>" readonly>
+                  <span class="input-group-text bg-dark border-secondary">
+                    <i class="fas fa-lock text-warning" title="Somente administradores podem alterar perfis"></i>
+                  </span>
+                </div>
+                <small class="text-warning">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Somente administradores podem alterar perfis
+                </small>
+              </div>
+            </div>
+
+            <div class="row g-4 mt-3">
+              <div class="col-md-6">
+                <label class="form-label text-white">Status da Conta</label>
+                <div class="input-group">
+                  <input type="text" class="form-control bg-dark text-white border-secondary" 
+                         value="<%= @user.active? ? 'Ativa' : 'Inativa' %>" readonly>
+                  <span class="input-group-text bg-dark border-secondary">
+                    <i class="fas fa-lock text-warning" title="Somente administradores podem alterar status"></i>
+                  </span>
+                </div>
+                <small class="text-warning">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Somente administradores podem ativar/desativar contas
+                </small>
+              </div>
+            </div>
+
+            <div class="row mt-5">
+              <div class="col-12 d-flex justify-content-between">
+                <%= link_to root_path, class: 'btn btn-secondary btn-lg' do %>
+                  <i class="fas fa-arrow-left me-2"></i> Voltar
+                <% end %>
+                
+                <button type="submit" class="btn btn-success btn-lg">
+                  <i class="fas fa-save me-2"></i>
+                  Salvar Alterações
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+  body {
+    background-color: #121212;
+    color: #f8f9fa;
+  }
+  
+  .bg-black {
+    background-color: #121212 !important;
+  }
+  
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+  }
+  
+  .btn-lg {
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+  }
+  
+  .card {
+    border-radius: 0.5rem;
+  }
+  
+  .form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  
+  .input-group-text {
+    color: #f8f9fa;
+  }
+  
+  .text-warning {
+    color: #ffc107 !important;
+  }
+  
+  .invalid-feedback {
+    display: block;
+  }
+</style>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+
+    const phoneInput = document.querySelector('input[name="user[phone]"]');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+          value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+          if (value.length < 14) {
+            value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+          }
+        }
+        e.target.value = value;
+      });
+    }
+  });
+</script>
+<% end %>

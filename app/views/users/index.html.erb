@@ -1,0 +1,192 @@
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-users me-2"></i>
+            Gerenciar Usuários
+          </h5>
+          <%= link_to new_user_path, class: 'btn btn-success btn-sm' do %>
+            <i class="fas fa-plus me-2"></i>Novo Usuário
+          <% end %>
+        </div>
+        
+        <div class="card-body bg-black p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col">Nome</th>
+                  <th scope="col">Email</th>
+                  <th scope="col">Telefone</th>
+                  <th scope="col">Perfil</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" class="text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @users.each do |user| %>
+                  <tr>
+                    <td class="text-white">
+                      <i class="fas fa-user-circle me-2 text-primary"></i>
+                      <%= user.name %>
+                    </td>
+                    <td class="text-muted"><%= user.email %></td>
+                    <td class="text-muted"><%= user.phone.present? ? user.phone : '-' %></td>
+                    <td>
+                      <% case user.profile_id
+                         when 1 %>
+                        <span class="badge bg-danger">Administrador</span>
+                      <% when 2 %>
+                        <span class="badge bg-warning">Gerente</span>
+                      <% else %>
+                        <span class="badge bg-info">Usuário</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if user.active? %>
+                        <span class="badge bg-success">Ativo</span>
+                      <% else %>
+                        <span class="badge bg-secondary">Inativo</span>
+                      <% end %>
+                    </td>
+                    <td class="text-center">
+                      <div class="btn-group" role="group">
+                        <%= link_to user_path(user), class: 'btn btn-outline-info btn-sm', title: 'Visualizar' do %>
+                          <i class="fas fa-eye"></i>
+                        <% end %>
+                        <%= link_to edit_user_path(user), class: 'btn btn-outline-warning btn-sm', title: 'Editar' do %>
+                          <i class="fas fa-edit"></i>
+                        <% end %>
+                        <%= link_to user_path(user), method: :delete, 
+                            class: 'btn btn-outline-danger btn-sm',
+                            title: 'Excluir',
+                            data: { confirm: 'Tem certeza que deseja excluir este usuário?' } do %>
+                          <i class="fas fa-trash"></i>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Paginação Manual -->
+          <% if @total_pages > 1 %>
+            <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
+              <div class="text-muted">
+                Mostrando <%= (@offset + 1) %> - <%= [@offset + @per_page, @total_users].min %> de <%= @total_users %> usuários
+              </div>
+              
+              <nav aria-label="Paginação de usuários">
+                <ul class="pagination pagination-sm mb-0">
+                  <!-- Primeira página -->
+                  <% if @page > 1 %>
+                    <li class="page-item">
+                      <%= link_to users_path(page: 1), class: 'page-link bg-dark text-white border-secondary' do %>
+                        <i class="fas fa-angle-double-left"></i>
+                      <% end %>
+                    </li>
+                    <li class="page-item">
+                      <%= link_to users_path(page: @page - 1), class: 'page-link bg-dark text-white border-secondary' do %>
+                        <i class="fas fa-angle-left"></i>
+                      <% end %>
+                    </li>
+                  <% else %>
+                    <li class="page-item disabled">
+                      <span class="page-link bg-dark text-muted border-secondary">
+                        <i class="fas fa-angle-double-left"></i>
+                      </span>
+                    </li>
+                    <li class="page-item disabled">
+                      <span class="page-link bg-dark text-muted border-secondary">
+                        <i class="fas fa-angle-left"></i>
+                      </span>
+                    </li>
+                  <% end %>
+                  
+                  <!-- Páginas -->
+                  <% start_page = [@page - 2, 1].max %>
+                  <% end_page = [start_page + 4, @total_pages].min %>
+                  <% start_page = [end_page - 4, 1].max if end_page - start_page < 4 %>
+                  
+                  <% (start_page..end_page).each do |page_num| %>
+                    <% if page_num == @page %>
+                      <li class="page-item active">
+                        <span class="page-link bg-primary border-primary"><%= page_num %></span>
+                      </li>
+                    <% else %>
+                      <li class="page-item">
+                        <%= link_to users_path(page: page_num), class: 'page-link bg-dark text-white border-secondary' do %>
+                          <%= page_num %>
+                        <% end %>
+                      </li>
+                    <% end %>
+                  <% end %>
+                  
+                  <!-- Última página -->
+                  <% if @page < @total_pages %>
+                    <li class="page-item">
+                      <%= link_to users_path(page: @page + 1), class: 'page-link bg-dark text-white border-secondary' do %>
+                        <i class="fas fa-angle-right"></i>
+                      <% end %>
+                    </li>
+                    <li class="page-item">
+                      <%= link_to users_path(page: @total_pages), class: 'page-link bg-dark text-white border-secondary' do %>
+                        <i class="fas fa-angle-double-right"></i>
+                      <% end %>
+                    </li>
+                  <% else %>
+                    <li class="page-item disabled">
+                      <span class="page-link bg-dark text-muted border-secondary">
+                        <i class="fas fa-angle-right"></i>
+                      </span>
+                    </li>
+                    <li class="page-item disabled">
+                      <span class="page-link bg-dark text-muted border-secondary">
+                        <i class="fas fa-angle-double-right"></i>
+                      </span>
+                    </li>
+                  <% end %>
+                </ul>
+              </nav>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+  body {
+    background-color: #121212;
+    color: #f8f9fa;
+  }
+  
+  .bg-black {
+    background-color: #121212 !important;
+  }
+  
+  .table-dark {
+    --bs-table-bg: #121212;
+    --bs-table-striped-bg: #1a1a1a;
+  }
+  
+  .table-hover tbody tr:hover {
+    background-color: #1a1a1a !important;
+  }
+  
+  .page-link:hover {
+    background-color: #2d3748 !important;
+    border-color: #4a5568 !important;
+  }
+  
+  .card {
+    border-radius: 0.5rem;
+  }
+</style>
+<% end %>

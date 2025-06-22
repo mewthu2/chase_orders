@@ -24,14 +24,25 @@
       integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13"
       crossorigin="anonymous"
     ></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <%= yield :styles %>
   </head>
 
   <body>
     <div class="wrapper" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>)">
       <% if current_user.present? %>
         <%= render 'layouts/partials/sidebar' %>
+        <button class="mobile-sidebar-toggle d-lg-none" id="mobileToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="sidebar-overlay d-lg-none" id="sidebarOverlay"></div>
       <% end %>
       <%= render 'layouts/partials/content' %>
     </div>
+
+    <%= yield :scripts %>
+    
   </body>
 </html>

@@ -1,0 +1,191 @@
+<div class="container-fluid py-4">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-user-<%= @user.new_record? ? 'plus' : 'edit' %> me-2"></i>
+            <%= @user.new_record? ? 'Novo Usuário' : 'Editar Usuário' %>
+          </h5>
+        </div>
+        
+        <div class="card-body bg-black">
+          <%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
+            <% if @user.errors.any? %>
+              <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle me-2"></i>Erros encontrados:</h6>
+                <ul class="mb-0">
+                  <% @user.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="row g-4">
+              <div class="col-md-4">
+                <label class="form-label text-white">Nome *</label>
+                <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
+                <div class="invalid-feedback">
+                  Por favor, informe o nome.
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label text-white">Email *</label>
+                <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
+                <div class="invalid-feedback">
+                  Por favor, informe um email válido.
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label text-white">Telefone</label>
+                <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
+              </div>
+            </div>
+
+            <div class="row g-4 mt-2">
+              <div class="col-md-4">
+                <label class="form-label text-white">Senha <%= @user.new_record? ? '*' : '(deixe em branco para manter)' %></label>
+                <%= form.password_field :password, class: 'form-control bg-dark text-white border-secondary', 
+                    required: @user.new_record?, autocomplete: 'new-password' %>
+                <div class="invalid-feedback">
+                  Por favor, informe a senha.
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <label class="form-label text-white">Confirmar Senha</label>
+                <%= form.password_field :password_confirmation, class: 'form-control bg-dark text-white border-secondary', 
+                    autocomplete: 'new-password' %>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label text-white">Perfil *</label>
+                <%= form.select :profile_id, options_for_select([
+                  ['Selecione um perfil', ''],
+                  ['Administrador', 1],
+                  ['Gerente', 2],
+                  ['Usuário', 3]
+                ], @user.profile_id), {}, { class: 'form-select bg-dark text-white border-secondary', required: true } %>
+                <div class="invalid-feedback">
+                  Por favor, selecione um perfil.
+                </div>
+                <small class="text-muted">
+                  <strong>Administrador:</strong> Acesso total ao sistema<br>
+                  <strong>Gerente:</strong> Acesso limitado de gerenciamento<br>
+                  <strong>Usuário:</strong> Acesso básico
+                </small>
+              </div>
+            </div>
+
+            <div class="row g-4 mt-3">
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @user.new_record? ? true : @user.active? %>
+                  <label class="form-check-label text-white">
+                    Usuário Ativo
+                  </label>
+                  <small class="d-block text-muted">Usuários inativos não podem fazer login no sistema</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mt-5">
+              <div class="col-12 d-flex justify-content-between">
+                <%= link_to users_path, class: 'btn btn-secondary btn-lg' do %>
+                  <i class="fas fa-arrow-left me-2"></i> Voltar para Lista
+                <% end %>
+                
+                <button type="submit" class="btn btn-success btn-lg">
+                  <i class="fas fa-save me-2"></i>
+                  <%= @user.new_record? ? 'Criar Usuário' : 'Salvar Alterações' %>
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+      border-color: #4299e1;
+      box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+    }
+    
+    .form-check-input:checked {
+      background-color: #4299e1;
+      border-color: #4299e1;
+    }
+    
+    .form-check-input:focus {
+      border-color: #4299e1;
+      box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+    }
+    
+    .btn-lg {
+      padding: 0.75rem 2rem;
+      font-size: 1.1rem;
+    }
+    
+    .card {
+      border-radius: 0.5rem;
+    }
+    
+    .form-label {
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .invalid-feedback {
+      display: block;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Bootstrap form validation
+      const forms = document.querySelectorAll('.needs-validation');
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add('was-validated');
+        }, false);
+      });
+
+      const phoneInput = document.querySelector('input[name="user[phone]"]');
+      if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\D/g, '');
+          if (value.length <= 11) {
+            value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            if (value.length < 14) {
+              value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+            }
+          }
+          e.target.value = value;
+        });
+      }
+    });
+  </script>
+<% end %>

@@ -12,7 +12,6 @@ Rails.application.routes.draw do
     collection do
       get :invoice_emition
       get :ranking_sellers
-      get :dalila
     end
   end
 
@@ -30,6 +29,24 @@ Rails.application.routes.draw do
     collection do
       get :reprocess
       get :verify_attempts
+    end
+  end
+
+  resources :discounts, only: [:index] do
+    collection do
+      post :search
+      patch :toggle_status
+      patch :update_dates
+      get :logs
+    end
+  end
+
+  resources :logs, only: [:index]
+
+  resources :users do
+    member do
+      patch :toggle_admin
+      patch :toggle_status
     end
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_14_020938) do
+ActiveRecord::Schema[7.2].define(version: 2025_06_22_000543) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -33,6 +33,31 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_14_020938) do
     t.boolean "xml_sended", default: false
     t.string "tracking"
     t.integer "id_nota_tiny2"
+  end
+
+  create_table "logs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "resource_type", null: false
+    t.string "resource_id"
+    t.string "action_type", null: false
+    t.string "resource_name"
+    t.text "details"
+    t.text "old_values"
+    t.text "new_values"
+    t.string "ip_address"
+    t.string "user_agent"
+    t.text "error_message"
+    t.boolean "success", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["action_type"], name: "index_logs_on_action_type"
+    t.index ["created_at"], name: "index_logs_on_created_at"
+    t.index ["resource_name"], name: "index_logs_on_resource_name"
+    t.index ["resource_type", "resource_id"], name: "index_logs_on_resource_type_and_resource_id"
+    t.index ["resource_type"], name: "index_logs_on_resource_type"
+    t.index ["success"], name: "index_logs_on_success"
+    t.index ["user_id", "resource_type"], name: "index_logs_on_user_id_and_resource_type"
+    t.index ["user_id"], name: "index_logs_on_user_id"
   end
 
   create_table "motors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -74,74 +99,3 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_14_020938) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "product_updates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.bigint "product_id", null: false
-    t.bigint "user_id", null: false
-    t.bigint "kinds"
-    t.string "field"
-    t.string "original_value"
-    t.string "modified_value"
-    t.string "json_return"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["product_id"], name: "index_product_updates_on_product_id"
-    t.index ["user_id"], name: "index_product_updates_on_user_id"
-  end
-
-  create_table "products", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.string "sku"
-    t.string "tiny_lagoa_seca_product_id"
-    t.integer "tiny_bh_shopping_id"
-    t.integer "tiny_rj_id"
-    t.string "tiny_2_id"
-    t.string "shopify_product_id"
-    t.string "shopify_variant_id"
-    t.string "shopify_inventory_item_id"
-    t.string "shopify_product_name"
-    t.string "cost"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "price"
-    t.string "compare_at_price"
-    t.string "vendor"
-    t.string "option1"
-    t.string "option2"
-    t.string "option3"
-    t.string "stock_lagoa_seca"
-    t.string "stock_bh_shopping"
-    t.integer "stock_rj"
-    t.string "stock_tiny_2"
-    t.string "tags"
-  end
-
-  create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.string "name"
-    t.string "phone"
-    t.string "email", default: "", null: false
-    t.string "encrypted_password", default: "", null: false
-    t.string "reset_password_token"
-    t.datetime "reset_password_sent_at"
-    t.datetime "remember_created_at"
-    t.integer "sign_in_count", default: 0, null: false
-    t.datetime "current_sign_in_at"
-    t.datetime "last_sign_in_at"
-    t.string "current_sign_in_ip"
-    t.string "last_sign_in_ip"
-    t.string "confirmation_token"
-    t.string "unlock_token"
-    t.datetime "confirmed_at"
-    t.datetime "confirmation_sent_at"
-    t.string "unconfirmed_email"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
-    t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
-    t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
-  end
-
-  add_foreign_key "order_items", "orders"
-  add_foreign_key "order_items", "products"
-  add_foreign_key "product_updates", "products"
-  add_foreign_key "product_updates", "users"
-end

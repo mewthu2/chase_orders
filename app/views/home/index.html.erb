@@ -1,642 +1,632 @@
 <div class="container-fluid py-4">
   <% title 'Dashboard' %>
 
-  <!-- SEÇÃO DO DIA ATUAL - AGORA NO TOPO -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-info shadow">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-calendar-day me-2"></i>Hoje: <%= l(@today, format: '%A, %d de %B de %Y').capitalize %>
-          </h5>
-          <span class="badge bg-info text-dark px-3 py-2">
-            <i class="fas fa-clock me-1"></i> <%= Time.now.strftime('%H:%M') %>
-          </span>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4 mb-3 mb-md-0">
-              <div class="card bg-black border border-primary h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-map-marker-alt me-2"></i>Rio de Janeiro
-                    </h6>
-                    <span class="badge bg-primary"><%= @today_stats['rj'][:total] %> pedidos</span>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
-                    <small><a href="<%= orders_path(kind: 'rj', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['rj'][:migrated] %></a></small>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
-                    <small><a href="<%= orders_path(kind: 'rj', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['rj'][:not_migrated] %></a></small>
-                  </div>
-                  <div class="mt-2">
-                    <div class="progress bg-dark" style="height: 8px;">
-                      <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" 
-                           style="width: <%= @today_stats['rj'][:migration_percentage] %>%"
-                           aria-valuenow="<%= @today_stats['rj'][:migration_percentage] %>" 
-                           aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                      <small class="text-muted"><%= @today_stats['rj'][:migration_percentage] %>% migrados</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-4 mb-3 mb-md-0">
-              <div class="card bg-black border border-success h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-store me-2"></i>BH Shopping
-                    </h6>
-                    <span class="badge bg-success"><%= @today_stats['bh_shopping'][:total] %> pedidos</span>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
-                    <small><a href="<%= orders_path(kind: 'bh_shopping', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['bh_shopping'][:migrated] %></a></small>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
-                    <small><a href="<%= orders_path(kind: 'bh_shopping', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['bh_shopping'][:not_migrated] %></a></small>
-                  </div>
-                  <div class="mt-2">
-                    <div class="progress bg-dark" style="height: 8px;">
-                      <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" 
-                           style="width: <%= @today_stats['bh_shopping'][:migration_percentage] %>%"
-                           aria-valuenow="<%= @today_stats['bh_shopping'][:migration_percentage] %>" 
-                           aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                      <small class="text-muted"><%= @today_stats['bh_shopping'][:migration_percentage] %>% migrados</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-4">
-              <div class="card bg-black border border-warning h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-water me-2"></i>Lagoa Seca
-                    </h6>
-                    <span class="badge bg-warning text-dark"><%= @today_stats['lagoa_seca'][:total] %> pedidos</span>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
-                    <small><a href="<%= orders_path(kind: 'lagoa_seca', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['lagoa_seca'][:migrated] %></a></small>
-                  </div>
-                  <div class="d-flex justify-content-between text-white">
-                    <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
-                    <small><a href="<%= orders_path(kind: 'lagoa_seca', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['lagoa_seca'][:not_migrated] %></a></small>
-                  </div>
-                  <div class="mt-2">
-                    <div class="progress bg-dark" style="height: 8px;">
-                      <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" 
-                           style="width: <%= @today_stats['lagoa_seca'][:migration_percentage] %>%"
-                           aria-valuenow="<%= @today_stats['lagoa_seca'][:migration_percentage] %>" 
-                           aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                      <small class="text-muted"><%= @today_stats['lagoa_seca'][:migration_percentage] %>% migrados</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+  <% if current_user&.admin? %>
+    <!-- SEÇÃO DO DIA ATUAL - AGORA NO TOPO -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-info shadow">
+          <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-calendar-day me-2"></i>Hoje: <%= l(Date.current, format: '%A, %d de %B de %Y').capitalize %>
+            </h5>
+            <span class="badge bg-info text-dark px-3 py-2">
+              <i class="fas fa-clock me-1"></i> <%= Time.now.strftime('%H:%M') %>
+            </span>
           </div>
-          
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ÚLTIMOS PEDIDOS MIGRADOS - AGORA LOGO APÓS A SEÇÃO DO DIA ATUAL -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-history me-2"></i>Últimos Pedidos Migrados
-          </h5>
-        </div>
-        <div class="card-body">
-          <!-- Abas de navegação -->
-          <ul class="nav nav-tabs mb-3" id="ordersTab" role="tablist">
-            <% @kinds.each_with_index do |kind, index| %>
-              <% 
-                active_class = index == 0 ? 'active' : ''
-                tab_id = "#{kind}-tab"
-                tab_content_id = "#{kind}-content"
-                
-                tab_color = case kind
-                  when 'rj' then 'text-primary'
-                  when 'bh_shopping' then 'text-success'
-                  when 'lagoa_seca' then 'text-warning'
-                  else 'text-secondary'
-                end
-                
-                kind_icon = case kind
-                  when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
-                  when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
-                  when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
-                  else '<i class="fas fa-tag me-1"></i>'
-                end
-              %>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link <%= active_class %> <%= tab_color %>" 
-                        id="<%= tab_id %>" 
-                        data-bs-toggle="tab" 
-                        data-bs-target="#<%= tab_content_id %>" 
-                        type="button" 
-                        role="tab" 
-                        aria-controls="<%= tab_content_id %>" 
-                        aria-selected="<%= index == 0 ? 'true' : 'false' %>">
-                  <%= kind_icon.html_safe %> <%= kind_display_name(kind) %>
-                </button>
-              </li>
-            <% end %>
-          </ul>
-          
-          <!-- Conteúdo das abas -->
-          <div class="tab-content" id="ordersTabContent">
-            <% @kinds.each_with_index do |kind, index| %>
-              <% 
-                active_class = index == 0 ? 'show active' : ''
-                tab_content_id = "#{kind}-content"
-                
-                border_class = case kind
-                  when 'rj' then 'border-primary'
-                  when 'bh_shopping' then 'border-success'
-                  when 'lagoa_seca' then 'border-warning'
-                  else 'border-secondary'
-                end
-              %>
-              <div class="tab-pane fade <%= active_class %>" 
-                   id="<%= tab_content_id %>" 
-                   role="tabpanel" 
-                   aria-labelledby="<%= kind %>-tab">
-                <div class="table-responsive">
-                  <table class="table table-dark table-hover align-middle mb-0">
-                    <thead class="bg-dark">
-                      <tr>
-                        <th class="text-white">ID</th>
-                        <th class="text-white">ID Tiny</th>
-                        <th class="text-white">ID Shopify</th>
-                        <th class="text-white">Data Tiny</th>
-                        <th class="text-white">Data de Migração</th>
-                        <th class="text-white">Itens</th>
-                        <th class="text-white">Tags</th>
-                        <th class="text-center text-white">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <% if @recent_migrated_orders[kind].any? %>
-                        <% @recent_migrated_orders[kind].each do |order| %>
-                          <tr>
-                            <td><span class="badge bg-dark"><%= order.id %></span></td>
-                            <td>
-                              <div class="d-flex align-items-center gap-2">
-                                <% if order.tiny_order_id.present? %>
-                                  <span class="badge bg-dark"><%= order.tiny_order_id %></span>
-                                  <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
-                                     target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
-                                    <i class="fas fa-external-link-alt"></i>
-                                  </a>
-                                <% else %>
-                                  <span class="badge bg-secondary">Não disponível</span>
-                                <% end %>
-                              </div>
-                            </td>
-                            <td>
-                              <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-success text-white"><%= order.shopify_order_id %></span>
-                                <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= order.shopify_order_id %>" 
-                                   target="_blank" class="btn btn-sm btn-outline-success" title="Ver no Shopify">
-                                  <i class="fas fa-external-link-alt"></i>
-                                </a>
-                              </div>
-                            </td>
-                            <td>
-                              <% if order.tiny_creation_date.present? %>
-                                <%= order.tiny_creation_date.is_a?(String) ? order.tiny_creation_date : order.tiny_creation_date.strftime('%d/%m/%Y') %>
-                              <% else %>
-                                <span class="badge bg-secondary">Não disponível</span>
-                              <% end %>
-                            </td>
-                            <td><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
-                            <td>
-                              <span class="badge bg-secondary"><%= order.order_items.count %> itens</span>
-                            </td>
-                            <td>
-                              <% if order.tags.present? %>
-                                <% order.tags.split(',').each do |tag| %>
-                                  <span class="badge bg-info text-dark"><%= tag.strip %></span>
-                                <% end %>
-                              <% else %>
-                                <span class="badge bg-secondary">Sem tags</span>
-                              <% end %>
-                            </td>
-                            <td class="text-center">
-                              <%= link_to order_path(order), class: 'btn btn-sm btn-light', target: '_blank', title: 'Ver detalhes' do %>
-                                <i class="fas fa-eye"></i>
-                              <% end %>
-                            </td>
-                          </tr>
-                        <% end %>
-                      <% else %>
-                        <tr>
-                          <td colspan="8" class="text-center py-4">
-                            <i class="fas fa-info-circle text-secondary mb-3" style="font-size: 2rem;"></i>
-                            <p class="mb-0">Nenhum pedido migrado encontrado para <%= kind_display_name(kind) %>.</p>
-                          </td>
-                        </tr>
-                      <% end %>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- RESUMO GERAL - AGORA APÓS A SEÇÃO DO DIA ATUAL -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow">
-        <!-- Mudar o título do dashboard -->
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-chart-pie me-2"></i>Resumo Geral de Integração
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <div class="card bg-black border border-info mb-4 h-100 shadow">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-white mb-0">
-                      <i class="fas fa-chart-pie me-2"></i>Visão Geral
-                    </h5>
-                    <span class="badge bg-info text-dark">Total</span>
-                  </div>
-                  <div class="text-center mb-4">
-                    <div class="display-4 text-white mb-0">
-                      <a href="<%= orders_path(has_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_migrated %></a> / 
-                      <a href="<%= orders_path %>" class="text-white text-decoration-none"><%= @total_orders %></a>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3 mb-md-0">
+                <div class="card bg-black border border-primary h-100">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6 class="text-white mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>Rio de Janeiro
+                      </h6>
+                      <span class="badge bg-primary"><%= @today_stats['rj'][:total] %> pedidos</span>
                     </div>
-                    <small class="text-muted">Pedidos migrados para o Shopify</small>
-                  </div>
-                  <div class="mb-2">
-                    <div class="d-flex justify-content-between mb-1">
-                      <small class="text-white">Progresso de Migração</small>
-                      <small class="text-white"><%= @migration_percentage %>%</small>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
+                      <small><a href="<%= orders_path(kind: 'rj', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['rj'][:migrated] %></a></small>
                     </div>
-                    <div class="progress bg-dark">
-                      <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" 
-                           style="width: <%= @migration_percentage %>%"
-                           aria-valuenow="<%= @migration_percentage %>" 
-                           aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
+                      <small><a href="<%= orders_path(kind: 'rj', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['rj'][:not_migrated] %></a></small>
                     </div>
-                  </div>
-                  
-                  <div class="row mt-4">
-                    <div class="col-6">
-                      <div class="text-center">
-                        <h3 class="text-white mb-0"><a href="<%= orders_path(has_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_migrated %></a></h3>
-                        <small class="text-success">Migrados</small>
+                    <div class="mt-2">
+                      <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" role="progressbar" 
+                             style="width: <%= @today_stats['rj'][:migration_percentage] %>%"
+                             aria-valuenow="<%= @today_stats['rj'][:migration_percentage] %>" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
                       </div>
-                    </div>
-                    <div class="col-6">
-                      <div class="text-center">
-                        <h3 class="text-white mb-0"><a href="<%= orders_path(without_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_not_migrated %></a></h3>
-                        <small class="text-danger">Pendentes</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="col-md-8">
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="card bg-black border border-primary mb-4 shadow">
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="text-white mb-0">
-                          <i class="fas fa-calendar-day me-2"></i>Hoje
-                        </h6>
-                        <a href="<%= orders_path(has_shopify: 1, start_date: @today, end_date: @today) %>" class="badge bg-primary text-decoration-none"><%= @today_stats['total'][:migrated] %></a>
-                      </div>
-                      <div class="text-center">
-                        <div class="h3 text-white mb-0"><%= @today_stats['total'][:migration_percentage] %>%</div>
-                        <small class="text-muted">Taxa de migração</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="col-md-4">
-                  <div class="card bg-black border border-success mb-4 shadow">
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="text-white mb-0">
-                          <i class="fas fa-calendar-week me-2"></i>7 Dias
-                        </h6>
-                        <a href="<%= orders_path(has_shopify: 1, start_date: @week_ago, end_date: @today) %>" class="badge bg-success text-decoration-none"><%= @week_stats['total'][:migrated] %></a>
-                      </div>
-                      <div class="text-center">
-                        <div class="h3 text-white mb-0"><%= @week_stats['total'][:migration_percentage] %>%</div>
-                        <small class="text-muted">Taxa de migração</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="col-md-4">
-                  <div class="card bg-black border border-warning mb-4 shadow">
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="text-white mb-0">
-                          <i class="fas fa-calendar-alt me-2"></i>30 Dias
-                        </h6>
-                        <a href="<%= orders_path(has_shopify: 1, start_date: @month_ago, end_date: @today) %>" class="badge bg-warning text-dark text-decoration-none"><%= @month_stats['total'][:migrated] %></a>
-                      </div>
-                      <div class="text-center">
-                        <div class="h3 text-white mb-0"><%= @month_stats['total'][:migration_percentage] %>%</div>
-                        <small class="text-muted">Taxa de migração</small>
+                      <div class="d-flex justify-content-end">
+                        <small class="text-muted"><%= @today_stats['rj'][:migration_percentage] %>% migrados</small>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div class="row">
-                <% @kinds.each do |kind| %>
-                  <% 
-                    border_class = case kind
-                      when 'rj' then 'border-primary'
-                      when 'bh_shopping' then 'border-success'
-                      when 'lagoa_seca' then 'border-warning'
-                      else 'border-secondary'
-                    end
-                    
-                    kind_icon = case kind
-                      when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
-                      when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
-                      when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
-                      else '<i class="fas fa-tag me-1"></i>'
-                    end
-                    
-                    badge_class = case kind
-                      when 'rj' then 'bg-primary'
-                      when 'bh_shopping' then 'bg-success'
-                      when 'lagoa_seca' then 'bg-warning text-dark'
-                      else 'bg-secondary'
-                    end
-                  %>
-                  <div class="col-md-4">
-                    <div class="card bg-black <%= border_class %> mb-4 shadow">
-                      <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                          <h6 class="text-white mb-0">
-                            <%= kind_icon.html_safe %> <%= kind_display_name(kind) %>
-                          </h6>
-                          <span class="badge <%= badge_class %>">
-                            <a href="<%= orders_path(kind: kind, has_shopify: 1) %>" class="text-decoration-none <%= kind == 'lagoa_seca' ? 'text-dark' : 'text-white' %>"><%= @kinds_stats[kind][:migrated] %></a> / 
-                            <a href="<%= orders_path(kind: kind) %>" class="text-decoration-none <%= kind == 'lagoa_seca' ? 'text-dark' : 'text-white' %>"><%= @kinds_stats[kind][:total] %></a>
-                          </span>
-                        </div>
-                        
-                        <div class="mb-2">
-                          <div class="d-flex justify-content-between mb-1">
-                            <small class="text-white">Progresso</small>
-                            <small class="text-white"><%= @kinds_stats[kind][:migration_percentage] %>%</small>
-                          </div>
-                          <div class="progress bg-dark">
-                            <div class="progress-bar <%= badge_class %> progress-bar-striped progress-bar-animated" role="progressbar" 
-                                 style="width: <%= @kinds_stats[kind][:migration_percentage] %>%"
-                                 aria-valuenow="<%= @kinds_stats[kind][:migration_percentage] %>" 
-                                 aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                        
-                        <div class="mt-3">
-                          <div class="d-flex justify-content-between text-white">
-                            <small><i class="fas fa-calendar-day me-1"></i> Hoje:</small>
-                            <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_today] %></a></small>
-                          </div>
-                          <div class="d-flex justify-content-between text-white">
-                            <small><i class="fas fa-calendar-week me-1"></i> 7 dias:</small>
-                            <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @week_ago, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_week] %></a></small>
-                          </div>
-                          <div class="d-flex justify-content-between text-white">
-                            <small><i class="fas fa-calendar-alt me-1"></i> 30 dias:</small>
-                            <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @month_ago, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_month] %></a></small>
-                          </div>
-                          <div class="d-flex justify-content-between text-white">
-                            <small><i class="fas fa-clock me-1"></i> Última:</small>
-                            <small><%= @kinds_stats[kind][:last_migrated] ? @kinds_stats[kind][:last_migrated].strftime('%d/%m/%Y %H:%M') : 'N/A' %></small>
-                          </div>
-                        </div>
+              <div class="col-md-4 mb-3 mb-md-0">
+                <div class="card bg-black border border-success h-100">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6 class="text-white mb-0">
+                        <i class="fas fa-store me-2"></i>BH Shopping
+                      </h6>
+                      <span class="badge bg-success"><%= @today_stats['bh_shopping'][:total] %> pedidos</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
+                      <small><a href="<%= orders_path(kind: 'bh_shopping', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['bh_shopping'][:migrated] %></a></small>
+                    </div>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
+                      <small><a href="<%= orders_path(kind: 'bh_shopping', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['bh_shopping'][:not_migrated] %></a></small>
+                    </div>
+                    <div class="mt-2">
+                      <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" 
+                             style="width: <%= @today_stats['bh_shopping'][:migration_percentage] %>%"
+                             aria-valuenow="<%= @today_stats['bh_shopping'][:migration_percentage] %>" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                      <div class="d-flex justify-content-end">
+                        <small class="text-muted"><%= @today_stats['bh_shopping'][:migration_percentage] %>% migrados</small>
                       </div>
                     </div>
                   </div>
-                <% end %>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card bg-black border border-warning h-100">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6 class="text-white mb-0">
+                        <i class="fas fa-water me-2"></i>Lagoa Seca
+                      </h6>
+                      <span class="badge bg-warning text-dark"><%= @today_stats['lagoa_seca'][:total] %> pedidos</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-check-circle me-1 text-success"></i> Migrados:</small>
+                      <small><a href="<%= orders_path(kind: 'lagoa_seca', has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['lagoa_seca'][:migrated] %></a></small>
+                    </div>
+                    <div class="d-flex justify-content-between text-white">
+                      <small><i class="fas fa-exclamation-circle me-1 text-danger"></i> Pendentes:</small>
+                      <small><a href="<%= orders_path(kind: 'lagoa_seca', without_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @today_stats['lagoa_seca'][:not_migrated] %></a></small>
+                    </div>
+                    <div class="mt-2">
+                      <div class="progress bg-dark" style="height: 8px;">
+                        <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" 
+                             style="width: <%= @today_stats['lagoa_seca'][:migration_percentage] %>%"
+                             aria-valuenow="<%= @today_stats['lagoa_seca'][:migration_percentage] %>" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                      <div class="d-flex justify-content-end">
+                        <small class="text-muted"><%= @today_stats['lagoa_seca'][:migration_percentage] %>% migrados</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-chart-line me-2"></i>Tendência de Migração (Últimos 30 dias)
-          </h5>
-        </div>
-        <div class="card-body">
-          <%= line_chart @daily_migration_data[:series], 
-  id: 'migration-trend-chart', 
-  height: '350px', 
-  colors: ['#0d6efd', '#198754', '#ffc107'],
-  title: 'Pedidos Migrados por Dia',
-  xtitle: 'Data',
-  ytitle: 'Pedidos Migrados',
-  xtype: 'category',
-  suffix: " pedidos",
-  library: {
-    chart: {
-      background: '#121212',
-      toolbar: { show: true },
-      zoom: { enabled: true }
-    },
-    grid: {
-      borderColor: '#343a40',
-      row: {
-        colors: ['#1a1a1a', 'transparent'],
-        opacity: 0.2
-      }
-    },
-    markers: { size: 4 },
-    stroke: { curve: 'smooth', width: 3 },
-    xaxis: {
-      categories: @daily_migration_data[:dates],
-      labels: { 
-        style: { colors: '#f8f9fa' },
-        rotate: -45,
-        rotateAlways: false,
-        hideOverlappingLabels: true,
-        trim: false,
-        maxHeight: 120
-      },
-      title: {
-        text: 'Data',
-        style: { color: '#f8f9fa' }
-      },
-      tickPlacement: 'on'
-    },
-    yaxis: {
-      title: {
-        text: 'Pedidos Migrados',
-        style: { color: '#f8f9fa' }
-      },
-      labels: { style: { colors: '#f8f9fa' } }
-    },
-    legend: {
-      position: 'top',
-      horizontalAlign: 'right',
-      floating: true,
-      offsetY: -25,
-      offsetX: -5,
-      labels: { colors: '#f8f9fa' }
-    },
-    tooltip: { 
-      theme: 'dark',
-      y: {
-        formatter: "function(val) { return val + ' pedidos'; }"
-      }
-    }
-  }
-%>
+    <!-- ÚLTIMOS PEDIDOS MIGRADOS -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-history me-2"></i>Últimos Pedidos Migrados
+            </h5>
+          </div>
+          <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="ordersTab" role="tablist">
+              <% @kinds.each_with_index do |kind, index| %>
+                <% 
+                  active_class = index == 0 ? 'active' : ''
+                  tab_id = "#{kind}-tab"
+                  tab_content_id = "#{kind}-content"
+                  
+                  tab_color = case kind
+                    when 'rj' then 'text-primary'
+                    when 'bh_shopping' then 'text-success'
+                    when 'lagoa_seca' then 'text-warning'
+                    else 'text-secondary'
+                  end
+                  
+                  kind_icon = case kind
+                    when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+                    when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+                    when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+                    else '<i class="fas fa-tag me-1"></i>'
+                  end
+                %>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link <%= active_class %> <%= tab_color %>" 
+                          id="<%= tab_id %>" 
+                          data-bs-toggle="tab" 
+                          data-bs-target="#<%= tab_content_id %>" 
+                          type="button" 
+                          role="tab" 
+                          aria-controls="<%= tab_content_id %>" 
+                          aria-selected="<%= index == 0 ? 'true' : 'false' %>">
+                    <%= kind_icon.html_safe %> <%= kind_display_name(kind) %>
+                  </button>
+                </li>
+              <% end %>
+            </ul>
+            
+            <div class="tab-content" id="ordersTabContent">
+              <% @kinds.each_with_index do |kind, index| %>
+                <% 
+                  active_class = index == 0 ? 'show active' : ''
+                  tab_content_id = "#{kind}-content"
+                %>
+                <div class="tab-pane fade <%= active_class %>" 
+                     id="<%= tab_content_id %>" 
+                     role="tabpanel" 
+                     aria-labelledby="<%= kind %>-tab">
+                  <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                      <thead class="bg-dark">
+                        <tr>
+                          <th class="text-white">ID</th>
+                          <th class="text-white">ID Tiny</th>
+                          <th class="text-white">ID Shopify</th>
+                          <th class="text-white">Data Tiny</th>
+                          <th class="text-white">Data de Migração</th>
+                          <th class="text-white">Itens</th>
+                          <th class="text-white">Tags</th>
+                          <th class="text-center text-white">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% if @recent_migrated_orders[kind]&.any? %>
+                          <% @recent_migrated_orders[kind].each do |order| %>
+                            <tr>
+                              <td><span class="badge bg-dark"><%= order.id %></span></td>
+                              <td>
+                                <div class="d-flex align-items-center gap-2">
+                                  <% if order.tiny_order_id.present? %>
+                                    <span class="badge bg-dark"><%= order.tiny_order_id %></span>
+                                    <a href="<%= ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/pedidos/editar.phtml?id=') %><%= order.tiny_order_id %>" 
+                                       target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
+                                      <i class="fas fa-external-link-alt"></i>
+                                    </a>
+                                  <% else %>
+                                    <span class="badge bg-secondary">Não disponível</span>
+                                  <% end %>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="d-flex align-items-center gap-2">
+                                  <span class="badge bg-success text-white"><%= order.shopify_order_id %></span>
+                                  <a href="<%= ENV.fetch('SHOPIFY_ORDER_URL', 'https://admin.shopify.com/') %><%= order.shopify_order_id %>" 
+                                     target="_blank" class="btn btn-sm btn-outline-success" title="Ver no Shopify">
+                                    <i class="fas fa-external-link-alt"></i>
+                                  </a>
+                                </div>
+                              </td>
+                              <td>
+                                <% if order.tiny_creation_date.present? %>
+                                  <%= order.tiny_creation_date.is_a?(String) ? order.tiny_creation_date : order.tiny_creation_date.strftime('%d/%m/%Y') %>
+                                <% else %>
+                                  <span class="badge bg-secondary">Não disponível</span>
+                                <% end %>
+                              </td>
+                              <td><%= order.updated_at.strftime('%d/%m/%Y %H:%M') %></td>
+                              <td>
+                                <span class="badge bg-secondary"><%= order.order_items.count %> itens</span>
+                              </td>
+                              <td>
+                                <% if order.tags.present? %>
+                                  <% order.tags.split(',').each do |tag| %>
+                                    <span class="badge bg-info text-dark"><%= tag.strip %></span>
+                                  <% end %>
+                                <% else %>
+                                  <span class="badge bg-secondary">Sem tags</span>
+                                <% end %>
+                              </td>
+                              <td class="text-center">
+                                <%= link_to order_path(order), class: 'btn btn-sm btn-light', target: '_blank', title: 'Ver detalhes' do %>
+                                  <i class="fas fa-eye"></i>
+                                <% end %>
+                              </td>
+                            </tr>
+                          <% end %>
+                        <% else %>
+                          <tr>
+                            <td colspan="8" class="text-center py-4">
+                              <i class="fas fa-info-circle text-secondary mb-3" style="font-size: 2rem;"></i>
+                              <p class="mb-0">Nenhum pedido migrado encontrado para <%= kind_display_name(kind) %>.</p>
+                            </td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row">
-    <div class="col-md-6 mb-4">
-      <div class="card bg-black border border-dark shadow h-100">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-chart-pie me-2"></i>Distribuição de Status por Tipo
-          </h5>
+    <!-- RESUMO GERAL -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-chart-pie me-2"></i>Resumo Geral de Integração
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="card bg-black border border-info mb-4 h-100 shadow">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h5 class="text-white mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>Visão Geral
+                      </h5>
+                      <span class="badge bg-info text-dark">Total</span>
+                    </div>
+                    <div class="text-center mb-4">
+                      <div class="display-4 text-white mb-0">
+                        <a href="<%= orders_path(has_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_migrated %></a> / 
+                        <a href="<%= orders_path %>" class="text-white text-decoration-none"><%= @total_orders %></a>
+                      </div>
+                      <small class="text-muted">Pedidos migrados para o Shopify</small>
+                    </div>
+                    <div class="mb-2">
+                      <div class="d-flex justify-content-between mb-1">
+                        <small class="text-white">Progresso de Migração</small>
+                        <small class="text-white"><%= @migration_percentage %>%</small>
+                      </div>
+                      <div class="progress bg-dark">
+                        <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" 
+                             style="width: <%= @migration_percentage %>%"
+                             aria-valuenow="<%= @migration_percentage %>" 
+                             aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                      <div class="col-6">
+                        <div class="text-center">
+                          <h3 class="text-white mb-0"><a href="<%= orders_path(has_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_migrated %></a></h3>
+                          <small class="text-success">Migrados</small>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <div class="text-center">
+                          <h3 class="text-white mb-0"><a href="<%= orders_path(without_shopify: 1) %>" class="text-white text-decoration-none"><%= @total_not_migrated %></a></h3>
+                          <small class="text-danger">Pendentes</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-8">
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="card bg-black border border-primary mb-4 shadow">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <h6 class="text-white mb-0">
+                            <i class="fas fa-calendar-day me-2"></i>Hoje
+                          </h6>
+                          <a href="<%= orders_path(has_shopify: 1, start_date: @today, end_date: @today) %>" class="badge bg-primary text-decoration-none"><%= @today_stats['total'][:migrated] %></a>
+                        </div>
+                        <div class="text-center">
+                          <div class="h3 text-white mb-0"><%= @today_stats['total'][:migration_percentage] %>%</div>
+                          <small class="text-muted">Taxa de migração</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <div class="card bg-black border border-success mb-4 shadow">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <h6 class="text-white mb-0">
+                            <i class="fas fa-calendar-week me-2"></i>7 Dias
+                          </h6>
+                          <a href="<%= orders_path(has_shopify: 1, start_date: @week_ago, end_date: @today) %>" class="badge bg-success text-decoration-none"><%= @week_stats['total'][:migrated] %></a>
+                        </div>
+                        <div class="text-center">
+                          <div class="h3 text-white mb-0"><%= @week_stats['total'][:migration_percentage] %>%</div>
+                          <small class="text-muted">Taxa de migração</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <div class="card bg-black border border-warning mb-4 shadow">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <h6 class="text-white mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>30 Dias
+                          </h6>
+                          <a href="<%= orders_path(has_shopify: 1, start_date: @month_ago, end_date: @today) %>" class="badge bg-warning text-dark text-decoration-none"><%= @month_stats['total'][:migrated] %></a>
+                        </div>
+                        <div class="text-center">
+                          <div class="h3 text-white mb-0"><%= @month_stats['total'][:migration_percentage] %>%</div>
+                          <small class="text-muted">Taxa de migração</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <% @kinds.each do |kind| %>
+                    <% 
+                      border_class = case kind
+                        when 'rj' then 'border-primary'
+                        when 'bh_shopping' then 'border-success'
+                        when 'lagoa_seca' then 'border-warning'
+                        else 'border-secondary'
+                      end
+                      
+                      kind_icon = case kind
+                        when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+                        when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+                        when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+                        else '<i class="fas fa-tag me-1"></i>'
+                      end
+                      
+                      badge_class = case kind
+                        when 'rj' then 'bg-primary'
+                        when 'bh_shopping' then 'bg-success'
+                        when 'lagoa_seca' then 'bg-warning text-dark'
+                        else 'bg-secondary'
+                      end
+                    %>
+                    <div class="col-md-4">
+                      <div class="card bg-black <%= border_class %> mb-4 shadow">
+                        <div class="card-body">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-white mb-0">
+                              <%= kind_icon.html_safe %> <%= kind_display_name(kind) %>
+                            </h6>
+                            <span class="badge <%= badge_class %>">
+                              <a href="<%= orders_path(kind: kind, has_shopify: 1) %>" class="text-decoration-none <%= kind == 'lagoa_seca' ? 'text-dark' : 'text-white' %>"><%= @kinds_stats[kind][:migrated] %></a> / 
+                              <a href="<%= orders_path(kind: kind) %>" class="text-decoration-none <%= kind == 'lagoa_seca' ? 'text-dark' : 'text-white' %>"><%= @kinds_stats[kind][:total] %></a>
+                            </span>
+                          </div>
+                          
+                          <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                              <small class="text-white">Progresso</small>
+                              <small class="text-white"><%= @kinds_stats[kind][:migration_percentage] %>%</small>
+                            </div>
+                            <div class="progress bg-dark">
+                              <div class="progress-bar <%= badge_class %> progress-bar-striped progress-bar-animated" role="progressbar" 
+                                   style="width: <%= @kinds_stats[kind][:migration_percentage] %>%"
+                                   aria-valuenow="<%= @kinds_stats[kind][:migration_percentage] %>" 
+                                   aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                          </div>
+                          
+                          <div class="mt-3">
+                            <div class="d-flex justify-content-between text-white">
+                              <small><i class="fas fa-calendar-day me-1"></i> Hoje:</small>
+                              <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @today, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_today] %></a></small>
+                            </div>
+                            <div class="d-flex justify-content-between text-white">
+                              <small><i class="fas fa-calendar-week me-1"></i> 7 dias:</small>
+                              <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @week_ago, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_week] %></a></small>
+                            </div>
+                            <div class="d-flex justify-content-between text-white">
+                              <small><i class="fas fa-calendar-alt me-1"></i> 30 dias:</small>
+                              <small><a href="<%= orders_path(kind: kind, has_shopify: 1, start_date: @month_ago, end_date: @today) %>" class="text-white text-decoration-none"><%= @kinds_stats[kind][:migrated_month] %></a></small>
+                            </div>
+                            <div class="d-flex justify-content-between text-white">
+                              <small><i class="fas fa-clock me-1"></i> Última:</small>
+                              <small><%= @kinds_stats[kind][:last_migrated] ? @kinds_stats[kind][:last_migrated].strftime('%d/%m/%Y %H:%M') : 'N/A' %></small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <%= bar_chart @status_distribution_data[:series],
-  id: 'status-distribution-chart',
-  height: '350px',
-  colors: ['#198754', '#dc3545'],
-  stacked: true,
-  title: 'Distribuição de Pedidos por Status',
-  xtitle: 'Tipo de Pedido',
-  ytitle: 'Quantidade de Pedidos',
-  library: {
-    chart: {
-      background: '#121212',
-      toolbar: { show: true },
-      stacked: true,
-      stackType: '100%'
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '70%',
-        borderRadius: 5,
-        dataLabels: {
-          position: 'center',
-          total: {
-            enabled: true,
-            formatter: "function(val) { return Math.round(val) + '%'; }",
-            style: {
-              fontSize: '13px',
-              fontWeight: 900,
-              colors: ['#fff']
+      </div>
+    </div>
+
+    <!-- GRÁFICOS -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-chart-line me-2"></i>Tendência de Migração (Últimos 30 dias)
+            </h5>
+          </div>
+          <div class="card-body">
+            <%= line_chart @daily_migration_data[:series], 
+    id: 'migration-trend-chart', 
+    height: '350px', 
+    colors: ['#0d6efd', '#198754', '#ffc107'],
+    title: 'Pedidos Migrados por Dia',
+    xtitle: 'Data',
+    ytitle: 'Pedidos Migrados',
+    xtype: 'category',
+    suffix: " pedidos",
+    library: {
+      chart: {
+        background: '#121212',
+        toolbar: { show: true },
+        zoom: { enabled: true }
+      },
+      grid: {
+        borderColor: '#343a40',
+        row: {
+          colors: ['#1a1a1a', 'transparent'],
+          opacity: 0.2
+        }
+      },
+      markers: { size: 4 },
+      stroke: { curve: 'smooth', width: 3 },
+      xaxis: {
+        categories: @daily_migration_data[:dates],
+        labels: { 
+          style: { colors: '#f8f9fa' },
+          rotate: -45,
+          rotateAlways: false,
+          hideOverlappingLabels: true,
+          trim: false,
+          maxHeight: 120
+        },
+        title: {
+          text: 'Data',
+          style: { color: '#f8f9fa' }
+        },
+        tickPlacement: 'on'
+      },
+      yaxis: {
+        title: {
+          text: 'Pedidos Migrados',
+          style: { color: '#f8f9fa' }
+        },
+        labels: { style: { colors: '#f8f9fa' } }
+      },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'right',
+        floating: true,
+        offsetY: -25,
+        offsetX: -5,
+        labels: { colors: '#f8f9fa' }
+      },
+      tooltip: { 
+        theme: 'dark',
+        y: {
+          formatter: "function(val) { return val + ' pedidos'; }"
+        }
+      }
+    }
+%>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="card bg-black border border-dark shadow h-100">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-chart-pie me-2"></i>Distribuição de Status por Tipo
+            </h5>
+          </div>
+          <div class="card-body">
+            <%= bar_chart @status_distribution_data[:series],
+    id: 'status-distribution-chart',
+    height: '350px',
+    colors: ['#198754', '#dc3545'],
+    stacked: true,
+    title: 'Distribuição de Pedidos por Status',
+    xtitle: 'Tipo de Pedido',
+    ytitle: 'Quantidade de Pedidos',
+    library: {
+      chart: {
+        background: '#121212',
+        toolbar: { show: true },
+        stacked: true,
+        stackType: '100%'
+      },
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '70%',
+          borderRadius: 5,
+          dataLabels: {
+            position: 'center',
+            total: {
+              enabled: true,
+              formatter: "function(val) { return Math.round(val) + '%'; }",
+              style: {
+                fontSize: '13px',
+                fontWeight: 900,
+                colors: ['#fff']
+              }
             }
           }
         }
-      }
-    },
-    dataLabels: { 
-      enabled: true,
-      style: {
-        colors: ['#fff']
       },
-      formatter: "function(val, opt) { return val > 0 ? val : ''; }"
-    },
-    xaxis: {
-      categories: @status_distribution_data[:labels],
-      labels: { style: { colors: '#f8f9fa' } },
-      title: {
-        text: 'Tipo de Pedido',
-        style: { color: '#f8f9fa' }
-      }
-    },
-    yaxis: {
-      title: {
-        text: 'Porcentagem',
-        style: { color: '#f8f9fa' }
+      dataLabels: { 
+        enabled: true,
+        style: {
+          colors: ['#fff']
+        },
+        formatter: "function(val, opt) { return val > 0 ? val : ''; }"
       },
-      labels: { 
-        style: { colors: '#f8f9fa' },
-        formatter: "function(val) { return Math.round(val) + '%'; }"
-      }
-    },
-    grid: { borderColor: '#343a40' },
-    legend: {
-      position: 'top',
-      horizontalAlign: 'right',
-      offsetY: -25,
-      offsetX: -5,
-      labels: { colors: '#f8f9fa' }
-    },
-    tooltip: {
-      theme: 'dark',
-      y: {
-        formatter: "function(val) { return val; }"
+      xaxis: {
+        categories: @status_distribution_data[:labels],
+        labels: { style: { colors: '#f8f9fa' } },
+        title: {
+          text: 'Tipo de Pedido',
+          style: { color: '#f8f9fa' }
+        }
+      },
+      yaxis: {
+        title: {
+          text: 'Porcentagem',
+          style: { color: '#f8f9fa' }
+        },
+        labels: { 
+          style: { colors: '#f8f9fa' },
+          formatter: "function(val) { return Math.round(val) + '%'; }"
+        }
+      },
+      grid: { borderColor: '#343a40' },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'right',
+        offsetY: -25,
+        offsetX: -5,
+        labels: { colors: '#f8f9fa' }
+      },
+      tooltip: {
+        theme: 'dark',
+        y: {
+          formatter: "function(val) { return val; }"
+        }
       }
     }
-  }
 %>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Substituir o gráfico de previsão de conclusão pelo gráfico de pedidos por dia da semana -->
-    <div class="col-md-6 mb-4">
-      <div class="card bg-black border border-dark shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-calendar-week me-2"></i>Distribuição de Pedidos por Dia da Semana
-          </h5>
-        </div>
-        <div class="card-body">
-          <%= column_chart @weekday_distribution_data[:series],
+      
+      <div class="col-md-6 mb-4">
+        <div class="card bg-black border border-dark shadow">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-calendar-week me-2"></i>Distribuição de Pedidos por Dia da Semana
+            </h5>
+          </div>
+          <div class="card-body">
+            <%= column_chart @weekday_distribution_data[:series],
 id: 'weekday-distribution-chart',
 height: '350px',
 colors: ['#0d6efd', '#198754', '#ffc107'],
@@ -697,50 +687,49 @@ library: {
   }
 }
 %>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Adicionar gráficos individuais por contexto -->
-  <div class="row mb-4">
-    <% @kinds.each do |kind| %>
-      <% 
-        border_class = case kind
-          when 'rj' then 'border-primary'
-          when 'bh_shopping' then 'border-success'
-          when 'lagoa_seca' then 'border-warning'
-          else 'border-secondary'
-        end
-        
-        kind_icon = case kind
-          when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
-          when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
-          when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
-          else '<i class="fas fa-tag me-1"></i>'
-        end
-        
-        chart_color = case kind
-          when 'rj' then '#0d6efd'
-          when 'bh_shopping' then '#198754'
-          when 'lagoa_seca' then '#ffc107'
-          else '#6c757d'
-        end
-      %>
-      <div class="col-md-4">
-        <div class="card bg-black <%= border_class %> shadow h-100">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <%= kind_icon.html_safe %> <%= kind_display_name(kind) %> - Pedidos por Dia
-            </h5>
-          </div>
-          <div class="card-body">
-            <%= column_chart [
-              {
-                name: kind_display_name(kind),
-                data: @weekday_distribution_data[:categories].zip(@weekday_distribution_data[:series].find { |s| s[:name] == kind_display_name(kind) }[:data]).to_h
-              }
-            ],
+    <div class="row mb-4">
+      <% @kinds.each do |kind| %>
+        <% 
+          border_class = case kind
+            when 'rj' then 'border-primary'
+            when 'bh_shopping' then 'border-success'
+            when 'lagoa_seca' then 'border-warning'
+            else 'border-secondary'
+          end
+          
+          kind_icon = case kind
+            when 'rj' then '<i class="fas fa-map-marker-alt me-1"></i>'
+            when 'bh_shopping' then '<i class="fas fa-store me-1"></i>'
+            when 'lagoa_seca' then '<i class="fas fa-water me-1"></i>'
+            else '<i class="fas fa-tag me-1"></i>'
+          end
+          
+          chart_color = case kind
+            when 'rj' then '#0d6efd'
+            when 'bh_shopping' then '#198754'
+            when 'lagoa_seca' then '#ffc107'
+            else '#6c757d'
+          end
+        %>
+        <div class="col-md-4">
+          <div class="card bg-black <%= border_class %> shadow h-100">
+            <div class="card-header bg-dark">
+              <h5 class="text-white mb-0">
+                <%= kind_icon.html_safe %> <%= kind_display_name(kind) %> - Pedidos por Dia
+              </h5>
+            </div>
+            <div class="card-body">
+              <%= column_chart [
+                {
+                  name: kind_display_name(kind),
+                  data: @weekday_distribution_data[:categories].zip(@weekday_distribution_data[:series].find { |s| s[:name] == kind_display_name(kind) }[:data]).to_h
+                }
+              ],
 id: "weekday-chart-#{kind}",
 height: '250px',
 colors: [chart_color],
@@ -789,45 +778,43 @@ library: {
   }
 }
 %>
-            <div class="mt-3 text-center">
-              <% 
-                data = @weekday_distribution_data[:series].find { |s| s[:name] == kind_display_name(kind) }[:data]
-                max_day_index = data.index(data.max)
-                min_day_index = data.index(data.select { |n| n > 0 }.min || 0)
-                total_orders = data.sum
-                
-                # Usar a média diária real calculada com base na período entre o primeiro e o último pedido
-                avg_orders = @real_daily_averages[kind][:daily_average]
-              %>
-              <div class="row">
-                <div class="col-4">
-                  <div class="border-end border-secondary">
-                    <small class="text-muted d-block">Dia mais movimentado</small>
-                    <span class="badge <%= border_class.gsub('border-', 'bg-') %>"><%= @weekday_distribution_data[:categories][max_day_index] %></span>
+              <div class="mt-3 text-center">
+                <% 
+                  data = @weekday_distribution_data[:series].find { |s| s[:name] == kind_display_name(kind) }[:data]
+                  max_day_index = data.index(data.max)
+                  total_orders = data.sum
+                  avg_orders = @real_daily_averages[kind][:daily_average]
+                %>
+                <div class="row">
+                  <div class="col-4">
+                    <div class="border-end border-secondary">
+                      <small class="text-muted d-block">Dia mais movimentado</small>
+                      <span class="badge <%= border_class.gsub('border-', 'bg-') %>"><%= @weekday_distribution_data[:categories][max_day_index] %></span>
+                    </div>
                   </div>
-                </div>
-                <div class="col-4">
-                  <div class="border-end border-secondary">
-                    <small class="text-muted d-block">Média diária</small>
-                    <span class="badge bg-secondary"><%= avg_orders %></span>
+                  <div class="col-4">
+                    <div class="border-end border-secondary">
+                      <small class="text-muted d-block">Média diária</small>
+                      <span class="badge bg-secondary"><%= avg_orders %></span>
+                    </div>
                   </div>
-                </div>
-                <div class="col-4">
-                  <div>
-                    <small class="text-muted d-block">Total</small>
-                    <span class="badge bg-dark"><%= total_orders %></span>
+                  <div class="col-4">
+                    <div>
+                      <small class="text-muted d-block">Total</small>
+                      <span class="badge bg-dark"><%= total_orders %></span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    <% end %>
-  </div>
+      <% end %>
+    </div>
 
-  <div class="row mt-4">
-
+  <% else %>
+   
+  <% end %>
 </div>
 
 <% content_for :styles do %>
@@ -880,7 +867,6 @@ library: {
       border-color: #343a40;
     }
 
-    /* Estilos para os elementos clicáveis */
     a.text-white {
       transition: all 0.2s ease;
     }
@@ -900,7 +886,6 @@ library: {
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     }
     
-    /* Estilos para as abas */
     .nav-tabs {
       border-bottom: 1px solid #343a40;
     }
@@ -951,7 +936,6 @@ library: {
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Inicialização do dashboard
       console.log('Dashboard inicializado');
     });
   </script>

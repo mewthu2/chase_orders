@@ -1,0 +1,5 @@
+<% if current_user.profile_id == 1 %>
+  <%= render 'form' %>
+<% else %>
+  <%= render 'self_edit_form' %>
+<% end %>

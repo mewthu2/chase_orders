@@ -1,0 +1,593 @@
+<div class="container-fluid py-4">
+  <% title 'Logs do Sistema' %>
+
+  <%= render 'layouts/partials/messages' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg transition-card">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-search me-2"></i>Filtros de Pesquisa
+          </h5>
+          <button class="btn btn-sm btn-dark border-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+            <i class="fas fa-sliders-h me-1"></i> Mostrar/Ocultar Filtros
+          </button>
+        </div>
+        <div class="collapse show" id="filterCollapse">
+          <div class="card-body bg-black">
+            <%= form_tag(logs_path, method: 'get', id: 'logs-filter-form') do %>
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label text-white">Busca Geral</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-search"></i>
+                    </span>
+                    <%= text_field_tag :search, params[:search], class: 'form-control bg-dark text-white border-secondary', 
+                        placeholder: 'Nome do cupom, usuário, IP...' %>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <label class="form-label text-white">Usuário</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-user"></i>
+                    </span>
+                    <%= select_tag :user_id, options_from_collection_for_select(
+                      User.order(:name), :id, :name, params[:user_id]
+                    ), { 
+                      include_blank: 'Todos os usuários',
+                      class: 'form-select bg-dark text-white border-secondary'
+                    } %>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <label class="form-label text-white">Tipo de Ação</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-cog"></i>
+                    </span>
+                    <%= select_tag :action_type, options_for_select([
+                      ['Todas as ações', ''],
+                      ['Busca', 'search'],
+                      ['Ativação', 'activate'],
+                      ['Desativação', 'deactivate'],
+                      ['Atualização de datas', 'update_dates']
+                    ], params[:action_type]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-3 mt-2">
+                <div class="col-md-3">
+                  <label class="form-label text-white">Tipo de Recurso</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-tag"></i>
+                    </span>
+                    <%= select_tag :resource_type, options_for_select([
+                      ['Todos os tipos', ''],
+                      ['Cupom', 'discount'],
+                      ['Produto', 'product'],
+                      ['Pedido', 'order']
+                    ], params[:resource_type]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label text-white">Status</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-check-circle"></i>
+                    </span>
+                    <%= select_tag :success, options_for_select([
+                      ['Todos', ''],
+                      ['Sucesso', 'true'],
+                      ['Erro', 'false']
+                    ], params[:success]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label text-white">Data Inicial</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                    <%= date_field_tag :date_from, params[:date_from], class: 'form-control bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label text-white">Data Final</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-calendar"></i>
+                    </span>
+                    <%= date_field_tag :date_to, params[:date_to], class: 'form-control bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                  <button type="button" class="btn btn-dark btn-sm" id="clear-filters">
+                    <i class="fas fa-eraser me-1"></i> Limpar Filtros
+                  </button>
+                  
+                  <button type="submit" class="btn btn-primary btn-hover">
+                    <i class="fas fa-search me-1"></i> Filtrar Logs
+                  </button>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg transition-card">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-history me-2"></i>Logs do Sistema
+          </h5>
+          <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
+            <%= @total_count %> registros
+          </span>
+        </div>
+        
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0 logs-table" id="logs-table">
+              <thead class="bg-dark text-white">
+                <tr>
+                  <th class="sortable" data-sort="created_at">
+                    Data/Hora <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="sortable" data-sort="user">
+                    Usuário <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="sortable" data-sort="action_type">
+                    Ação <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="sortable" data-sort="resource_type">
+                    Recurso <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="sortable" data-sort="resource_name">
+                    Nome <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="sortable" data-sort="success">
+                    Status <i class="fas fa-sort ms-1"></i>
+                  </th>
+                  <th class="text-center">IP</th>
+                  <th class="text-center">Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if @logs.any? %>
+                  <% @logs.each do |log| %>
+                    <tr class="log-row">
+                      <td>
+                        <span class="text-white">
+                          <%= log.created_at.strftime('%d/%m/%Y') %>
+                        </span>
+                        <br>
+                        <small class="text-muted">
+                          <%= log.created_at.strftime('%H:%M:%S') %>
+                        </small>
+                      </td>
+                      <td>
+                        <span class="badge bg-primary">
+                          <%= log.user&.name || 'Sistema' %>
+                        </span>
+                      </td>
+                      <td>
+                        <% 
+                          action_class = case log.action_type
+                            when 'activate' then 'bg-success'
+                            when 'deactivate' then 'bg-danger'
+                            when 'search' then 'bg-info'
+                            when 'update_dates' then 'bg-warning text-dark'
+                            else 'bg-secondary'
+                          end
+                          
+                          action_icon = case log.action_type
+                            when 'activate' then 'fas fa-play'
+                            when 'deactivate' then 'fas fa-stop'
+                            when 'search' then 'fas fa-search'
+                            when 'update_dates' then 'fas fa-calendar'
+                            else 'fas fa-cog'
+                          end
+                          
+                          action_text = case log.action_type
+                            when 'activate' then 'Ativação'
+                            when 'deactivate' then 'Desativação'
+                            when 'search' then 'Busca'
+                            when 'update_dates' then 'Atualização'
+                            else log.action_type.humanize
+                          end
+                        %>
+                        <span class="badge <%= action_class %>">
+                          <i class="<%= action_icon %> me-1"></i>
+                          <%= action_text %>
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge bg-dark">
+                          <%= log.resource_type.humanize %>
+                        </span>
+                      </td>
+                      <td>
+                        <% if log.resource_name.present? %>
+                          <code class="text-warning"><%= log.resource_name %></code>
+                        <% else %>
+                          <span class="text-muted">-</span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if log.success %>
+                          <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Sucesso
+                          </span>
+                        <% else %>
+                          <span class="badge bg-danger">
+                            <i class="fas fa-times me-1"></i>Erro
+                          </span>
+                        <% end %>
+                      </td>
+                      <td class="text-center">
+                        <small class="text-muted font-monospace">
+                          <%= log.ip_address %>
+                        </small>
+                      </td>
+                      <td class="text-center">
+                        <% if log.details.present? || log.error_message.present? || log.old_values.present? || log.new_values.present? || log.user_agent.present? %>
+                          <button class="btn btn-sm btn-outline-info view-log-btn" 
+                                  data-log-id="<%= log.id %>"
+                                  data-log-details="<%= log.details.present? ? log.details.gsub('"', '&quot;') : '' %>"
+                                  data-log-old-values="<%= log.old_values.present? ? log.old_values.gsub('"', '&quot;') : '' %>"
+                                  data-log-new-values="<%= log.new_values.present? ? log.new_values.gsub('"', '&quot;') : '' %>"
+                                  data-log-error="<%= log.error_message.present? ? log.error_message.gsub('"', '&quot;') : '' %>"
+                                  data-log-user-agent="<%= log.user_agent.present? ? log.user_agent.gsub('"', '&quot;') : '' %>">
+                            <i class="fas fa-eye"></i>
+                          </button>
+                        <% else %>
+                          <span class="text-muted">-</span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="8" class="text-center py-5">
+                      <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-white">Nenhum log encontrado</h5>
+                        <p class="text-muted">Tente ajustar os filtros para encontrar o que procura.</p>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="bg-dark">
+                <tr>
+                  <td colspan="8" class="text-center py-3 text-white">
+                    Exibindo <%= @logs.count %> de <%= @total_count %> logs
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        
+        <% if @total_pages > 1 %>
+          <div class="card-footer bg-dark">
+            <nav aria-label="Navegação de logs">
+              <ul class="pagination pagination-dark justify-content-center mb-0">
+                <li class="page-item <%= 'disabled' unless @prev_page %>">
+                  <% if @prev_page %>
+                    <%= link_to logs_path(params.except(:page).merge(page: @prev_page)), class: 'page-link' do %>
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    <% end %>
+                  <% else %>
+                    <span class="page-link">
+                      <i class="fas fa-chevron-left"></i> Anterior
+                    </span>
+                  <% end %>
+                </li>
+                
+                <% 
+                  start_page = [@page - 2, 1].max
+                  end_page = [start_page + 4, @total_pages].min
+                  start_page = [end_page - 4, 1].max
+                %>
+                
+                <% (start_page..end_page).each do |page_num| %>
+                  <li class="page-item <%= 'active' if page_num == @page %>">
+                    <%= link_to logs_path(params.except(:page).merge(page: page_num)), class: 'page-link' do %>
+                      <%= page_num %>
+                    <% end %>
+                  </li>
+                <% end %>
+                
+                <li class="page-item <%= 'disabled' unless @next_page %>">
+                  <% if @next_page %>
+                    <%= link_to logs_path(params.except(:page).merge(page: @next_page)), class: 'page-link' do %>
+                      Próxima <i class="fas fa-chevron-right"></i>
+                    <% end %>
+                  <% else %>
+                    <span class="page-link">
+                      Próxima <i class="fas fa-chevron-right"></i>
+                    </span>
+                  <% end %>
+                </li>
+              </ul>
+            </nav>
+            
+            <div class="text-center mt-3">
+              <small class="text-muted">
+                Página <%= @page %> de <%= @total_pages %> 
+                (mostrando <%= @logs.count %> de <%= @total_count %> registros)
+              </small>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white" id="logDetailsModalLabel">
+          Detalhes do Log
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="logDetailsContent">
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+    
+    .logs-table {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+    
+    .logs-table th {
+      font-weight: 600;
+      padding: 12px;
+      vertical-align: middle;
+    }
+    
+    .logs-table td {
+      padding: 12px;
+      vertical-align: middle;
+    }
+    
+    .log-row {
+      transition: background-color 0.2s ease;
+    }
+    
+    .bg-black {
+      background-color: #121212 !important;
+    }
+    
+    .transition-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .transition-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .btn-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .pagination-dark .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #f8f9fa;
+      transition: all 0.2s ease;
+      margin: 0 2px;
+      border-radius: 4px;
+    }
+    
+    .pagination-dark .page-item.active .page-link {
+      background-color: #f8f9fa;
+      border-color: #f8f9fa;
+      color: #212529;
+      font-weight: 600;
+    }
+    
+    .pagination-dark .page-link:hover {
+      background-color: #2c3034;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .badge {
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    
+    .form-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    .sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .sortable:hover {
+      background-color: #2c3034;
+    }
+    
+    .sortable.asc .fa-sort:before {
+      content: "\f0de";
+    }
+    
+    .sortable.desc .fa-sort:before {
+      content: "\f0dd";
+    }
+    
+    .modal-content {
+      border: 1px solid #343a40;
+    }
+    
+    pre {
+      font-size: 0.85rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background-color: #000 !important;
+      border: 1px solid #343a40;
+    }
+
+    #logDetailsModal {
+      z-index: 1060;
+    }
+
+    .modal-backdrop {
+      z-index: 1055;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const logRows = document.querySelectorAll('.log-row');
+      logRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+          this.style.backgroundColor = '#242424';
+        });
+        row.addEventListener('mouseleave', function() {
+          this.style.backgroundColor = '';
+        });
+      });
+      
+      document.getElementById('clear-filters').addEventListener('click', function() {
+        const form = document.getElementById('logs-filter-form');
+        const inputs = form.querySelectorAll('input, select');
+        inputs.forEach(input => {
+          if (input.type === 'submit' || input.type === 'button') return;
+          input.value = '';
+        });
+        form.submit();
+      });
+      
+      const sortableHeaders = document.querySelectorAll('.sortable');
+      sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          const sort = this.getAttribute('data-sort');
+          const currentSort = new URLSearchParams(window.location.search).get('sort') || '';
+          const currentDirection = new URLSearchParams(window.location.search).get('direction') || 'asc';
+          
+          let newDirection = 'asc';
+          if (currentSort === sort && currentDirection === 'asc') {
+            newDirection = 'desc';
+          }
+          
+          const url = new URL(window.location.href);
+          url.searchParams.set('sort', sort);
+          url.searchParams.set('direction', newDirection);
+          
+          window.location.href = url.toString();
+        });
+        
+        const currentSort = new URLSearchParams(window.location.search).get('sort');
+        const currentDirection = new URLSearchParams(window.location.search).get('direction') || 'asc';
+        
+        if (currentSort === header.getAttribute('data-sort')) {
+          header.classList.add(currentDirection);
+        }
+      });
+
+      const viewLogButtons = document.querySelectorAll('.view-log-btn');
+      const modal = new bootstrap.Modal(document.getElementById('logDetailsModal'));
+      const modalContent = document.getElementById('logDetailsContent');
+      const modalTitle = document.getElementById('logDetailsModalLabel');
+
+      viewLogButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const logId = this.getAttribute('data-log-id');
+          const details = this.getAttribute('data-log-details');
+          const oldValues = this.getAttribute('data-log-old-values');
+          const newValues = this.getAttribute('data-log-new-values');
+          const errorMessage = this.getAttribute('data-log-error');
+          const userAgent = this.getAttribute('data-log-user-agent');
+
+          modalTitle.textContent = `Detalhes do Log #${logId}`;
+          
+          let content = '';
+
+          if (details) {
+            content += '<h6 class="text-white">Detalhes:</h6>';
+            try {
+              const parsedDetails = JSON.parse(details);
+              content += `<pre class="bg-black text-white p-3 rounded">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
+            } catch (e) {
+              content += `<pre class="bg-black text-white p-3 rounded">${details}</pre>`;
+            }
+          }
+
+          if (oldValues) {
+            content += '<h6 class="text-white mt-3">Valores Antigos:</h6>';
+            try {
+              const parsedOldValues = JSON.parse(oldValues);
+              content += `<pre class="bg-black text-white p-3 rounded">${JSON.stringify(parsedOldValues, null, 2)}</pre>`;
+            } catch (e) {
+              content += `<pre class="bg-black text-white p-3 rounded">${oldValues}</pre>`;
+            }
+          }
+
+          if (newValues) {
+            content += '<h6 class="text-white mt-3">Valores Novos:</h6>';
+            try {
+              const parsedNewValues = JSON.parse(newValues);
+              content += `<pre class="bg-black text-white p-3 rounded">${JSON.stringify(parsedNewValues, null, 2)}</pre>`;
+            } catch (e) {
+              content += `<pre class="bg-black text-white p-3 rounded">${newValues}</pre>`;
+            }
+          }
+
+          if (errorMessage) {
+            content += '<h6 class="text-danger mt-3">Mensagem de Erro:</h6>';
+            content += `<div class="alert alert-danger">${errorMessage}</div>`;
+          }
+
+          if (userAgent) {
+            content += '<h6 class="text-white mt-3">User Agent:</h6>';
+            content += `<small class="text-muted">${userAgent}</small>`;
+          }
+
+          modalContent.innerHTML = content;
+          modal.show();
+        });
+      });
+    });
+  </script>
+<% end %>
