@@ -40,6 +40,10 @@
         <div class="sidebar-overlay d-lg-none" id="sidebarOverlay"></div>
       <% end %>
       <%= render 'layouts/partials/content' %>
+
+      <% if current_user.present? %>
+        <%= render 'layouts/partials/footer' %>
+      <% end %>
     </div>
 
     <%= yield :scripts %>
