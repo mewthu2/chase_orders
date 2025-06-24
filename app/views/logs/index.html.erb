@@ -292,7 +292,12 @@
               <ul class="pagination pagination-dark justify-content-center mb-0">
                 <li class="page-item <%= 'disabled' unless @prev_page %>">
                   <% if @prev_page %>
-                    <%= link_to logs_path(params.except(:page).merge(page: @prev_page)), class: 'page-link' do %>
+                    <% 
+                      # ✅ CORREÇÃO: Converter params para hash seguro
+                      current_params = request.query_parameters.except('page')
+                      prev_params = current_params.merge('page' => @prev_page)
+                    %>
+                    <%= link_to logs_path(prev_params), class: 'page-link' do %>
                       <i class="fas fa-chevron-left"></i> Anterior
                     <% end %>
                   <% else %>
@@ -310,7 +315,12 @@
                 
                 <% (start_page..end_page).each do |page_num| %>
                   <li class="page-item <%= 'active' if page_num == @page %>">
-                    <%= link_to logs_path(params.except(:page).merge(page: page_num)), class: 'page-link' do %>
+                    <% 
+                      # ✅ CORREÇÃO: Usar request.query_parameters em vez de params
+                      current_params = request.query_parameters.except('page')
+                      page_params = current_params.merge('page' => page_num)
+                    %>
+                    <%= link_to logs_path(page_params), class: 'page-link' do %>
                       <%= page_num %>
                     <% end %>
                   </li>
@@ -318,7 +328,12 @@
                 
                 <li class="page-item <%= 'disabled' unless @next_page %>">
                   <% if @next_page %>
-                    <%= link_to logs_path(params.except(:page).merge(page: @next_page)), class: 'page-link' do %>
+                    <% 
+                      # ✅ CORREÇÃO: Converter params para hash seguro
+                      current_params = request.query_parameters.except('page')
+                      next_params = current_params.merge('page' => @next_page)
+                    %>
+                    <%= link_to logs_path(next_params), class: 'page-link' do %>
                       Próxima <i class="fas fa-chevron-right"></i>
                     <% end %>
                   <% else %>
@@ -343,6 +358,7 @@
   </div>
 </div>
 
+<!-- Modal para detalhes do log -->
 <div class="modal fade" id="logDetailsModal" tabindex="-1" aria-labelledby="logDetailsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content bg-dark">
