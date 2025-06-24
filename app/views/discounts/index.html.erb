@@ -1,348 +1,452 @@
 <div id="loadingOverlay" class="loading-overlay">
-<div class="loading-content">
-  <div class="loading-spinner">
-    <div class="spinner-ring"></div>
-    <div class="spinner-ring"></div>
-    <div class="spinner-ring"></div>
-    <div class="spinner-ring"></div>
+  <div class="loading-content">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <div class="loading-text">
+      <h4 class="text-white mb-2">Processando...</h4>
+      <p class="text-white-50 mb-0" id="loadingMessage">Aguarde enquanto processamos sua solicitação</p>
+    </div>
   </div>
-  <div class="loading-text">
-    <h4 class="text-white mb-2">Processando...</h4>
-    <p class="text-white-50 mb-0" id="loadingMessage">Aguarde enquanto processamos sua solicitação</p>
-  </div>
-</div>
 </div>
 
 <div class="container-fluid py-4">
-<% title 'Cupons de Desconto' %>
+  <% title 'Cupons de Desconto' %>
 
-<%= render 'layouts/partials/messages' %>
+  <%= render 'layouts/partials/messages' %>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <div class="card bg-black border border-dark shadow-lg">
-      <div class="card-header bg-dark">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-search me-2"></i>Buscar Cupom de Desconto
-        </h5>
-      </div>
-      <div class="card-body bg-black">
-        <div class="row justify-content-center">
-          <div class="col-md-8">
-            <p class="text-white-50 text-center mb-4">Digite o código do cupom para visualizar e gerenciar</p>
-            
-            <%= form_with url: search_discounts_path, method: :post, local: true, class: "d-flex gap-3 align-items-end", id: "searchForm" do |f| %>
-              <div class="flex-grow-1">
-                <label class="form-label text-white fw-bold">Código do Cupom</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-dark border-dark text-white">
-                    <i class="fas fa-tags"></i>
-                  </span>
-                  <%= f.text_field :coupon_code, 
-                                   placeholder: "Digite o código do cupom...", 
-                                   value: @coupon_code,
-                                   class: "form-control bg-dark text-white border-dark form-control-lg",
-                                   required: true %>
+  <!-- Estatísticas rápidas - APENAS para admins ou profile_id == 1 -->
+  <% if current_user&.admin? || current_user&.profile_id == 1 %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow-lg">
+          <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-chart-bar me-2"></i>Estatísticas dos Cupons
+            </h6>
+            <div class="d-flex gap-2">
+              <%= link_to sync_discounts_path, method: :post, class: "btn btn-sm btn-primary" do %>
+                <i class="fas fa-sync me-1"></i>Sincronizar
+              <% end %>
+              <%= link_to sync_discounts_path(force: true), method: :post, class: "btn btn-sm btn-warning" do %>
+                <i class="fas fa-sync-alt me-1"></i>Sincronização Completa
+              <% end %>
+            </div>
+          </div>
+          <div class="card-body bg-black">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-success mb-1"><%= Discount.active.count %></h4>
+                  <small class="text-white-50">Cupons Ativos</small>
                 </div>
               </div>
-              <%= f.submit "Buscar Cupom", 
-                           class: "btn btn-primary btn-lg px-4",
-                           id: "searchBtn" %>
-            <% end %>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-danger mb-1"><%= Discount.inactive.count %></h4>
+                  <small class="text-white-50">Cupons Inativos</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-warning mb-1"><%= Discount.expired.count %></h4>
+                  <small class="text-white-50">Cupons Expirados</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-info mb-1"><%= Discount.count %></h4>
+                  <small class="text-white-50">Total de Cupons</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @recent_searches.present? %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow-lg">
+          <div class="card-header bg-dark">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-history me-2"></i>Últimas Pesquisas
+            </h6>
+          </div>
+          <div class="card-body bg-black">
+            <div class="row g-2">
+              <% @recent_searches.each do |search| %>
+                <div class="col-md-6 col-lg-4 col-xl-3">
+                  <div class="card bg-dark border border-secondary h-100 recent-search-card" 
+                       data-coupon="<%= search[:coupon_code] %>" 
+                       style="cursor: pointer;">
+                    <div class="card-body p-3">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge <%= search[:found] ? 'bg-success' : 'bg-danger' %> text-white">
+                          <i class="fas <%= search[:found] ? 'fa-check' : 'fa-times' %> me-1"></i>
+                          <%= search[:found] ? 'Encontrado' : 'Não encontrado' %>
+                        </span>
+                        <small class="text-white-50">
+                          <%= time_ago_in_words(search[:searched_at]) %> atrás
+                        </small>
+                      </div>
+                      <h6 class="text-white font-monospace mb-2">
+                        <%= search[:coupon_code] %>
+                      </h6>
+                      <small class="text-white-50">
+                        <i class="fas fa-user me-1"></i>
+                        <%= search[:user] %>
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-search me-2"></i>Buscar Cupom de Desconto
+            <small class="text-success ms-2">
+              <i class="fas fa-database me-1"></i>Busca Instantânea
+            </small>
+          </h5>
+        </div>
+        <div class="card-body bg-black">
+          <div class="row justify-content-center">
+            <div class="col-md-8">
+              <p class="text-white-50 text-center mb-4">Digite o código do cupom para visualizar e gerenciar</p>
+              
+              <%= form_with url: search_discounts_path, method: :post, local: true, class: "d-flex gap-3 align-items-end", id: "searchForm" do |f| %>
+                <div class="flex-grow-1">
+                  <label class="form-label text-white fw-bold">Código do Cupom</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-dark text-white">
+                      <i class="fas fa-tags"></i>
+                    </span>
+                    <%= f.text_field :coupon_code, 
+                                     placeholder: "Digite o código do cupom...", 
+                                     value: @coupon_code,
+                                     class: "form-control bg-dark text-white border-dark form-control-lg",
+                                     required: true,
+                                     id: "couponCodeInput" %>
+                  </div>
+                </div>
+                <%= f.submit "Buscar Cupom", 
+                             class: "btn btn-primary btn-lg px-4",
+                             id: "searchBtn" %>
+              <% end %>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<% if @discount_found %>
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-ticket-alt me-2"></i>Informações do Cupom
-          </h5>
-          <div class="d-flex align-items-center gap-3">
-            <% if @discount_found[:is_expired] %>
-              <span class="badge bg-danger text-white px-3 py-2">
-                <i class="fas fa-times-circle me-1"></i>Expirado
-              </span>
-            <% elsif @discount_found[:is_active] %>
-              <span class="badge bg-success text-white px-3 py-2">
-                <i class="fas fa-check-circle me-1"></i>Ativo
-              </span>
-            <% else %>
-              <span class="badge bg-secondary text-white px-3 py-2">
-                <i class="fas fa-pause-circle me-1"></i>Inativo
-              </span>
-            <% end %>
+  <% if @discount_found %>
+    <div class="row">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow-lg">
+          <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-ticket-alt me-2"></i>Informações do Cupom
+            </h5>
+            <div class="d-flex align-items-center gap-3">
+              <% if @discount_found[:is_expired] %>
+                <span class="badge bg-danger text-white px-3 py-2">
+                  <i class="fas fa-times-circle me-1"></i>Expirado
+                </span>
+              <% elsif @discount_found[:is_active] %>
+                <span class="badge bg-success text-white px-3 py-2">
+                  <i class="fas fa-check-circle me-1"></i>Ativo
+                </span>
+              <% else %>
+                <span class="badge bg-secondary text-white px-3 py-2">
+                  <i class="fas fa-pause-circle me-1"></i>Inativo
+                </span>
+              <% end %>
+            </div>
           </div>
-        </div>
-        
-        <div class="card-body bg-black">
-          <div class="row g-4">
-            <div class="col-md-6">
-              <div class="card bg-black border border-secondary h-100">
-                <div class="card-header bg-dark">
-                  <h6 class="text-white mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Informações Básicas
-                  </h6>
+          
+          <div class="card-body bg-black">
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary h-100">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Código</label>
+                        <div class="p-3 bg-dark border border-secondary rounded">
+                          <span class="text-white fs-5 font-monospace fw-bold">
+                            <%= @discount_found[:discount_code]['code'] %>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Título</label>
+                        <p class="text-white mb-0">
+                          <%= @discount_found[:price_rule]['title'] %>
+                        </p>
+                      </div>
+                      
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Tipo de Desconto</label>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="badge bg-info text-white px-3 py-2">
+                            <% if @discount_found[:detailed_info][:discount_type] == 'percentage' %>
+                              <i class="fas fa-percent me-1"></i>Percentual
+                            <% else %>
+                              <i class="fas fa-dollar-sign me-1"></i>Valor Fixo
+                            <% end %>
+                          </span>
+                          <span class="text-white-50">
+                            <%= @discount_found[:detailed_info][:applies_to] %>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Valor do Desconto</label>
+                        <div>
+                          <span class="badge bg-primary text-white px-4 py-3 fs-6">
+                            <% if @discount_found[:detailed_info][:discount_type] == 'percentage' %>
+                              <i class="fas fa-percent me-2"></i>
+                              <%= (@discount_found[:detailed_info][:discount_value].to_f * 100).to_i %>% OFF
+                            <% else %>
+                              <i class="fas fa-money-bill me-2"></i>
+                              R$ <%= number_with_precision(@discount_found[:detailed_info][:discount_value], precision: 2) %> OFF
+                            <% end %>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="card-body bg-black">
-                  <div class="row g-3">
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Código</label>
-                      <div class="p-3 bg-dark border border-secondary rounded">
-                        <span class="text-white fs-5 font-monospace fw-bold">
-                          <%= @discount_found[:discount_code]['code'] %>
-                        </span>
+              </div>
+
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary h-100">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-users me-2"></i>Requisitos e Elegibilidade
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="row g-3">
+                      <% if @discount_found[:detailed_info][:min_purchase_amount].present? && @discount_found[:detailed_info][:min_purchase_amount].to_f > 0 %>
+                        <div class="col-12">
+                          <label class="form-label text-white-50 small fw-bold">Compra Mínima</label>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning text-white px-3 py-2">
+                              <i class="fas fa-shopping-cart me-1"></i>
+                              R$ <%= number_with_precision(@discount_found[:detailed_info][:min_purchase_amount], precision: 2) %>
+                            </span>
+                          </div>
+                        </div>
+                      <% end %>
+
+                      <% if @discount_found[:detailed_info][:min_quantity].present? && @discount_found[:detailed_info][:min_quantity].to_i > 0 %>
+                        <div class="col-12">
+                          <label class="form-label text-white-50 small fw-bold">Quantidade Mínima</label>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-warning text-white px-3 py-2">
+                              <i class="fas fa-boxes me-1"></i>
+                              <%= @discount_found[:detailed_info][:min_quantity] %> itens
+                            </span>
+                          </div>
+                        </div>
+                      <% end %>
+                      
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Elegibilidade</label>
+                        <p class="text-white mb-0">
+                          <i class="fas fa-user-check me-1"></i>
+                          <%= @discount_found[:detailed_info][:customer_eligibility] %>
+                        </p>
                       </div>
-                    </div>
-                    
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Título</label>
-                      <p class="text-white mb-0">
-                        <%= @discount_found[:price_rule]['title'] %>
-                      </p>
-                    </div>
-                    
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Tipo de Desconto</label>
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-info text-white px-3 py-2">
-                          <% if @discount_found[:detailed_info][:discount_type] == 'percentage' %>
-                            <i class="fas fa-percent me-1"></i>Percentual
+
+                      <div class="col-12">
+                        <label class="form-label text-white-50 small fw-bold">Uso</label>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="badge bg-dark text-white border px-3 py-2">
+                            <%= @discount_found[:detailed_info][:usage_count] %> usos
+                          </span>
+                          <% if @discount_found[:detailed_info][:usage_limit] %>
+                            <span class="text-white-50">de <%= @discount_found[:detailed_info][:usage_limit] %> permitidos</span>
                           <% else %>
-                            <i class="fas fa-dollar-sign me-1"></i>Valor Fixo
+                            <span class="text-white-50">sem limite</span>
                           <% end %>
-                        </span>
-                        <span class="text-white-50">
-                          <%= @discount_found[:detailed_info][:applies_to] %>
-                        </span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Valor do Desconto</label>
-                      <div>
-                        <span class="badge bg-primary text-white px-4 py-3 fs-6">
-                          <% if @discount_found[:detailed_info][:discount_type] == 'percentage' %>
-                            <i class="fas fa-percent me-2"></i>
-                            <%= (@discount_found[:detailed_info][:discount_value].to_f * 100).to_i %>% OFF
-                          <% else %>
-                            <i class="fas fa-money-bill me-2"></i>
-                            R$ <%= number_with_precision(@discount_found[:detailed_info][:discount_value], precision: 2) %> OFF
-                          <% end %>
-                        </span>
-                      </div>
+
+                      <% if @discount_found[:detailed_info][:one_per_customer] %>
+                        <div class="col-12">
+                          <div class="alert alert-info bg-dark border-info mb-0">
+                            <i class="fas fa-user-lock me-2 text-white"></i>
+                            <small class="text-white">Limitado a 1 uso por cliente</small>
+                          </div>
+                        </div>
+                      <% end %>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="col-md-6">
-              <div class="card bg-black border border-secondary h-100">
-                <div class="card-header bg-dark">
-                  <h6 class="text-white mb-0">
-                    <i class="fas fa-users me-2"></i>Requisitos e Elegibilidade
-                  </h6>
-                </div>
-                <div class="card-body bg-black">
-                  <div class="row g-3">
-                    <% if @discount_found[:detailed_info][:min_purchase_amount].present? && @discount_found[:detailed_info][:min_purchase_amount].to_f > 0 %>
+            <div class="row mt-4 g-4">
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-layer-group me-2"></i>Combinações
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="row g-2">
                       <div class="col-12">
-                        <label class="form-label text-white-50 small fw-bold">Compra Mínima</label>
-                        <div class="d-flex align-items-center gap-2">
-                          <span class="badge bg-warning text-white px-3 py-2">
-                            <i class="fas fa-shopping-cart me-1"></i>
-                            R$ <%= number_with_precision(@discount_found[:detailed_info][:min_purchase_amount], precision: 2) %>
-                          </span>
-                        </div>
+                        <label class="form-label text-white-50 small fw-bold">Combina com:</label>
                       </div>
-                    <% end %>
-
-                    <% if @discount_found[:detailed_info][:min_quantity].present? && @discount_found[:detailed_info][:min_quantity].to_i > 0 %>
-                      <div class="col-12">
-                        <label class="form-label text-white-50 small fw-bold">Quantidade Mínima</label>
-                        <div class="d-flex align-items-center gap-2">
-                          <span class="badge bg-warning text-white px-3 py-2">
-                            <i class="fas fa-boxes me-1"></i>
-                            <%= @discount_found[:detailed_info][:min_quantity] %> itens
+                      <div class="col-12 d-flex flex-wrap gap-2">
+                        <% if @discount_found[:detailed_info][:combines_with_product] %>
+                          <span class="badge bg-success text-white">
+                            <i class="fas fa-box me-1"></i>Descontos de produto
                           </span>
-                        </div>
-                      </div>
-                    <% end %>
-                    
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Elegibilidade</label>
-                      <p class="text-white mb-0">
-                        <i class="fas fa-user-check me-1"></i>
-                        <%= @discount_found[:detailed_info][:customer_eligibility] %>
-                      </p>
-                    </div>
-
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Uso</label>
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-dark text-white border px-3 py-2">
-                          <%= @discount_found[:detailed_info][:usage_count] %> usos
-                        </span>
-                        <% if @discount_found[:detailed_info][:usage_limit] %>
-                          <span class="text-white-50">de <%= @discount_found[:detailed_info][:usage_limit] %> permitidos</span>
-                        <% else %>
-                          <span class="text-white-50">sem limite</span>
+                        <% end %>
+                        <% if @discount_found[:detailed_info][:combines_with_shipping] %>
+                          <span class="badge bg-success text-white">
+                            <i class="fas fa-shipping-fast me-1"></i>Descontos de frete
+                          </span>
+                        <% end %>
+                        <% if @discount_found[:detailed_info][:combines_with_order] %>
+                          <span class="badge bg-success text-white">
+                            <i class="fas fa-receipt me-1"></i>Descontos de pedido
+                          </span>
+                        <% end %>
+                        <% unless @discount_found[:detailed_info][:combines_with_product] || @discount_found[:detailed_info][:combines_with_shipping] || @discount_found[:detailed_info][:combines_with_order] %>
+                          <span class="badge bg-secondary text-white">
+                            <i class="fas fa-ban me-1"></i>Não combina com outros descontos
+                          </span>
                         <% end %>
                       </div>
                     </div>
-
-                    <% if @discount_found[:detailed_info][:one_per_customer] %>
-                      <div class="col-12">
-                        <div class="alert alert-info bg-dark border-info mb-0">
-                          <i class="fas fa-user-lock me-2 text-white"></i>
-                          <small class="text-white">Limitado a 1 uso por cliente</small>
-                        </div>
-                      </div>
-                    <% end %>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div class="row mt-4 g-4">
-            <div class="col-md-6">
-              <div class="card bg-black border border-secondary">
-                <div class="card-header bg-dark">
-                  <h6 class="text-white mb-0">
-                    <i class="fas fa-layer-group me-2"></i>Combinações
-                  </h6>
-                </div>
-                <div class="card-body bg-black">
-                  <div class="row g-2">
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Combina com:</label>
-                    </div>
-                    <div class="col-12 d-flex flex-wrap gap-2">
-                      <% if @discount_found[:detailed_info][:combines_with_product] %>
-                        <span class="badge bg-success text-white">
-                          <i class="fas fa-box me-1"></i>Descontos de produto
-                        </span>
-                      <% end %>
-                      <% if @discount_found[:detailed_info][:combines_with_shipping] %>
-                        <span class="badge bg-success text-white">
-                          <i class="fas fa-shipping-fast me-1"></i>Descontos de frete
-                        </span>
-                      <% end %>
-                      <% if @discount_found[:detailed_info][:combines_with_order] %>
-                        <span class="badge bg-success text-white">
-                          <i class="fas fa-receipt me-1"></i>Descontos de pedido
-                        </span>
-                      <% end %>
-                      <% unless @discount_found[:detailed_info][:combines_with_product] || @discount_found[:detailed_info][:combines_with_shipping] || @discount_found[:detailed_info][:combines_with_order] %>
-                        <span class="badge bg-secondary text-white">
-                          <i class="fas fa-ban me-1"></i>Não combina com outros descontos
-                        </span>
-                      <% end %>
-                    </div>
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-calendar-alt me-2"></i>Período de Validade
+                    </h6>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="card bg-black border border-secondary">
-                <div class="card-header bg-dark">
-                  <h6 class="text-white mb-0">
-                    <i class="fas fa-calendar-alt me-2"></i>Período de Validade
-                  </h6>
-                </div>
-                <div class="card-body bg-black">
-                  <div class="row g-3">
-                    <div class="col-12">
-                      <label class="form-label text-white-50 small fw-bold">Criado em</label>
-                      <p class="text-white mb-0">
-                        <i class="fas fa-clock me-1"></i>
-                        <%= Time.parse(@discount_found[:price_rule]['created_at']).strftime('%d/%m/%Y às %H:%M') %>
-                      </p>
-                    </div>
-
-                    <% if @discount_found[:price_rule]['starts_at'] %>
+                  <div class="card-body bg-black">
+                    <div class="row g-3">
                       <div class="col-12">
-                        <label class="form-label text-white-50 small fw-bold">Ativo desde</label>
-                        <p class="text-success mb-0">
-                          <i class="fas fa-calendar-plus me-1"></i>
-                          <%= Time.parse(@discount_found[:price_rule]['starts_at']).strftime('%d %b %Y') %>
+                        <label class="form-label text-white-50 small fw-bold">Criado em</label>
+                        <p class="text-white mb-0">
+                          <i class="fas fa-clock me-1"></i>
+                          <% if @discount_found[:price_rule]['created_at'] %>
+                            <%= Time.parse(@discount_found[:price_rule]['created_at']).strftime('%d/%m/%Y às %H:%M') %>
+                          <% else %>
+                            Data não disponível
+                          <% end %>
                         </p>
                       </div>
-                    <% end %>
 
-                    <% if @discount_found[:price_rule]['ends_at'] %>
-                      <div class="col-12">
-                        <label class="form-label text-white-50 small fw-bold">Válido até</label>
-                        <p class="text-warning mb-0">
-                          <i class="fas fa-calendar-times me-1"></i>
-                          <%= Time.parse(@discount_found[:price_rule]['ends_at']).strftime('%d %b %Y') %>
-                        </p>
-                      </div>
-                    <% else %>
-                      <div class="col-12">
-                        <div class="alert alert-success bg-dark border-success mb-0">
-                          <i class="fas fa-infinity me-2 text-white"></i>
-                          <small class="text-white">Sem data de expiração</small>
+                      <% if @discount_found[:price_rule]['starts_at'] %>
+                        <div class="col-12">
+                          <label class="form-label text-white-50 small fw-bold">Ativo desde</label>
+                          <p class="text-success mb-0">
+                            <i class="fas fa-calendar-plus me-1"></i>
+                            <%= Time.parse(@discount_found[:price_rule]['starts_at']).strftime('%d %b %Y') %>
+                          </p>
                         </div>
-                      </div>
-                    <% end %>
+                      <% end %>
+
+                      <% if @discount_found[:price_rule]['ends_at'] %>
+                        <div class="col-12">
+                          <label class="form-label text-white-50 small fw-bold">Válido até</label>
+                          <p class="text-warning mb-0">
+                            <i class="fas fa-calendar-times me-1"></i>
+                            <%= Time.parse(@discount_found[:price_rule]['ends_at']).strftime('%d %b %Y') %>
+                          </p>
+                        </div>
+                      <% else %>
+                        <div class="col-12">
+                          <div class="alert alert-success bg-dark border-success mb-0">
+                            <i class="fas fa-infinity me-2 text-white"></i>
+                            <small class="text-white">Sem data de expiração</small>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="card bg-black border border-secondary">
-                <div class="card-header bg-dark">
-                  <h6 class="text-white mb-0">
-                    <i class="fas fa-cogs me-2"></i>Ações
-                  </h6>
-                </div>
-                <div class="card-body bg-black">
-                  <div class="d-flex gap-3 justify-content-center flex-wrap">
-                    <% if @discount_found[:is_active] %>
-                      <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
-                        <%= f.hidden_field :discount_node_id, value: @discount_found[:node_id] %>
-                        <%= f.hidden_field :action_type, value: 'deactivate' %>
-                        <%= f.hidden_field :coupon_code, value: @coupon_code %>
-                        <%= f.submit "Desativar Cupom", 
-                                     class: "btn btn-danger btn-lg px-4 toggle-btn",
-                                     data: { 
-                                       confirm: "Tem certeza que deseja desativar este cupom?",
-                                       action: "deactivate"
-                                     } %>
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="card bg-black border border-secondary">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-cogs me-2"></i>Ações
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                      <% if @discount_found[:is_active] %>
+                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
+                          <%= f.hidden_field :discount_id, value: @discount_found[:database_id] %>
+                          <%= f.hidden_field :action_type, value: 'deactivate' %>
+                          <%= f.hidden_field :coupon_code, value: @coupon_code %>
+                          <%= f.submit "Desativar Cupom", 
+                                       class: "btn btn-danger btn-lg px-4 toggle-btn",
+                                       data: { 
+                                         confirm: "Tem certeza que deseja desativar este cupom?",
+                                         action: "deactivate"
+                                       } %>
+                        <% end %>
+                      <% else %>
+                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
+                          <%= f.hidden_field :discount_id, value: @discount_found[:database_id] %>
+                          <%= f.hidden_field :action_type, value: 'activate' %>
+                          <%= f.hidden_field :coupon_code, value: @coupon_code %>
+                          <%= f.submit "Ativar Cupom", 
+                                       class: "btn btn-success btn-lg px-4 toggle-btn",
+                                       data: { action: "activate" } %>
+                        <% end %>
                       <% end %>
-                    <% else %>
-                      <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
-                        <%= f.hidden_field :discount_node_id, value: @discount_found[:node_id] %>
-                        <%= f.hidden_field :action_type, value: 'activate' %>
-                        <%= f.hidden_field :coupon_code, value: @coupon_code %>
-                        <%= f.submit "Ativar Cupom", 
-                                     class: "btn btn-success btn-lg px-4 toggle-btn",
-                                     data: { action: "activate" } %>
-                      <% end %>
-                    <% end %>
-                    
-                    <button onclick="window.location.reload()" 
-                            class="btn btn-secondary btn-lg px-4">
-                      <i class="fas fa-sync-alt me-2"></i>Atualizar
-                    </button>
-                    
-                    <button onclick="window.location.href='<%= discounts_path %>'" 
-                            class="btn btn-dark btn-lg px-4">
-                      <i class="fas fa-search me-2"></i>Nova Busca
-                    </button>
+                      
+                      <button onclick="window.location.reload()" 
+                              class="btn btn-secondary btn-lg px-4">
+                        <i class="fas fa-sync-alt me-2"></i>Atualizar
+                      </button>
+                      
+                      <button onclick="window.location.href='<%= discounts_path %>'" 
+                              class="btn btn-dark btn-lg px-4">
+                        <i class="fas fa-search me-2"></i>Nova Busca
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -351,193 +455,202 @@
         </div>
       </div>
     </div>
-  </div>
-<% end %>
+  <% end %>
 </div>
 
 <% content_for :styles do %>
 <style>
-  body {
-    background-color: #121212;
-    color: #f8f9fa;
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.form-control::placeholder {
+  color: #adb5bd;
+  opacity: 1;
+}
+
+.form-control:focus {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.badge {
+  font-weight: 500;
+  color: #ffffff !important;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.input-group-text {
+  border-right: none;
+}
+
+.form-control {
+  border-left: none;
+}
+
+.form-control:focus + .input-group-text {
+  border-color: #495057;
+}
+
+.recent-search-card {
+  transition: all 0.3s ease;
+}
+
+.recent-search-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-color: #495057 !important;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.loading-content {
+  text-align: center;
+  background: rgba(33, 37, 41, 0.95);
+  padding: 3rem 2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2rem;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+}
+
+.spinner-ring:nth-child(1) {
+  animation-delay: 0s;
+  border-top-color: #007bff;
+}
+
+.spinner-ring:nth-child(2) {
+  animation-delay: -0.3s;
+  border-top-color: #28a745;
+  width: 90%;
+  height: 90%;
+  top: 5%;
+  left: 5%;
+}
+
+.spinner-ring:nth-child(3) {
+  animation-delay: -0.6s;
+  border-top-color: #ffc107;
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+}
+
+.spinner-ring:nth-child(4) {
+  animation-delay: -0.9s;
+  border-top-color: #dc3545;
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
-  
-  .bg-black {
-    background-color: #121212 !important;
-  }
-  
-  .form-control::placeholder {
-    color: #adb5bd;
+  to {
     opacity: 1;
+    transform: translateY(0);
   }
-  
-  .form-control:focus {
-    background-color: #343a40;
-    border-color: #495057;
-    color: #fff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-  }
-  
-  .text-white-50 {
-    color: rgba(255, 255, 255, 0.75) !important;
-  }
-  
-  .badge {
-    font-weight: 500;
-    color: #ffffff !important;
-  }
-  
-  .form-label {
-    font-size: 0.9rem;
-    margin-bottom: 0.3rem;
-  }
-  
-  .card {
-    border-radius: 8px;
-  }
-  
-  .btn {
-    border-radius: 6px;
-    font-weight: 500;
-  }
-  
-  .shadow-lg {
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-  }
-  
-  .input-group-text {
-    border-right: none;
-  }
-  
-  .form-control {
-    border-left: none;
-  }
-  
-  .form-control:focus + .input-group-text {
-    border-color: #495057;
-  }
+}
 
-  .loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(5px);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    animation: fadeIn 0.3s ease-in-out;
-  }
+.loading-text h4 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
 
-  .loading-overlay.show {
-    display: flex;
-  }
+.loading-text p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
 
-  .loading-content {
-    text-align: center;
-    background: rgba(33, 37, 41, 0.95);
-    padding: 3rem 2rem;
-    border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.4s ease-out;
-  }
+.alert {
+  border-radius: 6px;
+}
 
-  .loading-spinner {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 2rem;
-  }
+.alert .text-white {
+  color: #ffffff !important;
+}
 
-  .spinner-ring {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border: 3px solid transparent;
-    border-top: 3px solid #007bff;
-    border-radius: 50%;
-    animation: spin 1.2s linear infinite;
-  }
-
-  .spinner-ring:nth-child(1) {
-    animation-delay: 0s;
-    border-top-color: #007bff;
-  }
-
-  .spinner-ring:nth-child(2) {
-    animation-delay: -0.3s;
-    border-top-color: #28a745;
-    width: 90%;
-    height: 90%;
-    top: 5%;
-    left: 5%;
-  }
-
-  .spinner-ring:nth-child(3) {
-    animation-delay: -0.6s;
-    border-top-color: #ffc107;
-    width: 80%;
-    height: 80%;
-    top: 10%;
-    left: 10%;
-  }
-
-  .spinner-ring:nth-child(4) {
-    animation-delay: -0.9s;
-    border-top-color: #dc3545;
-    width: 70%;
-    height: 70%;
-    top: 15%;
-    left: 15%;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .loading-text h4 {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-
-  .loading-text p {
-    font-size: 0.9rem;
-    opacity: 0.8;
-  }
-
-  .alert {
-    border-radius: 6px;
-  }
-
-  .alert .text-white {
-    color: #ffffff !important;
-  }
-
-  .card-header h6 {
-    font-size: 1rem;
-    font-weight: 600;
-  }
+.card-header h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
 </style>
 <% end %>
 
@@ -545,9 +658,10 @@
 document.addEventListener('DOMContentLoaded', function() {
   const loadingOverlay = document.getElementById('loadingOverlay');
   const loadingMessage = document.getElementById('loadingMessage');
-  
+  const couponCodeInput = document.getElementById('couponCodeInput');
+
   const loadingMessages = {
-    search: 'Buscando cupom no Shopify...',
+    search: 'Buscando cupom na base de dados...',
     activate: 'Ativando cupom...',
     deactivate: 'Desativando cupom...'
   };
@@ -561,6 +675,17 @@ document.addEventListener('DOMContentLoaded', function() {
     loadingOverlay.classList.remove('show');
   }
 
+  const recentSearchCards = document.querySelectorAll('.recent-search-card');
+  recentSearchCards.forEach(card => {
+    card.addEventListener('click', function() {
+      const couponCode = this.getAttribute('data-coupon');
+      if (couponCodeInput && couponCode) {
+        couponCodeInput.value = couponCode;
+        couponCodeInput.focus();
+      }
+    });
+  });
+
   const searchForm = document.getElementById('searchForm');
   if (searchForm) {
     searchForm.addEventListener('submit', function(e) {
@@ -569,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   const toggleButtons = document.querySelectorAll('.toggle-btn');
-  
+
   toggleButtons.forEach(button => {
     button.addEventListener('click', function(e) {
       const action = this.getAttribute('data-action');

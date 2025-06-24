@@ -36,7 +36,7 @@ Rails.application.routes.draw do
     collection do
       post :search
       patch :toggle_status
-      patch :update_dates
+      post :sync
       get :logs
     end
   end

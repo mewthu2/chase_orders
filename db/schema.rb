@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_06_22_000543) do
+ActiveRecord::Schema[7.2].define(version: 2025_06_24_051404) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -33,6 +33,47 @@ ActiveRecord::Schema[7.2].define(version: 2025_06_22_000543) do
     t.boolean "xml_sended", default: false
     t.string "tracking"
     t.integer "id_nota_tiny2"
+  end
+
+  create_table "discounts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "shopify_node_id", null: false
+    t.string "shopify_price_rule_id"
+    t.string "code", null: false
+    t.string "title", null: false
+    t.text "summary"
+    t.boolean "is_active", default: true
+    t.boolean "is_expired", default: false
+    t.string "status", default: "ACTIVE"
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.datetime "shopify_created_at"
+    t.datetime "shopify_updated_at"
+    t.string "discount_type"
+    t.decimal "discount_value", precision: 10, scale: 4
+    t.string "currency_code", default: "BRL"
+    t.string "applies_to"
+    t.decimal "min_purchase_amount", precision: 10, scale: 2
+    t.integer "min_quantity"
+    t.string "customer_eligibility", default: "Todos os clientes"
+    t.integer "usage_limit"
+    t.integer "usage_count", default: 0
+    t.boolean "one_per_customer", default: false
+    t.boolean "combines_with_product", default: false
+    t.boolean "combines_with_shipping", default: false
+    t.boolean "combines_with_order", default: false
+    t.json "shopify_data"
+    t.datetime "last_synced_at"
+    t.boolean "needs_sync", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_discounts_on_code"
+    t.index ["ends_at"], name: "index_discounts_on_ends_at"
+    t.index ["is_active"], name: "index_discounts_on_is_active"
+    t.index ["is_expired"], name: "index_discounts_on_is_expired"
+    t.index ["last_synced_at"], name: "index_discounts_on_last_synced_at"
+    t.index ["needs_sync"], name: "index_discounts_on_needs_sync"
+    t.index ["shopify_node_id"], name: "index_discounts_on_shopify_node_id", unique: true
+    t.index ["starts_at"], name: "index_discounts_on_starts_at"
   end
 
   create_table "logs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -99,3 +140,78 @@ ActiveRecord::Schema[7.2].define(version: 2025_06_22_000543) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "product_updates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "kinds"
+    t.string "field"
+    t.string "original_value"
+    t.string "modified_value"
+    t.string "json_return"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_product_updates_on_product_id"
+    t.index ["user_id"], name: "index_product_updates_on_user_id"
+  end
+
+  create_table "products", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "sku"
+    t.string "tiny_lagoa_seca_product_id"
+    t.integer "tiny_bh_shopping_id"
+    t.integer "tiny_rj_id"
+    t.string "tiny_2_id"
+    t.string "shopify_product_id"
+    t.string "shopify_variant_id"
+    t.string "shopify_inventory_item_id"
+    t.string "shopify_product_name"
+    t.string "cost"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "price"
+    t.string "compare_at_price"
+    t.string "vendor"
+    t.string "option1"
+    t.string "option2"
+    t.string "option3"
+    t.string "stock_lagoa_seca"
+    t.string "stock_bh_shopping"
+    t.integer "stock_rj"
+    t.string "stock_tiny_2"
+    t.string "tags"
+  end
+
+  create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name"
+    t.string "phone"
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.integer "sign_in_count", default: 0, null: false
+    t.datetime "current_sign_in_at"
+    t.datetime "last_sign_in_at"
+    t.string "current_sign_in_ip"
+    t.string "last_sign_in_ip"
+    t.string "confirmation_token"
+    t.string "unlock_token"
+    t.datetime "confirmed_at"
+    t.datetime "confirmation_sent_at"
+    t.string "unconfirmed_email"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "profile_id", default: 2
+    t.boolean "active", default: true, null: false
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["profile_id"], name: "index_users_on_profile_id"
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
+  end
+
+  add_foreign_key "logs", "users"
+  add_foreign_key "order_items", "orders"
+  add_foreign_key "order_items", "products"
+  add_foreign_key "product_updates", "products"
+  add_foreign_key "product_updates", "users"
+end
