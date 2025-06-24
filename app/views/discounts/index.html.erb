@@ -1,3 +1,19 @@
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-content">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <div class="loading-text">
+      <h4 class="text-white mb-2">Processando...</h4>
+      <p class="text-white-50 mb-0" id="loadingMessage">Aguarde enquanto processamos sua solicitação</p>
+    </div>
+  </div>
+</div>
+
 <div class="container-fluid py-4">
   <% title 'Cupons de Desconto' %>
 
@@ -16,7 +32,7 @@
             <div class="col-md-8">
               <p class="text-white-50 text-center mb-4">Digite o código do cupom para visualizar e gerenciar</p>
               
-              <%= form_with url: search_discounts_path, method: :post, local: true, class: "d-flex gap-3 align-items-end" do |f| %>
+              <%= form_with url: search_discounts_path, method: :post, local: true, class: "d-flex gap-3 align-items-end", id: "searchForm" do |f| %>
                 <div class="flex-grow-1">
                   <label class="form-label text-white fw-bold">Código do Cupom</label>
                   <div class="input-group">
@@ -31,7 +47,8 @@
                   </div>
                 </div>
                 <%= f.submit "Buscar Cupom", 
-                             class: "btn btn-primary btn-lg px-4" %>
+                             class: "btn btn-primary btn-lg px-4",
+                             id: "searchBtn" %>
               <% end %>
             </div>
           </div>
@@ -108,7 +125,7 @@
                         <div>
                           <span class="badge bg-primary px-3 py-2">
                             <% if @discount_found[:price_rule]['value_type'] == 'percentage' %>
-                              <%= @discount_found[:price_rule]['value'] %>% OFF
+                              <%= (@discount_found[:price_rule]['value'].to_f * 100).to_i %>% OFF
                             <% else %>
                               R$ <%= @discount_found[:price_rule]['value'] %> OFF
                             <% end %>
@@ -134,7 +151,7 @@
                         <label class="form-label text-white-50 small fw-bold">Uso</label>
                         <div class="d-flex align-items-center gap-2">
                           <span class="badge bg-dark text-white border px-3 py-2">
-                            <%= @discount_found[:discount_code]['usage_count'] %> usos
+                            <%= @discount_found[:discount_data]['asyncUsageCount'] || 0 %> usos
                           </span>
                           <% if @discount_found[:price_rule]['usage_limit'] %>
                             <span class="text-white-50">de <%= @discount_found[:price_rule]['usage_limit'] %> permitidos</span>
@@ -148,7 +165,7 @@
                         <label class="form-label text-white-50 small fw-bold">Criado em</label>
                         <p class="text-white mb-0">
                           <i class="fas fa-clock me-1"></i>
-                          <%= Time.parse(@discount_found[:discount_code]['created_at']).strftime('%d/%m/%Y às %H:%M') %>
+                          <%= Time.parse(@discount_found[:price_rule]['created_at']).strftime('%d/%m/%Y às %H:%M') %>
                         </p>
                       </div>
                     </div>
@@ -167,8 +184,8 @@
                     </h6>
                   </div>
                   <div class="card-body bg-black">
-                    <%= form_with url: update_dates_discounts_path, method: :patch, local: true do |f| %>
-                      <%= f.hidden_field :price_rule_id, value: @discount_found[:price_rule]['id'] %>
+                    <%= form_with url: update_dates_discounts_path, method: :patch, local: true, class: "update-dates-form" do |f| %>
+                      <%= f.hidden_field :discount_node_id, value: @discount_found[:node_id] %>
                       <%= f.hidden_field :coupon_code, value: @coupon_code %>
                       
                       <div class="row g-3">
@@ -211,21 +228,25 @@
                     <div class="d-flex gap-3 justify-content-center flex-wrap">
                       <!-- Botão de Ativar/Desativar -->
                       <% if @discount_found[:is_active] %>
-                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline" do |f| %>
-                          <%= f.hidden_field :price_rule_id, value: @discount_found[:price_rule]['id'] %>
+                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
+                          <%= f.hidden_field :discount_node_id, value: @discount_found[:node_id] %>
                           <%= f.hidden_field :action_type, value: 'deactivate' %>
                           <%= f.hidden_field :coupon_code, value: @coupon_code %>
                           <%= f.submit "Desativar Cupom", 
-                                       class: "btn btn-danger btn-lg px-4",
-                                       data: { confirm: "Tem certeza que deseja desativar este cupom?" } %>
+                                       class: "btn btn-danger btn-lg px-4 toggle-btn",
+                                       data: { 
+                                         confirm: "Tem certeza que deseja desativar este cupom?",
+                                         action: "deactivate"
+                                       } %>
                         <% end %>
                       <% else %>
-                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline" do |f| %>
-                          <%= f.hidden_field :price_rule_id, value: @discount_found[:price_rule]['id'] %>
+                        <%= form_with url: toggle_status_discounts_path, method: :patch, local: true, class: "d-inline toggle-form" do |f| %>
+                          <%= f.hidden_field :discount_node_id, value: @discount_found[:node_id] %>
                           <%= f.hidden_field :action_type, value: 'activate' %>
                           <%= f.hidden_field :coupon_code, value: @coupon_code %>
                           <%= f.submit "Ativar Cupom", 
-                                       class: "btn btn-success btn-lg px-4" %>
+                                       class: "btn btn-success btn-lg px-4 toggle-btn",
+                                       data: { action: "activate" } %>
                         <% end %>
                       <% end %>
                       
@@ -311,5 +332,197 @@
     .form-control:focus + .input-group-text {
       border-color: #495057;
     }
+
+    /* Loading Overlay Styles */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .loading-overlay.show {
+      display: flex;
+    }
+
+    .loading-content {
+      text-align: center;
+      background: rgba(33, 37, 41, 0.95);
+      padding: 3rem 2rem;
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.4s ease-out;
+    }
+
+    .loading-spinner {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 2rem;
+    }
+
+    .spinner-ring {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 3px solid transparent;
+      border-top: 3px solid #007bff;
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+
+    .spinner-ring:nth-child(1) {
+      animation-delay: 0s;
+      border-top-color: #007bff;
+    }
+
+    .spinner-ring:nth-child(2) {
+      animation-delay: -0.3s;
+      border-top-color: #28a745;
+      width: 90%;
+      height: 90%;
+      top: 5%;
+      left: 5%;
+    }
+
+    .spinner-ring:nth-child(3) {
+      animation-delay: -0.6s;
+      border-top-color: #ffc107;
+      width: 80%;
+      height: 80%;
+      top: 10%;
+      left: 10%;
+    }
+
+    .spinner-ring:nth-child(4) {
+      animation-delay: -0.9s;
+      border-top-color: #dc3545;
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .loading-text h4 {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .loading-text p {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
   </style>
 <% end %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 Loading script iniciado');
+    
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    // Mensagens de loading
+    const loadingMessages = {
+      search: 'Buscando cupom no Shopify...',
+      activate: 'Ativando cupom...',
+      deactivate: 'Desativando cupom...',
+      update_dates: 'Atualizando datas do cupom...'
+    };
+
+    function showLoading(action = 'search') {
+      console.log('🔧 Mostrando loading para:', action);
+      loadingMessage.textContent = loadingMessages[action] || 'Processando...';
+      loadingOverlay.classList.add('show');
+    }
+
+    function hideLoading() {
+      console.log('🔧 Escondendo loading');
+      loadingOverlay.classList.remove('show');
+    }
+
+    // Form de busca
+    const searchForm = document.getElementById('searchForm');
+    if (searchForm) {
+      console.log('🔧 Form de busca encontrado');
+      searchForm.addEventListener('submit', function(e) {
+        console.log('🔧 Submit do form de busca');
+        showLoading('search');
+      });
+    }
+
+    // Botões de toggle (ativar/desativar)
+    const toggleButtons = document.querySelectorAll('.toggle-btn');
+    console.log('🔧 Botões de toggle encontrados:', toggleButtons.length);
+    
+    toggleButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        const action = this.getAttribute('data-action');
+        console.log('🔧 Clique no botão de toggle:', action);
+        
+        // Se tem confirmação, aguardar o resultado
+        if (this.hasAttribute('data-confirm')) {
+          const confirmed = confirm(this.getAttribute('data-confirm'));
+          if (confirmed) {
+            showLoading(action);
+          } else {
+            e.preventDefault();
+            return false;
+          }
+        } else {
+          showLoading(action);
+        }
+      });
+    });
+
+    // Form de update dates
+    const updateDatesForm = document.querySelector('.update-dates-form');
+    if (updateDatesForm) {
+      console.log('🔧 Form de update dates encontrado');
+      updateDatesForm.addEventListener('submit', function(e) {
+        console.log('🔧 Submit do form de update dates');
+        showLoading('update_dates');
+      });
+    }
+
+    // Esconder loading se a página carregar (em caso de erro)
+    window.addEventListener('load', function() {
+      setTimeout(hideLoading, 500);
+    });
+
+    // Esconder loading ao voltar da página
+    window.addEventListener('pageshow', function() {
+      hideLoading();
+    });
+  });
+</script>
