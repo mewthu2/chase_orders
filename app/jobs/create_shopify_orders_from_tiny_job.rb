@@ -430,6 +430,12 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       cleaned_phone = "55#{cleaned_phone}"
     end
 
+    if cleaned_phone.length == 12
+      ddd = cleaned_phone[2..3]
+      numero = cleaned_phone[4..]
+      cleaned_phone = "55#{ddd}9#{numero}"
+    end
+
     cleaned_phone = cleaned_phone[0, 13] if cleaned_phone.length > 13
 
     "+#{cleaned_phone}"
