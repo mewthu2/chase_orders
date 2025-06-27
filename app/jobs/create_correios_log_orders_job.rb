@@ -137,12 +137,12 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     return attempt.update(error: 'Forma de Envio não localizada', status: :error) unless selected_order.dig(:pedido, :forma_frete).present?
 
     forma_envio_code = case selected_order[:pedido][:forma_frete]
-                       when 'SEDEX'
+                       when 'SEDEX CORREIOS LOG+'
                          '39888'
-                       when 'PAC'
+                       when 'PAC CORREIOS LOG+'
                          '39870'
-                       when 'SEDEX HOJE'
-                         '03662'
+                       when 'SEDEX HOJE LOG+'
+                         '06602'
                        else
                          return attempt.update(error: 'Forma de Envio desconhecida', status: :error)
                        end

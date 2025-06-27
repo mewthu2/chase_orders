@@ -23,7 +23,7 @@ module Correios::Orders
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
-      servicosAdicionais: params[:forma_envio] == ('39888' || '03662') ? ['019'] : [],
+      servicosAdicionais: params[:forma_envio] == ('39888' || '06602') ? ['019'] : [],
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],

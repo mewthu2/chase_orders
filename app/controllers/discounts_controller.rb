@@ -164,13 +164,13 @@ class DiscountsController < ApplicationController
     if params[:action_filter].present?
       @logs = @logs.by_action_type(params[:action_filter])
     end
-    
+
     if params[:user_filter].present?
       @logs = @logs.by_user(params[:user_filter])
     end
-    
+
     if params[:coupon_filter].present?
-      @logs = @logs.where("resource_name ILIKE ?", "%#{params[:coupon_filter]}%")
+      @logs = @logs.where('resource_name ILIKE ?', "%#{params[:coupon_filter]}%")
     end
 
     if params[:status_filter].present?
@@ -181,7 +181,7 @@ class DiscountsController < ApplicationController
         @logs = @logs.failed
       end
     end
-    
+
     @users = User.all.order(:email)
     @actions = Log.by_resource_type('discount').distinct.pluck(:action_type)
   end
