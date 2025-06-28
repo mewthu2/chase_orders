@@ -1,5 +1,7 @@
 class GetTrackingJob < ActiveJob::Base
   def perform(param, att)
+    return unless ScheduleUtils.within_schedule?
+
     case param
     when 'all'
       pull_all_tracking

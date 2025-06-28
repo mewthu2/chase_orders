@@ -3,6 +3,8 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   include ApplicationHelper
 
   def perform(param, order)
+    return unless ScheduleUtils.within_schedule?
+
     return unless verify_comercial_hour?
     case param
     when 'all'
@@ -14,7 +16,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_correios_log_orders
     page = 1
-    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page)
+    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page, '28/06/2025')
 
     while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
       orders[:pedidos].each do |order|

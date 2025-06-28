@@ -1,5 +1,7 @@
 class InvoiceEmitionsJob < ActiveJob::Base
   def perform(param, att)
+    return unless ScheduleUtils.within_schedule?
+
     case param
     when 'all'
       all_emissions

@@ -1,74 +1,335 @@
-<% title 'Api Correios' %>
+<div class="container-fluid py-4">
+  <% title 'Api Correios' %>
 
-<div class="row">
-  <div class="col-6">
-    <span class="d-flex justify-content-center"> Buscar código de rastreio: </span>
-    <div class="card d-flex justify-content-center mt-2">
-      <input class="form-control" id="tracking_number" placeholder="Num pedido correios">
-      <button class="btn btn-dark text-secondary"id="search_button"><i id="loading" class="fa-regular fa-compass"></i></button>
-    </div>
-    <div class="card d-flex justify-content-center">
-      <div class="badge bg-secondary text-info mt-2 d-flex justify-content-center fs-5" id="tracking_result"></div>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="text-white">
+          <i class="fas fa-search me-2"></i>API Correios - Consultas
+        </h4>
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="col-6">
-    <span class="d-flex justify-content-center"> Buscar estoque de item: </span>
-    <div class="card d-flex justify-content-center mt-2">
-      <input class="form-control" id="item_code" placeholder="Código Estoque">
-      <button class="btn btn-dark text-secondary"id="search_button_stock"><i id="loading-stock" class="fa-regular fa-compass"></i></button>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="alert <%= within_schedule? ? 'alert-success' : 'alert-warning' %> border-0">
+        <div class="d-flex align-items-center">
+          <% if within_schedule? %>
+            <i class="fas fa-check-circle fa-2x me-3 text-success"></i>
+            <div>
+              <h5 class="mb-1">API Correios Online</h5>
+              <p class="mb-0">Consultas sendo processadas normalmente - Segunda a Sexta, 08:00 às 22:00</p>
+            </div>
+          <% else %>
+            <i class="fas fa-clock fa-2x me-3 text-warning"></i>
+            <div>
+              <h5 class="mb-1">API Correios Offline</h5>
+              <p class="mb-0">Fora do horário de funcionamento - Retorna Segunda a Sexta, 08:00 às 22:00</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
     </div>
-    <div class="card d-flex justify-content-center">
-      <div class="badge bg-secondary text-info mt-2 d-flex justify-content-center fs-5" id="stock_result"></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card bg-black border border-info shadow h-100">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-shipping-fast me-2"></i>Buscar Código de Rastreio
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="tracking_number" class="form-label text-white">Número do Pedido Correios</label>
+            <div class="input-group">
+              <input type="text" 
+                     class="form-control bg-dark text-white border-secondary" 
+                     id="tracking_number" 
+                     placeholder="Ex: 123456789">
+              <button class="btn btn-info" 
+                      type="button" 
+                      id="search_button"
+                      title="Buscar código de rastreio">
+                <i id="loading" class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="result-container">
+            <div class="card bg-dark border border-secondary">
+              <div class="card-body text-center">
+                <div id="tracking_result" class="text-info fs-6">
+                  <i class="fas fa-info-circle me-2"></i>
+                  Digite um número de pedido e clique em buscar
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card bg-black border border-success shadow h-100">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-boxes me-2"></i>Buscar Estoque de Item
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="item_code" class="form-label text-white">Código do Estoque</label>
+            <div class="input-group">
+              <input type="text" 
+                     class="form-control bg-dark text-white border-secondary" 
+                     id="item_code" 
+                     placeholder="Ex: ABC123">
+              <button class="btn btn-success" 
+                      type="button" 
+                      id="search_button_stock"
+                      title="Buscar estoque do item">
+                <i id="loading-stock" class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="result-container">
+            <div class="card bg-dark border border-secondary">
+              <div class="card-body text-center">
+                <div id="stock_result" class="text-success fs-6">
+                  <i class="fas fa-info-circle me-2"></i>
+                  Digite um código de estoque e clique em buscar
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-info-circle me-2"></i>Instruções de Uso
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="text-info mb-3">
+                <i class="fas fa-shipping-fast me-2"></i>Código de Rastreio
+              </h6>
+              <ul class="text-white-50 small">
+                <li>Digite o número do pedido dos Correios</li>
+                <li>Clique no botão de busca para consultar</li>
+                <li>O código de rastreio será exibido no resultado</li>
+                <li>Caso não encontrado, verifique o número digitado</li>
+              </ul>
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-success mb-3">
+                <i class="fas fa-boxes me-2"></i>Estoque de Item
+              </h6>
+              <ul class="text-white-50 small">
+                <li>Digite o código do item no estoque</li>
+                <li>Clique no botão de busca para consultar</li>
+                <li>As informações de estoque serão exibidas</li>
+                <li>Verifique se o código está correto</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-<script>
-  $(document).ready(function() {
-    $('#search_button').click(function() {
-      var trackingNumber = $('#tracking_number').val();
-      $('#loading').addClass('fa-spin');
-      $.ajax({
-        url: '<%= tracking_dashboard_index_path %>',
-        type: 'GET',
-        data: { tracking_number: trackingNumber },
-        dataType: 'json',
-        success: function(response) {
-          if (response[0]) {
-            $('#tracking_result').html(response[0]['codigoObjeto']);
-          } else {
-            $('#tracking_result').html('Nenhum resultado encontrado.');
-          }
-          $('#loading').removeClass('fa-spin');
-        },
-        error: function() {
-          $('#tracking_result').html('Erro ao buscar informações de rastreamento.');
-        }
-      });
-    });
-  });
 
-  $(document).ready(function() {
-    $('#search_button_stock').click(function() {
-      var item_code = $('#item_code').val();
-      $('#loading-stock').addClass('fa-spin');
-      $.ajax({
-        url: '<%= stock_dashboard_index_path %>',
-        type: 'GET',
-        data: { item_code: item_code },
-        dataType: 'json',
-        success: function(response) {
-          console.log(response)
-          if (response) {
-            $('#stock_result').html(JSON.stringify(response));
-          } else {
-            $('#stock_result').html('Nenhum resultado encontrado.');
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .bg-black {
+      background-color: #121212 !important;
+    }
+
+    .form-control {
+      color-scheme: dark;
+    }
+
+    .form-control:focus {
+      background-color: #1a1a1a;
+      border-color: #0d6efd;
+      color: #f8f9fa;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .input-group .btn {
+      border-left: none;
+    }
+
+    .result-container {
+      min-height: 80px;
+    }
+
+    .result-container .card {
+      transition: all 0.3s ease;
+    }
+
+    .result-success {
+      border-color: #198754 !important;
+      background-color: rgba(25, 135, 84, 0.1) !important;
+    }
+
+    .result-error {
+      border-color: #dc3545 !important;
+      background-color: rgba(220, 53, 69, 0.1) !important;
+    }
+
+    .result-info {
+      border-color: #0dcaf0 !important;
+      background-color: rgba(13, 202, 240, 0.1) !important;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .fa-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    .alert-success {
+      background-color: rgba(25, 135, 84, 0.1);
+      border: 1px solid rgba(25, 135, 84, 0.3);
+      color: #198754;
+    }
+
+    .alert-warning {
+      background-color: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: #ffc107;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    $(document).ready(function() {
+      $('#search_button').click(function() {
+        var trackingNumber = $('#tracking_number').val().trim();
+        
+        if (!trackingNumber) {
+          $('#tracking_result').html('<i class="fas fa-exclamation-triangle me-2"></i>Digite um número de pedido');
+          return;
+        }
+
+        $('#loading').removeClass('fa-search').addClass('fa-spinner fa-spin');
+        $('#search_button').prop('disabled', true);
+        $('#tracking_result').html('<i class="fas fa-spinner fa-spin me-2"></i>Buscando...');
+
+        $.ajax({
+          url: '<%= tracking_dashboard_index_path %>',
+          type: 'GET',
+          data: { tracking_number: trackingNumber },
+          dataType: 'json',
+          success: function(response) {
+            if (response[0] && response[0]['codigoObjeto']) {
+              $('#tracking_result').html('<i class="fas fa-check-circle me-2"></i>' + response[0]['codigoObjeto']);
+              $('.result-container .card').removeClass('result-error').addClass('result-success');
+            } else {
+              $('#tracking_result').html('<i class="fas fa-times-circle me-2"></i>Nenhum resultado encontrado');
+              $('.result-container .card').removeClass('result-success').addClass('result-error');
+            }
+          },
+          error: function() {
+            $('#tracking_result').html('<i class="fas fa-exclamation-triangle me-2"></i>Erro ao buscar informações');
+            $('.result-container .card').removeClass('result-success').addClass('result-error');
+          },
+          complete: function() {
+            $('#loading').removeClass('fa-spinner fa-spin').addClass('fa-search');
+            $('#search_button').prop('disabled', false);
           }
-          $('#loading-stock').removeClass('fa-spin');
-        },
-        error: function() {
-          $('#stock_result').html('Erro ao buscar informações de estoque.');
+        });
+      });
+
+      $('#tracking_number').keypress(function(e) {
+        if (e.which == 13) {
+          $('#search_button').click();
+        }
+      });
+
+      $('#search_button_stock').click(function() {
+        var itemCode = $('#item_code').val().trim();
+        
+        if (!itemCode) {
+          $('#stock_result').html('<i class="fas fa-exclamation-triangle me-2"></i>Digite um código de estoque');
+          return;
+        }
+
+        $('#loading-stock').removeClass('fa-search').addClass('fa-spinner fa-spin');
+        $('#search_button_stock').prop('disabled', true);
+        $('#stock_result').html('<i class="fas fa-spinner fa-spin me-2"></i>Buscando...');
+
+        $.ajax({
+          url: '<%= stock_dashboard_index_path %>',
+          type: 'GET',
+          data: { item_code: itemCode },
+          dataType: 'json',
+          success: function(response) {
+            if (response && Object.keys(response).length > 0) {
+              var formattedResponse = JSON.stringify(response, null, 2);
+              $('#stock_result').html('<i class="fas fa-check-circle me-2"></i><pre class="mb-0 text-start small">' + formattedResponse + '</pre>');
+              $('#stock_result .card').removeClass('result-error').addClass('result-success');
+            } else {
+              $('#stock_result').html('<i class="fas fa-times-circle me-2"></i>Nenhum resultado encontrado');
+              $('#stock_result .card').removeClass('result-success').addClass('result-error');
+            }
+          },
+          error: function() {
+            $('#stock_result').html('<i class="fas fa-exclamation-triangle me-2"></i>Erro ao buscar informações');
+            $('#stock_result .card').removeClass('result-success').addClass('result-error');
+          },
+          complete: function() {
+            $('#loading-stock').removeClass('fa-spinner fa-spin').addClass('fa-search');
+            $('#search_button_stock').prop('disabled', false);
+          }
+        });
+      });
+
+      $('#item_code').keypress(function(e) {
+        if (e.which == 13) {
+          $('#search_button_stock').click();
         }
       });
     });
-  });
-</script>
+  </script>
+<% end %>

@@ -13,6 +13,13 @@ module ApplicationHelper
     true
   end
 
+  def within_schedule?
+    now = Time.zone.now
+    weekday = (1..5).include?(now.wday)      # Segunda (1) a sexta (5)
+    work_hours = now.hour.between?(8, 21)    # Das 08h até 21:59 (pois 22:00 em diante já não é válido)
+    weekday && work_hours
+  end
+
   def client_shopify_graphql
     session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',

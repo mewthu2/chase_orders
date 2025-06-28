@@ -14,6 +14,8 @@ module ChaseOrders
     config.time_zone = 'Brasilia'
     
     config.active_record.default_timezone = :utc
+
+    config.eager_load_paths << Rails.root.join('lib')
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

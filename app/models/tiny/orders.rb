@@ -167,11 +167,15 @@ module Tiny::Orders
   end
 
   def change_situation(order_id, new_situation)
-    response = JSON.parse(HTTParty.get(ENV.fetch('ALTERAR_SITUACAO_PEDIDO'),
-                                       query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
-                                                formato: 'string',
-                                                id: order_id,
-                                                situacao: new_situation }))
-    response.with_indifferent_access[:retorno]
+    response = HTTParty.get(ENV.fetch('ALTERAR_SITUACAO_PEDIDO'),
+                            query: {
+                              token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                              formato: 'json',
+                              id: order_id,
+                              situacao: new_situation
+                            })
+
+    parsed = JSON.parse(response)
+    parsed.with_indifferent_access[:retorno]
   end
 end
