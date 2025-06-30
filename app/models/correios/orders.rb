@@ -15,7 +15,7 @@ module Correios::Orders
 
     body = {
       codigoArmazem: correios_cod_armazem,
-      numero: rand(20001..99999),
+      numero: params[:invoice],
       dataSolicitacao: params[:data_pedido],
       valordeclarado: params[:valor].gsub('.', ','),
       cartaoPostagem: correios_cartao_postagem,

@@ -151,7 +151,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Setting founded valures
     begin
-      params[:invoice]          << invoice[:numero]
+      params[:invoice]          << order[:pedido][:id]
       params[:numero_ecommerce] << ecommerce_number
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
