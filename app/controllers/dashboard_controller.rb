@@ -27,6 +27,19 @@ class DashboardController < ApplicationController
   #                      .where.not(tiny_order_id: ids_to_reject_emitions)
   # end
 
+
+  def push_tracking
+    @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
+                           .distinct(:order_correios_id)
+                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).pluck(:order_correios_id))
+  end
+  
+  def send_xml
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
+                       .distinct(:order_correios_id)
+                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
+  end
+
   def invoice_emition
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
                               .distinct(:order_correios_id)
@@ -227,12 +240,6 @@ class DashboardController < ApplicationController
     }
   end
 
-  def push_tracking
-    @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
-                           .distinct(:order_correios_id)
-                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).pluck(:order_correios_id))
-  end
-
   def tracking
     response = Correios::Orders.get_tracking(params[:tracking_number])
     if response.code == 200
@@ -254,12 +261,6 @@ class DashboardController < ApplicationController
   end
 
   def api_correios; end
-
-  def send_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
-                       .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
-  end
 
   def admin_only!
     unless current_user&.admin?

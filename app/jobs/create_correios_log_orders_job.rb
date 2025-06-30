@@ -31,7 +31,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   def process_order(order)
     return unless order.present?
 
-    return if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success)
+    return if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success, kinds: :create_correios_order).present?
 
     create_one_log_order(order)
   end
