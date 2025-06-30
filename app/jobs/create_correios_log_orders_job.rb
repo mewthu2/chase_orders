@@ -96,7 +96,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     # else
     #   assert_value = selected_order[:pedido][:total_produtos]
     # end
-    assert_value = '50.00' if assert_value < '50.00'
+    assert_value = '50.00'
 
     # assert ecommerce
     if selected_order[:pedido][:numero_ecommerce].present?

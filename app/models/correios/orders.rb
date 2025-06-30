@@ -15,7 +15,7 @@ module Correios::Orders
 
     body = {
       codigoArmazem: correios_cod_armazem,
-      numero: params[:invoice],
+      numero: rand(20001..99999),
       dataSolicitacao: params[:data_pedido],
       valordeclarado: params[:valor].gsub('.', ','),
       cartaoPostagem: correios_cartao_postagem,
@@ -23,7 +23,7 @@ module Correios::Orders
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
-      servicosAdicionais: params[:forma_envio] == ('39888' || '06602') ? ['019'] : [],
+      servicosAdicionais: params[:forma_envio] == ('39888' || '06602') ? ['019'] : ['064'],
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],
