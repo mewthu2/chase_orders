@@ -24,7 +24,6 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       end
 
       page += 1
-      orders = Tiny::Orders.get_orders('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page, '')
     end
   end
 
