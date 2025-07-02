@@ -23,7 +23,7 @@ class DashboardController < ApplicationController
 
   def order_correios_create
     # Buscar pedidos do Tiny com status "preparando envio" - otimizado
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '28/06/2025')
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
     @orders = @orders_response&.dig('pedidos') || []
     
     # Buscar todos os attempts relevantes de uma vez - OTIMIZAÇÃO PRINCIPAL
