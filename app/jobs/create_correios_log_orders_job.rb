@@ -16,7 +16,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_correios_log_orders
     page = 1
-    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page, '28/06/2025')
+    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page, '14/06/2025')
 
     while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
       orders[:pedidos].each do |order|
@@ -74,11 +74,11 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     p 'Waking Up, and get back to work!'
 
     # Obtain invoice number
-    begin
-      invoice = Tiny::Invoices.obtain_invoice(selected_order[:pedido][:id_nota_fiscal])
-    rescue StandardError => e
-      attempt.update(error: e, status: :error)
-    end
+    # begin
+    #   invoice = Tiny::Invoices.obtain_invoice(selected_order[:pedido][:id_nota_fiscal])
+    # rescue StandardError => e
+    #   attempt.update(error: e, status: :error)
+    # end
 
     # Verify order founded
     attempt.update(error: "Order - #{order[:pedido][:id]} não encontrada", status: :error) unless selected_order.present?
