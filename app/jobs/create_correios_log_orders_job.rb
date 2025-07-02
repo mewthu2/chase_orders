@@ -16,7 +16,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
   def create_correios_log_orders
     page = 1
-    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), page, '14/06/2025')
+    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
 
     while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
       orders[:pedidos].each do |order|
