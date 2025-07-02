@@ -3,37 +3,12 @@ class DashboardController < ApplicationController
   before_action :admin_only!
   protect_from_forgery except: :modal_test
 
-  # def index
-  #   start_date = Time.new - 1.month
-
-  #   ids_to_reject = Attempt.select(:tiny_order_id)
-  #                          .where(kinds: :create_note_tiny2, status: :success)
-  #                          .where('created_at >= ?', start_date)
-  #                          .map(&:to_s)
-
-  #   @orders = Tiny::Orders.get_all_orders('tiny_3', 'Preparando Envio', '', start_date)
-
-  #   @all_orders = @orders&.reject do |order|
-  #     ids_to_reject.include?(order['pedido']['id'].to_s)
-  #   end
-
-  #   ids_to_reject_emitions = Attempt.select(:tiny_order_id)
-  #                                   .where(kinds: :emission_invoice_tiny2, status: :success)
-  #                                   .where('created_at >= ?', start_date)
-  #                                   .map(&:to_s)
-
-  #   @emitions = Attempt.where(kinds: :create_note_tiny2, status: :success)
-  #                      .where('created_at >= ?', start_date)
-  #                      .where.not(tiny_order_id: ids_to_reject_emitions)
-  # end
-
-
   def push_tracking
     @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
                            .distinct(:order_correios_id)
                            .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).pluck(:order_correios_id))
   end
-  
+
   def send_xml
     @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
                        .distinct(:order_correios_id)
@@ -46,9 +21,172 @@ class DashboardController < ApplicationController
                               .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).pluck(:order_correios_id))
   end
 
+  def order_correios_create
+    # Buscar pedidos do Tiny com status "preparando envio" - otimizado
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '28/06/2025')
+    @orders = @orders_response&.dig('pedidos') || []
+    
+    # Buscar todos os attempts relevantes de uma vez - OTIMIZAÇÃO PRINCIPAL
+    all_attempts = Attempt.where(kinds: :create_correios_order)
+                          .select(:tiny_order_id, :order_correios_id, :status, :created_at, :updated_at, :message)
+                          .order(:created_at)
+
+    # Separar por status para evitar múltiplas queries
+    processed_order_ids = Set.new
+    queue_attempts = []
+    failed_attempts = []
+
+    all_attempts.each do |attempt|
+      case attempt.status
+      when 2 # success
+        processed_order_ids.add(attempt.tiny_order_id.to_s)
+      when 0, 1 # pending, processing
+        queue_attempts << attempt
+      when 3 # failed
+        failed_attempts << attempt if failed_attempts.size < 10
+      end
+    end
+    
+    # Filtrar pedidos que ainda não foram processados
+    @pending_orders = @orders.reject do |order_data|
+      order_id = order_data['pedido']['id'].to_s
+      processed_order_ids.include?(order_id)
+    end
+    
+    # Criar hash para lookup rápido de posição na fila
+    @queue_positions = {}
+    queue_attempts.each_with_index do |attempt, index|
+      @queue_positions[attempt.tiny_order_id.to_s] = {
+        position: index + 1,
+        status: attempt.status,
+        created_at: attempt.created_at,
+        updated_at: attempt.updated_at,
+        message: attempt.message
+      }
+    end
+    
+    @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
+    
+    # Estatísticas calculadas em memória - mais rápido
+    pending_count = queue_attempts.count { |a| a.status == 0 }
+    processing_count = queue_attempts.count { |a| a.status == 1 }
+    
+    @stats = {
+      total_orders: @orders.count,
+      pending_orders: @pending_orders.count,
+      in_queue: queue_attempts.count,
+      successful: processed_order_ids.count,
+      failed: failed_attempts.count,
+      pending: pending_count,
+      processing: processing_count
+    }
+  end
+
+  def order_correios_tracking
+    # Dados para acompanhamento - otimizado
+    prepare_tracking_data_optimized
+  end
+
+  private
+
+  def prepare_tracking_data_optimized
+    # Uma única query complexa para buscar todos os dados necessários
+    sql = <<-SQL
+      WITH successful_orders AS (
+        SELECT DISTINCT tiny_order_id, order_correios_id
+        FROM attempts 
+        WHERE kinds = 0 AND status = 2
+      ),
+      invoice_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE NOT EXISTS (
+          SELECT 1 FROM attempts a 
+          WHERE a.order_correios_id = so.order_correios_id 
+          AND a.kinds = 1 AND a.status = 2
+        )
+      ),
+      xml_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE EXISTS (
+          SELECT 1 FROM attempts a 
+          WHERE a.order_correios_id = so.order_correios_id 
+          AND a.kinds = 1 AND a.status = 2
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM attempts a 
+          WHERE a.order_correios_id = so.order_correios_id 
+          AND a.kinds = 2 AND a.status = 2
+        )
+      ),
+      tracking_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE EXISTS (
+          SELECT 1 FROM attempts a 
+          WHERE a.order_correios_id = so.order_correios_id 
+          AND a.kinds = 2 AND a.status = 2
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM attempts a 
+          WHERE a.order_correios_id = so.order_correios_id 
+          AND a.kinds = 3 AND a.status = 2
+        )
+      )
+      SELECT 
+        so.tiny_order_id,
+        CASE 
+          WHEN ip.tiny_order_id IS NOT NULL THEN 'invoice_emition'
+          WHEN xp.tiny_order_id IS NOT NULL THEN 'send_xml'
+          WHEN tp.tiny_order_id IS NOT NULL THEN 'push_tracking'
+          ELSE 'completed'
+        END as current_status
+      FROM successful_orders so
+      LEFT JOIN invoice_pending ip ON so.tiny_order_id = ip.tiny_order_id
+      LEFT JOIN xml_pending xp ON so.tiny_order_id = xp.tiny_order_id
+      LEFT JOIN tracking_pending tp ON so.tiny_order_id = tp.tiny_order_id
+    SQL
+
+    results = ActiveRecord::Base.connection.exec_query(sql)
+    
+    # Processar resultados
+    @tracking_summary = {}
+    invoice_count = 0
+    xml_count = 0
+    tracking_count = 0
+    
+    results.rows.each do |row|
+      order_id = row[0].to_s  # primeira coluna: tiny_order_id
+      status = row[1]         # segunda coluna: current_status
+      
+      @tracking_summary[order_id] = {
+        invoice_emition: status == 'invoice_emition',
+        send_xml: status == 'send_xml',
+        push_tracking: status == 'push_tracking'
+      }
+      
+      case status
+      when 'invoice_emition'
+        invoice_count += 1
+      when 'send_xml'
+        xml_count += 1
+      when 'push_tracking'
+        tracking_count += 1
+      end
+    end
+
+    # Estatísticas de acompanhamento
+    @tracking_stats = {
+      invoice_emition: invoice_count,
+      send_xml: xml_count,
+      push_tracking: tracking_count,
+      total_tracking: @tracking_summary.count
+    }
+  end
+
   def ranking_sellers
     orders_with_sellers = Order.where.not(tags: [nil, ''])
-
     sellers_stats = Hash.new do |hash, key|
       hash[key] = {
         total: 0,
@@ -62,7 +200,6 @@ class DashboardController < ApplicationController
 
     orders_with_sellers.each do |order|
       seller_name = order.tags.strip
-
       sellers_stats[seller_name][:total] += 1
 
       if order.shopify_order_id.present?
@@ -75,15 +212,14 @@ class DashboardController < ApplicationController
       sellers_stats[seller_name][:by_kind][order.kinds][:migrated] += 1 if order.shopify_order_id.present?
 
       date = if order.tiny_creation_date.is_a?(String)
-               Date.strptime(order.tiny_creation_date, '%d/%m/%Y')
-             else
-               order.tiny_creation_date.try(:to_date)
-             end
+        Date.strptime(order.tiny_creation_date, '%d/%m/%Y')
+      else
+        order.tiny_creation_date.try(:to_date)
+      end
 
       next unless date.present?
 
       month_key = date.strftime('%Y-%m')
-
       sellers_stats[seller_name][:by_month][month_key][:total] += 1
       sellers_stats[seller_name][:by_month][month_key][:migrated] += 1 if order.shopify_order_id.present?
 
@@ -106,10 +242,8 @@ class DashboardController < ApplicationController
       if months.length >= 6
         recent_months = months.last(3)
         previous_months = months.first(3)
-
         recent_total = recent_months.sum { |m| stats[:by_month][m][:total] }
         previous_total = previous_months.sum { |m| stats[:by_month][m][:total] }
-
         stats[:trend] = if previous_total.positive?
           ((recent_total.to_f / previous_total) - 1) * 100
         else
@@ -120,13 +254,11 @@ class DashboardController < ApplicationController
       end
 
       stats[:best_weekday] = stats[:by_weekday].index(stats[:by_weekday].max)
-
-      active_days = stats[:by_month].sum { |_, month_stats| month_stats[:total].positive? ? 1 : 0 }
+      active_days = stats[:by_month].sum { |_, month_stats| stats[:total].positive? ? 1 : 0 }
       stats[:daily_average] = active_days.positive? ? (stats[:total].to_f / active_days).round(1) : 0
     end
 
     @sellers_ranking = sellers_stats.sort_by { |_, stats| -stats[:total] }
-
     @total_orders = @sellers_ranking.sum { |_, stats| stats[:total] }
     @total_migrated = @sellers_ranking.sum { |_, stats| stats[:migrated] }
     @total_not_migrated = @sellers_ranking.sum { |_, stats| stats[:not_migrated] }
@@ -159,8 +291,6 @@ class DashboardController < ApplicationController
 
     prepare_chart_data
   end
-
-  private
 
   def prepare_chart_data
     top_sellers = @sellers_ranking.first(10)
@@ -209,7 +339,6 @@ class DashboardController < ApplicationController
     }
 
     weekdays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-
     top5_sellers = @sellers_ranking.first(5)
 
     @weekday_distribution_data = {
@@ -223,7 +352,6 @@ class DashboardController < ApplicationController
     }
 
     all_months = @sellers_ranking.flat_map { |_, stats| stats[:by_month].keys }.uniq.sort.last(12)
-
     formatted_months = all_months.map do |month|
       year, month_num = month.split('-')
       Date.new(year.to_i, month_num.to_i, 1).strftime('%b/%Y')

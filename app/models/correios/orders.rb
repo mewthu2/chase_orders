@@ -53,10 +53,16 @@ module Correios::Orders
       attempt.update(error: e, status: :error)
     end
 
-    if request.present? && request.force_encoding('UTF-8').include?('Pedido já Cadastrado')
-      @request = JSON.parse(request)
+    body = request.body.to_s.force_encoding('UTF-8')
+
+    if request.present? && body.include?('Pedido já Cadastrado')
+      begin
+        @request = JSON.parse(body)
+      rescue JSON::ParserError
+        @request = body
+      end
     else
-      @request = request
+      @request = body.presence || request
     end
 
     attempt.update(message: @request, status: :success, order_correios_id: @request.body[/\/pedidos\/(\d+)/, 1]) if @request.present? && @request.include?('/efulfillment/v1/pedidos/')

@@ -10,10 +10,12 @@ Rails.application.routes.draw do
 
   resources :dashboard, only: [:index] do
     collection do
-      get :invoice_emition
       get :ranking_sellers
-      get :push_tracking
+      get :order_correios_tracking
+      get :order_correios_create
       get :send_xml
+      get :push_tracking
+      get :invoice_emition
       get :api_correios
       get :tracking
       get :stock

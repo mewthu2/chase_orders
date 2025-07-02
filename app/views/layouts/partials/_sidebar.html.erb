@@ -3,7 +3,6 @@
     <div class="nav-brand">
       <%= image_tag "admin/chase-logo.png", alt: "ChaseOrders", class: "nav-logo" %>
     </div>
-
     <div class="nav-carousel" id="navCarousel">
       <div class="nav-items">
         <div class="nav-item">
@@ -12,14 +11,12 @@
             <span class="nav-text">Home</span>
           <% end %>
         </div>
-
         <div class="nav-item">
           <%= link_to edit_user_path(current_user), class: "nav-link #{'active' if current_page?(edit_user_path(current_user))}", title: "Meu Perfil" do %>
             <i class="fas fa-user-edit"></i>
             <span class="nav-text">Perfil</span>
           <% end %>
         </div>
-
         <% if current_user&.profile_id == 1 %>
           <div class="nav-item">
             <%= link_to ranking_sellers_dashboard_index_path, class: "nav-link #{'active' if current_page?(ranking_sellers_dashboard_index_path)}", title: "Ranking Vendedores" do %>
@@ -27,7 +24,6 @@
               <span class="nav-text">Ranking</span>
             <% end %>
           </div>
-
           <div class="nav-item nav-group">
             <div class="nav-group-content">
               <div class="nav-group-header">
@@ -35,14 +31,20 @@
                 <span class="nav-text">Correios</span>
               </div>
               <div class="nav-group-items">
-                <%= link_to invoice_emition_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}", title: "Emissão de Notas" do %>
-                  <i class="fas fa-file-invoice"></i>
+                <%= link_to order_correios_tracking_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}", title: "Acompanhamento de Pedidos" do %>
+                  <i class="fas fa-route"></i>
+                <% end %>
+                <%= link_to order_correios_create_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}", title: "Criação de Pedidos no Correios" do %>
+                  <i class="fas fa-plus-circle"></i>
+                <% end %>
+                <%= link_to send_xml_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(send_xml_dashboard_index_path)}", title: "Enviar XML" do %>
+                  <i class="fas fa-file-code"></i>
                 <% end %>
                 <%= link_to push_tracking_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(push_tracking_dashboard_index_path)}", title: "Rastreamento" do %>
                   <i class="fas fa-shipping-fast"></i>
                 <% end %>
-                <%= link_to send_xml_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(send_xml_dashboard_index_path)}", title: "Enviar XML" do %>
-                  <i class="fas fa-file-code"></i>
+                <%= link_to invoice_emition_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}", title: "Emissão de Notas" do %>
+                  <i class="fas fa-file-invoice"></i>
                 <% end %>
                 <%= link_to api_correios_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(api_correios_dashboard_index_path)}", title: "API Correios" do %>
                   <i class="fas fa-cogs"></i>
@@ -50,21 +52,18 @@
               </div>
             </div>
           </div>
-
           <div class="nav-item">
             <%= link_to users_path, class: "nav-link #{'active' if controller_name == 'users'}", title: "Usuários" do %>
               <i class="fas fa-users"></i>
               <span class="nav-text">Usuários</span>
             <% end %>
           </div>
-
           <div class="nav-item">
             <%= link_to products_path, class: "nav-link #{'active' if current_page?(products_path)}", title: "Produtos" do %>
               <i class="fas fa-box"></i>
               <span class="nav-text">Produtos</span>
             <% end %>
           </div>
-
           <div class="nav-item">
             <%= link_to logs_path, class: "nav-link #{'active' if current_page?(logs_path)}", title: "Logs" do %>
               <i class="fas fa-history"></i>
@@ -72,7 +71,6 @@
             <% end %>
           </div>
         <% end %>
-
         <% if current_user&.profile_id == 1 || current_user&.profile_id == 2 %>
           <div class="nav-item">
             <%= link_to discounts_path, class: "nav-link #{'active' if current_page?(discounts_path)}", title: "Cupons" do %>
@@ -83,7 +81,6 @@
         <% end %>
       </div>
     </div>
-
     <div class="nav-user">
       <div class="user-info">
         <span class="user-name"><%= current_user.name %></span>
@@ -206,7 +203,7 @@
   padding: 0.5rem 1rem;
   border-radius: 0.5rem;
   transition: all 0.2s ease;
-  min-width: 180px;
+  min-width: 280px;
   height: 50px;
   background-color: rgba(66, 153, 225, 0.05);
   border: 1px solid rgba(66, 153, 225, 0.2);
@@ -374,7 +371,7 @@
   }
 
   .nav-group {
-    min-width: 150px;
+    min-width: 220px;
     height: 45px;
     padding: 0.25rem 0.75rem;
   }
@@ -431,7 +428,7 @@
   }
 
   .nav-group {
-    min-width: 120px;
+    min-width: 180px;
     height: 40px;
     padding: 0.25rem 0.5rem;
   }

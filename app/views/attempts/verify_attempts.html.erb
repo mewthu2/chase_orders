@@ -1,84 +1,469 @@
-<% title 'Tentativas de Integração' %>
+<div class="container-fluid py-4">
+  <% title 'Tentativas de Integração' %>
 
-<div class="card bg-secondary" style="overflow-x:scroll;">
-  <table class="table table-dark table-hover table-responsive" id="attemps-table">
-    <thead>
-      <tr>
-        <th class="text-center"><%= Attempt.human_attribute_name :id %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :tiny_order_id %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :kinds %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :message %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :status %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :status_code %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :error %></th>
-        <th class="text-center"><%= 'XML enviado' %></th>
-        <th class="text-center"><%= Attempt.human_attribute_name :created_at %></th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @attempts.each do |attempt| %>
-        <tr>
-          <td class="text-center"><%= attempt.id %></td>
-          <td class="text-center" style="min-width:12em;">
-            <%= attempt.tiny_order_id  %> -
-            <span class="badge bg-primary" style="cursor: pointer;" onclick="window.open('<%=ENV.fetch('TINY_SELLS_URL')%>#edit/<%= attempt.tiny_order_id  %>', '_blank');">
-              Ver no Tiny
-            </span>
-          </td>
-          <td class="text-center"><%= attempt.kinds %></td>
-          <td class="text-center"><%= attempt.message %></td>
-          <td class="text-center"><%= attempt.status %></td>
-          <td class="text-center"><%= attempt.status_code %> - <%= attempt.message %></td>
-          <td class="text-center"><%= attempt.error %></td>
-          <td class="text-center">
-            <% if attempt.xml_nota.present? %>
-              <button class="btn btn-primary" onclick="copiarConteudo(<%= attempt.id %>)">Copiar XML</button>
-            <% end %>
-            <span class="content<%= attempt.id %>" style="display:none">
-              <%= attempt.xml_nota %>
-            </span>
-          </td>
-          <td class="text-center"><%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-        </tr>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+            <i class="fas fa-filter me-1"></i> Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse mb-4" id="filtersCollapse">
+    <div class="card bg-black border border-dark shadow">
+      <div class="card-header bg-dark">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-filter me-2"></i>Filtros
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="get">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label for="status" class="form-label text-white">Status</label>
+              <select name="status" id="status" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todos</option>
+                <option value="0">Pendente</option>
+                <option value="1">Processando</option>
+                <option value="2">Sucesso</option>
+                <option value="3">Erro</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="kinds" class="form-label text-white">Tipo</label>
+              <select name="kinds" id="kinds" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todos</option>
+                <option value="create_correios_order">Criação Correios</option>
+                <option value="emission_invoice">Emissão de Nota</option>
+                <option value="send_xml">Envio XML</option>
+                <option value="get_tracking">Rastreamento</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="period" class="form-label text-white">Período</label>
+              <select name="period" id="period" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todo o período</option>
+                <option value="today">Hoje</option>
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="90">Últimos 90 dias</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="order_id" class="form-label text-white">ID do Pedido</label>
+              <input type="text" name="order_id" id="order_id" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 123456">
+            </div>
+          </div>
+          <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Aplicar Filtros
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
+      <div>
+        <h5 class="mb-1">Tentativas de Integração</h5>
+        <p class="mb-0">Histórico completo de todas as tentativas de integração com os sistemas externos (Correios, Tiny, etc.)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Tentativas -->
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-history me-2"></i>Tentativas de Integração
+        </h5>
+        <div>
+          <span class="badge bg-info me-2">
+            <i class="fas fa-list"></i> <%= page_entries_info @attempts %>
+          </span>
+          <span class="badge bg-primary">
+            Histórico de Tentativas
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <% if @attempts.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="attemptsTable">
+            <thead>
+              <tr>
+                <th class="text-center">
+                  <i class="fas fa-hashtag me-1"></i>
+                  <%= Attempt.human_attribute_name :id %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-shopping-cart me-1"></i>
+                  <%= Attempt.human_attribute_name :tiny_order_id %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-cog me-1"></i>
+                  <%= Attempt.human_attribute_name :kinds %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-comment me-1"></i>
+                  <%= Attempt.human_attribute_name :message %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-info-circle me-1"></i>
+                  <%= Attempt.human_attribute_name :status %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-code me-1"></i>
+                  <%= Attempt.human_attribute_name :status_code %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  <%= Attempt.human_attribute_name :error %>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-file-code me-1"></i>
+                  XML Enviado
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-calendar me-1"></i>
+                  <%= Attempt.human_attribute_name :created_at %>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @attempts.each do |attempt| %>
+                <tr>
+                  <td class="text-center">
+                    <span class="fw-bold text-white"><%= attempt.id %></span>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="fw-bold text-white"><%= attempt.tiny_order_id %></span>
+                      <button class="btn btn-sm btn-outline-primary mt-1" 
+                              onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= attempt.tiny_order_id %>', '_blank');"
+                              title="Ver no Tiny">
+                        <i class="fas fa-external-link-alt me-1"></i>Ver no Tiny
+                      </button>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <% case attempt.kinds %>
+                    <% when 'create_correios_order' %>
+                      <span class="badge bg-primary">
+                        <i class="fas fa-plus-circle"></i> Criação Correios
+                      </span>
+                    <% when 'emission_invoice' %>
+                      <span class="badge bg-warning text-dark">
+                        <i class="fas fa-file-invoice"></i> Emissão Nota
+                      </span>
+                    <% when 'send_xml' %>
+                      <span class="badge bg-info text-dark">
+                        <i class="fas fa-file-code"></i> Envio XML
+                      </span>
+                    <% when 'get_tracking' %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-shipping-fast"></i> Rastreamento
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary"><%= attempt.kinds %></span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-white" title="<%= attempt.message %>">
+                      <%= truncate(attempt.message, length: 30) %>
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <% case attempt.status %>
+                    <% when 0 %>
+                      <span class="badge bg-warning text-dark">
+                        <i class="fas fa-clock"></i> Pendente
+                      </span>
+                    <% when 1 %>
+                      <span class="badge bg-primary">
+                        <i class="fas fa-spinner fa-spin"></i> Processando
+                      </span>
+                    <% when 2 %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check-circle"></i> Sucesso
+                      </span>
+                    <% when 3 %>
+                      <span class="badge bg-danger">
+                        <i class="fas fa-times-circle"></i> Erro
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary"><%= attempt.status %></span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="text-white"><%= attempt.status_code %></span>
+                      <% if attempt.message.present? %>
+                        <small class="text-muted" title="<%= attempt.message %>">
+                          <%= truncate(attempt.message, length: 20) %>
+                        </small>
+                      <% end %>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <% if attempt.error.present? %>
+                      <span class="text-danger" title="<%= attempt.error %>">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <%= truncate(attempt.error, length: 20) %>
+                      </span>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if attempt.xml_nota.present? %>
+                      <button class="btn btn-sm btn-outline-success" 
+                              onclick="copiarConteudo(<%= attempt.id %>)"
+                              title="Copiar XML">
+                        <i class="fas fa-copy me-1"></i>Copiar XML
+                      </button>
+                      <span class="content<%= attempt.id %>" style="display:none">
+                        <%= attempt.xml_nota %>
+                      </span>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="text-white"><%= attempt.created_at.strftime('%d/%m/%Y') %></span>
+                      <small class="text-muted"><%= attempt.created_at.strftime('%H:%M') %></small>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginação -->
+        <div class="d-flex justify-content-center mt-4">
+          <%= will_paginate @attempts, 
+              class: 'pagination pagination-dark justify-content-center',
+              inner_window: 1,
+              previous_label: '<i class="fas fa-chevron-left"></i>'.html_safe,
+              next_label: '<i class="fas fa-chevron-right"></i>'.html_safe %>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h5 class="text-white">Nenhuma tentativa encontrada</h5>
+          <p class="text-muted">Não há tentativas de integração para os filtros aplicados.</p>
+        </div>
       <% end %>
-    </tbody>
-    <tfoot>
-      <tr>
-        <th colspan="12">
-          <%= page_entries_info @attempts %>
-        </th>
-      </tr>
-    </tfoot>
-  </table>
+    </div>
+  </div>
 </div>
 
-<script>
-  $(document).ready(function() {
-      $('.table').DataTable();
-  });
-
-  function copiarConteudo(id) {
-
-    var conteudo = document.querySelector('.content' + id);
-
-    if (conteudo) {
-
-        var texto = conteudo.textContent
-        console.log(texto);
-        var areaTransferencia = document.createElement('textarea');
-        areaTransferencia.value = texto;
-
-        document.body.appendChild(areaTransferencia);
-
-        areaTransferencia.select();
-
-        document.execCommand('copy');
-
-        console.log('Conteúdo copiado!');
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
     }
-}
 
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
 
-</script>
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
 
-<%= will_paginate @attempts, list_classes: %w[pagination justify-content-center mt-lg], inner_window: 1 %>
+    .bg-black {
+      background-color: #121212 !important;
+    }
+
+    .table-responsive {
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .table th {
+      background-color: #1a1a1a;
+      border-color: #343a40;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      border-color: #343a40;
+      vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+    }
+
+    .form-select, .form-control {
+      color-scheme: dark;
+    }
+
+    .form-select option {
+      background-color: #212529;
+      color: #f8f9fa;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .fa-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    .alert-info {
+      background-color: rgba(13, 202, 240, 0.1);
+      border: 1px solid rgba(13, 202, 240, 0.3);
+      color: #0dcaf0;
+    }
+
+    /* Paginação customizada */
+    .pagination-dark .page-link {
+      background-color: #343a40;
+      border-color: #495057;
+      color: #f8f9fa;
+    }
+
+    .pagination-dark .page-link:hover {
+      background-color: #495057;
+      border-color: #6c757d;
+      color: #ffffff;
+    }
+
+    .pagination-dark .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+      color: #ffffff;
+    }
+
+    .pagination-dark .page-item.disabled .page-link {
+      background-color: #212529;
+      border-color: #343a40;
+      color: #6c757d;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inicializar DataTable
+      if (document.getElementById('attemptsTable')) {
+        $('#attemptsTable').DataTable({
+          responsive: true,
+          pageLength: 25,
+          order: [[0, 'desc']], // Ordenar por ID decrescente
+          language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+          },
+          columnDefs: [
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      // Tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      // Animação dos cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 50);
+      });
+    });
+
+    // Função para copiar XML
+    function copiarConteudo(id) {
+      var conteudo = document.querySelector('.content' + id);
+      if (conteudo) {
+        var texto = conteudo.textContent.trim();
+        
+        // Usar a API moderna do clipboard se disponível
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(texto).then(function() {
+            // Mostrar feedback visual
+            showCopyFeedback(id, true);
+          }).catch(function(err) {
+            console.error('Erro ao copiar: ', err);
+            showCopyFeedback(id, false);
+          });
+        } else {
+          // Fallback para navegadores mais antigos
+          var areaTransferencia = document.createElement('textarea');
+          areaTransferencia.value = texto;
+          document.body.appendChild(areaTransferencia);
+          areaTransferencia.select();
+          
+          try {
+            var sucesso = document.execCommand('copy');
+            showCopyFeedback(id, sucesso);
+          } catch (err) {
+            console.error('Erro ao copiar: ', err);
+            showCopyFeedback(id, false);
+          }
+          
+          document.body.removeChild(areaTransferencia);
+        }
+      }
+    }
+
+    // Função para mostrar feedback visual
+    function showCopyFeedback(id, sucesso) {
+      var botao = document.querySelector(`button[onclick="copiarConteudo(${id})"]`);
+      if (botao) {
+        var textoOriginal = botao.innerHTML;
+        
+        if (sucesso) {
+          botao.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+          botao.classList.remove('btn-outline-success');
+          botao.classList.add('btn-success');
+        } else {
+          botao.innerHTML = '<i class="fas fa-times me-1"></i>Erro!';
+          botao.classList.remove('btn-outline-success');
+          botao.classList.add('btn-danger');
+        }
+        
+        setTimeout(function() {
+          botao.innerHTML = textoOriginal;
+          botao.classList.remove('btn-success', 'btn-danger');
+          botao.classList.add('btn-outline-success');
+        }, 2000);
+      }
+    }
+  </script>
+<% end %>

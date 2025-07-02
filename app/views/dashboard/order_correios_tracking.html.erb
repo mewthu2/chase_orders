@@ -1,0 +1,358 @@
+<div class="container-fluid py-4">
+  <% title 'Acompanhamento de Pedidos no Correios' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+            <i class="fas fa-filter me-1"></i> Filtros
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse mb-4" id="filtersCollapse">
+    <div class="card bg-black border border-dark shadow">
+      <div class="card-header bg-dark">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-filter me-2"></i>Filtros
+        </h5>
+      </div>
+      <div class="card-body">
+        <form action="<%= order_correios_tracking_dashboard_index_path %>" method="get">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="status" class="form-label text-white">Status</label>
+              <select name="status" id="status" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todos</option>
+                <option value="invoice_emition">Aguardando Emissão de Nota</option>
+                <option value="send_xml">Aguardando Envio XML</option>
+                <option value="push_tracking">Aguardando Rastreamento</option>
+                <option value="completed">Processamento Completo</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="period" class="form-label text-white">Período</label>
+              <select name="period" id="period" class="form-select bg-dark text-white border-secondary">
+                <option value="">Todo o período</option>
+                <option value="today">Hoje</option>
+                <option value="7">Últimos 7 dias</option>
+                <option value="30">Últimos 30 dias</option>
+                <option value="90">Últimos 90 dias</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="order_id" class="form-label text-white">ID do Pedido</label>
+              <input type="text" name="order_id" id="order_id" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 123456">
+            </div>
+          </div>
+          <div class="mt-3 text-end">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search me-1"></i> Aplicar Filtros
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas de Acompanhamento -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-file-invoice fa-2x text-warning mb-2"></i>
+          <h4 class="text-white"><%= @tracking_stats[:invoice_emition] %></h4>
+          <small class="text-muted">&nbsp;</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-file-code fa-2x text-info mb-2"></i>
+          <h4 class="text-white"><%= @tracking_stats[:send_xml] %></h4>
+          <small class="text-muted">&nbsp;</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-shipping-fast fa-2x text-primary mb-2"></i>
+          <h4 class="text-white"><%= @tracking_stats[:push_tracking] %></h4>
+          <small class="text-muted">&nbsp;</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark border border-secondary shadow-sm">
+        <div class="card-body text-center">
+          <i class="fas fa-list-alt fa-2x text-success mb-2"></i>
+          <h4 class="text-white"><%= @tracking_stats[:total_tracking] %></h4>
+          <small class="text-muted">Total em Acompanhamento</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
+      <div>
+        <h5 class="mb-1">Fluxo de Acompanhamento</h5>
+        <p class="mb-0">Pedidos criados no Correios → Emissão de Nota → Envio XML → Rastreamento → Processamento Completo</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Acompanhamento -->
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Fluxo
+        </h5>
+        <div>
+          <span class="badge bg-info me-2">
+            <i class="fas fa-route"></i> Fluxo de Processamento
+          </span>
+          <span class="badge bg-primary">
+            Acompanhamento de Pedidos
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <% if @tracking_summary.any? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="trackingTable">
+            <thead>
+              <tr>
+                <th width="50" class="text-center">
+                  <i class="fas fa-cog"></i>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-hashtag me-1"></i>
+                  ID Pedido Tiny
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-file-invoice me-1"></i>
+                  Emissão de Nota
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-file-code me-1"></i>
+                  Envio XML
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-shipping-fast me-1"></i>
+                  Rastreamento
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Status Atual
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @tracking_summary.each do |order_id, status| %>
+                <tr>
+                  <td class="text-center">
+                    <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), 
+                        class: 'btn btn-sm btn-outline-info', 
+                        method: :post, 
+                        target: '_blank',
+                        title: 'Verificar tentativas' do %>
+                      <i class="fas fa-paperclip"></i>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-bold text-white"><%= order_id %></span>
+                  </td>
+                  <td class="text-center">
+                    <% if status[:invoice_emition] %>
+                      <span class="badge bg-warning text-dark">
+                        <i class="fas fa-clock"></i> Na Fila
+                      </span>
+                    <% else %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check"></i> Concluído
+                      </span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if status[:send_xml] %>
+                      <span class="badge bg-info text-dark">
+                        <i class="fas fa-clock"></i> Na Fila
+                      </span>
+                    <% elsif status[:invoice_emition] %>
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-minus"></i> Aguardando
+                      </span>
+                    <% else %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check"></i> Concluído
+                      </span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if status[:push_tracking] %>
+                      <span class="badge bg-primary">
+                        <i class="fas fa-clock"></i> Na Fila
+                      </span>
+                    <% elsif status[:send_xml] || status[:invoice_emition] %>
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-minus"></i> Aguardando
+                      </span>
+                    <% else %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check"></i> Concluído
+                      </span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if status[:push_tracking] %>
+                      <span class="badge bg-primary fs-6">Aguardando Rastreamento</span>
+                    <% elsif status[:send_xml] %>
+                      <span class="badge bg-info fs-6">Aguardando Envio XML</span>
+                    <% elsif status[:invoice_emition] %>
+                      <span class="badge bg-warning fs-6">Aguardando Emissão de Nota</span>
+                    <% else %>
+                      <span class="badge bg-success fs-6">Processamento Completo</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Nenhum pedido em acompanhamento</h5>
+          <p class="text-muted">Todos os pedidos foram processados completamente.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .bg-black {
+      background-color: #121212 !important;
+    }
+
+    .table-responsive {
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .table th {
+      background-color: #1a1a1a;
+      border-color: #343a40;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      border-color: #343a40;
+      vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+    }
+
+    .fs-6 {
+      font-size: 0.875rem !important;
+    }
+
+    .form-select, .form-control {
+      color-scheme: dark;
+    }
+
+    .form-select option {
+      background-color: #212529;
+      color: #f8f9fa;
+    }
+
+    .alert-info {
+      background-color: rgba(13, 202, 240, 0.1);
+      border: 1px solid rgba(13, 202, 240, 0.3);
+      color: #0dcaf0;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inicializar DataTable
+      if (document.getElementById('trackingTable')) {
+        $('#trackingTable').DataTable({
+          responsive: true,
+          pageLength: 25,
+          order: [[1, 'asc']],
+          language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+          },
+          columnDefs: [
+            { orderable: false, targets: [0] },
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      // Tooltips
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      // Animação dos cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 50);
+      });
+
+      // Auto-refresh
+      setInterval(function() {
+        if (document.visibilityState === 'visible') {
+          location.reload();
+        }
+      }, 60000);
+    });
+  </script>
+<% end %>
