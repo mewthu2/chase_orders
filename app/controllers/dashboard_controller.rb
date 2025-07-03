@@ -4,7 +4,7 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def push_tracking
-    @get_tracking = Attempt.where(kinds: :send_xml, status: :success)
+    @push_tracking = Attempt.where(kinds: :send_xml, status: :success)
                            .distinct(:order_correios_id)
                            .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: :success).pluck(:order_correios_id))
   end
