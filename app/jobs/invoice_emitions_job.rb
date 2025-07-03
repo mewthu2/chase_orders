@@ -11,10 +11,11 @@ class InvoiceEmitionsJob < ActiveJob::Base
   end
 
   def all_emissions
-    successful_ids = Attempt.where(kinds: :emission_invoice, status: :success).pluck(:order_correios_id).compact
-
+    successful_ids = Attempt.where(kinds: :emission_invoice, status: :success)
+                            .pluck(:order_correios_id)
+                            .compact
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
-                              .where('order_correios_id IS NULL OR order_correios_id NOT IN (?)', successful_ids)
+                              .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
     @invoice_emition.each do |att|
       one_emission(att)
