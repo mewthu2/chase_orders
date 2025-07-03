@@ -38,27 +38,29 @@ class DashboardController < ApplicationController
   end
 
   def invoice_emition
+    successful_ids = Attempt.where(kinds: :emission_invoice, status: :success).pluck(:order_correios_id).compact
+
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
+                              .where('order_correios_id IS NULL OR order_correios_id NOT IN (?)', successful_ids)
                               .distinct(:order_correios_id)
-                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: :success).pluck(:order_correios_id))
   end
 
   def order_correios_create
     @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
     @orders = @orders_response&.dig('pedidos') || []
-    
+
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order, 
       status: :success
     ).pluck(:tiny_order_id).map(&:to_s).to_set
-    
+
     @pending_orders = @orders.reject do |order_data|
       order_id = order_data['pedido']['id'].to_s
       successfully_processed_ids.include?(order_id)
     end
-    
+
     pending_order_ids = @pending_orders.map { |order_data| order_data['pedido']['id'].to_s }
-    
+
     relevant_attempts = Attempt.where(
       kinds: :create_correios_order,
       tiny_order_id: pending_order_ids
@@ -76,7 +78,7 @@ class DashboardController < ApplicationController
         failed_attempts << attempt if failed_attempts.size < 10
       end
     end
-    
+
     @queue_positions = {}
     queue_attempts.each_with_index do |attempt, index|
       @queue_positions[attempt.tiny_order_id.to_s] = {
@@ -87,9 +89,9 @@ class DashboardController < ApplicationController
         message: attempt.message
       }
     end
-    
+
     @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
-    
+
     all_attempts_for_analysis = Attempt.where(
       kinds: :create_correios_order,
       tiny_order_id: pending_order_ids
