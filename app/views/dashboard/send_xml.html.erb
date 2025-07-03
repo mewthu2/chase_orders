@@ -63,19 +63,27 @@
 
   <div class="row mb-4">
     <div class="col-12">
-      <div class="alert <%= within_schedule? ? 'alert-success' : 'alert-warning' %> border-0">
+      <div class="alert alert-warning border-0">
         <div class="d-flex align-items-center">
           <% if within_schedule? %>
-            <i class="fas fa-check-circle fa-2x me-3 text-success"></i>
+            <i class="fas fa-check-circle fa-2x me-3 text-warning"></i>
             <div>
-              <h5 class="mb-1">Sistema de Envio XML Online</h5>
-              <p class="mb-0">Envios sendo processados normalmente - Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 3: Envio XML</h5>
+              <p class="mb-0">
+                <strong><%= @send_xml.count %> pedidos</strong> aguardando 
+                Criação no Correios → Emissão de Nota → <strong><i class="fas fa-file-code text-warning"></i> Envio XML</strong> → 
+                Rastreamento - Sistema funcionando normalmente (Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% else %>
             <i class="fas fa-clock fa-2x me-3 text-warning"></i>
             <div>
-              <h5 class="mb-1">Sistema de Envio XML Offline</h5>
-              <p class="mb-0">Fora do horário de funcionamento - Retorna Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 3: Envio XML</h5>
+              <p class="mb-0">
+                <strong><%= @send_xml.count %> pedidos</strong> aguardando 
+                Criação no Correios → Emissão de Nota → <strong><i class="fas fa-file-code text-warning"></i> Envio XML</strong> → 
+                Rastreamento - Fora do horário de funcionamento (Retorna Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% end %>
         </div>
@@ -83,164 +91,153 @@
     </div>
   </div>
 
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow">
-        <div class="card-header bg-dark">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-list me-2"></i>Fila de Envio de XML para Correios
-            </h5>
-            <div>
-              <% if within_schedule? %>
-                <span class="badge bg-success me-2">
-                  <i class="fa-solid fa-spinner fa-spin"></i> Fila Ativa
-                </span>
-              <% else %>
-                <span class="badge bg-danger me-2">
-                  <i class="fas fa-pause"></i> Fila Pausada
-                </span>
-              <% end %>
-              <span class="badge bg-success">
-                Envio de XML para os Correios
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="card-body">
-          <% if @send_xml.present? %>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover" id="xmlTable">
-                <thead>
-                  <tr>
-                    <th width="50" class="text-center">
-                      <i class="fas fa-cog"></i>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-hashtag me-1"></i>
-                      <%= Attempt.human_attribute_name :tiny_order_id %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-mail-bulk me-1"></i>
-                      <%= Attempt.human_attribute_name :order_correios_id %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-file-invoice me-1"></i>
-                      <%= Attempt.human_attribute_name :id_nota_fiscal %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-tag me-1"></i>
-                      <%= Attempt.human_attribute_name :kinds %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-info-circle me-1"></i>
-                      <%= Attempt.human_attribute_name :status %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-code me-1"></i>
-                      Status Code
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-exclamation-triangle me-1"></i>
-                      <%= Attempt.human_attribute_name :error %>
-                    </th>
-                    <th class="text-center">
-                      <i class="fas fa-clock me-1"></i>
-                      <%= Attempt.human_attribute_name :created_at %>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @send_xml.each do |att| %>
-                    <tr>
-                      <td class="text-center">
-                        <%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), 
-                            class: 'btn btn-sm btn-outline-info', 
-                            method: :post, 
-                            target: '_blank',
-                            title: 'Verificar tentativas' do %>
-                          <i class="fas fa-paperclip"></i>
-                        <% end %>
-                      </td>
-                      <td class="text-center">
-                        <div class="d-flex flex-column align-items-center">
-                          <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
-                          <button class="btn btn-sm btn-primary mt-1" 
-                                  onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= att.tiny_order_id %>', '_blank');"
-                                  title="Ver no Tiny">
-                            <i class="fas fa-external-link-alt me-1"></i>
-                            Ver no Tiny
-                          </button>
-                        </div>
-                      </td>
-                      <td class="text-center">
-                        <% if att.order_correios_id.present? %>
-                          <span class="badge bg-info text-dark fs-6"><%= att.order_correios_id %></span>
-                        <% else %>
-                          <span class="badge bg-secondary">-</span>
-                        <% end %>
-                      </td>
-                      <td class="text-center">
-                        <% if att.id_nota_fiscal.present? %>
-                          <span class="badge bg-success fs-6"><%= att.id_nota_fiscal %></span>
-                        <% else %>
-                          <span class="badge bg-secondary">-</span>
-                        <% end %>
-                      </td>
-                      <td class="text-center">
-                        <span class="badge bg-primary text-white"><%= att.kinds %></span>
-                      </td>
-                      <td class="text-center">
-                        <% 
-                          status_class = case att.status
-                          when 'success' then 'bg-success'
-                          when 'error' then 'bg-danger'
-                          when 'processing' then 'bg-warning text-dark'
-                          else 'bg-secondary'
-                          end
-                        %>
-                        <span class="badge <%= status_class %>"><%= att.status %></span>
-                      </td>
-                      <td class="text-center">
-                        <div class="d-flex flex-column align-items-center">
-                          <span class="badge bg-dark"><%= att.status_code %></span>
-                          <% if att.message.present? %>
-                            <small class="text-muted mt-1"><%= truncate(att.message, length: 30) %></small>
-                          <% end %>
-                        </div>
-                      </td>
-                      <td class="text-center">
-                        <% if att.error.present? %>
-                          <span class="badge bg-danger" 
-                                title="<%= att.error %>" 
-                                data-bs-toggle="tooltip">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Erro
-                          </span>
-                        <% else %>
-                          <span class="badge bg-secondary">-</span>
-                        <% end %>
-                      </td>
-                      <td class="text-center">
-                        <div class="d-flex flex-column align-items-center">
-                          <span class="text-white"><%= att.created_at.strftime('%d/%m/%Y') %></span>
-                          <small class="text-muted"><%= att.created_at.strftime('%H:%M') %></small>
-                        </div>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-file-code me-2"></i>Pedidos Aguardando Envio de XML
+        </h5>
+        <div>
+          <% if within_schedule? %>
+            <span class="badge bg-success me-2">
+              <i class="fa-solid fa-spinner fa-spin"></i> Fila Ativa
+            </span>
           <% else %>
-            <div class="text-center py-5">
-              <i class="fas fa-file-code fa-3x text-muted mb-3"></i>
-              <h5 class="text-white">Nenhum XML na fila</h5>
-              <p class="text-muted">Não há XMLs pendentes para envio aos Correios no momento.</p>
-            </div>
+            <span class="badge bg-danger me-2">
+              <i class="fas fa-pause"></i> Fila Pausada
+            </span>
           <% end %>
+          <span class="badge bg-warning text-dark me-2">
+            <i class="fas fa-clock"></i> <%= @send_xml.count %> Na Fila de XML
+          </span>
+          <span class="badge bg-primary">
+            Envio de XML para Correios
+          </span>
         </div>
       </div>
+    </div>
+    <div class="card-body">
+      <% if @send_xml.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="xmlTable">
+            <thead>
+              <tr>
+                <th width="50" class="text-center">
+                  <i class="fas fa-cog"></i>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-hashtag me-1"></i>
+                  ID Pedido Tiny
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-mail-bulk me-1"></i>
+                  ID Correios
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-file-invoice me-1"></i>
+                  Nota Fiscal
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Status Fila
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Último Erro
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-calendar me-1"></i>
+                  Data Criação
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @send_xml.each do |att| %>
+                <% order_id = att.tiny_order_id.to_s %>
+                <% last_error = @last_errors[order_id] %>
+                
+                <tr>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), 
+                          class: 'btn btn-sm btn-outline-info', 
+                          method: :post, 
+                          target: '_blank',
+                          title: 'Verificar tentativas' do %>
+                        <i class="fas fa-paperclip"></i>
+                      <% end %>
+                      <button class="btn btn-sm btn-outline-info" 
+                              onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= att.tiny_order_id %>', '_blank');"
+                              title="Ver no Tiny">
+                        <i class="fas fa-external-link-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <% if att.order_correios_id.present? %>
+                      <span class="badge bg-info text-dark fs-6"><%= att.order_correios_id %></span>
+                    <% else %>
+                      <span class="badge bg-secondary">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if att.id_nota_fiscal.present? %>
+                      <span class="badge bg-success fs-6"><%= att.id_nota_fiscal %></span>
+                    <% else %>
+                      <span class="badge bg-secondary">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-warning text-dark">
+                      <i class="fas fa-clock"></i>
+                      Na Fila XML
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <% if last_error && last_error[:message] != 'Rastreio não disponível' %>
+                      <div class="d-flex flex-column align-items-center">
+                        <% if last_error[:status] == 'fail' %>
+                          <span class="badge bg-warning text-dark mb-1">
+                            <i class="fas fa-exclamation-triangle"></i> Falha
+                          </span>
+                        <% elsif last_error[:status] == 'error' %>
+                          <span class="badge bg-danger mb-1">
+                            <i class="fas fa-times-circle"></i> Erro
+                          </span>
+                        <% end %>
+                        <span class="text-danger small" title="<%= last_error[:message] %>">
+                          <%= truncate(last_error[:message], length: 40) %>
+                        </span>
+                        <small class="text-muted">
+                          <%= last_error[:updated_at].strftime('%d/%m') %>
+                        </small>
+                      </div>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="text-white"><%= att.created_at.strftime('%d/%m/%Y') %></span>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-file-code fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Todos os XMLs foram enviados</h5>
+          <p class="text-muted">Não há XMLs aguardando envio aos Correios no momento.</p>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>
@@ -257,7 +254,7 @@
     }
 
     .card:hover {
-      transform: translateY(-5px);
+      transform: translateY(-2px);
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
     }
 
@@ -317,16 +314,16 @@
       animation: spin 1s linear infinite;
     }
 
-    .alert-success {
-      background-color: rgba(25, 135, 84, 0.1);
-      border: 1px solid rgba(25, 135, 84, 0.3);
-      color: #198754;
-    }
-
     .alert-warning {
       background-color: rgba(255, 193, 7, 0.1);
       border: 1px solid rgba(255, 193, 7, 0.3);
       color: #ffc107;
+    }
+
+    .alert-success {
+      background-color: rgba(25, 135, 84, 0.1);
+      border: 1px solid rgba(25, 135, 84, 0.3);
+      color: #198754;
     }
   </style>
 <% end %>
@@ -334,14 +331,26 @@
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      function initializeDataTable(tableId, options = {}) {
+        const table = document.getElementById(tableId);
+        if (table && !$.fn.DataTable.isDataTable('#' + tableId)) {
+          $('#' + tableId).DataTable({
+            responsive: true,
+            pageLength: 25,
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            },
+            columnDefs: [
+              { className: "text-center", targets: "_all" }
+            ],
+            ...options
+          });
+        }
+      }
+
       if (document.getElementById('xmlTable')) {
-        $('#xmlTable').DataTable({
-          responsive: true,
-          pageLength: 25,
-          order: [[8, 'desc']],
-          language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
-          },
+        initializeDataTable('xmlTable', {
+          order: [[6, 'desc']],
           columnDefs: [
             { orderable: false, targets: [0] },
             { className: "text-center", targets: "_all" }
@@ -349,7 +358,7 @@
         });
       }
 
-      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
@@ -359,7 +368,7 @@
         setTimeout(() => {
           card.style.opacity = '1';
           card.style.transform = 'translateY(0)';
-        }, index * 100);
+        }, index * 50);
       });
 
       <% if within_schedule? %>

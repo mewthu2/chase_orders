@@ -81,7 +81,6 @@
     </div>
   </div>
 
-  <!-- Tabela de Tentativas -->
   <div class="card bg-dark border border-secondary shadow-sm">
     <div class="card-header bg-secondary">
       <div class="d-flex justify-content-between align-items-center">
@@ -253,7 +252,6 @@
           </table>
         </div>
 
-        <!-- Paginação -->
         <div class="d-flex justify-content-center mt-4">
           <%= will_paginate @attempts, 
               class: 'pagination pagination-dark justify-content-center',
@@ -346,7 +344,6 @@
       color: #0dcaf0;
     }
 
-    /* Paginação customizada */
     .pagination-dark .page-link {
       background-color: #343a40;
       border-color: #495057;
@@ -376,12 +373,11 @@
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Inicializar DataTable
       if (document.getElementById('attemptsTable')) {
         $('#attemptsTable').DataTable({
           responsive: true,
           pageLength: 25,
-          order: [[0, 'desc']], // Ordenar por ID decrescente
+          order: [[0, 'desc']],
           language: {
             url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
           },
@@ -391,13 +387,11 @@
         });
       }
 
-      // Tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
 
-      // Animação dos cards
       const cards = document.querySelectorAll('.card');
       cards.forEach((card, index) => {
         setTimeout(() => {
@@ -407,23 +401,19 @@
       });
     });
 
-    // Função para copiar XML
     function copiarConteudo(id) {
       var conteudo = document.querySelector('.content' + id);
       if (conteudo) {
         var texto = conteudo.textContent.trim();
         
-        // Usar a API moderna do clipboard se disponível
         if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(texto).then(function() {
-            // Mostrar feedback visual
             showCopyFeedback(id, true);
           }).catch(function(err) {
             console.error('Erro ao copiar: ', err);
             showCopyFeedback(id, false);
           });
         } else {
-          // Fallback para navegadores mais antigos
           var areaTransferencia = document.createElement('textarea');
           areaTransferencia.value = texto;
           document.body.appendChild(areaTransferencia);
@@ -442,7 +432,6 @@
       }
     }
 
-    // Função para mostrar feedback visual
     function showCopyFeedback(id, sucesso) {
       var botao = document.querySelector(`button[onclick="copiarConteudo(${id})"]`);
       if (botao) {

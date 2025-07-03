@@ -63,19 +63,27 @@
 
   <div class="row mb-4">
     <div class="col-12">
-      <div class="alert <%= within_schedule? ? 'alert-success' : 'alert-warning' %> border-0">
+      <div class="alert alert-danger border-0">
         <div class="d-flex align-items-center">
           <% if within_schedule? %>
-            <i class="fas fa-check-circle fa-2x me-3 text-success"></i>
+            <i class="fas fa-check-circle fa-2x me-3 text-danger"></i>
             <div>
-              <h5 class="mb-1">Sistema de Rastreio Online</h5>
-              <p class="mb-0">Solicitações sendo processadas normalmente - Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 4: Rastreamento</h5>
+              <p class="mb-0">
+                <strong><%= @push_tracking&.count || 0 %> pedidos</strong> aguardando 
+                Criação no Correios → Emissão de Nota → Envio XML → <strong><i class="fas fa-shipping-fast text-danger"></i> Rastreamento</strong> - 
+                Solicitações sendo processadas normalmente (Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% else %>
             <i class="fas fa-clock fa-2x me-3 text-warning"></i>
             <div>
-              <h5 class="mb-1">Sistema de Rastreio Offline</h5>
-              <p class="mb-0">Fora do horário de funcionamento - Retorna Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 4: Rastreamento</h5>
+              <p class="mb-0">
+                <strong><%= @push_tracking&.count || 0 %> pedidos</strong> aguardando 
+                Criação no Correios → Emissão de Nota → Envio XML → <strong><i class="fas fa-shipping-fast text-danger"></i> Rastreamento</strong> - 
+                Fora do horário de funcionamento (Retorna Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% end %>
         </div>
@@ -101,14 +109,17 @@
                   <i class="fas fa-pause"></i> Fila Pausada
                 </span>
               <% end %>
-              <span class="badge bg-danger">
+              <span class="badge bg-danger me-2">
+                <i class="fas fa-shipping-fast"></i> <%= @push_tracking&.count || 0 %> Na Fila de Rastreio
+              </span>
+              <span class="badge bg-primary">
                 Solicitação de código de rastreio do Correios
               </span>
             </div>
           </div>
         </div>
         <div class="card-body">
-          <% if @push_tracking.present? %>
+          <% if @push_tracking&.present? %>
             <div class="table-responsive">
               <table class="table table-dark table-hover" id="trackingTable">
                 <thead>
@@ -188,7 +199,7 @@
                         <% end %>
                       </td>
                       <td class="text-center">
-                        <span class="badge bg-warning text-dark"><%= att.kinds %></span>
+                        <span class="badge bg-danger text-white"><%= att.kinds %></span>
                       </td>
                       <td class="text-center">
                         <% 
@@ -327,6 +338,12 @@
       background-color: rgba(255, 193, 7, 0.1);
       border: 1px solid rgba(255, 193, 7, 0.3);
       color: #ffc107;
+    }
+
+    .alert-danger {
+      background-color: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      color: #dc3545;
     }
   </style>
 <% end %>

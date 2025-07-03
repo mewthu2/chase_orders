@@ -30,10 +30,10 @@
               <label for="status" class="form-label text-white">Status</label>
               <select name="status" id="status" class="form-select bg-dark text-white border-secondary">
                 <option value="">Todos</option>
-                <option value="pending">Pendente</option>
-                <option value="processing">Processando</option>
-                <option value="success">Sucesso</option>
+                <option value="fail">Falha</option>
                 <option value="error">Erro</option>
+                <option value="success">Sucesso</option>
+                <option value="processing">Processando</option>
               </select>
             </div>
             <div class="col-md-4">
@@ -61,75 +61,20 @@
     </div>
   </div>
 
-  <!-- Estatísticas -->
-  <div class="row mb-4">
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-shopping-cart fa-2x text-primary mb-2"></i>
-          <h4 class="text-white"><%= @stats[:total_orders] %></h4>
-          <small class="text-muted">Total Pedidos</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-          <h4 class="text-white"><%= @stats[:pending_orders] %></h4>
-          <small class="text-muted">&nbsp;</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-list fa-2x text-info mb-2"></i>
-          <h4 class="text-white"><%= @stats[:in_queue] %></h4>
-          <small class="text-muted">Na Fila</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-spinner fa-2x text-primary mb-2"></i>
-          <h4 class="text-white"><%= @stats[:processing] %></h4>
-          <small class="text-muted">Processando</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-          <h4 class="text-white"><%= @stats[:successful] %></h4>
-          <small class="text-muted">Processados</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2"></i>
-          <h4 class="text-white"><%= @stats[:failed] %></h4>
-          <small class="text-muted">Com Erro</small>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="alert alert-info border-0 mb-4">
+  <div class="alert alert-primary border-0 mb-4">
     <div class="d-flex align-items-center">
-      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
+      <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
       <div>
-        <h5 class="mb-1">Fluxo de Processamento</h5>
-        <p class="mb-0">1. Pedidos "Preparando Envio" → 2. Criação Correios → 3. Emissão de Nota → 4. Envio XML → 5. Rastreamento</p>
+        <h5 class="mb-1">Fluxo de Processamento - Etapa 1: Criação no Correios</h5>
+        <p class="mb-0">
+          <strong><%= @pending_orders.count %> pedidos</strong> aguardando 
+          <strong><i class="fas fa-plus-circle text-primary"></i> Criação no Correios</strong> → 
+          Emissão de Nota → Envio XML → Rastreamento
+        </p>
       </div>
     </div>
   </div>
 
-  <!-- Tabela de Pedidos Aguardando -->
   <div class="card bg-dark border border-secondary shadow-sm">
     <div class="card-header bg-secondary">
       <div class="d-flex justify-content-between align-items-center">
@@ -140,8 +85,8 @@
           <span class="badge bg-warning text-dark me-2">
             <i class="fas fa-clock"></i> Aguardando Processamento
           </span>
-          <span class="badge bg-primary">
-            Criação de Pedidos Correios
+          <span class="badge bg-primary me-2">
+            <i class="fas fa-plus-circle"></i> <%= @pending_orders.count %> Aguardando Criação
           </span>
         </div>
       </div>
@@ -176,12 +121,8 @@
                   Status Fila
                 </th>
                 <th class="text-center">
-                  <i class="fas fa-list-ol me-1"></i>
-                  Posição
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-clock me-1"></i>
-                  Última Atualização
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Último Erro
                 </th>
               </tr>
             </thead>
@@ -190,6 +131,7 @@
                 <% order = order_data['pedido'] %>
                 <% order_id = order['id'].to_s %>
                 <% queue_info = @queue_positions[order_id] %>
+                <% last_error = @last_errors[order_id] %>
                 
                 <tr>
                   <td class="text-center">
@@ -229,12 +171,12 @@
                   </td>
                   <td class="text-center">
                     <% if queue_info %>
-                      <% if queue_info[:status] == 0 %>
+                      <% if queue_info[:status] == 'fail' %>
                         <span class="badge bg-warning text-dark">
                           <i class="fas fa-clock"></i>
-                          Pendente
+                          Falha
                         </span>
-                      <% elsif queue_info[:status] == 1 %>
+                      <% elsif queue_info[:status] == 'processing' %>
                         <span class="badge bg-primary">
                           <i class="fas fa-spinner fa-spin"></i>
                           Processando
@@ -248,20 +190,23 @@
                     <% end %>
                   </td>
                   <td class="text-center">
-                    <% if queue_info %>
+                    <% if last_error %>
                       <div class="d-flex flex-column align-items-center">
-                        <span class="badge bg-info text-dark fs-6">#<%= queue_info[:position] %></span>
-                        <small class="text-muted">na fila</small>
-                      </div>
-                    <% else %>
-                      <span class="text-muted">-</span>
-                    <% end %>
-                  </td>
-                  <td class="text-center">
-                    <% if queue_info %>
-                      <div class="d-flex flex-column align-items-center">
-                        <span class="text-white"><%= queue_info[:updated_at].strftime('%d/%m/%Y') %></span>
-                        <small class="text-muted"><%= queue_info[:updated_at].strftime('%H:%M') %></small>
+                        <% if last_error[:status] == 'fail' %>
+                          <span class="badge bg-warning text-dark mb-1">
+                            <i class="fas fa-exclamation-triangle"></i> Falha
+                          </span>
+                        <% elsif last_error[:status] == 'error' %>
+                          <span class="badge bg-danger mb-1">
+                            <i class="fas fa-times-circle"></i> Erro
+                          </span>
+                        <% end %>
+                        <span class="text-danger small" title="<%= last_error[:message] %>">
+                          <%= truncate(last_error[:message], length: 40) %>
+                        </span>
+                        <small class="text-muted">
+                          <%= last_error[:updated_at].strftime('%d/%m %H:%M') %>
+                        </small>
                       </div>
                     <% else %>
                       <span class="text-muted">-</span>
@@ -281,71 +226,6 @@
       <% end %>
     </div>
   </div>
-
-  <!-- Tabela de Erros Recentes -->
-  <% if @failed_attempts.any? %>
-    <div class="card bg-dark border border-secondary shadow-sm mt-4">
-      <div class="card-header bg-secondary">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Erros Recentes na Criação
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-dark table-hover" id="errorsTable">
-            <thead>
-              <tr>
-                <th width="50" class="text-center">
-                  <i class="fas fa-cog"></i>
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-hashtag me-1"></i>
-                  ID Pedido
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-clock me-1"></i>
-                  Data do Erro
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-exclamation-triangle me-1"></i>
-                  Mensagem de Erro
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <% @failed_attempts.each do |attempt| %>
-                <tr>
-                  <td class="text-center">
-                    <%= link_to verify_attempts_attempts_path(tiny_order_id: attempt.tiny_order_id), 
-                        class: 'btn btn-sm btn-outline-info', 
-                        method: :post, 
-                        target: '_blank',
-                        title: 'Verificar tentativas' do %>
-                      <i class="fas fa-paperclip"></i>
-                    <% end %>
-                  </td>
-                  <td class="text-center">
-                    <span class="fw-bold text-white"><%= attempt.tiny_order_id %></span>
-                  </td>
-                  <td class="text-center">
-                    <div class="d-flex flex-column align-items-center">
-                      <span class="text-white"><%= attempt.updated_at.strftime('%d/%m/%Y') %></span>
-                      <small class="text-muted"><%= attempt.updated_at.strftime('%H:%M') %></small>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <span class="text-danger" title="<%= attempt.message %>">
-                      <%= truncate(attempt.message, length: 50) %>
-                    </span>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  <% end %>
 </div>
 
 <% content_for :styles do %>
@@ -420,10 +300,10 @@
       animation: spin 1s linear infinite;
     }
 
-    .alert-info {
-      background-color: rgba(13, 202, 240, 0.1);
-      border: 1px solid rgba(13, 202, 240, 0.3);
-      color: #0dcaf0;
+    .alert-primary {
+      background-color: rgba(13, 110, 253, 0.1);
+      border: 1px solid rgba(13, 110, 253, 0.3);
+      color: #0d6efd;
     }
   </style>
 <% end %>
@@ -431,7 +311,6 @@
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Inicializar DataTables
       function initializeDataTable(tableId, options = {}) {
         const table = document.getElementById(tableId);
         if (table && !$.fn.DataTable.isDataTable('#' + tableId)) {
@@ -459,24 +338,11 @@
         });
       }
 
-      if (document.getElementById('errorsTable')) {
-        initializeDataTable('errorsTable', {
-          pageLength: 10,
-          order: [[2, 'desc']],
-          columnDefs: [
-            { orderable: false, targets: [0] },
-            { className: "text-center", targets: "_all" }
-          ]
-        });
-      }
-
-      // Tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
 
-      // Animação dos cards
       const cards = document.querySelectorAll('.card');
       cards.forEach((card, index) => {
         setTimeout(() => {
@@ -485,7 +351,6 @@
         }, index * 50);
       });
 
-      // Auto-refresh
       setInterval(function() {
         if (document.visibilityState === 'visible') {
           location.reload();

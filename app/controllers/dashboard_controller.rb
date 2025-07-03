@@ -4,56 +4,79 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def push_tracking
-    @get_tracking = Attempt.where(kinds: :send_xml, status: 2)
+    @get_tracking = Attempt.where(kinds: :send_xml, status: :success)
                            .distinct(:order_correios_id)
-                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2).pluck(:order_correios_id))
+                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: :success).pluck(:order_correios_id))
   end
 
   def send_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: :success)
                        .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
+                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: :success).pluck(:order_correios_id))
+    
+    # Buscar as últimas tentativas de send_xml para cada tiny_order_id
+    pending_order_ids = @send_xml.pluck(:tiny_order_id).map(&:to_s)
+    
+    @last_errors = {}
+    pending_order_ids.each do |order_id|
+      last_error = Attempt.where(
+        kinds: :send_xml,
+        tiny_order_id: order_id,
+        status: [:fail, :error]
+      ).where.not(message: [nil, ''])
+       .order(updated_at: :desc)
+       .first
+      
+      if last_error
+        @last_errors[order_id] = {
+          message: last_error.message,
+          status: last_error.status,
+          updated_at: last_error.updated_at
+        }
+      end
+    end
   end
 
   def invoice_emition
-    @invoice_emition = Attempt.where(kinds: :create_correios_order, status: 2)
+    @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
                               .distinct(:order_correios_id)
-                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: 2).pluck(:order_correios_id))
+                              .where.not(order_correios_id: Attempt.where(kinds: :emission_invoice, status: :success).pluck(:order_correios_id))
   end
 
   def order_correios_create
-    # Buscar pedidos do Tiny com status "preparando envio" - otimizado
     @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
     @orders = @orders_response&.dig('pedidos') || []
     
-    # Buscar todos os attempts relevantes de uma vez - OTIMIZAÇÃO PRINCIPAL
-    all_attempts = Attempt.where(kinds: :create_correios_order)
-                          .select(:tiny_order_id, :order_correios_id, :status, :created_at, :updated_at, :message)
-                          .order(:created_at)
+    successfully_processed_ids = Attempt.where(
+      kinds: :create_correios_order, 
+      status: :success
+    ).pluck(:tiny_order_id).map(&:to_s).to_set
+    
+    @pending_orders = @orders.reject do |order_data|
+      order_id = order_data['pedido']['id'].to_s
+      successfully_processed_ids.include?(order_id)
+    end
+    
+    pending_order_ids = @pending_orders.map { |order_data| order_data['pedido']['id'].to_s }
+    
+    relevant_attempts = Attempt.where(
+      kinds: :create_correios_order,
+      tiny_order_id: pending_order_ids
+    ).select(:tiny_order_id, :order_correios_id, :status, :created_at, :updated_at, :message)
+     .order(:created_at)
 
-    # Separar por status para evitar múltiplas queries
-    processed_order_ids = Set.new
     queue_attempts = []
     failed_attempts = []
 
-    all_attempts.each do |attempt|
+    relevant_attempts.each do |attempt|
       case attempt.status
-      when 2 # success
-        processed_order_ids.add(attempt.tiny_order_id.to_s)
-      when 0, 1 # pending, processing
+      when 'fail', 'processing'
         queue_attempts << attempt
-      when 3 # failed
+      when 'error'
         failed_attempts << attempt if failed_attempts.size < 10
       end
     end
     
-    # Filtrar pedidos que ainda não foram processados
-    @pending_orders = @orders.reject do |order_data|
-      order_id = order_data['pedido']['id'].to_s
-      processed_order_ids.include?(order_id)
-    end
-    
-    # Criar hash para lookup rápido de posição na fila
     @queue_positions = {}
     queue_attempts.each_with_index do |attempt, index|
       @queue_positions[attempt.tiny_order_id.to_s] = {
@@ -67,15 +90,46 @@ class DashboardController < ApplicationController
     
     @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
     
-    # Estatísticas calculadas em memória - mais rápido
-    pending_count = queue_attempts.count { |a| a.status == 0 }
-    processing_count = queue_attempts.count { |a| a.status == 1 }
+    all_attempts_for_analysis = Attempt.where(
+      kinds: :create_correios_order,
+      tiny_order_id: pending_order_ids
+    ).where.not(message: [nil, ''])
+
+    @attempts_summary = {
+      total: all_attempts_for_analysis.count,
+      fail: all_attempts_for_analysis.where(status: :fail).count,
+      error: all_attempts_for_analysis.where(status: :error).count,
+      success: all_attempts_for_analysis.where(status: :success).count,
+      processing: all_attempts_for_analysis.where(status: :processing).count
+    }
+
+    @last_errors = {}
+    pending_order_ids.each do |order_id|
+      last_error = Attempt.where(
+        kinds: :create_correios_order,
+        tiny_order_id: order_id,
+        status: [:fail, :error]
+      ).where.not(message: [nil, ''])
+       .order(updated_at: :desc)
+       .first
+      
+      if last_error
+        @last_errors[order_id] = {
+          message: last_error.message,
+          status: last_error.status,
+          updated_at: last_error.updated_at
+        }
+      end
+    end
+    
+    pending_count = queue_attempts.count { |a| a.status == 'fail' }
+    processing_count = queue_attempts.count { |a| a.status == 'processing' }
     
     @stats = {
       total_orders: @orders.count,
       pending_orders: @pending_orders.count,
       in_queue: queue_attempts.count,
-      successful: processed_order_ids.count,
+      successful: successfully_processed_ids.count,
       failed: failed_attempts.count,
       pending: pending_count,
       processing: processing_count
@@ -83,14 +137,12 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_tracking
-    # Dados para acompanhamento - otimizado
     prepare_tracking_data_optimized
   end
 
   private
 
   def prepare_tracking_data_optimized
-    # Uma única query complexa para buscar todos os dados necessários
     sql = <<-SQL
       WITH successful_orders AS (
         SELECT DISTINCT tiny_order_id, order_correios_id
@@ -150,15 +202,14 @@ class DashboardController < ApplicationController
 
     results = ActiveRecord::Base.connection.exec_query(sql)
     
-    # Processar resultados
     @tracking_summary = {}
     invoice_count = 0
     xml_count = 0
     tracking_count = 0
     
     results.rows.each do |row|
-      order_id = row[0].to_s  # primeira coluna: tiny_order_id
-      status = row[1]         # segunda coluna: current_status
+      order_id = row[0].to_s
+      status = row[1]
       
       @tracking_summary[order_id] = {
         invoice_emition: status == 'invoice_emition',
@@ -176,7 +227,6 @@ class DashboardController < ApplicationController
       end
     end
 
-    # Estatísticas de acompanhamento
     @tracking_stats = {
       invoice_emition: invoice_count,
       send_xml: xml_count,

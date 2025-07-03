@@ -30,7 +30,22 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   def process_order(order)
     return unless order.present?
 
-    return if Attempt.find_by(tiny_order_id: order[:pedido][:id], status: :success, kinds: :create_correios_order).present?
+    return if Attempt.find_by(
+      tiny_order_id: order[:pedido][:id],
+      status: :success,
+      kinds: :create_correios_order
+    ).present?
+
+    attempt = Attempt.where(
+      tiny_order_id: order[:pedido][:id],
+      kinds: :create_correios_order
+    ).last
+
+    if attempt&.message.to_s =~ /ID do pedido: (\d+)/
+      order_id = Regexp.last_match(1)
+      attempt.update(order_correios_id: order_id, status: :success)
+      return
+    end
 
     create_one_log_order(order)
   end

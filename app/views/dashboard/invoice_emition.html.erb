@@ -63,19 +63,27 @@
 
   <div class="row mb-4">
     <div class="col-12">
-      <div class="alert <%= within_schedule? ? 'alert-success' : 'alert-warning' %> border-0">
+      <div class="alert alert-success border-0 mb-4">
         <div class="d-flex align-items-center">
           <% if within_schedule? %>
             <i class="fas fa-check-circle fa-2x me-3 text-success"></i>
             <div>
-              <h5 class="mb-1">Fila dos Correios Online</h5>
-              <p class="mb-0">Sistema funcionando normalmente - Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 2: Emissão de Nota</h5>
+              <p class="mb-0">
+                <strong><%= @invoice_emition.count %> pedidos</strong> aguardando 
+                Criação no Correios → <strong><i class="fas fa-file-invoice text-success"></i> Emissão de Nota</strong> → 
+                Envio XML → Rastreamento - Sistema funcionando normalmente (Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% else %>
             <i class="fas fa-clock fa-2x me-3 text-warning"></i>
             <div>
-              <h5 class="mb-1">Fila dos Correios Offline</h5>
-              <p class="mb-0">Fora do horário de funcionamento - Retorna Segunda a Sexta, 08:00 às 22:00</p>
+              <h5 class="mb-1">Fluxo de Processamento - Etapa 2: Emissão de Nota</h5>
+              <p class="mb-0">
+                <strong><%= @invoice_emition.count %> pedidos</strong> aguardando 
+                Criação no Correios → <strong><i class="fas fa-file-invoice text-success"></i> Emissão de Nota</strong> → 
+                Envio XML → Rastreamento - Fora do horário de funcionamento (Retorna Segunda a Sexta, 08:00 às 22:00)
+              </p>
             </div>
           <% end %>
         </div>
@@ -101,6 +109,9 @@
                   <i class="fas fa-pause"></i> Fila Pausada
                 </span>
               <% end %>
+              <span class="badge bg-success me-2">
+                <i class="fas fa-file-invoice"></i> <%= @invoice_emition.count %> Na Fila de Notas
+              </span>
               <span class="badge bg-primary">
                 Emissão de Nota Fiscal no Tiny
               </span>

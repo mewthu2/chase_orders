@@ -61,46 +61,6 @@
     </div>
   </div>
 
-  <!-- Estatísticas de Acompanhamento -->
-  <div class="row mb-4">
-    <div class="col-md-3">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-file-invoice fa-2x text-warning mb-2"></i>
-          <h4 class="text-white"><%= @tracking_stats[:invoice_emition] %></h4>
-          <small class="text-muted">&nbsp;</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-file-code fa-2x text-info mb-2"></i>
-          <h4 class="text-white"><%= @tracking_stats[:send_xml] %></h4>
-          <small class="text-muted">&nbsp;</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-shipping-fast fa-2x text-primary mb-2"></i>
-          <h4 class="text-white"><%= @tracking_stats[:push_tracking] %></h4>
-          <small class="text-muted">&nbsp;</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-dark border border-secondary shadow-sm">
-        <div class="card-body text-center">
-          <i class="fas fa-list-alt fa-2x text-success mb-2"></i>
-          <h4 class="text-white"><%= @tracking_stats[:total_tracking] %></h4>
-          <small class="text-muted">Total em Acompanhamento</small>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="alert alert-info border-0 mb-4">
     <div class="d-flex align-items-center">
       <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
@@ -111,7 +71,6 @@
     </div>
   </div>
 
-  <!-- Tabela de Acompanhamento -->
   <div class="card bg-dark border border-secondary shadow-sm">
     <div class="card-header bg-secondary">
       <div class="d-flex justify-content-between align-items-center">
@@ -316,7 +275,6 @@
 <% content_for :scripts do %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Inicializar DataTable
       if (document.getElementById('trackingTable')) {
         $('#trackingTable').DataTable({
           responsive: true,
@@ -332,13 +290,11 @@
         });
       }
 
-      // Tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
 
-      // Animação dos cards
       const cards = document.querySelectorAll('.card');
       cards.forEach((card, index) => {
         setTimeout(() => {
@@ -347,7 +303,6 @@
         }, index * 50);
       });
 
-      // Auto-refresh
       setInterval(function() {
         if (document.visibilityState === 'visible') {
           location.reload();

@@ -31,20 +31,20 @@
                 <span class="nav-text">Correios</span>
               </div>
               <div class="nav-group-items">
-                <%= link_to order_correios_tracking_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}", title: "Acompanhamento de Pedidos" do %>
+                <%= link_to order_correios_tracking_dashboard_index_path, class: "nav-mini-link nav-tracking #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}", title: "Acompanhamento de Pedidos" do %>
                   <i class="fas fa-route"></i>
                 <% end %>
-                <%= link_to order_correios_create_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}", title: "Criação de Pedidos no Correios" do %>
+                <%= link_to order_correios_create_dashboard_index_path, class: "nav-mini-link nav-create #{'active' if current_page?(order_correios_create_dashboard_index_path)}", title: "Criação de Pedidos no Correios" do %>
                   <i class="fas fa-plus-circle"></i>
                 <% end %>
-                <%= link_to send_xml_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(send_xml_dashboard_index_path)}", title: "Enviar XML" do %>
+                <%= link_to invoice_emition_dashboard_index_path, class: "nav-mini-link nav-invoice #{'active' if current_page?(invoice_emition_dashboard_index_path)}", title: "Emissão de Notas" do %>
+                  <i class="fas fa-file-invoice"></i>
+                <% end %>
+                <%= link_to send_xml_dashboard_index_path, class: "nav-mini-link nav-xml #{'active' if current_page?(send_xml_dashboard_index_path)}", title: "Enviar XML" do %>
                   <i class="fas fa-file-code"></i>
                 <% end %>
-                <%= link_to push_tracking_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(push_tracking_dashboard_index_path)}", title: "Rastreamento" do %>
+                <%= link_to push_tracking_dashboard_index_path, class: "nav-mini-link nav-push #{'active' if current_page?(push_tracking_dashboard_index_path)}", title: "Rastreamento" do %>
                   <i class="fas fa-shipping-fast"></i>
-                <% end %>
-                <%= link_to invoice_emition_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}", title: "Emissão de Notas" do %>
-                  <i class="fas fa-file-invoice"></i>
                 <% end %>
                 <%= link_to api_correios_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(api_correios_dashboard_index_path)}", title: "API Correios" do %>
                   <i class="fas fa-cogs"></i>
@@ -270,6 +270,70 @@
   color: #ffffff;
   background-color: rgba(66, 153, 225, 0.5);
   border-color: rgba(66, 153, 225, 0.7);
+}
+
+/* Cores específicas para cada seção */
+.nav-create {
+  background-color: rgba(0, 123, 255, 0.2) !important;
+  border-color: rgba(0, 123, 255, 0.4) !important;
+}
+
+.nav-create:hover {
+  background-color: rgba(0, 123, 255, 0.3) !important;
+  border-color: rgba(0, 123, 255, 0.5) !important;
+}
+
+.nav-create.active {
+  background-color: rgba(0, 123, 255, 0.5) !important;
+  border-color: rgba(0, 123, 255, 0.7) !important;
+}
+
+.nav-invoice {
+  background-color: rgba(25, 135, 84, 0.2) !important;
+  border-color: rgba(25, 135, 84, 0.4) !important;
+}
+
+.nav-invoice:hover {
+  background-color: rgba(25, 135, 84, 0.3) !important;
+  border-color: rgba(25, 135, 84, 0.5) !important;
+}
+
+.nav-invoice.active {
+  background-color: rgba(25, 135, 84, 0.5) !important;
+  border-color: rgba(25, 135, 84, 0.7) !important;
+}
+
+.nav-xml {
+  background-color: rgba(255, 193, 7, 0.2) !important;
+  border-color: rgba(255, 193, 7, 0.4) !important;
+  color: #000 !important;
+}
+
+.nav-xml:hover {
+  background-color: rgba(255, 193, 7, 0.3) !important;
+  border-color: rgba(255, 193, 7, 0.5) !important;
+  color: #000 !important;
+}
+
+.nav-xml.active {
+  background-color: rgba(255, 193, 7, 0.5) !important;
+  border-color: rgba(255, 193, 7, 0.7) !important;
+  color: #000 !important;
+}
+
+.nav-push {
+  background-color: rgba(220, 53, 69, 0.2) !important;
+  border-color: rgba(220, 53, 69, 0.4) !important;
+}
+
+.nav-push:hover {
+  background-color: rgba(220, 53, 69, 0.3) !important;
+  border-color: rgba(220, 53, 69, 0.5) !important;
+}
+
+.nav-push.active {
+  background-color: rgba(220, 53, 69, 0.5) !important;
+  border-color: rgba(220, 53, 69, 0.7) !important;
 }
 
 .nav-mini-link i {
