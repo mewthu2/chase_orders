@@ -10,13 +10,15 @@ class DashboardController < ApplicationController
   end
 
   def send_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order, status: :success)
+    sent_xml_ids = Attempt.where(kinds: :send_xml, status: :success)
+                      .pluck(:order_correios_id)
+                      .compact
+    @send_xml = Attempt.where(kinds: :emission_invoice, status: :success)
+                       .where.not(order_correios_id: sent_xml_ids)
                        .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: :success).pluck(:order_correios_id))
-    
-    # Buscar as últimas tentativas de send_xml para cada tiny_order_id
+
     pending_order_ids = @send_xml.pluck(:tiny_order_id).map(&:to_s)
-    
+
     @last_errors = {}
     pending_order_ids.each do |order_id|
       last_error = Attempt.where(
@@ -26,7 +28,7 @@ class DashboardController < ApplicationController
       ).where.not(message: [nil, ''])
        .order(updated_at: :desc)
        .first
-      
+
       if last_error
         @last_errors[order_id] = {
           message: last_error.message,
@@ -38,10 +40,11 @@ class DashboardController < ApplicationController
   end
 
   def invoice_emition
-    successful_ids = Attempt.where(kinds: :emission_invoice, status: :success).pluck(:order_correios_id).compact
-
+    successful_ids = Attempt.where(kinds: :emission_invoice, status: :success)
+                            .pluck(:order_correios_id)
+                            .compact
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
-                              .where('order_correios_id IS NULL OR order_correios_id NOT IN (?)', successful_ids)
+                              .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
   end
 
