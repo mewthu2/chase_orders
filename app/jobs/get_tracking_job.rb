@@ -55,9 +55,6 @@ class GetTrackingJob < ActiveJob::Base
 
     else
       attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
-
-      # Returns the object to the queue
-      att.destroy
     end
   end
 end
