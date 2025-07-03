@@ -1,6 +1,5 @@
 class GetTrackingJob < ActiveJob::Base
   def perform(param, att)
-
     case param
     when 'all'
       pull_all_tracking
@@ -19,7 +18,6 @@ class GetTrackingJob < ActiveJob::Base
   end
 
   def get_one_tracking(att)
-    # Get tracking
     begin
       attempt = Attempt.create(kinds: :get_tracking)
       tracking = Correios::Orders.get_tracking(att.order_correios_id)
@@ -27,7 +25,6 @@ class GetTrackingJob < ActiveJob::Base
       attempt.update(error: e, status: :error, message: 'Erro na solicitação de rastreio aos Correios')
     end
 
-    # Get order
     begin
       order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), att.tiny_order_id)
     rescue StandardError => e
