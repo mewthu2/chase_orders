@@ -10,12 +10,9 @@ class DashboardController < ApplicationController
   end
 
   def send_xml
-    sent_xml_ids = Attempt.where(kinds: :send_xml, status: :success)
-                      .pluck(:order_correios_id)
-                      .compact
-    @send_xml = Attempt.where(kinds: :emission_invoice, status: :success)
-                       .where.not(order_correios_id: sent_xml_ids)
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
                        .distinct(:order_correios_id)
+                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
 
     pending_order_ids = @send_xml.pluck(:tiny_order_id).map(&:to_s)
 
