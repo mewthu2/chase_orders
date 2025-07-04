@@ -3,6 +3,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     case param
     when 'all'
       send_all_xml
+      insist_on_send_xml
     when 'one'
       send_one_xml(att)
     end
@@ -13,6 +14,16 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
 
+    @send_xml.each do |att|
+      send_one_xml(att)
+    end
+  end
+
+  def insist_on_send_xml
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
+                       .distinct(:order_correios_id)
+                       .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: 2)
+                                                            .pluck(:order_correios_id))
     @send_xml.each do |att|
       send_one_xml(att)
     end
