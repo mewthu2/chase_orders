@@ -91,7 +91,7 @@ module Correios::Orders
         user: @request['user']
       )
 
-      if @request['statusCode'] == 200
+      if @request['statusCode'] == '200'
         order_id = @request['mensagem'][/pedidos\/(\d+)/, 1]
         attempt.update(status: :success, status_code: 200, order_correios_id: order_id)
       elsif @request['mensagem'].to_s.include?('Pedido já Cadastrado')

@@ -191,7 +191,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       puts "Draft order criado: #{draft_order['name']}"
       draft_order
     end
-  end 
+  end
 
   def complete_draft_order_rest(session:, draft_order_id:, location_id:, tiny_order_id:, kind:, pedido:)
     client = ShopifyAPI::Clients::Rest::Admin.new(session:)
