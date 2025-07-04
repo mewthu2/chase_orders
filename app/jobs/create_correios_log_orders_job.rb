@@ -5,7 +5,16 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   def perform(param, order)
     return unless ScheduleUtils.within_schedule?
 
-    return unless verify_comercial_hour?
+    Attempt.where(kinds: :create_correios_order, status: :success).find_each do |attempt|
+      next unless attempt.message.present?
+
+      if attempt.message =~ /\/pedidos\/(\d+)/
+        order_id = attempt.message[/\/pedidos\/(\d+)/, 1]
+
+        attempt.update(order_correios_id: order_id)
+      end
+    end
+
     case param
     when 'all'
       create_correios_log_orders
