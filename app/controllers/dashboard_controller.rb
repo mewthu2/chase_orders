@@ -4,9 +4,14 @@ class DashboardController < ApplicationController
   protect_from_forgery except: :modal_test
 
   def push_tracking
-    @push_tracking = Attempt.where(kinds: :send_xml, status: :success)
-                           .distinct(:order_correios_id)
-                           .where.not(order_correios_id: Attempt.where(kinds: :get_tracking, status: :success).pluck(:order_correios_id))
+    tracked_ids = Attempt.where(kinds: :get_tracking, status: :success).pluck(:order_correios_id)
+
+    latest_ids = Attempt.where(kinds: :send_xml, status: :success)
+                        .where.not(order_correios_id: tracked_ids)
+                        .select('MAX(id) AS id')
+                        .group(:order_correios_id)
+
+    push_tracking = Attempt.where(id: latest_ids.map(&:id))
   end
 
   def send_xml
