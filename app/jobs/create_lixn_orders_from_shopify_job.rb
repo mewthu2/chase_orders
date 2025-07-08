@@ -166,7 +166,7 @@ class CreateLixnOrdersFromShopifyJob < ActiveJob::Base
     rescue ShopifyAPI::Errors::HttpResponseError => e
       puts "Erro ao buscar pedidos da Shopify: #{e.message}"
     ensure
-      create_or_find_attempt(succes: create_lixn_order, kind:)
+      create_or_find_attempt(succes_id: create_lixn_order, kind:)
     end
   end
 
