@@ -34,6 +34,7 @@ class CreateLixnOrdersFromShopifyJob < ActiveJob::Base
   # @param kind [Symbol] The kind of shopping (e.g., :bh_shopping, :rj, :lagoa_seca).
   # @return [String] The token for the specified kind.
   def token_by_kind(kind = nil)
+    # TO-TO Kinds needs to be defined for this store, this is just a example
     {
       bh_shopping: ENV.fetch('BH_SHOPPING_TOKEN_APP'),
       rj: ENV.fetch('BARRA_SHOPPING_TOKEN_APP'),
