@@ -130,18 +130,18 @@ class CreateLixnOrdersFromShopifyJob < ActiveJob::Base
   end
 
   # Creates or finds an attempt record for transferring a Shopify order to Lixn.
-  # @param success [Boolean] Indicates whether the transfer was successful.
+  # @param success_id [Integer] Indicates whether the transfer was successful by Lixn order id.
   # @param kind [Symbol] The kind of shopping (e.g., :bh_shopping, :rj, :lagoa_seca).
   # @return [Attempt] The created or updated Attempt record.
-  def create_or_find_attempt(success:, kind:)
+  def create_or_find_attempt(success_id:, kind:)
     Attempt.find_or_create_by(
       shopify_order_id: @attempt.shopify_order_id, kind: Attempt.kinds[:transfer_shopify_order_to_lixn]
     ).update!(
-      status: success ? :error : :success,
-      lixn_order_id: @lixn_order_id,
-      tracking: "#{kind}|#{success ? 'success' : 'error'}:",
-      classification: success ? 'create_lixn_orders_from_shopify_job' : 'exception',
-      message: "Importação de pedidos da Shopify para Lixn concluída com #{success ? 'successo' : 'falha'} para o tipo #{kind}.",
+      status: success_id ? :error : :success,
+      lixn_order_id: success_id,
+      tracking: "#{kind}|#{success_id ? 'success' : 'error'}:",
+      classification: success_id ? 'create_lixn_orders_from_shopify_job' : 'exception',
+      message: "Importação de pedidos da Shopify para Lixn concluída com #{success_id ? 'successo' : 'falha'} para o tipo #{kind}.",
     )
   end
 
@@ -283,8 +283,10 @@ class CreateLixnOrdersFromShopifyJob < ActiveJob::Base
     build_lixn_selector_params
 
     response = setup_lixn_session.call(:importar, message: lixn_savon_message)
-    result = response.body[:importar_response][:importar_result]
-    @lixn_order_id = result.dig(:documentos, :int).first.to_i if result[:success]
+    result = response.body.dig(:importar_response, :importar_result)
+    return unless result[:success]
+
+    result.dig(:documentos, :int).first.to_i
   rescue Savon::Error => e
     Rails.logger.error "Linx order creation failed: #{e.message}"
   end
