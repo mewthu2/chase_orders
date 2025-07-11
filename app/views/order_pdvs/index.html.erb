@@ -193,11 +193,12 @@
                           when 'lagoa_seca' then 'bg-warning text-dark'
                           when 'bh_shopping' then 'bg-success'
                           when 'rj' then 'bg-primary'
+                          when 'online' then 'bg-info text-dark'
                           else 'bg-secondary'
                           end
                         %>
                         <span class="badge <%= store_badge_class %>">
-                          <%= order.store_type.humanize %>
+                          <%= order.store_type == 'online' ? 'Online Store' : order.store_type.humanize %>
                         </span>
                       </td>
                       <td>

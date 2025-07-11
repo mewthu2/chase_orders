@@ -5,8 +5,12 @@ class ShopifyIntegrationService
 
   def integrate
     begin
-      shopify_session = create_shopify_session
+      # Configurar token e location baseado na loja
+      config = get_store_config(@order_pdv.store_type)
+      
+      shopify_session = create_shopify_session(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: shopify_session)
+      graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: shopify_session)
 
       existing_customer = find_existing_customer(client, @order_pdv.customer_email, @order_pdv.customer_phone)
 
@@ -46,7 +50,8 @@ class ShopifyIntegrationService
           shipping_address: build_address_data,
           shipping_lines: shipping_lines,
           financial_status: 'pending',
-          tags: build_tags,
+          fulfillment_status: 'unfulfilled',
+          tags: build_tags(config[:location_name]),
           note: @order_pdv.order_note,
           total_price: @order_pdv.total_price,
           subtotal_price: @order_pdv.subtotal,
@@ -57,25 +62,49 @@ class ShopifyIntegrationService
         }
       }
 
+      # 1. Criar o pedido no Shopify
+      Rails.logger.info "Criando pedido no Shopify para order_pdv #{@order_pdv.id}"
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
 
-      if order && order['id']
-        begin
-          create_fulfillment(client, order['id'], get_location_id(@order_pdv.store_type))
-        rescue => e
-          Rails.logger.error "Erro ao criar fulfillment: #{e.message}"
-        end
+      unless order && order['id']
+        return {
+          success: false,
+          error: "Resposta inválida do Shopify ao criar pedido"
+        }
+      end
 
+      Rails.logger.info "Pedido criado no Shopify: #{order['id']}"
+
+      # 2. Reservar estoque na location específica
+      reservation_results = reserve_inventory_at_location(
+        graphql_client, 
+        @order_pdv.order_pdv_items, 
+        config[:location_id],
+        config[:location_name]
+      )
+
+      if reservation_results[:success]
+        Rails.logger.info "Estoque reservado com sucesso na location #{config[:location_name]}"
+        
         {
           success: true,
           order_id: order['id'],
-          order_number: order['order_number'] || order['name']
+          order_number: order['order_number'] || order['name'],
+          location: config[:location_name],
+          reservations: reservation_results[:reservations]
         }
       else
+        Rails.logger.error "Falha ao reservar estoque: #{reservation_results[:error]}"
+        
+        # Pedido foi criado mas estoque não foi reservado
+        # Vamos manter o pedido mas sinalizar o problema
         {
-          success: false,
-          error: "Resposta inválida do Shopify"
+          success: true,
+          order_id: order['id'],
+          order_number: order['order_number'] || order['name'],
+          location: config[:location_name],
+          warning: "Pedido criado mas estoque não foi reservado: #{reservation_results[:error]}"
         }
       end
 
@@ -87,6 +116,7 @@ class ShopifyIntegrationService
       }
     rescue => e
       Rails.logger.error "Erro na integração: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
       {
         success: false,
         error: e.message
@@ -96,10 +126,302 @@ class ShopifyIntegrationService
 
   private
 
-  def create_shopify_session
+  def reserve_inventory_at_location(graphql_client, order_items, location_id, location_name)
+    reservations = []
+    
+    begin
+      Rails.logger.info "Iniciando reserva de estoque na location #{location_name} (#{location_id})"
+      
+      order_items.each do |item|
+        variant_id = item.product.shopify_variant_id
+        quantity = item.quantity
+        
+        Rails.logger.info "Reservando #{quantity} unidades do produto #{item.sku} (variant: #{variant_id})"
+        
+        # Verificar estoque disponível antes de reservar
+        stock_check = check_inventory_at_location(graphql_client, variant_id, location_id)
+        
+        unless stock_check[:success]
+          raise "Erro ao verificar estoque do produto #{item.sku}: #{stock_check[:error]}"
+        end
+        
+        available_quantity = stock_check[:available_quantity]
+        
+        if available_quantity < quantity
+          raise "Estoque insuficiente para #{item.sku}. Disponível: #{available_quantity}, Solicitado: #{quantity}"
+        end
+        
+        # Criar reserva de inventory
+        reservation_result = create_inventory_reservation(
+          graphql_client, 
+          variant_id, 
+          location_id, 
+          quantity,
+          "PDV Order ##{@order_pdv.id} - #{item.sku}"
+        )
+        
+        if reservation_result[:success]
+          reservations << {
+            variant_id: variant_id,
+            sku: item.sku,
+            quantity: quantity,
+            location_id: location_id,
+            reservation_id: reservation_result[:reservation_id]
+          }
+          
+          Rails.logger.info "Reserva criada com sucesso para #{item.sku}: #{reservation_result[:reservation_id]}"
+        else
+          raise "Falha ao reservar estoque para #{item.sku}: #{reservation_result[:error]}"
+        end
+      end
+      
+      {
+        success: true,
+        reservations: reservations
+      }
+      
+    rescue => e
+      Rails.logger.error "Erro durante reserva de estoque: #{e.message}"
+      
+      # Tentar reverter reservas já criadas
+      if reservations.any?
+        Rails.logger.info "Tentando reverter #{reservations.count} reservas já criadas"
+        cancel_inventory_reservations(graphql_client, reservations)
+      end
+      
+      {
+        success: false,
+        error: e.message,
+        partial_reservations: reservations
+      }
+    end
+  end
+
+  def check_inventory_at_location(graphql_client, variant_id, location_id)
+    begin
+      query = <<~GRAPHQL
+        query($variantId: ID!, $locationId: ID!) {
+          productVariant(id: $variantId) {
+            id
+            sku
+            inventoryItem {
+              id
+              inventoryLevels(locationIds: [$locationId], first: 1) {
+                edges {
+                  node {
+                    id
+                    available
+                    location {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      variables = {
+        variantId: "gid://shopify/ProductVariant/#{variant_id}",
+        locationId: "gid://shopify/Location/#{location_id}"
+      }
+
+      response = graphql_client.query(query: query, variables: variables)
+      
+      if response.body['errors']
+        return {
+          success: false,
+          error: response.body['errors'].map { |e| e['message'] }.join(', ')
+        }
+      end
+
+      variant = response.body.dig('data', 'productVariant')
+      
+      unless variant
+        return {
+          success: false,
+          error: 'Produto não encontrado'
+        }
+      end
+
+      inventory_level = variant.dig('inventoryItem', 'inventoryLevels', 'edges', 0, 'node')
+      
+      unless inventory_level
+        return {
+          success: false,
+          error: 'Nível de estoque não encontrado para esta location'
+        }
+      end
+
+      {
+        success: true,
+        available_quantity: inventory_level['available'] || 0,
+        location_name: inventory_level.dig('location', 'name')
+      }
+      
+    rescue => e
+      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
+      {
+        success: false,
+        error: e.message
+      }
+    end
+  end
+
+  def create_inventory_reservation(graphql_client, variant_id, location_id, quantity, note)
+    begin
+      mutation = <<~GRAPHQL
+        mutation($input: InventoryReserveInput!) {
+          inventoryReserve(input: $input) {
+            inventoryReservation {
+              id
+              quantity
+              note
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      GRAPHQL
+
+      variables = {
+        input: {
+          inventoryItemId: get_inventory_item_id(graphql_client, variant_id),
+          locationId: "gid://shopify/Location/#{location_id}",
+          quantity: quantity,
+          note: note
+        }
+      }
+
+      response = graphql_client.query(query: mutation, variables: variables)
+      
+      if response.body['errors']
+        return {
+          success: false,
+          error: response.body['errors'].map { |e| e['message'] }.join(', ')
+        }
+      end
+
+      result = response.body.dig('data', 'inventoryReserve')
+      
+      if result['userErrors']&.any?
+        return {
+          success: false,
+          error: result['userErrors'].map { |e| e['message'] }.join(', ')
+        }
+      end
+
+      reservation = result['inventoryReservation']
+      
+      {
+        success: true,
+        reservation_id: reservation['id']
+      }
+      
+    rescue => e
+      Rails.logger.error "Erro ao criar reserva: #{e.message}"
+      {
+        success: false,
+        error: e.message
+      }
+    end
+  end
+
+  def get_inventory_item_id(graphql_client, variant_id)
+    query = <<~GRAPHQL
+      query($variantId: ID!) {
+        productVariant(id: $variantId) {
+          inventoryItem {
+            id
+          }
+        }
+      }
+    GRAPHQL
+
+    variables = {
+      variantId: "gid://shopify/ProductVariant/#{variant_id}"
+    }
+
+    response = graphql_client.query(query: query, variables: variables)
+    response.body.dig('data', 'productVariant', 'inventoryItem', 'id')
+  end
+
+  def cancel_inventory_reservations(graphql_client, reservations)
+    reservations.each do |reservation|
+      begin
+        Rails.logger.info "Cancelando reserva #{reservation[:reservation_id]} para #{reservation[:sku]}"
+        
+        mutation = <<~GRAPHQL
+          mutation($id: ID!) {
+            inventoryUnreserve(id: $id) {
+              userErrors {
+                field
+                message
+              }
+            }
+          }
+        GRAPHQL
+
+        variables = { id: reservation[:reservation_id] }
+        
+        response = graphql_client.query(query: mutation, variables: variables)
+        
+        if response.body['errors'] || response.body.dig('data', 'inventoryUnreserve', 'userErrors')&.any?
+          Rails.logger.error "Erro ao cancelar reserva #{reservation[:reservation_id]}"
+        else
+          Rails.logger.info "Reserva #{reservation[:reservation_id]} cancelada com sucesso"
+        end
+        
+      rescue => e
+        Rails.logger.error "Erro ao cancelar reserva #{reservation[:reservation_id]}: #{e.message}"
+      end
+    end
+  end
+
+  def get_store_config(store_type)
+    case store_type
+    when 'bh_shopping'
+      {
+        access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_BH_SHOPPING'),
+        location_name: 'BH Shopping'
+      }
+    when 'rj'
+      {
+        access_token: ENV.fetch('BARRA_SHOPPING_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_BARRA_SHOPPING'),
+        location_name: 'Barra Shopping'
+      }
+    when 'lagoa_seca'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
+        location_name: 'Lagoa Seca'
+      }
+    when 'online'
+      {
+        access_token: ENV.fetch('CHASE_ORDERS_TOKEN'),
+        location_id: ENV.fetch('LOCATION_LOG'),
+        location_name: 'Online Store'
+      }
+    else
+      # Fallback para Lagoa Seca
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
+        location_name: 'Lagoa Seca'
+      }
+    end
+  end
+
+  def create_shopify_session(access_token)
     ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: ENV['LAGOA_SECA_TOKEN_APP']
+      access_token: access_token
     )
   end
 
@@ -140,8 +462,8 @@ class ShopifyIntegrationService
     }
   end
 
-  def build_tags
-    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO"]
+  def build_tags(location_name)
+    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", "ESTOQUE_RESERVADO", location_name]
     tags.join(',')
   end
 
@@ -166,44 +488,5 @@ class ShopifyIntegrationService
 
     cleaned_phone = cleaned_phone[0, 13] if cleaned_phone.length > 13
     "+#{cleaned_phone}"
-  end
-
-  def get_location_id(store_type)
-    case store_type
-    when 'bh_shopping'
-      ENV['LOCATION_BH_SHOPPING']
-    when 'rj'
-      ENV['LOCATION_BARRA_SHOPPING']
-    when 'lagoa_seca'
-      ENV['LOCATION_LAGOA_SECA']
-    else
-      ENV['LOCATION_LAGOA_SECA']
-    end
-  end
-
-  def create_fulfillment(client, order_id, location_id)
-    return unless location_id
-
-    fulfillment_orders_response = client.get(path: "orders/#{order_id}/fulfillment_orders.json")
-    fulfillment_orders = fulfillment_orders_response.body['fulfillment_orders']
-
-    fulfillment_orders.each do |fo|
-      if fo['assigned_location_id'] != location_id.to_i && fo['supported_actions'].include?('move')
-        client.post(path: "fulfillment_orders/#{fo['id']}/move.json",
-          body: { fulfillment_order: { new_location_id: location_id } }
-        )
-      end
-
-      client.post(path: 'fulfillments.json',
-        body: {
-          fulfillment: {
-            message: 'Pedido entregue em mãos - PDV.',
-            notify_customer: false,
-            line_items_by_fulfillment_order: [{ fulfillment_order_id: fo['id'] }],
-            location_id: location_id
-          }
-        }
-      )
-    end
   end
 end

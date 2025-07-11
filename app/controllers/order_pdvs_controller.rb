@@ -23,14 +23,26 @@ class OrderPdvsController < ApplicationController
 
   def edit
     @items = @order_pdv.order_pdv_items.includes(:product)
+    # Separar endereço para edição
+    @address_parts = parse_address(@order_pdv)
   end
 
   def update
-    if @order_pdv.update(order_pdv_params)
+    # Juntar endereço no backend
+    address1 = build_address1(params[:order_pdv])
+    address2 = build_address2(params[:order_pdv])
+    
+    order_params = order_pdv_params.merge(
+      address1: address1,
+      address2: address2
+    )
+
+    if @order_pdv.update(order_params)
       recalculate_totals
       redirect_to @order_pdv, notice: 'Pedido atualizado com sucesso!'
     else
       @items = @order_pdv.order_pdv_items.includes(:product)
+      @address_parts = parse_address(@order_pdv)
       render :edit
     end
   end
@@ -217,9 +229,36 @@ class OrderPdvsController < ApplicationController
   def order_pdv_params
     params.require(:order_pdv).permit(
       :customer_name, :customer_email, :customer_phone, :customer_cpf,
-      :address1, :address2, :city, :state, :zip, :store_type, :payment_method,
-      :discount_amount, :discount_reason, :notes
+      :street, :number, :complement, :neighborhood, :city, :state, :zip, 
+      :store_type, :payment_method, :discount_amount, :discount_reason, :notes
     )
+  end
+
+  def build_address1(params)
+    parts = []
+    parts << params[:street] if params[:street].present?
+    parts << params[:number] if params[:number].present?
+    parts.join(', ')
+  end
+
+  def build_address2(params)
+    parts = []
+    parts << params[:complement] if params[:complement].present?
+    parts << params[:neighborhood] if params[:neighborhood].present?
+    parts.join(', ')
+  end
+
+  def parse_address(order_pdv)
+    # Tentar separar o endereço existente para edição
+    address1_parts = order_pdv.address1&.split(', ') || []
+    address2_parts = order_pdv.address2&.split(', ') || []
+
+    {
+      street: address1_parts[0] || '',
+      number: address1_parts[1] || '',
+      complement: address2_parts[0] || '',
+      neighborhood: address2_parts[1] || ''
+    }
   end
 
   def params_per_page(per_page_param)

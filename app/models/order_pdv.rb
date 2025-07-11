@@ -22,6 +22,13 @@ class OrderPdv < ApplicationRecord
     error: 'error'
   }
 
+  enum reservation_status: {
+    none: 'none',
+    reserved: 'reserved',
+    reservation_error: 'reservation_error',
+    partially_reserved: 'partially_reserved'
+  }
+
   scope :recent, -> { order(created_at: :desc) }
   scope :by_status, ->(status) { where(status: status) if status.present? }
 
@@ -65,5 +72,45 @@ class OrderPdv < ApplicationRecord
     else
       'Pendente'
     end
+  end
+
+  def reservation_status_text
+    case reservation_status
+    when 'reserved'
+      'Estoque Reservado'
+    when 'reservation_error'
+      'Erro na Reserva'
+    when 'partially_reserved'
+      'Parcialmente Reservado'
+    else
+      'Sem Reserva'
+    end
+  end
+
+  def reservation_status_color
+    case reservation_status
+    when 'reserved'
+      'success'
+    when 'reservation_error'
+      'danger'
+    when 'partially_reserved'
+      'warning'
+    else
+      'secondary'
+    end
+  end
+
+  def parsed_reservations
+    return [] unless inventory_reservations.present?
+    
+    begin
+      JSON.parse(inventory_reservations)
+    rescue JSON::ParserError
+      []
+    end
+  end
+
+  def has_inventory_reserved?
+    reserved? || partially_reserved?
   end
 end

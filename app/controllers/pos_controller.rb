@@ -16,7 +16,8 @@ class PosController < ApplicationController
       products_data = []
 
       begin
-        session = create_shopify_session
+        # Usar token padrão para busca de produtos (Lagoa Seca)
+        session = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
         
         products.each do |product|
           stock_info = get_product_stock(product, session)
@@ -79,7 +80,9 @@ class PosController < ApplicationController
     end
 
     begin
-      session = create_shopify_session
+      # Usar token baseado na loja selecionada
+      access_token = get_access_token_for_store(store_type)
+      session = create_shopify_session(access_token)
       stock_info = get_product_stock(product, session)
       available_quantity = stock_info[:quantity]
 
@@ -190,14 +193,18 @@ class PosController < ApplicationController
       discount_amount = params[:discount_amount].to_f
       total_price = subtotal - discount_amount
 
+      # Juntar endereço no backend
+      address1 = build_address1(params)
+      address2 = build_address2(params)
+
       order_pdv = OrderPdv.create!(
         user: current_user,
         customer_name: params[:customer_name],
         customer_email: params[:customer_email],
         customer_phone: params[:customer_phone],
         customer_cpf: params[:customer_cpf],
-        address1: params[:address1],
-        address2: params[:address2],
+        address1: address1,
+        address2: address2,
         city: params[:city],
         state: params[:state],
         zip: params[:zip],
@@ -209,7 +216,8 @@ class PosController < ApplicationController
         total_price: total_price,
         notes: params[:notes],
         order_note: build_order_note(params),
-        status: 'pending'
+        status: 'pending',
+        reservation_status: 'none'
       )
 
       cart_items.each do |item|
@@ -232,25 +240,47 @@ class PosController < ApplicationController
         result = ShopifyIntegrationService.new(order_pdv).integrate
         
         if result[:success]
-          order_pdv.update!(
+          # Atualizar status do pedido
+          update_data = {
             status: 'integrated',
             shopify_order_id: result[:order_id],
             shopify_order_number: result[:order_number],
             integrated_at: Time.current,
             integration_error: nil
-          )
+          }
+          
+          # Atualizar status da reserva se houver
+          if result[:reservations]
+            update_data[:reservation_status] = 'reserved'
+            update_data[:inventory_reservations] = result[:reservations].to_json
+            update_data[:reservation_error] = nil
+          elsif result[:warning]
+            update_data[:reservation_status] = 'reservation_error'
+            update_data[:reservation_error] = result[:warning]
+          end
+          
+          order_pdv.update!(update_data)
+          
+          success_message = "Pedido criado e integrado com sucesso ao Shopify (#{result[:location]})!"
+          if result[:reservations]
+            success_message += " Estoque reservado na location."
+          elsif result[:warning]
+            success_message += " ATENÇÃO: #{result[:warning]}"
+          end
           
           render json: { 
             success: true, 
-            message: 'Pedido criado e integrado com sucesso ao Shopify!',
+            message: success_message,
             order_id: order_pdv.id,
-            shopify_order_number: result[:order_number]
+            shopify_order_number: result[:order_number],
+            has_reservation: result[:reservations].present?
           }
         else
           order_pdv.update!(
             status: 'error',
             integration_error: result[:error],
-            integration_attempts: 1
+            integration_attempts: 1,
+            reservation_status: 'none'
           )
           
           render json: { 
@@ -264,7 +294,8 @@ class PosController < ApplicationController
         order_pdv.update!(
           status: 'error',
           integration_error: e.message,
-          integration_attempts: 1
+          integration_attempts: 1,
+          reservation_status: 'none'
         )
         
         render json: { 
@@ -291,10 +322,37 @@ class PosController < ApplicationController
     cart_items.sum { |item| item['price'].to_f * item['quantity'].to_i }
   end
 
-  def create_shopify_session
+  def build_address1(params)
+    parts = []
+    parts << params[:street] if params[:street].present?
+    parts << params[:number] if params[:number].present?
+    parts.join(', ')
+  end
+
+  def build_address2(params)
+    parts = []
+    parts << params[:complement] if params[:complement].present?
+    parts << params[:neighborhood] if params[:neighborhood].present?
+    parts.join(', ')
+  end
+
+  def get_access_token_for_store(store_type)
+    case store_type
+    when 'bh_shopping'
+      ENV['BH_SHOPPING_TOKEN_APP']
+    when 'rj'
+      ENV['BARRA_SHOPPING_TOKEN_APP']
+    when 'online'
+      ENV['CHASE_ORDERS_TOKEN']
+    else
+      ENV['LAGOA_SECA_TOKEN_APP']
+    end
+  end
+
+  def create_shopify_session(access_token)
     ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: ENV['LAGOA_SECA_TOKEN_APP']
+      access_token: access_token
     )
   end
 

@@ -134,35 +134,47 @@
           </div>
           <div class="card-body">
             <div class="row">
-              <div class="col-12 mb-3">
-                <%= f.label :address1, class: "form-label text-white" do %>
-                  <i class="fas fa-road me-1"></i>Endereço (Rua, Número) *
+              <div class="col-md-6 mb-3">
+                <%= f.label :zip, class: "form-label text-white" do %>
+                  <i class="fas fa-mail-bulk me-1"></i>CEP *
                 <% end %>
-                <%= f.text_field :address1, class: "form-control bg-dark text-white border-secondary", placeholder: "Ex: Rua das Flores, 123", required: true %>
-              </div>
-              <div class="col-12 mb-3">
-                <%= f.label :address2, class: "form-label text-white" do %>
-                  <i class="fas fa-building me-1"></i>Complemento e Bairro *
-                <% end %>
-                <%= f.text_field :address2, class: "form-control bg-dark text-white border-secondary", placeholder: "Ex: Apto 45, Centro", required: true %>
+                <%= f.text_field :zip, class: "form-control bg-dark text-white border-secondary", placeholder: "00000-000", required: true %>
               </div>
               <div class="col-md-6 mb-3">
-                <%= f.label :city, class: "form-label text-white" do %>
-                  <i class="fas fa-city me-1"></i>Cidade *
-                <% end %>
-                <%= f.text_field :city, class: "form-control bg-dark text-white border-secondary", required: true %>
-              </div>
-              <div class="col-md-3 mb-3">
                 <%= f.label :state, class: "form-label text-white" do %>
                   <i class="fas fa-flag me-1"></i>Estado *
                 <% end %>
                 <%= f.text_field :state, class: "form-control bg-dark text-white border-secondary", placeholder: "SP", maxlength: 2, required: true %>
               </div>
-              <div class="col-md-3 mb-3">
-                <%= f.label :zip, class: "form-label text-white" do %>
-                  <i class="fas fa-mail-bulk me-1"></i>CEP *
+              <div class="col-12 mb-3">
+                <%= f.label :city, class: "form-label text-white" do %>
+                  <i class="fas fa-city me-1"></i>Cidade *
                 <% end %>
-                <%= f.text_field :zip, class: "form-control bg-dark text-white border-secondary", placeholder: "00000-000", required: true %>
+                <%= f.text_field :city, class: "form-control bg-dark text-white border-secondary", required: true %>
+              </div>
+              <div class="col-12 mb-3">
+                <label class="form-label text-white">
+                  <i class="fas fa-map me-1"></i>Bairro *
+                </label>
+                <input type="text" name="order_pdv[neighborhood]" value="<%= @address_parts[:neighborhood] %>" required class="form-control bg-dark text-white border-secondary">
+              </div>
+              <div class="col-md-8 mb-3">
+                <label class="form-label text-white">
+                  <i class="fas fa-road me-1"></i>Rua *
+                </label>
+                <input type="text" name="order_pdv[street]" value="<%= @address_parts[:street] %>" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label text-white">
+                  <i class="fas fa-hashtag me-1"></i>Número *
+                </label>
+                <input type="text" name="order_pdv[number]" value="<%= @address_parts[:number] %>" required class="form-control bg-dark text-white border-secondary" placeholder="123">
+              </div>
+              <div class="col-12">
+                <label class="form-label text-white">
+                  <i class="fas fa-building me-1"></i>Complemento
+                </label>
+                <input type="text" name="order_pdv[complement]" value="<%= @address_parts[:complement] %>" class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Bloco B">
               </div>
             </div>
           </div>

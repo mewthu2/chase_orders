@@ -160,7 +160,7 @@
 </div>
 
 <div id="checkout-modal" class="modal fade" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content bg-dark border-secondary">
       <div class="modal-header border-secondary">
         <h5 class="modal-title text-white">
@@ -170,115 +170,130 @@
       </div>
       <div class="modal-body">
         <form id="checkout-form">
-          <div class="card bg-black border-secondary mb-3">
-            <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Configurações da Venda</h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <label class="form-label text-white">Loja *</label>
-                  <select name="store_type" class="form-select bg-dark text-white border-secondary" required>
-                    <option value="">Selecione a loja</option>
-                    <option value="lagoa_seca">Lagoa Seca</option>
-                    <option value="bh_shopping">BH Shopping</option>
-                    <option value="rj">Barra Shopping (RJ)</option>
-                  </select>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card bg-black border-secondary mb-3">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">Configurações da Venda</h6>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">Forma de Pagamento *</label>
-                  <select name="payment_method" class="form-select bg-dark text-white border-secondary" required>
-                    <option value="">Selecione o pagamento</option>
-                    <option value="dinheiro">Dinheiro</option>
-                    <option value="cartao_credito">Cartão de Crédito</option>
-                    <option value="cartao_debito">Cartão de Débito</option>
-                    <option value="pix">PIX</option>
-                  </select>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-12 mb-3">
+                      <label class="form-label text-white">Loja *</label>
+                      <select name="store_type" class="form-select bg-dark text-white border-secondary" required>
+                        <option value="">Selecione a loja</option>
+                        <option value="online">Online Store</option>
+                        <option value="lagoa_seca">Lagoa Seca</option>
+                        <option value="bh_shopping">BH Shopping</option>
+                        <option value="rj">Barra Shopping (RJ)</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label text-white">Forma de Pagamento *</label>
+                      <select name="payment_method" class="form-select bg-dark text-white border-secondary" required>
+                        <option value="">Selecione o pagamento</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="cartao_credito">Cartão de Crédito</option>
+                        <option value="cartao_debito">Cartão de Débito</option>
+                        <option value="pix">PIX</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card bg-black border-secondary mb-3">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">Dados do Cliente</h6>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-12 mb-3">
+                      <label class="form-label text-white">Nome Completo *</label>
+                      <input type="text" name="customer_name" required class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label class="form-label text-white">Email *</label>
+                      <input type="email" name="customer_email" required class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label text-white">Telefone *</label>
+                      <input type="tel" name="customer_phone" required class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label text-white">CPF *</label>
+                      <input type="text" name="customer_cpf" required class="form-control bg-dark text-white border-secondary">
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="card bg-black border-secondary mb-3">
-            <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Dados do Cliente</h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <label class="form-label text-white">Nome Completo *</label>
-                  <input type="text" name="customer_name" required class="form-control bg-dark text-white border-secondary">
+            <div class="col-md-6">
+              <div class="card bg-black border-secondary mb-3">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">Endereço de Entrega</h6>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">Email *</label>
-                  <input type="email" name="customer_email" required class="form-control bg-dark text-white border-secondary">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">Telefone *</label>
-                  <input type="tel" name="customer_phone" required class="form-control bg-dark text-white border-secondary">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">CPF *</label>
-                  <input type="text" name="customer_cpf" required class="form-control bg-dark text-white border-secondary">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label text-white">CEP *</label>
+                      <input type="text" name="zip" required class="form-control bg-dark text-white border-secondary" placeholder="00000-000" id="cep-input">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label text-white">Estado *</label>
+                      <input type="text" name="state" required class="form-control bg-dark text-white border-secondary" placeholder="SP" maxlength="2" id="state-input">
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label class="form-label text-white">Cidade *</label>
+                      <input type="text" name="city" required class="form-control bg-dark text-white border-secondary" id="city-input">
+                    </div>
+                    <div class="col-12 mb-3">
+                      <label class="form-label text-white">Bairro *</label>
+                      <input type="text" name="neighborhood" required class="form-control bg-dark text-white border-secondary" id="neighborhood-input">
+                    </div>
+                    <div class="col-md-8 mb-3">
+                      <label class="form-label text-white">Rua *</label>
+                      <input type="text" name="street" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores" id="street-input">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                      <label class="form-label text-white">Número *</label>
+                      <input type="text" name="number" required class="form-control bg-dark text-white border-secondary" placeholder="123" id="number-input">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label text-white">Complemento</label>
+                      <input type="text" name="complement" class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Bloco B">
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div class="card bg-black border-secondary mb-3">
-            <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Endereço de Entrega</h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-12 mb-3">
-                  <label class="form-label text-white">Endereço (Rua, Número) *</label>
-                  <input type="text" name="address1" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores, 123">
+              <div class="card bg-black border-secondary mb-3">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">Desconto (Opcional)</h6>
                 </div>
-                <div class="col-12 mb-3">
-                  <label class="form-label text-white">Complemento e Bairro *</label>
-                  <input type="text" name="address2" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Centro">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">Cidade *</label>
-                  <input type="text" name="city" required class="form-control bg-dark text-white border-secondary">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label text-white">Estado *</label>
-                  <input type="text" name="state" required class="form-control bg-dark text-white border-secondary" placeholder="SP" maxlength="2">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label text-white">CEP *</label>
-                  <input type="text" name="zip" required class="form-control bg-dark text-white border-secondary" placeholder="00000-000">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label text-white">Valor do Desconto (R$)</label>
+                      <input type="number" name="discount_amount" step="0.01" min="0" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label text-white">Motivo do Desconto</label>
+                      <input type="text" name="discount_reason" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div class="card bg-black border-secondary mb-3">
-            <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Desconto (Opcional)</h6>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <label class="form-label text-white">Valor do Desconto (R$)</label>
-                  <input type="number" name="discount_amount" step="0.01" min="0" class="form-control bg-dark text-white border-secondary">
+              <div class="card bg-black border-secondary">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">Observações</h6>
                 </div>
-                <div class="col-md-6">
-                  <label class="form-label text-white">Motivo do Desconto</label>
-                  <input type="text" name="discount_reason" class="form-control bg-dark text-white border-secondary">
+                <div class="card-body">
+                  <textarea name="notes" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Observações adicionais..."></textarea>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div class="card bg-black border-secondary">
-            <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Observações</h6>
-            </div>
-            <div class="card-body">
-              <textarea name="notes" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Observações adicionais..."></textarea>
             </div>
           </div>
         </form>
@@ -614,6 +629,27 @@ function hideLoading() {
   document.getElementById('loading-overlay').classList.add('d-none');
 }
 
+// Busca de CEP
+document.getElementById('cep-input')?.addEventListener('blur', function(e) {
+  const cep = e.target.value.replace(/\D/g, '');
+  
+  if (cep.length === 8) {
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.erro) {
+          document.getElementById('street-input').value = data.logradouro || '';
+          document.getElementById('neighborhood-input').value = data.bairro || '';
+          document.getElementById('city-input').value = data.localidade || '';
+          document.getElementById('state-input').value = data.uf || '';
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao buscar CEP:', error);
+      });
+  }
+});
+
 document.getElementById('product-search').addEventListener('input', function(e) {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
@@ -860,7 +896,7 @@ document.getElementById('checkout-form').addEventListener('submit', function(e) 
   const data = Object.fromEntries(formData.entries());
 
   // Validar campos obrigatórios
-  const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'customer_cpf', 'address1', 'address2', 'city', 'state', 'zip', 'store_type', 'payment_method'];
+  const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'customer_cpf', 'street', 'number', 'neighborhood', 'city', 'state', 'zip', 'store_type', 'payment_method'];
   const missingFields = requiredFields.filter(field => !data[field] || data[field].trim() === '');
   
   if (missingFields.length > 0) {

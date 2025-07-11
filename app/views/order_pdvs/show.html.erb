@@ -51,6 +51,7 @@
                   when 'lagoa_seca' then 'bg-warning text-dark'
                   when 'bh_shopping' then 'bg-success'
                   when 'rj' then 'bg-primary'
+                  when 'online' then 'bg-info text-dark'
                   else 'bg-secondary'
                   end
                 %>
@@ -265,7 +266,16 @@
           <div class="mb-3">
             <label class="form-label text-muted">Loja:</label>
             <div>
-              <span class="badge <%= store_badge_class %>"><%= @order_pdv.store_type.humanize %></span>
+              <% 
+                store_badge_class = case @order_pdv.store_type
+                when 'lagoa_seca' then 'bg-warning text-dark'
+                when 'bh_shopping' then 'bg-success'
+                when 'rj' then 'bg-primary'
+                when 'online' then 'bg-info text-dark'
+                else 'bg-secondary'
+                end
+              %>
+              <span class="badge <%= store_badge_class %>"><%= @order_pdv.store_type == 'online' ? 'Online Store' : @order_pdv.store_type.humanize %></span>
             </div>
           </div>
           
