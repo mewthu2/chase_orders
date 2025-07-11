@@ -3,7 +3,6 @@
 <div class="container-fluid py-4">
   <% title 'PDV - Point of Sale' %>
 
-  <!-- HEADER PDV -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-success shadow">
@@ -65,11 +64,8 @@
     </div>
   </div>
 
-  <!-- INTERFACE PRINCIPAL -->
   <div class="row">
-    <!-- COLUNA ESQUERDA - BUSCA E PRODUTOS -->
     <div class="col-lg-8">
-      <!-- BUSCA DE PRODUTOS -->
       <div class="card bg-black border border-dark shadow mb-4">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
@@ -83,13 +79,11 @@
           <input type="text" id="product-search" placeholder="Digite SKU ou nome do produto..." 
                  class="form-control form-control-lg bg-dark text-white border-secondary">
           
-          <!-- RESULTADOS DA BUSCA -->
           <div id="search-results" class="mt-4"></div>
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA - CARRINHO -->
     <div class="col-lg-4">
       <div class="card bg-black border border-dark shadow position-sticky" style="top: 20px;">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
@@ -109,7 +103,6 @@
                 <div class="card bg-dark border-secondary mb-2">
                   <div class="card-body p-3">
                     <div class="d-flex align-items-center gap-3">
-                      <!-- Imagem do Produto -->
                       <% if item['image_url'].present? %>
                         <img src="<%= item['image_url'] %>" alt="<%= item['name'] %>" 
                              class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
@@ -120,7 +113,6 @@
                         </div>
                       <% end %>
 
-                      <!-- Informações do Produto -->
                       <div class="flex-grow-1 min-w-0">
                         <h6 class="text-white mb-1"><%= item['sku'] %></h6>
                         <p class="text-muted mb-1 small"><%= truncate(item['name'], length: 30) %></p>
@@ -130,7 +122,6 @@
                         </div>
                       </div>
 
-                      <!-- Botão Remover -->
                       <button onclick="removeFromCart('<%= item['product_id'] %>')" 
                               class="btn btn-outline-danger btn-sm">
                         <i class="fas fa-times"></i>
@@ -150,7 +141,6 @@
             <% end %>
           </div>
 
-          <!-- TOTAL -->
           <% if @cart_items.any? %>
             <div class="border-top border-secondary pt-3 mt-3">
               <div class="d-flex justify-content-between align-items-center mb-3">
@@ -158,7 +148,6 @@
                 <span class="h4 text-success mb-0">R$ <%= sprintf('%.2f', @total) %></span>
               </div>
               
-              <!-- BOTÃO FINALIZAR -->
               <button onclick="openCheckoutModal()" class="btn btn-success btn-lg w-100">
                 <i class="fas fa-credit-card me-2"></i>Finalizar Venda
               </button>
@@ -170,7 +159,6 @@
   </div>
 </div>
 
-<!-- MODAL DE CHECKOUT -->
 <div id="checkout-modal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content bg-dark border-secondary">
@@ -182,7 +170,6 @@
       </div>
       <div class="modal-body">
         <form id="checkout-form">
-          <!-- Configurações da Loja -->
           <div class="card bg-black border-secondary mb-3">
             <div class="card-header bg-secondary">
               <h6 class="text-white mb-0">Configurações da Venda</h6>
@@ -190,16 +177,18 @@
             <div class="card-body">
               <div class="row">
                 <div class="col-md-6">
-                  <label class="form-label text-white">Loja</label>
-                  <select name="store_type" class="form-select bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Loja *</label>
+                  <select name="store_type" class="form-select bg-dark text-white border-secondary" required>
+                    <option value="">Selecione a loja</option>
                     <option value="lagoa_seca">Lagoa Seca</option>
                     <option value="bh_shopping">BH Shopping</option>
                     <option value="rj">Barra Shopping (RJ)</option>
                   </select>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label text-white">Forma de Pagamento</label>
-                  <select name="payment_method" class="form-select bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Forma de Pagamento *</label>
+                  <select name="payment_method" class="form-select bg-dark text-white border-secondary" required>
+                    <option value="">Selecione o pagamento</option>
                     <option value="dinheiro">Dinheiro</option>
                     <option value="cartao_credito">Cartão de Crédito</option>
                     <option value="cartao_debito">Cartão de Débito</option>
@@ -210,7 +199,6 @@
             </div>
           </div>
 
-          <!-- Dados do Cliente -->
           <div class="card bg-black border-secondary mb-3">
             <div class="card-header bg-secondary">
               <h6 class="text-white mb-0">Dados do Cliente</h6>
@@ -222,49 +210,51 @@
                   <input type="text" name="customer_name" required class="form-control bg-dark text-white border-secondary">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label text-white">Email</label>
-                  <input type="email" name="customer_email" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Email *</label>
+                  <input type="email" name="customer_email" required class="form-control bg-dark text-white border-secondary">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label text-white">Telefone</label>
-                  <input type="tel" name="customer_phone" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Telefone *</label>
+                  <input type="tel" name="customer_phone" required class="form-control bg-dark text-white border-secondary">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label text-white">CPF</label>
-                  <input type="text" name="customer_cpf" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">CPF *</label>
+                  <input type="text" name="customer_cpf" required class="form-control bg-dark text-white border-secondary">
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Endereço -->
           <div class="card bg-black border-secondary mb-3">
             <div class="card-header bg-secondary">
-              <h6 class="text-white mb-0">Endereço</h6>
+              <h6 class="text-white mb-0">Endereço de Entrega</h6>
             </div>
             <div class="card-body">
               <div class="row">
                 <div class="col-12 mb-3">
-                  <label class="form-label text-white">Endereço</label>
-                  <input type="text" name="address1" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Endereço (Rua, Número) *</label>
+                  <input type="text" name="address1" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores, 123">
+                </div>
+                <div class="col-12 mb-3">
+                  <label class="form-label text-white">Complemento e Bairro *</label>
+                  <input type="text" name="address2" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Centro">
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label text-white">Cidade</label>
-                  <input type="text" name="city" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">Cidade *</label>
+                  <input type="text" name="city" required class="form-control bg-dark text-white border-secondary">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label text-white">Estado</label>
-                  <input type="text" name="state" class="form-control bg-dark text-white border-secondary" placeholder="SP" maxlength="2">
+                  <label class="form-label text-white">Estado *</label>
+                  <input type="text" name="state" required class="form-control bg-dark text-white border-secondary" placeholder="SP" maxlength="2">
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label text-white">CEP</label>
-                  <input type="text" name="zip" class="form-control bg-dark text-white border-secondary">
+                  <label class="form-label text-white">CEP *</label>
+                  <input type="text" name="zip" required class="form-control bg-dark text-white border-secondary" placeholder="00000-000">
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Desconto -->
           <div class="card bg-black border-secondary mb-3">
             <div class="card-header bg-secondary">
               <h6 class="text-white mb-0">Desconto (Opcional)</h6>
@@ -283,7 +273,6 @@
             </div>
           </div>
 
-          <!-- Observações -->
           <div class="card bg-black border-secondary">
             <div class="card-header bg-secondary">
               <h6 class="text-white mb-0">Observações</h6>
@@ -306,7 +295,6 @@
   </div>
 </div>
 
-<!-- LOADING OVERLAY -->
 <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" 
      style="background: rgba(0,0,0,0.8); z-index: 9999;">
   <div class="d-flex justify-content-center align-items-center h-100">
@@ -363,7 +351,6 @@
       background-color: #212529 !important;
     }
 
-    /* LAYOUT MELHORADO DOS PRODUTOS - IGUAL AO EDIT */
     .product-item {
       background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
       border: 1px solid #4a5568;
@@ -382,8 +369,8 @@
     }
 
     .product-image-container {
-      width: 80px;  /* Aumentado de 60px para 80px */
-      height: 80px; /* Aumentado de 60px para 80px */
+      width: 80px;
+      height: 80px;
       border-radius: 8px;
       overflow: hidden;
       background: #4a5568;
@@ -480,7 +467,6 @@
       opacity: 0.7;
     }
 
-    /* BADGES DE ESTOQUE MELHORADOS */
     .stock-info {
       display: flex;
       align-items: center;
@@ -535,7 +521,6 @@
       border: 1px solid #4a5568;
     }
 
-    /* Estados vazios melhorados */
     .search-empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -560,15 +545,14 @@
       opacity: 0.7;
     }
 
-    /* Responsividade */
     @media (max-width: 768px) {
       .product-item {
         padding: 12px;
       }
 
       .product-image-container {
-        width: 70px;  /* Aumentado de 50px para 70px */
-        height: 70px; /* Aumentado de 50px para 70px */
+        width: 70px;
+        height: 70px;
       }
 
       .product-info {
@@ -590,7 +574,6 @@
       }
     }
 
-    /* Animação de loading nos botões */
     .btn-loading {
       position: relative;
       color: transparent !important;
@@ -622,7 +605,6 @@
 <script>
 let searchTimeout;
 
-// Funções de loading
 function showLoading(message = 'Processando...') {
   document.getElementById('loading-message').textContent = message;
   document.getElementById('loading-overlay').classList.remove('d-none');
@@ -632,7 +614,6 @@ function hideLoading() {
   document.getElementById('loading-overlay').classList.add('d-none');
 }
 
-// Busca de produtos
 document.getElementById('product-search').addEventListener('input', function(e) {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
@@ -753,14 +734,12 @@ function searchProducts(query) {
   });
 }
 
-// Adicionar ao carrinho
 function addToCart(productId, quantity, buttonElement) {
   const originalText = buttonElement.innerHTML;
-  
-  // Adicionar estado de loading
+
   buttonElement.classList.add('btn-loading');
   buttonElement.disabled = true;
-  
+
   showLoading('Adicionando produto ao carrinho...');
 
   fetch('/pos/add_to_cart', {
@@ -779,21 +758,17 @@ function addToCart(productId, quantity, buttonElement) {
     hideLoading();
     
     if (data.success) {
-      // Feedback visual de sucesso
       buttonElement.classList.remove('btn-loading');
       buttonElement.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
       buttonElement.innerHTML = '✅ Adicionado!';
       
-      // Atualizar contadores do carrinho
       document.getElementById('cart-count-badge').textContent = data.cart_count + ' itens';
       document.getElementById('cart-total-display').textContent = 'R$ ' + data.total.toFixed(2);
       
-      // Recarregar após 1.5 segundos
       setTimeout(() => {
         location.reload();
       }, 1500);
     } else {
-      // Restaurar botão em caso de erro
       buttonElement.classList.remove('btn-loading');
       buttonElement.disabled = false;
       buttonElement.innerHTML = originalText;
@@ -804,7 +779,6 @@ function addToCart(productId, quantity, buttonElement) {
     hideLoading();
     console.error('Erro:', error);
     
-    // Restaurar botão em caso de erro
     buttonElement.classList.remove('btn-loading');
     buttonElement.disabled = false;
     buttonElement.innerHTML = originalText;
@@ -812,7 +786,6 @@ function addToCart(productId, quantity, buttonElement) {
   });
 }
 
-// Remover do carrinho
 function removeFromCart(productId) {
   if (!confirm('Remover este item do carrinho?')) return;
 
@@ -842,7 +815,6 @@ function removeFromCart(productId) {
   });
 }
 
-// Limpar carrinho
 function clearCart() {
   if (!confirm('Tem certeza que deseja limpar o carrinho?')) return;
 
@@ -871,7 +843,6 @@ function clearCart() {
   });
 }
 
-// Modal de checkout
 function openCheckoutModal() {
   const modal = new bootstrap.Modal(document.getElementById('checkout-modal'));
   modal.show();
@@ -882,12 +853,20 @@ function closeCheckoutModal() {
   if (modal) modal.hide();
 }
 
-// Finalizar venda
 document.getElementById('checkout-form').addEventListener('submit', function(e) {
   e.preventDefault();
 
   const formData = new FormData(this);
   const data = Object.fromEntries(formData.entries());
+
+  // Validar campos obrigatórios
+  const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'customer_cpf', 'address1', 'address2', 'city', 'state', 'zip', 'store_type', 'payment_method'];
+  const missingFields = requiredFields.filter(field => !data[field] || data[field].trim() === '');
+  
+  if (missingFields.length > 0) {
+    alert('Por favor, preencha todos os campos obrigatórios.');
+    return;
+  }
 
   closeCheckoutModal();
   showLoading('Processando venda no Shopify...');

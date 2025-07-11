@@ -15,7 +15,6 @@ class PosController < ApplicationController
       
       products_data = []
 
-      # Configurar sessão do Shopify
       begin
         session = create_shopify_session
         
@@ -37,7 +36,6 @@ class PosController < ApplicationController
         Rails.logger.error "Erro ao buscar estoque: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
         
-        # Se der erro no Shopify, retorna produtos sem info de estoque
         products_data = products.map do |product|
           {
             id: product.id,
@@ -80,7 +78,6 @@ class PosController < ApplicationController
       return
     end
 
-    # Verificar estoque no Shopify
     begin
       session = create_shopify_session
       stock_info = get_product_stock(product, session)
@@ -125,10 +122,8 @@ class PosController < ApplicationController
       return
     end
 
-    # Inicializar carrinho se não existir
     session[:cart_items] ||= []
 
-    # Verificar se o produto já está no carrinho
     existing_item = session[:cart_items].find { |item| item['product_id'] == product_id.to_s }
 
     if existing_item
@@ -161,11 +156,9 @@ class PosController < ApplicationController
     product_id = params[:product_id]
     cart_items = session[:cart_items] || []
 
-    # Remover o item do carrinho
     cart_items.reject! { |item| item['product_id'] == product_id }
     session[:cart_items] = cart_items
 
-    # Sempre retornar JSON
     render json: { 
       success: true, 
       message: 'Item removido do carrinho' 
@@ -173,10 +166,8 @@ class PosController < ApplicationController
   end
 
   def clear_cart
-    # Limpar o carrinho
     session[:cart_items] = []
 
-    # Sempre retornar JSON
     render json: { 
       success: true, 
       message: 'Carrinho limpo' 
@@ -195,12 +186,10 @@ class PosController < ApplicationController
     end
 
     begin
-      # Calcular totais
       subtotal = calculate_total(cart_items)
       discount_amount = params[:discount_amount].to_f
       total_price = subtotal - discount_amount
 
-      # Criar pedido local primeiro
       order_pdv = OrderPdv.create!(
         user: current_user,
         customer_name: params[:customer_name],
@@ -208,6 +197,7 @@ class PosController < ApplicationController
         customer_phone: params[:customer_phone],
         customer_cpf: params[:customer_cpf],
         address1: params[:address1],
+        address2: params[:address2],
         city: params[:city],
         state: params[:state],
         zip: params[:zip],
@@ -222,7 +212,6 @@ class PosController < ApplicationController
         status: 'pending'
       )
 
-      # Criar itens do pedido
       cart_items.each do |item|
         product = Product.find(item['product_id'])
         order_pdv.order_pdv_items.create!(
@@ -231,15 +220,14 @@ class PosController < ApplicationController
           product_name: item['name'],
           price: item['price'],
           quantity: item['quantity'],
+          total: item['price'].to_f * item['quantity'].to_i,
           option1: item['option1'],
           image_url: item['image_url']
         )
       end
 
-      # Limpar carrinho
       session[:cart_items] = []
 
-      # Tentar integrar com Shopify imediatamente
       begin
         result = ShopifyIntegrationService.new(order_pdv).integrate
         
@@ -264,7 +252,7 @@ class PosController < ApplicationController
             integration_error: result[:error],
             integration_attempts: 1
           )
-
+          
           render json: { 
             success: true, 
             message: 'Pedido registrado localmente. Erro na integração com Shopify, mas pode ser tentado novamente.',
@@ -278,7 +266,7 @@ class PosController < ApplicationController
           integration_error: e.message,
           integration_attempts: 1
         )
-
+        
         render json: { 
           success: true, 
           message: 'Pedido registrado localmente. Erro na integração com Shopify, mas pode ser tentado novamente.',

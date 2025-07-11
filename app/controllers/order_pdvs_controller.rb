@@ -3,11 +3,10 @@ class OrderPdvsController < ApplicationController
   before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product]
 
   def index
-    @order_pdvs = OrderPdv.includes(:user)  # Removido :order_pdv_items do eager loading
+    @order_pdvs = OrderPdv.includes(:user)
                           .by_status(params[:status])
                           .recent
 
-    # Aplicar paginação
     @order_pdvs = @order_pdvs.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
     
     @status_counts = {
@@ -28,7 +27,6 @@ class OrderPdvsController < ApplicationController
 
   def update
     if @order_pdv.update(order_pdv_params)
-      # Recalcular totais se necessário
       recalculate_totals
       redirect_to @order_pdv, notice: 'Pedido atualizado com sucesso!'
     else
@@ -103,7 +101,6 @@ class OrderPdvsController < ApplicationController
       
       products_data = []
 
-      # Configurar sessão do Shopify
       begin
         session = create_shopify_session
         
@@ -124,7 +121,6 @@ class OrderPdvsController < ApplicationController
       rescue => e
         Rails.logger.error "Erro ao buscar estoque: #{e.message}"
         
-        # Se der erro no Shopify, retorna produtos sem info de estoque
         products_data = products.map do |product|
           {
             id: product.id,
@@ -166,7 +162,6 @@ class OrderPdvsController < ApplicationController
       return
     end
 
-    # Verificar se o produto já existe no pedido
     existing_item = @order_pdv.order_pdv_items.find_by(product: product)
 
     if existing_item
@@ -178,13 +173,12 @@ class OrderPdvsController < ApplicationController
         product_name: product.shopify_product_name,
         price: product.price,
         quantity: quantity,
-        total: product.price * quantity,  # Adicionar cálculo do total
+        total: product.price * quantity,
         option1: product.option1,
         image_url: product.image_url
       )
     end
 
-    # Recalcular totais
     recalculate_totals
 
     render json: { 
@@ -223,7 +217,7 @@ class OrderPdvsController < ApplicationController
   def order_pdv_params
     params.require(:order_pdv).permit(
       :customer_name, :customer_email, :customer_phone, :customer_cpf,
-      :address1, :city, :state, :zip, :store_type, :payment_method,
+      :address1, :address2, :city, :state, :zip, :store_type, :payment_method,
       :discount_amount, :discount_reason, :notes
     )
   end
@@ -234,12 +228,10 @@ class OrderPdvsController < ApplicationController
   end
 
   def recalculate_totals
-    # Recalcular o total de cada item primeiro
     @order_pdv.order_pdv_items.each do |item|
       item.update_column(:total, item.price * item.quantity)
     end
     
-    # Depois recalcular os totais do pedido
     subtotal = @order_pdv.order_pdv_items.sum(:total)
     total_price = subtotal - (@order_pdv.discount_amount || 0)
     

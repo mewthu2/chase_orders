@@ -3,9 +3,10 @@ class OrderPdvItem < ApplicationRecord
   belongs_to :product
 
   validates :sku, :product_name, presence: true
-  validates :price, :quantity, :total, presence: true, numericality: { greater_than: 0 }
+  validates :price, :quantity, presence: true, numericality: { greater_than: 0 }
+  validates :total, presence: true, numericality: { greater_than: 0 }, allow_blank: false
 
-  before_save :calculate_total
+  before_validation :calculate_total
 
   def formatted_price
     "R$ #{sprintf('%.2f', price)}"

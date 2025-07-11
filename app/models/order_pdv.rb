@@ -4,6 +4,14 @@ class OrderPdv < ApplicationRecord
   has_many :products, through: :order_pdv_items
 
   validates :customer_name, presence: true
+  validates :customer_email, presence: true
+  validates :customer_phone, presence: true
+  validates :customer_cpf, presence: true
+  validates :address1, presence: true
+  validates :address2, presence: true
+  validates :city, presence: true
+  validates :state, presence: true
+  validates :zip, presence: true
   validates :store_type, presence: true
   validates :payment_method, presence: true
   validates :subtotal, :total_price, presence: true, numericality: { greater_than: 0 }

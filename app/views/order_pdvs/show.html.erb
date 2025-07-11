@@ -1,7 +1,6 @@
 <% content_for :title, "Pedido PDV ##{@order_pdv.id}" %>
 
 <div class="container-fluid py-4">
-  <!-- HEADER DO PEDIDO -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black shadow">
@@ -72,9 +71,7 @@
   </div>
 
   <div class="row">
-    <!-- COLUNA ESQUERDA - INFORMAÇÕES DO PEDIDO -->
     <div class="col-lg-8">
-      <!-- ITENS DO PEDIDO -->
       <div class="card bg-black shadow mb-4">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
@@ -86,7 +83,6 @@
             <div class="card bg-dark mb-3">
               <div class="card-body p-3">
                 <div class="d-flex align-items-center gap-3">
-                  <!-- Imagem do Produto -->
                   <% if item.image_url.present? %>
                     <img src="<%= item.image_url %>" alt="<%= item.product_name %>" 
                          class="rounded" style="width: 60px; height: 60px; object-fit: cover;">
@@ -97,7 +93,6 @@
                     </div>
                   <% end %>
 
-                  <!-- Informações do Produto -->
                   <div class="flex-grow-1">
                     <h6 class="text-white mb-1"><%= item.sku %></h6>
                     <p class="text-muted mb-1"><%= item.product_name %></p>
@@ -106,7 +101,6 @@
                     <% end %>
                   </div>
 
-                  <!-- Preços e Quantidade -->
                   <div class="text-end">
                     <div class="text-success fw-bold h5 mb-1"><%= item.formatted_total %></div>
                     <small class="text-muted">
@@ -118,7 +112,6 @@
             </div>
           <% end %>
           
-          <!-- TOTAIS -->
           <div class="card bg-black border border-success">
             <div class="card-body">
               <div class="row">
@@ -144,7 +137,6 @@
         </div>
       </div>
 
-      <!-- DADOS DO CLIENTE -->
       <div class="card bg-black shadow">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
@@ -158,53 +150,36 @@
                 <label class="form-label text-muted">Nome:</label>
                 <div class="text-white"><%= @order_pdv.customer_name %></div>
               </div>
-              <% if @order_pdv.customer_email.present? %>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Email:</label>
-                  <div class="text-white"><%= @order_pdv.customer_email %></div>
-                </div>
-              <% end %>
-              <% if @order_pdv.customer_phone.present? %>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Telefone:</label>
-                  <div class="text-white"><%= @order_pdv.customer_phone %></div>
-                </div>
-              <% end %>
-              <% if @order_pdv.customer_cpf.present? %>
-                <div class="mb-3">
-                  <label class="form-label text-muted">CPF:</label>
-                  <div class="text-white"><%= @order_pdv.customer_cpf %></div>
-                </div>
-              <% end %>
+              <div class="mb-3">
+                <label class="form-label text-muted">Email:</label>
+                <div class="text-white"><%= @order_pdv.customer_email %></div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">Telefone:</label>
+                <div class="text-white"><%= @order_pdv.customer_phone %></div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label text-muted">CPF:</label>
+                <div class="text-white"><%= @order_pdv.customer_cpf %></div>
+              </div>
             </div>
             <div class="col-md-6">
-              <% if @order_pdv.address1.present? %>
-                <div class="mb-3">
-                  <label class="form-label text-muted">Endereço:</label>
-                  <address class="text-white mb-0">
-                    <%= @order_pdv.address1 %><br>
-                    <% if @order_pdv.city.present? %>
-                      <%= @order_pdv.city %>
-                      <% if @order_pdv.state.present? %>
-                        - <%= @order_pdv.state %>
-                      <% end %>
-                      <br>
-                    <% end %>
-                    <% if @order_pdv.zip.present? %>
-                      CEP: <%= @order_pdv.zip %>
-                    <% end %>
-                  </address>
-                </div>
-              <% end %>
+              <div class="mb-3">
+                <label class="form-label text-muted">Endereço:</label>
+                <address class="text-white mb-0">
+                  <%= @order_pdv.address1 %><br>
+                  <%= @order_pdv.address2 %><br>
+                  <%= @order_pdv.city %> - <%= @order_pdv.state %><br>
+                  CEP: <%= @order_pdv.zip %>
+                </address>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- COLUNA DIREITA - STATUS E AÇÕES -->
     <div class="col-lg-4">
-      <!-- STATUS DA INTEGRAÇÃO -->
       <div class="card bg-black shadow mb-4">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
@@ -251,7 +226,6 @@
             </div>
           <% end %>
           
-          <!-- AÇÕES -->
           <div class="d-grid gap-2">
             <% if @order_pdv.can_retry_integration? %>
               <button onclick="integrateOrder(<%= @order_pdv.id %>)" 
@@ -281,7 +255,6 @@
         </div>
       </div>
 
-      <!-- INFORMAÇÕES DA VENDA -->
       <div class="card bg-black shadow">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
@@ -299,6 +272,11 @@
           <div class="mb-3">
             <label class="form-label text-muted">Pagamento:</label>
             <div class="text-white"><%= @order_pdv.payment_method.humanize %></div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-muted">Frete:</label>
+            <div class="text-white">SEDEX</div>
           </div>
           
           <% if @order_pdv.discount_amount > 0 %>
@@ -381,7 +359,6 @@ function integrateOrder(orderId) {
   const button = document.getElementById('integrate-btn');
   const originalContent = button.innerHTML;
   
-  // Mostrar loading
   button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Integrando...';
   button.disabled = true;
   
@@ -394,7 +371,6 @@ function integrateOrder(orderId) {
   })
   .then(response => {
     if (response.ok) {
-      // Recarregar a página para mostrar o resultado
       location.reload();
     } else {
       throw new Error('Erro na integração');
@@ -404,7 +380,6 @@ function integrateOrder(orderId) {
     console.error('Erro:', error);
     alert('Erro ao integrar pedido. Tente novamente.');
     
-    // Restaurar botão
     button.innerHTML = originalContent;
     button.disabled = false;
   });

@@ -8,10 +8,8 @@ class ShopifyIntegrationService
       shopify_session = create_shopify_session
       client = ShopifyAPI::Clients::Rest::Admin.new(session: shopify_session)
 
-      # Buscar cliente existente
       existing_customer = find_existing_customer(client, @order_pdv.customer_email, @order_pdv.customer_phone)
 
-      # Preparar dados do pedido
       line_items = @order_pdv.order_pdv_items.map do |item|
         {
           variant_id: item.product.shopify_variant_id,
@@ -20,53 +18,49 @@ class ShopifyIntegrationService
         }
       end
 
-      # Preparar transações
-      transactions = @order_pdv.total_price.zero? ? [] : [
-        {
-          kind: 'sale',
-          status: 'success',
-          amount: @order_pdv.total_price.to_s
-        }
-      ]
-
-      # Preparar dados do cliente
       customer_data = if existing_customer
         { id: existing_customer['id'] }
       else
         {
           first_name: @order_pdv.customer_name&.split(' ')&.first || 'Cliente',
           last_name: @order_pdv.customer_name&.split(' ', 2)&.last || 'PDV',
-          email: @order_pdv.customer_email.presence || "pdv-#{Time.current.to_i}@loja.com",
+          email: @order_pdv.customer_email,
           phone: format_phone_for_shopify(@order_pdv.customer_phone)
         }
       end
 
-      # Criar pedido no Shopify
+      shipping_lines = [
+        {
+          title: 'SEDEX',
+          price: '0.00',
+          code: 'SEDEX',
+          source: 'shopify'
+        }
+      ]
+
       order_data = {
         order: {
           line_items: line_items,
           customer: customer_data,
           billing_address: build_address_data,
           shipping_address: build_address_data,
-          financial_status: 'paid',
+          shipping_lines: shipping_lines,
+          financial_status: 'pending',
           tags: build_tags,
           note: @order_pdv.order_note,
           total_price: @order_pdv.total_price,
           subtotal_price: @order_pdv.subtotal,
           total_discounts: @order_pdv.discount_amount,
-          transactions: transactions,
           source_name: @order_pdv.store_type,
           send_receipt: false,
           send_fulfillment_receipt: false
         }
       }
 
-      # Criar o pedido
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
 
       if order && order['id']
-        # Tentar criar fulfillment
         begin
           create_fulfillment(client, order['id'], get_location_id(@order_pdv.store_type))
         rescue => e
@@ -113,14 +107,12 @@ class ShopifyIntegrationService
     return nil if email.blank? && phone.blank?
 
     begin
-      # Buscar por email primeiro
       if email.present?
         response = client.get(path: "customers/search.json", query: { query: "email:#{email}" })
         customers = response.body['customers']
         return customers.first if customers.any?
       end
 
-      # Buscar por telefone
       if phone.present?
         formatted_phone = format_phone_for_shopify(phone)
         response = client.get(path: "customers/search.json", query: { query: "phone:#{formatted_phone}" })
@@ -139,16 +131,17 @@ class ShopifyIntegrationService
     {
       first_name: @order_pdv.customer_name&.split(' ')&.first || 'Cliente',
       last_name: @order_pdv.customer_name&.split(' ', 2)&.last || 'PDV',
-      address1: @order_pdv.address1.presence || 'Venda Presencial',
-      city: @order_pdv.city.presence || 'Loja',
-      province: @order_pdv.state.presence || 'SP',
-      zip: @order_pdv.zip.presence || '00000-000',
+      address1: @order_pdv.address1,
+      address2: @order_pdv.address2,
+      city: @order_pdv.city,
+      province: @order_pdv.state,
+      zip: @order_pdv.zip,
       country: 'BR'
     }
   end
 
   def build_tags
-    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name]
+    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO"]
     tags.join(',')
   end
 
