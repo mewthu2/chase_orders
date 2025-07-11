@@ -12,6 +12,39 @@ module Shopify::Products
     ShopifyAPI::Clients::Graphql::Admin.new(session:)
   end
 
+    def update_product_with_image_url(product)
+      return unless product.shopify_product_id.present?
+
+      begin
+        session = ShopifyAPI::Auth::Session.new(
+          shop: 'chasebrasil.myshopify.com',
+          access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP')
+        )
+
+        client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+
+        response = client.get(path: "products/#{product.shopify_product_id}.json")
+        shopify_product = response.body['product']
+
+        if shopify_product && shopify_product['images'] && shopify_product['images'].any?
+          first_image = shopify_product['images'].first
+          image_url = first_image['src']
+
+          product.update_column(:image_url, image_url)
+          puts "✅ Imagem atualizada para produto #{product.sku}: #{image_url}"
+        else
+          puts "⚠️  Nenhuma imagem encontrada para produto #{product.sku}"
+        end
+
+      rescue ShopifyAPI::Errors::HttpResponseError => e
+        puts "❌ Erro HTTP ao buscar imagem do produto #{product.sku}: #{e.message}"
+      rescue StandardError => e
+        puts "❌ Erro ao buscar imagem do produto #{product.sku}: #{e.message}"
+      end
+
+      sleep(0.2)
+    end
+
   def client_shopify_rest
     session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',

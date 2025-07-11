@@ -17,6 +17,7 @@
             <span class="nav-text">Perfil</span>
           <% end %>
         </div>
+
         <% if current_user&.profile_id == 1 %>
           <div class="nav-item">
             <%= link_to ranking_sellers_dashboard_index_path, class: "nav-link #{'active' if current_page?(ranking_sellers_dashboard_index_path)}", title: "Ranking Vendedores" do %>
@@ -71,7 +72,25 @@
             <% end %>
           </div>
         <% end %>
+
         <% if current_user&.profile_id == 1 || current_user&.profile_id == 2 %>
+          <div class="nav-item nav-group nav-group-pdv">
+            <div class="nav-group-content">
+              <div class="nav-group-header">
+                <i class="fas fa-cash-register"></i>
+                <span class="nav-text">PDV</span>
+              </div>
+              <div class="nav-group-items">
+                <%= link_to pos_path, class: "nav-mini-link nav-pos #{'active' if current_page?(pos_path)}", title: "Ponto de Venda" do %>
+                  <i class="fas fa-shopping-cart"></i>
+                <% end %>
+                <%= link_to order_pdvs_path, class: "nav-mini-link nav-orders #{'active' if controller_name == 'order_pdvs'}", title: "Gerenciar Pedidos PDV" do %>
+                  <i class="fas fa-list-alt"></i>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          
           <div class="nav-item">
             <%= link_to discounts_path, class: "nav-link #{'active' if current_page?(discounts_path)}", title: "Cupons" do %>
               <i class="fas fa-tags"></i>
@@ -95,8 +114,7 @@
           <% end %>
         </span>
       </div>
-      <%= link_to destroy_user_session_path, method: :delete, 
-          class: 'logout-btn',
+      <%= link_to destroy_user_session_path, method: :delete, class: 'logout-btn',
           data: { confirm: 'Tem certeza que deseja sair?' },
           title: 'Sair' do %>
         <i class="fas fa-sign-out-alt"></i>
@@ -214,6 +232,26 @@
   transform: translateY(-2px);
 }
 
+.nav-group-pdv {
+  background-color: rgba(40, 167, 69, 0.05) !important;
+  border: 1px solid rgba(40, 167, 69, 0.2) !important;
+  min-width: 200px;
+}
+
+.nav-group-pdv:hover {
+  background-color: rgba(40, 167, 69, 0.1) !important;
+  border-color: rgba(40, 167, 69, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+.nav-group-pdv .nav-group-header {
+  color: rgba(40, 167, 69, 0.9);
+}
+
+.nav-group-pdv .nav-group-header i {
+  color: rgba(40, 167, 69, 0.8);
+}
+
 .nav-group-content {
   display: flex;
   align-items: center;
@@ -272,7 +310,6 @@
   border-color: rgba(66, 153, 225, 0.7);
 }
 
-/* Cores específicas para cada seção */
 .nav-create {
   background-color: rgba(0, 123, 255, 0.2) !important;
   border-color: rgba(0, 123, 255, 0.4) !important;
@@ -334,6 +371,36 @@
 .nav-push.active {
   background-color: rgba(220, 53, 69, 0.5) !important;
   border-color: rgba(220, 53, 69, 0.7) !important;
+}
+
+.nav-pos {
+  background-color: rgba(40, 167, 69, 0.2) !important;
+  border-color: rgba(40, 167, 69, 0.4) !important;
+}
+
+.nav-pos:hover {
+  background-color: rgba(40, 167, 69, 0.3) !important;
+  border-color: rgba(40, 167, 69, 0.5) !important;
+}
+
+.nav-pos.active {
+  background-color: rgba(40, 167, 69, 0.5) !important;
+  border-color: rgba(40, 167, 69, 0.7) !important;
+}
+
+.nav-orders {
+  background-color: rgba(108, 117, 125, 0.2) !important;
+  border-color: rgba(108, 117, 125, 0.4) !important;
+}
+
+.nav-orders:hover {
+  background-color: rgba(108, 117, 125, 0.3) !important;
+  border-color: rgba(108, 117, 125, 0.5) !important;
+}
+
+.nav-orders.active {
+  background-color: rgba(108, 117, 125, 0.5) !important;
+  border-color: rgba(108, 117, 125, 0.7) !important;
 }
 
 .nav-mini-link i {
@@ -440,6 +507,10 @@
     padding: 0.25rem 0.75rem;
   }
 
+  .nav-group-pdv {
+    min-width: 160px;
+  }
+
   .nav-group-content {
     gap: 0.5rem;
   }
@@ -495,6 +566,10 @@
     min-width: 180px;
     height: 40px;
     padding: 0.25rem 0.5rem;
+  }
+
+  .nav-group-pdv {
+    min-width: 140px;
   }
 
   .nav-group-content {

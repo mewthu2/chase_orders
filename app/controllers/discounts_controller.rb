@@ -17,7 +17,6 @@ class DiscountsController < ApplicationController
     end
 
     begin
-      # Busca no banco local primeiro
       @discount_found = find_discount_in_database(@coupon_code)
 
       LogService.log_discount_action(
@@ -30,7 +29,7 @@ class DiscountsController < ApplicationController
           timestamp: Time.current.iso8601,
           source: 'database'
         },
-        request: request
+        request:
       )
 
       if @discount_found
@@ -52,7 +51,7 @@ class DiscountsController < ApplicationController
           timestamp: Time.current.iso8601,
           error: e.message
         },
-        request: request,
+        request:,
         error: e
       )
     end
@@ -67,17 +66,14 @@ class DiscountsController < ApplicationController
     coupon_code = params[:coupon_code]
 
     begin
-      # Busca o cupom no banco local
       discount = Discount.find(discount_id)
-      
+
       old_status = discount.is_active ? 'active' : 'inactive'
       old_ends_at = discount.ends_at
 
-      # Atualiza no Shopify primeiro
       shopify_result = update_discount_in_shopify(discount, action)
-      
+
       if shopify_result[:success]
-        # Se deu certo no Shopify, atualiza no banco local
         case action
         when 'deactivate'
           discount.update!(
@@ -95,13 +91,12 @@ class DiscountsController < ApplicationController
           )
         end
 
-        # Atualiza os dados para exibição
         @discount_found = format_discount_for_display(discount)
-        
+
         LogService.log_discount_action(
           user: current_user,
-          action: action,
-          coupon_code: coupon_code,
+          action:,
+          coupon_code:,
           price_rule_id: discount.shopify_price_rule_id,
           old_values: {
             status: old_status,
@@ -115,29 +110,29 @@ class DiscountsController < ApplicationController
             timestamp: Time.current.iso8601,
             discount_node_id: discount.shopify_node_id
           },
-          request: request
+          request:
         )
-        
-        flash[:success] = "Status do cupom alterado com sucesso!"
+
+        flash[:success] = 'Status do cupom alterado com sucesso!'
       else
         raise StandardError, shopify_result[:error]
       end
-      
+
     rescue StandardError => e
       flash[:error] = "Erro ao alterar status do cupom: #{e.message}"
       @discount_found = format_discount_for_display(discount) if discount
-      
+
       LogService.log_discount_action(
         user: current_user,
-        action: action,
-        coupon_code: coupon_code,
+        action:,
+        coupon_code:,
         price_rule_id: discount&.shopify_price_rule_id,
         details: {
           attempted_action: action,
           timestamp: Time.current.iso8601,
           error_message: e.message
         },
-        request: request,
+        request:,
         error: e
       )
     end
@@ -161,17 +156,11 @@ class DiscountsController < ApplicationController
                .page(params[:page])
                .per(50)
 
-    if params[:action_filter].present?
-      @logs = @logs.by_action_type(params[:action_filter])
-    end
+    @logs = @logs.by_action_type(params[:action_filter]) if params[:action_filter].present?
 
-    if params[:user_filter].present?
-      @logs = @logs.by_user(params[:user_filter])
-    end
+    @logs = @logs.by_user(params[:user_filter]) if params[:user_filter].present?
 
-    if params[:coupon_filter].present?
-      @logs = @logs.where('resource_name ILIKE ?', "%#{params[:coupon_filter]}%")
-    end
+    @logs = @logs.where('resource_name ILIKE ?', "%#{params[:coupon_filter]}%") if params[:coupon_filter].present?
 
     if params[:status_filter].present?
       case params[:status_filter]
@@ -199,7 +188,7 @@ class DiscountsController < ApplicationController
        .map do |log|
          details = log.details
          found = false
-         
+
          if details.is_a?(String)
            begin
              parsed_details = JSON.parse(details)
@@ -210,12 +199,12 @@ class DiscountsController < ApplicationController
          elsif details.is_a?(Hash)
            found = details['found'] || false
          end
-         
+
          {
            coupon_code: log.resource_name,
            user: log.user&.email || 'Sistema',
            searched_at: log.created_at,
-           found: found
+           found:
          }
        end
        .uniq { |search| search[:coupon_code] }
@@ -227,7 +216,7 @@ class DiscountsController < ApplicationController
 
     @session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: access_token
+      access_token:
     )
 
     @client = ShopifyAPI::Clients::Rest::Admin.new(session: @session)
@@ -237,7 +226,6 @@ class DiscountsController < ApplicationController
     discount = Discount.find_by_code(code)
     return nil unless discount
 
-    # Atualiza o status baseado nas datas se necessário
     discount.update_status_from_dates! if discount.ends_at.present?
 
     format_discount_for_display(discount)
@@ -287,7 +275,7 @@ class DiscountsController < ApplicationController
     case action
     when 'deactivate'
       new_ends_at = Time.current.iso8601
-      
+
       mutation = <<~GRAPHQL
         mutation discountCodeBasicUpdate($id: ID!, $basicCodeDiscount: DiscountCodeBasicInput!) {
           discountCodeBasicUpdate(id: $id, basicCodeDiscount: $basicCodeDiscount) {
@@ -348,14 +336,14 @@ class DiscountsController < ApplicationController
       path: 'graphql.json',
       body: {
         query: mutation,
-        variables: variables
+        variables:
       }
     )
 
     if response.body['data'] && response.body['data']['discountCodeBasicUpdate']
       user_errors = response.body['data']['discountCodeBasicUpdate']['userErrors']
-      
-      if user_errors && user_errors.any?
+
+      if user_errors&.any?
         error_messages = user_errors.map { |error| "#{error['field']}: #{error['message']}" }.join(', ')
         return { success: false, error: "Erros da API Shopify: #{error_messages}" }
       end
@@ -366,18 +354,18 @@ class DiscountsController < ApplicationController
       return { success: false, error: "Erros GraphQL: #{error_messages}" }
     end
 
-    { success: false, error: "Resposta inesperada da API Shopify" }
+    { success: false, error: 'Resposta inesperada da API Shopify' }
   end
 
   def admin_or_manager!
-    unless current_user&.admin? || current_user&.manager?
-      redirect_to root_path, alert: 'Acesso negado.'
-    end
+    return if current_user&.admin? || current_user&.manager?
+
+    redirect_to root_path, alert: 'Acesso negado.'
   end
 
   def admin_only!
-    unless current_user&.admin?
-      redirect_to root_path, alert: 'Acesso negado.'
-    end
+    return if current_user&.admin?
+
+    redirect_to root_path, alert: 'Acesso negado.'
   end
 end

@@ -30,7 +30,7 @@ module Correios::Orders
         numeroEndereco: params[:numero],
         complemento: params[:complemento],
         bairro: params[:bairro],
-        cep: params[:cep],
+        cep: '13289476',
         cidade: params[:cidade],
         uf: params[:uf],
         ddd: fone.match(/\(([^)]+)\)/).present? ? fone.match(/\(([^)]+)\)/)[1] : fone,

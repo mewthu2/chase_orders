@@ -1,0 +1,405 @@
+<% content_for :title, "Pedidos PDV" %>
+
+<div class="container-fluid py-4">
+  <% title 'Pedidos PDV' %>
+
+  <!-- SEÇÃO DO DIA ATUAL - AGORA NO TOPO -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-success shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-cash-register me-2"></i>PDV - Hoje: <%= l(Date.current, format: '%A, %d de %B de %Y').capitalize %>
+          </h5>
+          <div class="d-flex gap-3">
+            <span class="badge bg-success text-dark px-3 py-2">
+              <i class="fas fa-clock me-1"></i> <%= Time.now.strftime('%H:%M') %>
+            </span>
+            <%= link_to pos_path, class: "btn btn-success btn-sm" do %>
+              <i class="fas fa-plus me-1"></i>Nova Venda
+            <% end %>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3 mb-3 mb-md-0">
+              <div class="card bg-black border border-warning h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-hourglass-half me-2"></i>Pendentes
+                    </h6>
+                    <span class="badge bg-warning text-dark"><%= @status_counts[:pending] %></span>
+                  </div>
+                  <div class="text-center">
+                    <div class="h4 text-warning mb-0"><%= @status_counts[:pending] %></div>
+                    <small class="text-muted">Aguardando integração</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3 mb-md-0">
+              <div class="card bg-black border border-success h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-check-circle me-2"></i>Integrados
+                    </h6>
+                    <span class="badge bg-success"><%= @status_counts[:integrated] %></span>
+                  </div>
+                  <div class="text-center">
+                    <div class="h4 text-success mb-0"><%= @status_counts[:integrated] %></div>
+                    <small class="text-muted">Enviados ao Shopify</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3 mb-md-0">
+              <div class="card bg-black border border-danger h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-exclamation-triangle me-2"></i>Com Erro
+                    </h6>
+                    <span class="badge bg-danger"><%= @status_counts[:error] %></span>
+                  </div>
+                  <div class="text-center">
+                    <div class="h4 text-danger mb-0"><%= @status_counts[:error] %></div>
+                    <small class="text-muted">Falha na integração</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card bg-black border border-info h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-chart-pie me-2"></i>Total
+                    </h6>
+                    <span class="badge bg-info text-dark"><%= @status_counts[:all] %></span>
+                  </div>
+                  <div class="text-center">
+                    <div class="h4 text-info mb-0"><%= @status_counts[:all] %></div>
+                    <small class="text-muted">Pedidos registrados</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS E CONTROLES -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-filter me-2"></i>Filtros e Controles
+          </h5>
+        </div>
+        <div class="card-body">
+          <%= form_with url: order_pdvs_path, method: :get, local: true, class: "row g-3 align-items-end" do |f| %>
+            <div class="col-md-3">
+              <%= f.label :status, "Status", class: "form-label text-white" %>
+              <%= f.select :status, 
+                  options_for_select([
+                    ['Todos os Status', ''],
+                    ['Pendentes', 'pending'],
+                    ['Integrados', 'integrated'],
+                    ['Com Erro', 'error']
+                  ], params[:status]), 
+                  {}, 
+                  { class: "form-select bg-dark text-white border-secondary" } %>
+            </div>
+            <div class="col-md-3">
+              <%= f.label :per_page, "Itens por página", class: "form-label text-white" %>
+              <%= f.select :per_page, 
+                  options_for_select([
+                    ['20', '20'],
+                    ['50', '50'],
+                    ['100', '100']
+                  ], params[:per_page]), 
+                  {}, 
+                  { class: "form-select bg-dark text-white border-secondary" } %>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex gap-2">
+                <%= f.submit "Filtrar", class: "btn btn-primary" %>
+                <%= link_to "Limpar", order_pdvs_path, class: "btn btn-outline-secondary" %>
+                <%= link_to pos_path, class: "btn btn-success" do %>
+                  <i class="fas fa-plus me-1"></i>Nova Venda
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA DE PEDIDOS -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-list me-2"></i>Lista de Pedidos PDV
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="text-white">ID</th>
+                  <th class="text-white">Data</th>
+                  <th class="text-white">Cliente</th>
+                  <th class="text-white">Vendedor</th>
+                  <th class="text-white">Loja</th>
+                  <th class="text-white">Itens</th>
+                  <th class="text-white">Total</th>
+                  <th class="text-white">Status</th>
+                  <th class="text-white">Shopify</th>
+                  <th class="text-center text-white">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if @order_pdvs.any? %>
+                  <% @order_pdvs.each do |order| %>
+                    <tr>
+                      <td>
+                        <span class="badge bg-dark">#<%= order.id %></span>
+                      </td>
+                      <td>
+                        <div><%= order.created_at.strftime('%d/%m/%Y') %></div>
+                        <small class="text-muted"><%= order.created_at.strftime('%H:%M') %></small>
+                      </td>
+                      <td>
+                        <div class="text-white"><%= order.customer_name %></div>
+                        <% if order.customer_email.present? %>
+                          <small class="text-muted"><%= order.customer_email %></small>
+                        <% end %>
+                      </td>
+                      <td>
+                        <span class="badge bg-secondary"><%= order.user.name %></span>
+                      </td>
+                      <td>
+                        <% 
+                          store_badge_class = case order.store_type
+                          when 'lagoa_seca' then 'bg-warning text-dark'
+                          when 'bh_shopping' then 'bg-success'
+                          when 'rj' then 'bg-primary'
+                          else 'bg-secondary'
+                          end
+                        %>
+                        <span class="badge <%= store_badge_class %>">
+                          <%= order.store_type.humanize %>
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge bg-info text-dark">
+                          <%= order.items_count %> itens
+                        </span>
+                      </td>
+                      <td>
+                        <strong class="text-success"><%= order.formatted_total %></strong>
+                      </td>
+                      <td>
+                        <% 
+                          status_badge_class = case order.status
+                          when 'integrated' then 'bg-success'
+                          when 'error' then 'bg-danger'
+                          else 'bg-warning text-dark'
+                          end
+                        %>
+                        <span class="badge <%= status_badge_class %>">
+                          <%= order.integration_status_text %>
+                        </span>
+                      </td>
+                      <td>
+                        <% if order.shopify_order_number.present? %>
+                          <div class="text-white"><%= order.shopify_order_number %></div>
+                          <small class="text-muted">ID: <%= order.shopify_order_id %></small>
+                        <% else %>
+                          <span class="text-muted">-</span>
+                        <% end %>
+                      </td>
+                      <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                          <%= link_to order_pdv_path(order), class: "btn btn-outline-light btn-sm", title: "Ver detalhes" do %>
+                            <i class="fas fa-eye"></i>
+                          <% end %>
+                          
+                          <%= link_to edit_order_pdv_path(order), class: "btn btn-outline-warning btn-sm", title: "Editar pedido" do %>
+                            <i class="fas fa-edit"></i>
+                          <% end %>
+                          
+                          <% if order.can_retry_integration? %>
+                            <button onclick="integrateOrder(<%= order.id %>)" 
+                                    class="btn btn-outline-success btn-sm"
+                                    title="Integrar com Shopify"
+                                    data-order-id="<%= order.id %>">
+                              <i class="fas fa-sync"></i>
+                            </button>
+                          <% end %>
+                          
+                          <% if order.integrated? && order.shopify_order_id.present? %>
+                            <a href="https://chasebrasil.myshopify.com/admin/orders/<%= order.shopify_order_id %>" 
+                               target="_blank" 
+                               class="btn btn-outline-info btn-sm" 
+                               title="Ver no Shopify">
+                              <i class="fas fa-external-link-alt"></i>
+                            </a>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="10" class="text-center py-5">
+                      <div class="mb-3">
+                        <i class="fas fa-shopping-cart fa-3x text-muted"></i>
+                      </div>
+                      <h5 class="text-muted">Nenhum pedido encontrado</h5>
+                      <p class="text-muted">Os pedidos criados no PDV aparecerão aqui.</p>
+                      <%= link_to pos_path, class: "btn btn-success" do %>
+                        <i class="fas fa-plus me-1"></i>Criar Primeira Venda
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGINAÇÃO -->
+  <% if @order_pdvs.respond_to?(:total_pages) && @order_pdvs.total_pages > 1 %>
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-center">
+          <%= will_paginate @order_pdvs, 
+              renderer: BootstrapPagination::Rails, 
+              class: "pagination pagination-dark",
+              previous_label: '<i class="fas fa-chevron-left"></i>'.html_safe,
+              next_label: '<i class="fas fa-chevron-right"></i>'.html_safe %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+function integrateOrder(orderId) {
+  if (!confirm('Confirma a integração deste pedido com o Shopify?')) return;
+  
+  const button = document.querySelector(`button[data-order-id="${orderId}"]`);
+  const originalContent = button.innerHTML;
+  
+  // Mostrar loading no botão
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  button.disabled = true;
+  
+  fetch(`/order_pdvs/${orderId}/integrate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => {
+    if (response.ok) {
+      // Recarregar a página para mostrar o resultado
+      location.reload();
+    } else {
+      throw new Error('Erro na integração');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao integrar pedido. Tente novamente.');
+    
+    // Restaurar botão
+    button.innerHTML = originalContent;
+    button.disabled = false;
+  });
+}
+</script>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .bg-black {
+      background-color: #121212 !important;
+    }
+
+    .table-dark {
+      --bs-table-bg: #121212;
+      --bs-table-striped-bg: #1a1a1a;
+      --bs-table-hover-bg: #242424;
+      border-color: #343a40;
+    }
+
+    .form-select.bg-dark {
+      background-color: #212529 !important;
+      border-color: #495057;
+    }
+
+    .form-select.bg-dark:focus {
+      background-color: #212529 !important;
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .pagination-dark .page-link {
+      background-color: #212529;
+      border-color: #495057;
+      color: #f8f9fa;
+    }
+
+    .pagination-dark .page-link:hover {
+      background-color: #343a40;
+      border-color: #6c757d;
+      color: #ffffff;
+    }
+
+    .pagination-dark .page-item.active .page-link {
+      background-color: #0d6efd;
+      border-color: #0d6efd;
+    }
+
+    a.text-white {
+      transition: all 0.2s ease;
+    }
+
+    a.text-white:hover {
+      opacity: 0.8;
+      text-decoration: underline !important;
+    }
+
+    .btn-group .btn {
+      margin: 0 1px;
+    }
+  </style>
+<% end %>

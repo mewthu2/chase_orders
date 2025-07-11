@@ -1,0 +1,1109 @@
+<% content_for :title, "Editar Pedido PDV ##{@order_pdv.id}" %>
+
+<div class="container-fluid py-4">
+  <!-- HEADER DO PEDIDO -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <div>
+            <h4 class="text-white mb-1">
+              <i class="fas fa-edit me-2"></i>Editar Pedido PDV #<%= @order_pdv.id %>
+            </h4>
+            <small class="text-muted">
+              <i class="fas fa-info-circle me-1"></i>
+              Edite os dados do pedido e adicione/remova produtos
+            </small>
+          </div>
+          <div class="d-flex gap-2">
+            <span class="badge bg-warning text-dark px-3 py-2">
+              <i class="fas fa-exclamation-triangle me-1"></i>Modo Edição
+            </span>
+            <span class="badge bg-info text-dark px-3 py-2">
+              <i class="fas fa-calendar me-1"></i><%= @order_pdv.created_at.strftime('%d/%m/%Y') %>
+            </span>
+            <span class="badge bg-success px-3 py-2" id="total-badge">
+              <i class="fas fa-dollar-sign me-1"></i><%= @order_pdv.formatted_total %>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- COLUNA ESQUERDA - FORMULÁRIO -->
+    <div class="col-lg-8">
+      <%= form_with model: @order_pdv, local: true do |f| %>
+        <!-- MENSAGENS DE ERRO -->
+        <% if @order_pdv.errors.any? %>
+          <div class="card bg-black shadow mb-4">
+            <div class="card-body">
+              <div class="alert alert-danger bg-dark text-white">
+                <div class="d-flex align-items-center mb-2">
+                  <i class="fas fa-exclamation-triangle me-2"></i>
+                  <h6 class="mb-0">Erro ao salvar pedido:</h6>
+                </div>
+                <ul class="mb-0 ps-3">
+                  <% @order_pdv.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- CONFIGURAÇÕES DA VENDA -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-cog me-2"></i>Configurações da Venda
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <%= f.label :store_type, class: "form-label text-white" do %>
+                  <i class="fas fa-store me-1"></i>Loja *
+                <% end %>
+                <%= f.select :store_type, 
+                    options_for_select([
+                      ['Lagoa Seca', 'lagoa_seca'],
+                      ['BH Shopping', 'bh_shopping'],
+                      ['Barra Shopping (RJ)', 'rj']
+                    ], @order_pdv.store_type), 
+                    {}, 
+                    { class: "form-select bg-dark text-white border-secondary" } %>
+              </div>
+              <div class="col-md-6">
+                <%= f.label :payment_method, class: "form-label text-white" do %>
+                  <i class="fas fa-credit-card me-1"></i>Forma de Pagamento *
+                <% end %>
+                <%= f.select :payment_method, 
+                    options_for_select([
+                      ['Dinheiro', 'dinheiro'],
+                      ['Cartão de Crédito', 'cartao_credito'],
+                      ['Cartão de Débito', 'cartao_debito'],
+                      ['PIX', 'pix']
+                    ], @order_pdv.payment_method), 
+                    {}, 
+                    { class: "form-select bg-dark text-white border-secondary" } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DADOS DO CLIENTE -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-user me-2"></i>Dados do Cliente
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <%= f.label :customer_name, class: "form-label text-white" do %>
+                  <i class="fas fa-user me-1"></i>Nome Completo *
+                <% end %>
+                <%= f.text_field :customer_name, class: "form-control bg-dark text-white border-secondary", required: true %>
+              </div>
+              <div class="col-md-6 mb-3">
+                <%= f.label :customer_email, class: "form-label text-white" do %>
+                  <i class="fas fa-envelope me-1"></i>Email
+                <% end %>
+                <%= f.email_field :customer_email, class: "form-control bg-dark text-white border-secondary" %>
+              </div>
+              <div class="col-md-6 mb-3">
+                <%= f.label :customer_phone, class: "form-label text-white" do %>
+                  <i class="fas fa-phone me-1"></i>Telefone
+                <% end %>
+                <%= f.text_field :customer_phone, class: "form-control bg-dark text-white border-secondary" %>
+              </div>
+              <div class="col-md-6 mb-3">
+                <%= f.label :customer_cpf, class: "form-label text-white" do %>
+                  <i class="fas fa-id-card me-1"></i>CPF
+                <% end %>
+                <%= f.text_field :customer_cpf, class: "form-control bg-dark text-white border-secondary" %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ENDEREÇO -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-map-marker-alt me-2"></i>Endereço de Entrega
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-12 mb-3">
+                <%= f.label :address1, class: "form-label text-white" do %>
+                  <i class="fas fa-road me-1"></i>Endereço
+                <% end %>
+                <%= f.text_field :address1, class: "form-control bg-dark text-white border-secondary", placeholder: "Rua, número, complemento" %>
+              </div>
+              <div class="col-md-6 mb-3">
+                <%= f.label :city, class: "form-label text-white" do %>
+                  <i class="fas fa-city me-1"></i>Cidade
+                <% end %>
+                <%= f.text_field :city, class: "form-control bg-dark text-white border-secondary" %>
+              </div>
+              <div class="col-md-3 mb-3">
+                <%= f.label :state, class: "form-label text-white" do %>
+                  <i class="fas fa-flag me-1"></i>Estado
+                <% end %>
+                <%= f.text_field :state, class: "form-control bg-dark text-white border-secondary", placeholder: "SP", maxlength: 2 %>
+              </div>
+              <div class="col-md-3 mb-3">
+                <%= f.label :zip, class: "form-label text-white" do %>
+                  <i class="fas fa-mail-bulk me-1"></i>CEP
+                <% end %>
+                <%= f.text_field :zip, class: "form-control bg-dark text-white border-secondary", placeholder: "00000-000" %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESCONTO -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-percentage me-2"></i>Desconto (Opcional)
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <%= f.label :discount_amount, class: "form-label text-white" do %>
+                  <i class="fas fa-dollar-sign me-1"></i>Valor do Desconto (R$)
+                <% end %>
+                <%= f.number_field :discount_amount, step: 0.01, min: 0, class: "form-control bg-dark text-white border-secondary", placeholder: "0,00" %>
+              </div>
+              <div class="col-md-6 mb-3">
+                <%= f.label :discount_reason, class: "form-label text-white" do %>
+                  <i class="fas fa-comment me-1"></i>Motivo do Desconto
+                <% end %>
+                <%= f.text_field :discount_reason, class: "form-control bg-dark text-white border-secondary", placeholder: "Ex: Promoção, Cliente fidelidade..." %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- OBSERVAÇÕES -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-header bg-dark">
+            <h5 class="text-white mb-0">
+              <i class="fas fa-sticky-note me-2"></i>Observações Adicionais
+            </h5>
+          </div>
+          <div class="card-body">
+            <%= f.label :notes, class: "form-label text-white" do %>
+              <i class="fas fa-edit me-1"></i>Observações
+            <% end %>
+            <%= f.text_area :notes, rows: 4, class: "form-control bg-dark text-white border-secondary", placeholder: "Observações adicionais sobre o pedido..." %>
+          </div>
+        </div>
+
+        <!-- BOTÕES DE AÇÃO -->
+        <div class="card bg-black shadow mb-4">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <%= link_to @order_pdv, class: "btn btn-outline-secondary" do %>
+                  <i class="fas fa-times me-2"></i>Cancelar
+                <% end %>
+              </div>
+              <div class="d-flex gap-3">
+                <button type="button" class="btn btn-outline-info" onclick="previewChanges()">
+                  <i class="fas fa-eye me-2"></i>Visualizar
+                </button>
+                <%= f.submit "Salvar Alterações", class: "btn btn-success btn-lg" %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- COLUNA DIREITA - PRODUTOS -->
+    <div class="col-lg-4">
+      <!-- BUSCAR PRODUTOS -->
+      <div class="card bg-black shadow mb-4">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-search me-2"></i>Adicionar Produtos
+          </h5>
+        </div>
+        <div class="card-body">
+          <input type="text" id="product-search" placeholder="Digite SKU ou nome do produto..." 
+                 class="form-control bg-dark text-white border-secondary mb-3">
+          
+          <!-- RESULTADOS DA BUSCA -->
+          <div id="search-results"></div>
+        </div>
+      </div>
+
+      <!-- ITENS ATUAIS -->
+      <div class="card bg-black shadow">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-shopping-bag me-2"></i>Itens do Pedido (<%= @items.count %>)
+          </h5>
+        </div>
+        <div class="card-body" id="current-items">
+          <% @items.each do |item| %>
+            <div class="current-item-card" id="item-<%= item.id %>">
+              <div class="current-item-content">
+                <!-- Imagem do Produto -->
+                <div class="current-item-image">
+                  <% if item.image_url.present? %>
+                    <img src="<%= item.image_url %>" alt="<%= item.product_name %>" class="item-image">
+                  <% else %>
+                    <div class="item-placeholder">
+                      <i class="fas fa-image"></i>
+                    </div>
+                  <% end %>
+                </div>
+
+                <!-- Informações do Produto -->
+                <div class="current-item-info">
+                  <div class="item-sku"><%= item.sku %></div>
+                  <div class="item-name"><%= truncate(item.product_name, length: 35) %></div>
+                  <% if item.option1.present? %>
+                    <div class="item-option"><%= item.option1 %></div>
+                  <% end %>
+                  <div class="item-details">
+                    <span class="item-quantity">Qtd: <%= item.quantity %></span>
+                    <span class="item-price"><%= item.formatted_price %></span>
+                  </div>
+                  <div class="item-total"><%= item.formatted_total %></div>
+                </div>
+
+                <!-- Botão Remover -->
+                <div class="current-item-actions">
+                  <button onclick="removeItem(<%= item.id %>)" class="remove-item-btn" title="Remover item">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <% if @items.empty? %>
+            <div class="empty-items-state" id="empty-state">
+              <i class="fas fa-shopping-cart"></i>
+              <h6>Nenhum item no pedido</h6>
+              <p>Use a busca acima para adicionar produtos</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" 
+     style="background: rgba(0,0,0,0.8); z-index: 9999;">
+  <div class="d-flex justify-content-center align-items-center h-100">
+    <div class="text-center">
+      <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+      <h5 class="text-white" id="loading-message">Processando...</h5>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .bg-black {
+      background-color: #121212 !important;
+    }
+
+    .form-control.bg-dark {
+      background-color: #212529 !important;
+      border-color: #495057;
+      transition: all 0.3s ease;
+    }
+
+    .form-control.bg-dark:focus {
+      background-color: #212529 !important;
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .form-select.bg-dark {
+      background-color: #212529 !important;
+      border-color: #495057;
+      transition: all 0.3s ease;
+    }
+
+    .form-select.bg-dark:focus {
+      background-color: #212529 !important;
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .form-label {
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-label i {
+      color: #6c757d;
+      margin-right: 6px;
+    }
+
+    .btn {
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* LAYOUT MELHORADO DOS PRODUTOS */
+    .product-item {
+      background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+      border: 1px solid #4a5568;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .product-item:hover {
+      transform: translateY(-3px);
+      border-color: #68d391;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(135deg, #374151 0%, #4a5568 100%);
+    }
+
+    .product-image-container {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #4a5568;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #68d391;
+      flex-shrink: 0;
+    }
+
+    .product-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 0;
+      padding: 0 12px;
+    }
+
+    .product-sku {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #68d391;
+      margin: 0 0 4px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .product-name {
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+      font-weight: 500;
+    }
+
+    .product-price {
+      color: #4fd1c7;
+      font-weight: 700;
+      font-size: 1rem;
+      margin: 0 0 6px 0;
+    }
+
+    .product-option {
+      display: inline-block;
+      background: rgba(104, 211, 145, 0.2);
+      color: #68d391;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border: 1px solid rgba(104, 211, 145, 0.3);
+    }
+
+    .product-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .add-to-cart-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .add-to-cart-btn:enabled {
+      background: linear-gradient(135deg, #68d391 0%, #48bb78 100%);
+      color: #1a202c;
+      box-shadow: 0 4px 12px rgba(104, 211, 145, 0.3);
+    }
+
+    .add-to-cart-btn:enabled:hover {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(104, 211, 145, 0.4);
+    }
+
+    .add-to-cart-btn:disabled {
+      background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+      color: #a0aec0;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    /* BADGES DE ESTOQUE MELHORADOS */
+    .stock-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .stock-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid;
+    }
+
+    .stock-high {
+      background: rgba(72, 187, 120, 0.2);
+      color: #48bb78;
+      border-color: #48bb78;
+    }
+
+    .stock-low {
+      background: rgba(237, 137, 54, 0.2);
+      color: #ed8936;
+      border-color: #ed8936;
+    }
+
+    .stock-out {
+      background: rgba(245, 101, 101, 0.2);
+      color: #f56565;
+      border-color: #f56565;
+    }
+
+    .stock-error {
+      background: rgba(160, 174, 192, 0.2);
+      color: #a0aec0;
+      border-color: #a0aec0;
+    }
+
+    .stock-quantity {
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #e2e8f0;
+      background: rgba(45, 55, 72, 0.8);
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1px solid #4a5568;
+    }
+
+    /* LAYOUT MELHORADO DOS ITENS ATUAIS */
+    .current-item-card {
+      background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+      border: 1px solid #4a5568;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .current-item-card:hover {
+      transform: translateY(-2px);
+      border-color: #e53e3e;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .current-item-content {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      gap: 12px;
+    }
+
+    .current-item-image {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #4a5568;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #e53e3e;
+      flex-shrink: 0;
+    }
+
+    .item-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .item-placeholder {
+      color: #a0aec0;
+      font-size: 1.2rem;
+    }
+
+    .current-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .item-sku {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #e53e3e;
+      margin: 0 0 4px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .item-name {
+      color: #e2e8f0;
+      font-size: 0.8rem;
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+      font-weight: 500;
+    }
+
+    .item-option {
+      display: inline-block;
+      background: rgba(229, 62, 62, 0.2);
+      color: #e53e3e;
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      border: 1px solid rgba(229, 62, 62, 0.3);
+      margin-bottom: 6px;
+    }
+
+    .item-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .item-quantity {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      font-weight: 600;
+    }
+
+    .item-price {
+      font-size: 0.75rem;
+      color: #4fd1c7;
+      font-weight: 600;
+    }
+
+    .item-total {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #48bb78;
+      text-align: right;
+    }
+
+    .current-item-actions {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .remove-item-btn {
+      background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+    }
+
+    .remove-item-btn:hover {
+      background: linear-gradient(135deg, #c53030 0%, #9c2626 100%);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+    }
+
+    .remove-item-btn i {
+      font-size: 0.8rem;
+    }
+
+    /* ESTADO VAZIO DOS ITENS */
+    .empty-items-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #a0aec0;
+    }
+
+    .empty-items-state i {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-items-state h6 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #e2e8f0;
+    }
+
+    .empty-items-state p {
+      font-size: 0.85rem;
+      margin: 0;
+      opacity: 0.7;
+    }
+
+    /* RESPONSIVIDADE */
+    @media (max-width: 768px) {
+      .product-item {
+        padding: 12px;
+      }
+
+      .product-image-container {
+        width: 70px;
+        height: 70px;
+      }
+
+      .product-info {
+        padding: 0 8px;
+      }
+
+      .product-sku {
+        font-size: 0.85rem;
+      }
+
+      .product-name {
+        font-size: 0.8rem;
+      }
+
+      .add-to-cart-btn {
+        min-width: 80px;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+      }
+
+      .current-item-content {
+        padding: 10px;
+        gap: 10px;
+      }
+
+      .current-item-image {
+        width: 50px;
+        height: 50px;
+      }
+
+      .item-name {
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+<% end %>
+
+<script>
+let searchTimeout;
+
+// Funções de loading
+function showLoading(message = 'Processando...') {
+  document.getElementById('loading-message').textContent = message;
+  document.getElementById('loading-overlay').classList.remove('d-none');
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.add('d-none');
+}
+
+// Busca de produtos
+document.getElementById('product-search').addEventListener('input', function(e) {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+
+  if (query.length < 2) {
+    document.getElementById('search-results').innerHTML = '';
+    return;
+  }
+
+  searchTimeout = setTimeout(() => {
+    searchProducts(query);
+  }, 300);
+});
+
+function searchProducts(query) {
+  showLoading('Buscando produtos e verificando estoque...');
+
+  fetch('/order_pdvs/search_product', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ 
+      query: query,
+      order_pdv_id: <%= @order_pdv.id %>
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    const resultsContainer = document.getElementById('search-results');
+
+    if (data.success && data.products.length > 0) {
+      resultsContainer.innerHTML = data.products.map(product => {
+        let stockClass = 'stock-out';
+        let stockText = 'Sem Estoque';
+        let stockIcon = '❌';
+
+        if (product.stock_status === 'high') {
+          stockClass = 'stock-high';
+          stockText = 'Disponível';
+          stockIcon = '✅';
+        } else if (product.stock_status === 'low') {
+          stockClass = 'stock-low';
+          stockText = 'Baixo';
+          stockIcon = '⚠️';
+        } else if (product.stock_status === 'error') {
+          stockClass = 'stock-error';
+          stockText = 'Erro';
+          stockIcon = '❓';
+        }
+
+        const isOutOfStock = product.stock_status === 'out';
+        const buttonText = isOutOfStock ? '❌ Sem Estoque' : '➕ Adicionar';
+
+        return `
+          <div class="product-item">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div class="product-image-container">
+                ${product.image_url ? 
+                  `<img src="${product.image_url}" alt="${product.name}" class="product-image">` :
+                  `<i class="fas fa-image" style="color: #a0aec0; font-size: 1.2rem;"></i>`
+                }
+              </div>
+              
+              <div class="product-info">
+                <div class="product-sku">${product.sku}</div>
+                <div class="product-name">${product.name}</div>
+                <div class="product-price">R$ ${product.price.toFixed(2)}</div>
+                
+                ${product.option1 ? 
+                  `<div class="product-option">${product.option1}</div>` : 
+                  ''
+                }
+                
+                <div class="stock-info">
+                  <span class="stock-badge ${stockClass}">
+                    ${stockIcon} ${stockText}
+                  </span>
+                  <span class="stock-quantity">
+                    ${product.stock} un.
+                  </span>
+                </div>
+              </div>
+              
+              <div class="product-actions">
+                <button 
+                  onclick="addProductToOrder(${product.id}, 1, this)"
+                  class="add-to-cart-btn"
+                  ${isOutOfStock ? 'disabled' : ''}
+                >
+                  ${buttonText}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      resultsContainer.innerHTML = `
+        <div class="text-center py-4">
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h6 class="text-muted">Nenhum produto encontrado</h6>
+          <p class="text-muted small">Tente buscar por SKU ou nome do produto</p>
+        </div>
+      `;
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro na busca:', error);
+    document.getElementById('search-results').innerHTML = `
+      <div class="text-center py-4">
+        <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+        <h6 class="text-danger">Erro ao buscar produtos</h6>
+        <p class="text-muted small">Tente novamente em alguns instantes</p>
+      </div>
+    `;
+  });
+}
+
+function addProductToOrder(productId, quantity, buttonElement) {
+  const originalText = buttonElement.innerHTML;
+  buttonElement.innerHTML = '⏳ Adicionando...';
+  buttonElement.disabled = true;
+
+  showLoading('Adicionando produto ao pedido...');
+
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/add_product`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      product_id: productId,
+      quantity: quantity
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    
+    if (data.success) {
+      buttonElement.innerHTML = '✅ Adicionado!';
+      buttonElement.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
+      
+      // Atualizar badge do total
+      document.getElementById('total-badge').innerHTML = `<i class="fas fa-dollar-sign me-1"></i>${data.total}`;
+      
+      // Recarregar após 1.5 segundos
+      setTimeout(() => {
+        location.reload();
+      }, 1500);
+    } else {
+      buttonElement.innerHTML = originalText;
+      buttonElement.disabled = false;
+      alert(data.message || 'Erro ao adicionar produto');
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro:', error);
+    buttonElement.innerHTML = originalText;
+    buttonElement.disabled = false;
+    alert('Erro ao adicionar produto ao pedido');
+  });
+}
+
+function removeItem(itemId) {
+  if (!confirm('Remover este item do pedido?')) return;
+
+  showLoading('Removendo item do pedido...');
+
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/remove_product`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ item_id: itemId })
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    
+    if (data.success) {
+      // Remover o item da interface
+      document.getElementById(`item-${itemId}`).remove();
+      
+      // Atualizar badge do total
+      document.getElementById('total-badge').innerHTML = `<i class="fas fa-dollar-sign me-1"></i>${data.total}`;
+      
+      // Verificar se não há mais itens
+      const itemsContainer = document.getElementById('current-items');
+      if (itemsContainer.children.length === 0) {
+        itemsContainer.innerHTML = `
+          <div class="empty-items-state" id="empty-state">
+            <i class="fas fa-shopping-cart"></i>
+            <h6>Nenhum item no pedido</h6>
+            <p>Use a busca acima para adicionar produtos</p>
+          </div>
+        `;
+      }
+    } else {
+      alert(data.message || 'Erro ao remover item');
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro:', error);
+    alert('Erro ao remover item do pedido');
+  });
+}
+
+function previewChanges() {
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  
+  let preview = "=== PREVIEW DAS ALTERAÇÕES ===\n\n";
+  
+  preview += "🏪 LOJA: " + formData.get('order_pdv[store_type]') + "\n";
+  preview += "💳 PAGAMENTO: " + formData.get('order_pdv[payment_method]') + "\n\n";
+  
+  preview += "👤 CLIENTE:\n";
+  preview += "Nome: " + formData.get('order_pdv[customer_name]') + "\n";
+  if (formData.get('order_pdv[customer_email]')) {
+    preview += "Email: " + formData.get('order_pdv[customer_email]') + "\n";
+  }
+  if (formData.get('order_pdv[customer_phone]')) {
+    preview += "Telefone: " + formData.get('order_pdv[customer_phone]') + "\n";
+  }
+  if (formData.get('order_pdv[customer_cpf]')) {
+    preview += "CPF: " + formData.get('order_pdv[customer_cpf]') + "\n";
+  }
+  
+  if (formData.get('order_pdv[address1]')) {
+    preview += "\n📍 ENDEREÇO:\n";
+    preview += formData.get('order_pdv[address1]') + "\n";
+    if (formData.get('order_pdv[city]')) {
+      preview += formData.get('order_pdv[city]');
+      if (formData.get('order_pdv[state]')) {
+        preview += " - " + formData.get('order_pdv[state]');
+      }
+      preview += "\n";
+    }
+    if (formData.get('order_pdv[zip]')) {
+      preview += "CEP: " + formData.get('order_pdv[zip]') + "\n";
+    }
+  }
+  
+  if (formData.get('order_pdv[discount_amount]') && parseFloat(formData.get('order_pdv[discount_amount]')) > 0) {
+    preview += "\n💰 DESCONTO:\n";
+    preview += "Valor: R$ " + parseFloat(formData.get('order_pdv[discount_amount]')).toFixed(2) + "\n";
+    if (formData.get('order_pdv[discount_reason]')) {
+      preview += "Motivo: " + formData.get('order_pdv[discount_reason]') + "\n";
+    }
+  }
+  
+  if (formData.get('order_pdv[notes]')) {
+    preview += "\n📝 OBSERVAÇÕES:\n";
+    preview += formData.get('order_pdv[notes]') + "\n";
+  }
+  
+  alert(preview);
+}
+
+// Validação em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+  const requiredFields = document.querySelectorAll('input[required]');
+  
+  requiredFields.forEach(field => {
+    field.addEventListener('blur', function() {
+      if (this.value.trim() === '') {
+        this.classList.add('is-invalid');
+      } else {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+      }
+    });
+  });
+  
+  // Formatação automática do CEP
+  const zipField = document.querySelector('input[name="order_pdv[zip]"]');
+  if (zipField) {
+    zipField.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, '');
+      if (value.length > 5) {
+        value = value.substring(0, 5) + '-' + value.substring(5, 8);
+      }
+      this.value = value;
+    });
+  }
+  
+  // Formatação automática do CPF
+  const cpfField = document.querySelector('input[name="order_pdv[customer_cpf]"]');
+  if (cpfField) {
+    cpfField.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, '');
+      if (value.length > 3) {
+        value = value.substring(0, 3) + '.' + value.substring(3);
+      }
+      if (value.length > 7) {
+        value = value.substring(0, 7) + '.' + value.substring(7);
+      }
+      if (value.length > 11) {
+        value = value.substring(0, 11) + '-' + value.substring(11, 13);
+      }
+      this.value = value;
+    });
+  }
+  
+  // Formatação automática do telefone
+  const phoneField = document.querySelector('input[name="order_pdv[customer_phone]"]');
+  if (phoneField) {
+    phoneField.addEventListener('input', function() {
+      let value = this.value.replace(/\D/g, '');
+      if (value.length > 2) {
+        value = '(' + value.substring(0, 2) + ') ' + value.substring(2);
+      }
+      if (value.length > 10) {
+        value = value.substring(0, 10) + '-' + value.substring(10, 14);
+      }
+      this.value = value;
+    });
+  }
+});
+</script>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_06_24_051404) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_11_035613) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -130,6 +130,55 @@ ActiveRecord::Schema[7.2].define(version: 2025_06_24_051404) do
     t.index ["product_id"], name: "index_order_items_on_product_id"
   end
 
+  create_table "order_pdv_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "order_pdv_id", null: false
+    t.bigint "product_id", null: false
+    t.string "sku", null: false
+    t.string "product_name", null: false
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.integer "quantity", null: false
+    t.decimal "total", precision: 10, scale: 2, null: false
+    t.string "option1"
+    t.string "image_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_pdv_id", "product_id"], name: "index_order_pdv_items_on_order_pdv_id_and_product_id"
+    t.index ["order_pdv_id"], name: "index_order_pdv_items_on_order_pdv_id"
+    t.index ["product_id"], name: "index_order_pdv_items_on_product_id"
+  end
+
+  create_table "order_pdvs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "customer_name", null: false
+    t.string "customer_email"
+    t.string "customer_phone"
+    t.string "customer_cpf"
+    t.string "address1"
+    t.string "city"
+    t.string "state"
+    t.string "zip"
+    t.string "store_type", null: false
+    t.string "payment_method", null: false
+    t.decimal "subtotal", precision: 10, scale: 2, null: false
+    t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
+    t.string "discount_reason"
+    t.decimal "total_price", precision: 10, scale: 2, null: false
+    t.text "notes"
+    t.text "order_note"
+    t.string "status", default: "pending"
+    t.string "shopify_order_id"
+    t.string "shopify_order_number"
+    t.text "integration_error"
+    t.datetime "integrated_at"
+    t.integer "integration_attempts", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_order_pdvs_on_created_at"
+    t.index ["shopify_order_id"], name: "index_order_pdvs_on_shopify_order_id"
+    t.index ["status"], name: "index_order_pdvs_on_status"
+    t.index ["user_id"], name: "index_order_pdvs_on_user_id"
+  end
+
   create_table "orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.integer "tiny_order_id"
@@ -178,6 +227,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_06_24_051404) do
     t.integer "stock_rj"
     t.string "stock_tiny_2"
     t.string "tags"
+    t.text "image_url"
   end
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -212,6 +262,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_06_24_051404) do
   add_foreign_key "logs", "users"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
+  add_foreign_key "order_pdv_items", "order_pdvs"
+  add_foreign_key "order_pdv_items", "products"
+  add_foreign_key "order_pdvs", "users"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
 end

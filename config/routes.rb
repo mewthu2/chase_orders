@@ -38,6 +38,29 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :order_pdvs, only: [:index, :show, :edit, :update] do
+    member do
+      post :integrate
+      post :add_product
+      delete :remove_product
+    end
+    collection do
+      post :search_product
+    end
+  end
+
+  resources :pos, only: [:index] do
+    collection do
+      post :search_product
+      post :get_product_details
+      post :add_to_cart
+      delete :remove_from_cart
+      delete :clear_cart
+      post :create_order
+      post :check_stock
+    end
+  end
+
   resources :discounts, only: [:index] do
     collection do
       post :search
