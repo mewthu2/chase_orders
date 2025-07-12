@@ -18,19 +18,19 @@ class OrderPdv < ApplicationRecord
 
   enum status: {
     pending: 'pending',
-    integrated: 'integrated', 
+    integrated: 'integrated',
     error: 'error'
   }
 
   enum reservation_status: {
-    none: 'none',
+    no_reservation: 'none',
     reserved: 'reserved',
     reservation_error: 'reservation_error',
     partially_reserved: 'partially_reserved'
   }
 
   scope :recent, -> { order(created_at: :desc) }
-  scope :by_status, ->(status) { where(status: status) if status.present? }
+  scope :by_status, ->(status) { where(status:) if status.present? }
 
   def formatted_total
     "R$ #{sprintf('%.2f', total_price)}"
@@ -102,7 +102,7 @@ class OrderPdv < ApplicationRecord
 
   def parsed_reservations
     return [] unless inventory_reservations.present?
-    
+
     begin
       JSON.parse(inventory_reservations)
     rescue JSON::ParserError
