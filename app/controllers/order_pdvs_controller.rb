@@ -8,7 +8,7 @@ class OrderPdvsController < ApplicationController
                           .recent
 
     @order_pdvs = @order_pdvs.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
-    
+
     @status_counts = {
       all: OrderPdv.count,
       pending: OrderPdv.pending.count,
@@ -23,18 +23,17 @@ class OrderPdvsController < ApplicationController
 
   def edit
     @items = @order_pdv.order_pdv_items.includes(:product)
-    # Separar endereço para edição
+
     @address_parts = parse_address(@order_pdv)
   end
 
   def update
-    # Juntar endereço no backend
     address1 = build_address1(params[:order_pdv])
     address2 = build_address2(params[:order_pdv])
-    
+
     order_params = order_pdv_params.merge(
-      address1: address1,
-      address2: address2
+      address1:,
+      address2:
     )
 
     if @order_pdv.update(order_params)
@@ -50,7 +49,7 @@ class OrderPdvsController < ApplicationController
   def integrate
     begin
       result = ShopifyIntegrationService.new(@order_pdv).integrate
-      
+
       if result[:success]
         @order_pdv.update!(
           status: 'integrated',
@@ -109,8 +108,8 @@ class OrderPdvsController < ApplicationController
 
     if query.present?
       products = Product.where("sku LIKE ? OR shopify_product_name LIKE ?", "%#{query}%", "%#{query}%"
-      ).limit(10)
-      
+     ).limit(10)
+
       products_data = []
 
       begin

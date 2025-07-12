@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_11_145837) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_12_160911) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -174,6 +174,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_11_145837) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "address2"
+    t.string "reservation_status"
     t.index ["created_at"], name: "index_order_pdvs_on_created_at"
     t.index ["shopify_order_id"], name: "index_order_pdvs_on_shopify_order_id"
     t.index ["status"], name: "index_order_pdvs_on_status"
