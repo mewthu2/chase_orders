@@ -3,7 +3,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   include ApplicationHelper
 
   def perform(param, order)
-    return unless ScheduleUtils.within_schedule?
+    # return unless ScheduleUtils.within_schedule?
 
     Attempt.where(kinds: :create_correios_order, status: :success).find_each do |attempt|
       next unless attempt.message.present?
