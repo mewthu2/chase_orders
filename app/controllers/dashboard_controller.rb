@@ -55,9 +55,10 @@ class DashboardController < ApplicationController
     @orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
-      kinds: :create_correios_order, 
-      status: :success
-    ).pluck(:tiny_order_id).map(&:to_s).to_set
+      kinds: :create_correios_order,
+      status: :success,
+      created_at: 1.month.ago..Time.current
+    ).pluck(:tiny_order_id).map(&:to_s)
 
     @pending_orders = @orders.reject do |order_data|
       order_id = order_data['pedido']['id'].to_s
@@ -68,9 +69,10 @@ class DashboardController < ApplicationController
 
     relevant_attempts = Attempt.where(
       kinds: :create_correios_order,
-      tiny_order_id: pending_order_ids
-    ).select(:tiny_order_id, :order_correios_id, :status, :created_at, :updated_at, :message)
-     .order(:created_at)
+      tiny_order_id: pending_order_ids,
+      created_at: 1.month.ago..Time.current
+    ).where.not(message: [nil, ''])
+                               .order(:created_at)
 
     queue_attempts = []
     failed_attempts = []
@@ -84,53 +86,41 @@ class DashboardController < ApplicationController
       end
     end
 
-    @queue_positions = {}
-    queue_attempts.each_with_index do |attempt, index|
-      @queue_positions[attempt.tiny_order_id.to_s] = {
-        position: index + 1,
-        status: attempt.status,
-        created_at: attempt.created_at,
-        updated_at: attempt.updated_at,
-        message: attempt.message
-      }
+    @queue_positions = queue_attempts.each_with_index.to_h do |attempt, index|
+      [
+        attempt.tiny_order_id.to_s,
+        {
+          position: index + 1,
+          status: attempt.status,
+          created_at: attempt.created_at,
+          updated_at: attempt.updated_at,
+          message: attempt.message
+        }
+      ]
     end
 
     @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
 
-    all_attempts_for_analysis = Attempt.where(
-      kinds: :create_correios_order,
-      tiny_order_id: pending_order_ids
-    ).where.not(message: [nil, ''])
-
+    grouped_status = relevant_attempts.group_by(&:status)
     @attempts_summary = {
-      total: all_attempts_for_analysis.count,
-      fail: all_attempts_for_analysis.where(status: :fail).count,
-      error: all_attempts_for_analysis.where(status: :error).count,
-      success: all_attempts_for_analysis.where(status: :success).count,
-      processing: all_attempts_for_analysis.where(status: :processing).count
+      total: relevant_attempts.count,
+      fail: grouped_status['fail']&.size || 0,
+      error: grouped_status['error']&.size || 0,
+      success: grouped_status['success']&.size || 0,
+      processing: grouped_status['processing']&.size || 0
     }
 
     @last_errors = {}
-    pending_order_ids.each do |order_id|
-      last_error = Attempt.where(
-        kinds: :create_correios_order,
-        tiny_order_id: order_id,
-        status: [:fail, :error]
-      ).where.not(message: [nil, ''])
-       .order(updated_at: :desc)
-       .first
-
-      if last_error
-        @last_errors[order_id] = {
-          message: last_error.message,
-          status: last_error.status,
-          updated_at: last_error.updated_at
+    relevant_attempts
+      .select { |a| %w[fail error].include?(a.status) && a.message.present? }
+      .group_by(&:tiny_order_id).each do |order_id, attempts|
+        last = attempts.max_by(&:updated_at)
+        @last_errors[order_id.to_s] = {
+          message: last.message,
+          status: last.status,
+          updated_at: last.updated_at
         }
       end
-    end
-
-    pending_count = queue_attempts.count { |a| a.status == 'fail' }
-    processing_count = queue_attempts.count { |a| a.status == 'processing' }
 
     @stats = {
       total_orders: @orders.count,
@@ -138,10 +128,11 @@ class DashboardController < ApplicationController
       in_queue: queue_attempts.count,
       successful: successfully_processed_ids.count,
       failed: failed_attempts.count,
-      pending: pending_count,
-      processing: processing_count
+      pending: queue_attempts.count { |a| a.status == 'fail' },
+      processing: queue_attempts.count { |a| a.status == 'processing' }
     }
   end
+
 
   def order_correios_tracking
     prepare_tracking_data_optimized
