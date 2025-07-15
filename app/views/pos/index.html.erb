@@ -24,7 +24,7 @@
         </div>
         <div class="card-body">
           <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <div class="card bg-black border border-primary h-100">
                 <div class="card-body">
                   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -40,7 +40,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
               <div class="card bg-black border border-warning h-100">
                 <div class="card-body">
                   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -54,6 +54,24 @@
                   <div class="text-center">
                     <div class="h6 text-warning mb-0">Estoque Shopify</div>
                     <small class="text-muted">Verificação automática</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-black border border-success h-100">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-tags me-2"></i>Cupons de Desconto
+                    </h6>
+                    <span class="badge bg-success text-dark" id="coupon-status-badge">
+                      <i class="fas fa-ticket-alt me-1"></i>Disponível
+                    </span>
+                  </div>
+                  <div class="text-center">
+                    <div class="h6 text-success mb-0" id="coupon-discount-display">R$ 0,00</div>
+                    <small class="text-muted">Desconto aplicado</small>
                   </div>
                 </div>
               </div>
@@ -85,7 +103,7 @@
     </div>
 
     <div class="col-lg-4">
-      <div class="card bg-black border border-dark shadow position-sticky" style="top: 20px;">
+      <div class="card bg-black border border-dark shadow position-sticky mb-4" style="top: 20px;">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h5 class="text-white mb-0">
             <i class="fas fa-shopping-cart me-2"></i>Carrinho
@@ -97,7 +115,19 @@
           <% end %>
         </div>
         <div class="card-body">
-          <div id="cart-items" style="max-height: 400px; overflow-y: auto;">
+          <!-- Seção de Cupom -->
+          <div class="mb-3" id="coupon-section">
+            <div class="d-flex gap-2 mb-2">
+              <input type="text" id="coupon-input" placeholder="Código do cupom..." 
+                     class="form-control form-control-sm bg-dark text-white border-secondary">
+              <button onclick="searchCoupon()" class="btn btn-success btn-sm" id="search-coupon-btn">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+            <div id="coupon-result" class="mt-2"></div>
+          </div>
+
+          <div id="cart-items" style="max-height: 350px; overflow-y: auto;">
             <% if @cart_items.any? %>
               <% @cart_items.each do |item| %>
                 <div class="card bg-dark border-secondary mb-2">
@@ -143,9 +173,20 @@
 
           <% if @cart_items.any? %>
             <div class="border-top border-secondary pt-3 mt-3">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="h5 text-white mb-0">Total:</span>
-                <span class="h4 text-success mb-0">R$ <%= sprintf('%.2f', @total) %></span>
+              <!-- Resumo de valores -->
+              <div id="cart-summary">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-white">Subtotal:</span>
+                  <span class="text-white" id="subtotal-display">R$ <%= sprintf('%.2f', @total) %></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2" id="coupon-discount-row" style="display: none !important;">
+                  <span class="text-success">Desconto (Cupom):</span>
+                  <span class="text-success" id="coupon-discount-amount">R$ 0,00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 border-top pt-2">
+                  <span class="h5 text-white mb-0">Total:</span>
+                  <span class="h4 text-success mb-0" id="final-total-display">R$ <%= sprintf('%.2f', @total) %></span>
+                </div>
               </div>
               
               <button onclick="openCheckoutModal()" class="btn btn-success btn-lg w-100">
@@ -159,6 +200,7 @@
   </div>
 </div>
 
+<!-- Modal de Checkout -->
 <div id="checkout-modal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-xl">
     <div class="modal-content bg-dark border-secondary">
@@ -270,7 +312,7 @@
 
               <div class="card bg-black border-secondary mb-3">
                 <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Desconto (Opcional)</h6>
+                  <h6 class="text-white mb-0">Desconto Adicional (Opcional)</h6>
                 </div>
                 <div class="card-body">
                   <div class="row">
@@ -560,6 +602,54 @@
       opacity: 0.7;
     }
 
+    /* Estilos para cupons - MELHORADOS */
+    .coupon-valid {
+      background: rgba(40, 167, 69, 0.15);
+      border: 2px solid #28a745;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+
+    .coupon-invalid {
+      background: rgba(220, 53, 69, 0.15);
+      border: 2px solid #dc3545;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    }
+
+    .coupon-applied {
+      background: rgba(13, 110, 253, 0.15);
+      border: 2px solid #0d6efd;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+    }
+
+    /* Melhorar contraste dos textos nos cupons */
+    .coupon-valid .text-success {
+      color: #20c997 !important;
+      font-weight: 600;
+    }
+
+    .coupon-invalid .text-danger {
+      color: #ff6b6b !important;
+      font-weight: 600;
+    }
+
+    .coupon-applied .text-primary {
+      color: #4dabf7 !important;
+      font-weight: 600;
+    }
+
+    .coupon-valid .text-white-50,
+    .coupon-invalid .text-white-50,
+    .coupon-applied .text-white-50 {
+      color: #e9ecef !important;
+      font-weight: 500;
+    }
+
     @media (max-width: 768px) {
       .product-item {
         padding: 12px;
@@ -619,6 +709,7 @@
 
 <script>
 let searchTimeout;
+let appliedCoupon = null;
 
 function showLoading(message = 'Processando...') {
   document.getElementById('loading-message').textContent = message;
@@ -650,6 +741,7 @@ document.getElementById('cep-input')?.addEventListener('blur', function(e) {
   }
 });
 
+// Busca de produtos
 document.getElementById('product-search').addEventListener('input', function(e) {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
@@ -770,6 +862,232 @@ function searchProducts(query) {
   });
 }
 
+// Funções de cupom
+function searchCoupon() {
+  const couponCode = document.getElementById('coupon-input').value.trim();
+
+  if (!couponCode) {
+    alert('Digite o código do cupom');
+    return;
+  }
+
+  const button = document.getElementById('search-coupon-btn');
+  const originalText = button.innerHTML;
+
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  button.disabled = true;
+
+  fetch('/pos/search_coupon', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ coupon_code: couponCode })
+  })
+  .then(response => response.json())
+  .then(data => {
+    button.innerHTML = originalText;
+    button.disabled = false;
+    
+    const resultDiv = document.getElementById('coupon-result');
+    
+    if (data.success) {
+      const discountValue = parseFloat(data.coupon.discount_value);
+      // CORREÇÃO: Para porcentagem, o valor já vem convertido do backend (10 para 10%)
+      const discountText = data.coupon.discount_type === 'percentage' ? 
+        `${discountValue}% OFF` : 
+        `R$ ${discountValue.toFixed(2)} OFF`;
+        
+      resultDiv.innerHTML = `
+        <div class="coupon-valid">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong class="text-success">✅ ${data.coupon.code}</strong>
+            <button onclick="applyCoupon('${data.coupon.code}')" class="btn btn-success btn-sm">
+              Aplicar
+            </button>
+          </div>
+          <small class="text-white-50">
+            ${data.coupon.title} - ${discountText}
+          </small>
+        </div>
+      `;
+    } else {
+      resultDiv.innerHTML = `
+        <div class="coupon-invalid">
+          <strong class="text-danger">❌ ${data.message}</strong>
+        </div>
+      `;
+      
+      setTimeout(() => {
+        resultDiv.innerHTML = '';
+      }, 3000);
+    }
+  })
+  .catch(error => {
+    button.innerHTML = originalText;
+    button.disabled = false;
+    console.error('Erro:', error);
+    
+    document.getElementById('coupon-result').innerHTML = `
+      <div class="coupon-invalid">
+        <strong class="text-danger">❌ Erro ao buscar cupom</strong>
+      </div>
+    `;
+  });
+}
+
+function applyCoupon(couponCode) {
+  showLoading('Aplicando cupom...');
+
+  fetch('/pos/apply_coupon', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ coupon_code: couponCode })
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    
+    if (data.success) {
+      appliedCoupon = data.coupon;
+      const discountAmount = parseFloat(data.discount_amount) || 0;
+      const subtotal = parseFloat(data.subtotal) || 0;
+      const newTotal = parseFloat(data.new_total) || 0;
+      
+      updateCouponDisplay({ discount_amount: discountAmount });
+      updateCartTotals(subtotal, discountAmount, newTotal);
+      
+      // CORREÇÃO: Para porcentagem, o valor já vem convertido do backend (10 para 10%)
+      const discountValue = parseFloat(data.coupon.discount_value);
+      const discountText = data.coupon.discount_type === 'percentage' ? 
+        `${discountValue}% OFF` : 
+        `R$ ${discountValue.toFixed(2)} OFF`;
+      
+      document.getElementById('coupon-result').innerHTML = `
+        <div class="coupon-applied">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong class="text-primary">🎟️ ${data.coupon.code}</strong>
+            <button onclick="removeCoupon()" class="btn btn-outline-danger btn-sm">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <small class="text-white-50">
+            ${data.coupon.title} - ${discountText}<br>
+            Desconto aplicado: R$ ${discountAmount.toFixed(2)}
+          </small>
+        </div>
+      `;
+      
+      document.getElementById('coupon-input').value = '';
+    } else {
+      document.getElementById('coupon-result').innerHTML = `
+        <div class="coupon-invalid">
+          <strong class="text-danger">❌ ${data.message}</strong>
+        </div>
+      `;
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro:', error);
+    alert('Erro ao aplicar cupom');
+  });
+}
+
+function removeCoupon() {
+  if (!confirm('Remover cupom aplicado?')) return;
+
+  showLoading('Removendo cupom...');
+
+  fetch('/pos/remove_coupon', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    
+    if (data.success) {
+      appliedCoupon = null;
+      updateCouponDisplay(null);
+      
+      // Recalcular totais sem desconto
+      const subtotal = parseFloat(data.new_total) || 0;
+      updateCartTotals(subtotal, 0, subtotal);
+      
+      document.getElementById('coupon-result').innerHTML = '';
+      
+      // Limpar input
+      document.getElementById('coupon-input').value = '';
+    } else {
+      alert(data.message || 'Erro ao remover cupom');
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro:', error);
+    alert('Erro ao remover cupom');
+  });
+}
+
+function updateCouponDisplay(data) {
+  const statusBadge = document.getElementById('coupon-status-badge');
+  const discountDisplay = document.getElementById('coupon-discount-display');
+
+  if (data && data.discount_amount) {
+    const discountAmount = parseFloat(data.discount_amount) || 0;
+    statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Aplicado';
+    statusBadge.className = 'badge bg-primary text-white';
+    discountDisplay.textContent = `R$ ${discountAmount.toFixed(2)}`;
+  } else {
+    statusBadge.innerHTML = '<i class="fas fa-ticket-alt me-1"></i>Disponível';
+    statusBadge.className = 'badge bg-success text-dark';
+    discountDisplay.textContent = 'R$ 0,00';
+  }
+}
+
+function updateCartTotals(subtotal, discountAmount, total) {
+  // Garantir que todos os valores sejam números
+  const sub = parseFloat(subtotal) || 0;
+  const discount = parseFloat(discountAmount) || 0;
+  const tot = parseFloat(total) || 0;
+
+  // Verificar se os elementos existem antes de modificá-los
+  const subtotalDisplay = document.getElementById('subtotal-display');
+  const finalTotalDisplay = document.getElementById('final-total-display');
+  const cartTotalDisplay = document.getElementById('cart-total-display');
+  const discountRow = document.getElementById('coupon-discount-row');
+  const discountAmountSpan = document.getElementById('coupon-discount-amount');
+
+  if (subtotalDisplay) {
+    subtotalDisplay.textContent = `R$ ${sub.toFixed(2)}`;
+  }
+
+  if (finalTotalDisplay) {
+    finalTotalDisplay.textContent = `R$ ${tot.toFixed(2)}`;
+  }
+
+  if (cartTotalDisplay) {
+    cartTotalDisplay.textContent = `R$ ${tot.toFixed(2)}`;
+  }
+
+  if (discountRow && discountAmountSpan) {
+    if (discount > 0) {
+      discountRow.style.display = 'flex';
+      discountAmountSpan.textContent = `R$ ${discount.toFixed(2)}`;
+    } else {
+      discountRow.style.display = 'none';
+    }
+  }
+}
+
 function addToCart(productId, quantity, buttonElement) {
   const originalText = buttonElement.innerHTML;
 
@@ -798,9 +1116,20 @@ function addToCart(productId, quantity, buttonElement) {
       buttonElement.style.background = 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)';
       buttonElement.innerHTML = '✅ Adicionado!';
       
-      document.getElementById('cart-count-badge').textContent = data.cart_count + ' itens';
-      document.getElementById('cart-total-display').textContent = 'R$ ' + data.total.toFixed(2);
+      // Atualizar contador do carrinho
+      const cartCountBadge = document.getElementById('cart-count-badge');
+      if (cartCountBadge) {
+        cartCountBadge.textContent = data.cart_count + ' itens';
+      }
       
+      // Atualizar totais apenas se os elementos existirem
+      if (data.has_coupon) {
+        updateCartTotals(data.subtotal, data.discount_amount, data.total);
+      } else {
+        updateCartTotals(data.subtotal, 0, data.total);
+      }
+      
+      // Recarregar a página após um delay para mostrar o produto no carrinho
       setTimeout(() => {
         location.reload();
       }, 1500);
@@ -898,7 +1227,7 @@ document.getElementById('checkout-form').addEventListener('submit', function(e) 
   // Validar campos obrigatórios
   const requiredFields = ['customer_name', 'customer_email', 'customer_phone', 'customer_cpf', 'street', 'number', 'neighborhood', 'city', 'state', 'zip', 'store_type', 'payment_method'];
   const missingFields = requiredFields.filter(field => !data[field] || data[field].trim() === '');
-  
+
   if (missingFields.length > 0) {
     alert('Por favor, preencha todos os campos obrigatórios.');
     return;
@@ -920,7 +1249,11 @@ document.getElementById('checkout-form').addEventListener('submit', function(e) 
     hideLoading();
     
     if (data.success) {
-      alert(`Pedido registrado com sucesso!\n${data.message}`);
+      let message = `Pedido registrado com sucesso!\n${data.message}`;
+      if (data.coupon_used) {
+        message += `\n\nCupom ${data.coupon_used} aplicado com sucesso!`;
+      }
+      alert(message);
       location.reload();
     } else {
       alert(`Erro ao finalizar venda: ${data.message}`);
@@ -933,5 +1266,12 @@ document.getElementById('checkout-form').addEventListener('submit', function(e) 
     alert('Erro ao processar venda');
     openCheckoutModal();
   });
+});
+
+document.getElementById('coupon-input').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchCoupon();
+  }
 });
 </script>

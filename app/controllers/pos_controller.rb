@@ -64,6 +64,214 @@ class PosController < ApplicationController
     end
   end
 
+  def search_coupon
+    coupon_code = params[:coupon_code]&.strip
+
+    if coupon_code.blank?
+      render json: { 
+        success: false, 
+        message: 'Código do cupom não fornecido' 
+      }
+      return
+    end
+
+    begin
+      discount = find_discount_by_code(coupon_code)
+      
+      if discount
+        # DEBUG: Log dos valores do cupom
+        Rails.logger.info "=== DEBUG CUPOM ==="
+        Rails.logger.info "Código: #{discount.code}"
+        Rails.logger.info "Tipo: #{discount.discount_type}"
+        Rails.logger.info "Valor original: #{discount.discount_value}"
+        Rails.logger.info "Valor como float: #{discount.discount_value.to_f}"
+        Rails.logger.info "==================="
+
+        # Log da busca do cupom
+        LogService.log_discount_action(
+          user: current_user,
+          action: 'search_pdv',
+          coupon_code: coupon_code,
+          details: {
+            found: true,
+            search_term: coupon_code,
+            discount_type: discount.discount_type,
+            discount_value: discount.discount_value.to_f,
+            timestamp: Time.current.iso8601,
+            source: 'pdv'
+          },
+          request: request
+        )
+
+        # Verificar se o cupom é válido
+        validation = validate_coupon_for_cart(discount, session[:cart_items] || [])
+        
+        if validation[:valid]
+          render json: { 
+            success: true, 
+            coupon: format_coupon_for_pdv(discount),
+            message: 'Cupom válido!'
+          }
+        else
+          render json: { 
+            success: false, 
+            message: validation[:error],
+            coupon_found: true
+          }
+        end
+      else
+        # Log da busca sem resultado
+        LogService.log_discount_action(
+          user: current_user,
+          action: 'search_pdv',
+          coupon_code: coupon_code,
+          details: {
+            found: false,
+            search_term: coupon_code,
+            timestamp: Time.current.iso8601,
+            source: 'pdv'
+          },
+          request: request
+        )
+
+        render json: { 
+          success: false, 
+          message: 'Cupom não encontrado ou inválido'
+        }
+      end
+    rescue => e
+      Rails.logger.error "Erro ao buscar cupom: #{e.message}"
+      render json: { 
+        success: false, 
+        message: 'Erro interno ao buscar cupom'
+      }
+    end
+  end
+
+  def apply_coupon
+    coupon_code = params[:coupon_code]&.strip
+    cart_items = session[:cart_items] || []
+
+    if coupon_code.blank?
+      render json: { 
+        success: false, 
+        message: 'Código do cupom não fornecido' 
+      }
+      return
+    end
+
+    if cart_items.empty?
+      render json: { 
+        success: false, 
+        message: 'Carrinho vazio' 
+      }
+      return
+    end
+
+    begin
+      discount = find_discount_by_code(coupon_code)
+      
+      unless discount
+        render json: { 
+          success: false, 
+          message: 'Cupom não encontrado' 
+        }
+        return
+      end
+
+      # Validar cupom para o carrinho atual
+      validation = validate_coupon_for_cart(discount, cart_items)
+      
+      unless validation[:valid]
+        render json: { 
+          success: false, 
+          message: validation[:error]
+        }
+        return
+      end
+
+      # Calcular desconto
+      subtotal = calculate_total(cart_items)
+      discount_calculation = calculate_discount_amount(discount, subtotal, cart_items)
+      
+      # Salvar cupom na sessão
+      session[:applied_coupon] = {
+        code: coupon_code,
+        discount_id: discount.id,
+        discount_type: discount.discount_type,
+        discount_value: discount.discount_value.to_f,
+        discount_amount: discount_calculation[:discount_amount].to_f,
+        applied_at: Time.current.iso8601
+      }
+
+      # Log da aplicação do cupom
+      LogService.log_discount_action(
+        user: current_user,
+        action: 'apply_pdv',
+        coupon_code: coupon_code,
+        details: {
+          subtotal: subtotal,
+          discount_amount: discount_calculation[:discount_amount],
+          discount_type: discount.discount_type,
+          discount_value: discount.discount_value,
+          timestamp: Time.current.iso8601,
+          cart_items_count: cart_items.count
+        },
+        request: request
+      )
+
+      new_total = subtotal - discount_calculation[:discount_amount]
+
+      render json: { 
+        success: true, 
+        message: 'Cupom aplicado com sucesso!',
+        coupon: format_coupon_for_pdv(discount),
+        discount_amount: discount_calculation[:discount_amount].to_f,
+        new_total: new_total.to_f,
+        subtotal: subtotal.to_f
+      }
+    rescue => e
+      Rails.logger.error "Erro ao aplicar cupom: #{e.message}"
+      render json: { 
+        success: false, 
+        message: 'Erro interno ao aplicar cupom'
+      }
+    end
+  end
+
+  def remove_coupon
+    if session[:applied_coupon]
+      coupon_code = session[:applied_coupon]['code']
+      session.delete(:applied_coupon)
+      
+      # Log da remoção do cupom
+      LogService.log_discount_action(
+        user: current_user,
+        action: 'remove_pdv',
+        coupon_code: coupon_code,
+        details: {
+          timestamp: Time.current.iso8601,
+          source: 'pdv'
+        },
+        request: request
+      )
+
+      cart_items = session[:cart_items] || []
+      new_total = calculate_total(cart_items)
+
+      render json: { 
+        success: true, 
+        message: 'Cupom removido',
+        new_total: new_total
+      }
+    else
+      render json: { 
+        success: false, 
+        message: 'Nenhum cupom aplicado'
+      }
+    end
+  end
+
   def check_stock
     product_id = params[:product_id]
     quantity = params[:quantity].to_i
@@ -144,15 +352,28 @@ class PosController < ApplicationController
       }
     end
 
+    # Recalcular totais considerando cupom aplicado
     cart_count = session[:cart_items].sum { |item| item['quantity'].to_i }
-    total = calculate_total(session[:cart_items])
-
-    render json: { 
+    subtotal = calculate_total(session[:cart_items])
+    
+    response_data = {
       success: true, 
       message: 'Produto adicionado ao carrinho',
       cart_count: cart_count,
-      total: total
+      subtotal: subtotal
     }
+
+    # Se há cupom aplicado, recalcular desconto
+    if session[:applied_coupon]
+      discount_amount = session[:applied_coupon]['discount_amount'].to_f
+      response_data[:total] = subtotal - discount_amount
+      response_data[:discount_amount] = discount_amount
+      response_data[:has_coupon] = true
+    else
+      response_data[:total] = subtotal
+    end
+
+    render json: response_data
   end
 
   def remove_from_cart
@@ -162,6 +383,11 @@ class PosController < ApplicationController
     cart_items.reject! { |item| item['product_id'] == product_id }
     session[:cart_items] = cart_items
 
+    # Se carrinho ficou vazio, remover cupom
+    if cart_items.empty? && session[:applied_coupon]
+      session.delete(:applied_coupon)
+    end
+
     render json: { 
       success: true, 
       message: 'Item removido do carrinho' 
@@ -170,6 +396,7 @@ class PosController < ApplicationController
 
   def clear_cart
     session[:cart_items] = []
+    session.delete(:applied_coupon)
 
     render json: { 
       success: true, 
@@ -190,8 +417,21 @@ class PosController < ApplicationController
 
     begin
       subtotal = calculate_total(cart_items)
-      discount_amount = params[:discount_amount].to_f
-      total_price = subtotal - discount_amount
+      
+      # Calcular desconto (cupom + desconto manual)
+      coupon_discount = 0
+      coupon_code = nil
+      coupon_details = nil
+      
+      if session[:applied_coupon]
+        coupon_discount = session[:applied_coupon]['discount_amount'].to_f
+        coupon_code = session[:applied_coupon]['code']
+        coupon_details = session[:applied_coupon]
+      end
+      
+      manual_discount = params[:discount_amount].to_f
+      total_discount = coupon_discount + manual_discount
+      total_price = subtotal - total_discount
 
       # Juntar endereço no backend
       address1 = build_address1(params)
@@ -211,11 +451,13 @@ class PosController < ApplicationController
         store_type: params[:store_type],
         payment_method: params[:payment_method],
         subtotal: subtotal,
-        discount_amount: discount_amount,
-        discount_reason: params[:discount_reason],
+        discount_amount: total_discount,
+        discount_reason: build_discount_reason(coupon_code, params[:discount_reason]),
+        coupon_code: coupon_code,
+        coupon_discount_amount: coupon_discount,
         total_price: total_price,
         notes: params[:notes],
-        order_note: build_order_note(params),
+        order_note: build_order_note(params, coupon_details),
         status: 'pending',
         reservation_status: 'none'
       )
@@ -234,7 +476,9 @@ class PosController < ApplicationController
         )
       end
 
+      # Limpar sessão
       session[:cart_items] = []
+      session.delete(:applied_coupon)
 
       begin
         result = ShopifyIntegrationService.new(order_pdv).integrate
@@ -260,6 +504,23 @@ class PosController < ApplicationController
           end
           
           order_pdv.update!(update_data)
+
+          # Log do uso do cupom se aplicado
+          if coupon_code
+            LogService.log_discount_action(
+              user: current_user,
+              action: 'use_pdv',
+              coupon_code: coupon_code,
+              details: {
+                order_id: order_pdv.id,
+                shopify_order_id: result[:order_id],
+                discount_amount: coupon_discount,
+                subtotal: subtotal,
+                timestamp: Time.current.iso8601
+              },
+              request: request
+            )
+          end
           
           success_message = "Pedido criado e integrado com sucesso ao Shopify (#{result[:location]})!"
           if result[:reservations]
@@ -273,7 +534,8 @@ class PosController < ApplicationController
             message: success_message,
             order_id: order_pdv.id,
             shopify_order_number: result[:order_number],
-            has_reservation: result[:reservations].present?
+            has_reservation: result[:reservations].present?,
+            coupon_used: coupon_code
           }
         else
           order_pdv.update!(
@@ -317,6 +579,109 @@ class PosController < ApplicationController
   end
 
   private
+
+  def find_discount_by_code(code)
+    discount = Discount.find_by_code(code)
+    return nil unless discount
+    
+    # Atualizar status baseado nas datas
+    discount.update_status_from_dates! if discount.ends_at.present?
+    
+    # Retornar apenas se estiver ativo
+    discount.is_active? ? discount : nil
+  end
+
+  def validate_coupon_for_cart(discount, cart_items)
+    # Verificar se está ativo
+    unless discount.is_active?
+      return { valid: false, error: 'Cupom inativo ou expirado' }
+    end
+
+    # Verificar se não expirou
+    if discount.is_expired?
+      return { valid: false, error: 'Cupom expirado' }
+    end
+
+    # Verificar valor mínimo
+    if discount.min_purchase_amount.present? && discount.min_purchase_amount > 0
+      subtotal = calculate_total(cart_items)
+      if subtotal < discount.min_purchase_amount
+        return { 
+          valid: false, 
+          error: "Valor mínimo de R$ #{sprintf('%.2f', discount.min_purchase_amount)} não atingido" 
+        }
+      end
+    end
+
+    # Verificar quantidade mínima
+    if discount.min_quantity.present? && discount.min_quantity > 0
+      total_quantity = cart_items.sum { |item| item['quantity'].to_i }
+      if total_quantity < discount.min_quantity
+        return { 
+          valid: false, 
+          error: "Quantidade mínima de #{discount.min_quantity} itens não atingida" 
+        }
+      end
+    end
+
+    # Verificar limite de uso
+    if discount.usage_limit.present? && discount.usage_limit > 0
+      if discount.usage_count >= discount.usage_limit
+        return { valid: false, error: 'Cupom esgotado (limite de uso atingido)' }
+      end
+    end
+
+    { valid: true }
+  end
+
+  def calculate_discount_amount(discount, subtotal, cart_items)
+    case discount.discount_type
+    when 'percentage'
+      discount_amount = subtotal * (discount.discount_value / 100.0)
+    when 'fixed_amount'
+      discount_amount = discount.discount_value
+    else
+      discount_amount = 0
+    end
+
+    # Não pode ser maior que o subtotal
+    discount_amount = [discount_amount, subtotal].min
+
+    {
+      discount_amount: discount_amount,
+      percentage: discount.discount_type == 'percentage' ? discount.discount_value : nil
+    }
+  end
+
+  def format_coupon_for_pdv(discount)
+    # Para porcentagem, converter de decimal para percentual (0.1 -> 10)
+    display_value = if discount.discount_type == 'percentage'
+      (discount.discount_value.to_f * 100).round(2)
+    else
+      discount.discount_value.to_f
+    end
+
+    {
+      id: discount.id,
+      code: discount.code,
+      title: discount.title,
+      discount_type: discount.discount_type,
+      discount_value: display_value,
+      min_purchase_amount: discount.min_purchase_amount&.to_f,
+      min_quantity: discount.min_quantity,
+      usage_count: discount.usage_count,
+      usage_limit: discount.usage_limit,
+      is_active: discount.is_active,
+      expires_at: discount.ends_at&.strftime('%d/%m/%Y')
+    }
+  end
+
+  def build_discount_reason(coupon_code, manual_reason)
+    reasons = []
+    reasons << "Cupom: #{coupon_code}" if coupon_code.present?
+    reasons << manual_reason if manual_reason.present?
+    reasons.join(' | ')
+  end
 
   def calculate_total(cart_items)
     cart_items.sum { |item| item['price'].to_f * item['quantity'].to_i }
@@ -408,7 +773,7 @@ class PosController < ApplicationController
     end
   end
 
-  def build_order_note(params)
+  def build_order_note(params, coupon_details = nil)
     notes = []
     notes << "=== VENDA PDV ==="
     notes << "Vendedor: #{current_user.name}"
@@ -420,8 +785,15 @@ class PosController < ApplicationController
       notes << "CPF: #{params[:customer_cpf]}"
     end
 
+    if coupon_details
+      notes << "=== CUPOM APLICADO ==="
+      notes << "Código: #{coupon_details['code']}"
+      notes << "Desconto: R$ #{sprintf('%.2f', coupon_details['discount_amount'])}"
+      notes << "Tipo: #{coupon_details['discount_type'] == 'percentage' ? 'Percentual' : 'Valor Fixo'}"
+    end
+
     if params[:discount_amount].to_f > 0
-      notes << "Desconto: R$ #{sprintf('%.2f', params[:discount_amount].to_f)}"
+      notes << "Desconto Manual: R$ #{sprintf('%.2f', params[:discount_amount].to_f)}"
       notes << "Motivo: #{params[:discount_reason]}" if params[:discount_reason].present?
     end
 

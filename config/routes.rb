@@ -18,7 +18,7 @@ Rails.application.routes.draw do
       get :invoice_emition
       get :api_correios
       get :tracking
-      get :stock
+      get :stockend
     end
   end
 
@@ -30,7 +30,6 @@ Rails.application.routes.draw do
 
   resources :motors, only: [:index]
   resources :orders
-
   resources :attempts, only: [:index] do
     collection do
       get :reprocess
@@ -52,6 +51,9 @@ Rails.application.routes.draw do
   resources :pos, only: [:index] do
     collection do
       post :search_product
+      post :search_coupon
+      post :apply_coupon
+      delete :remove_coupon
       post :get_product_details
       post :add_to_cart
       delete :remove_from_cart
@@ -71,7 +73,7 @@ Rails.application.routes.draw do
   end
 
   resources :logs, only: [:index]
-
+  
   resources :users do
     member do
       patch :toggle_admin

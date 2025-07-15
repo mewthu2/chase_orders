@@ -23,14 +23,14 @@ class OrderPdv < ApplicationRecord
   }
 
   enum reservation_status: {
-    no_reservation: 'none',
+    none: 'none',
     reserved: 'reserved',
     reservation_error: 'reservation_error',
     partially_reserved: 'partially_reserved'
   }
 
   scope :recent, -> { order(created_at: :desc) }
-  scope :by_status, ->(status) { where(status:) if status.present? }
+  scope :by_status, ->(status) { where(status: status) if status.present? }
 
   def formatted_total
     "R$ #{sprintf('%.2f', total_price)}"
@@ -42,6 +42,22 @@ class OrderPdv < ApplicationRecord
 
   def formatted_discount
     "R$ #{sprintf('%.2f', discount_amount)}"
+  end
+
+  def formatted_coupon_discount
+    "R$ #{sprintf('%.2f', coupon_discount_amount || 0)}"
+  end
+
+  def has_coupon?
+    coupon_code.present? && coupon_discount_amount.present? && coupon_discount_amount > 0
+  end
+
+  def manual_discount_amount
+    (discount_amount || 0) - (coupon_discount_amount || 0)
+  end
+
+  def formatted_manual_discount
+    "R$ #{sprintf('%.2f', manual_discount_amount)}"
   end
 
   def items_count
@@ -110,7 +126,7 @@ class OrderPdv < ApplicationRecord
     end
   end
 
-  def has_inventory_reserved?
+  def inventory_reserved?
     reserved? || partially_reserved?
   end
 end

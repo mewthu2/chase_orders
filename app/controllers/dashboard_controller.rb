@@ -51,7 +51,7 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', 2.weeks.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
@@ -119,7 +119,7 @@ class DashboardController < ApplicationController
       ).where.not(message: [nil, ''])
        .order(updated_at: :desc)
        .first
-      
+
       if last_error
         @last_errors[order_id] = {
           message: last_error.message,
@@ -128,10 +128,10 @@ class DashboardController < ApplicationController
         }
       end
     end
-    
+
     pending_count = queue_attempts.count { |a| a.status == 'fail' }
     processing_count = queue_attempts.count { |a| a.status == 'processing' }
-    
+
     @stats = {
       total_orders: @orders.count,
       pending_orders: @pending_orders.count,
@@ -153,7 +153,7 @@ class DashboardController < ApplicationController
     sql = <<-SQL
       WITH successful_orders AS (
         SELECT DISTINCT tiny_order_id, order_correios_id
-        FROM attempts 
+        FROM attempts
         WHERE kinds = 0 AND status = 2
       ),
       invoice_pending AS (
@@ -208,22 +208,22 @@ class DashboardController < ApplicationController
     SQL
 
     results = ActiveRecord::Base.connection.exec_query(sql)
-    
+
     @tracking_summary = {}
     invoice_count = 0
     xml_count = 0
     tracking_count = 0
-    
+
     results.rows.each do |row|
       order_id = row[0].to_s
       status = row[1]
-      
+
       @tracking_summary[order_id] = {
         invoice_emition: status == 'invoice_emition',
         send_xml: status == 'send_xml',
         push_tracking: status == 'push_tracking'
       }
-      
+
       case status
       when 'invoice_emition'
         invoice_count += 1
