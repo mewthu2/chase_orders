@@ -23,7 +23,7 @@ class OrderPdv < ApplicationRecord
   }
 
   enum reservation_status: {
-    none: 'none',
+    not_reserved: 'none',
     reserved: 'reserved',
     reservation_error: 'reservation_error',
     partially_reserved: 'partially_reserved'
@@ -62,10 +62,6 @@ class OrderPdv < ApplicationRecord
 
   def items_count
     order_pdv_items.sum(:quantity)
-  end
-
-  def can_retry_integration?
-    pending? || error?
   end
 
   def integration_status_color
