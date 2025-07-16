@@ -51,7 +51,7 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', 2.weeks.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
