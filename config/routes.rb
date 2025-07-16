@@ -50,15 +50,18 @@ Rails.application.routes.draw do
 
   resources :pos, only: [:index] do
     collection do
+      get :get_cart_data  # Nova rota
       post :search_product
       post :search_coupon
       post :apply_coupon
       delete :remove_coupon
       post :get_product_details
       post :add_to_cart
+      patch :update_cart_quantity
       delete :remove_from_cart
       delete :clear_cart
       post :create_order
+      post :create_order_without_integration
       post :check_stock
     end
   end
