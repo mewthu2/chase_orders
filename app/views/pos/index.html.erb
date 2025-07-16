@@ -265,6 +265,7 @@
                       </select>
                     </div>
                     
+                    <!-- Seção de Pagamento Múltiplo -->
                     <div class="col-12 mb-3" id="multi-payment-section" style="display: none;">
                       <div class="card bg-dark border-info">
                         <div class="card-header bg-info text-dark">
@@ -274,6 +275,7 @@
                         </div>
                         <div class="card-body">
                           <div id="payment-methods-container">
+                            <!-- Métodos de pagamento serão adicionados aqui -->
                           </div>
                           <button type="button" onclick="addPaymentMethod()" class="btn btn-outline-info btn-sm">
                             <i class="fas fa-plus me-1"></i>Adicionar Método
@@ -776,6 +778,30 @@
         transform: rotate(360deg);
       }
     }
+
+    .btn-outline-success:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+      border-color: #6c757d !important;
+      color: #6c757d !important;
+    }
+
+    .btn-outline-success:disabled:hover {
+      background-color: transparent !important;
+      border-color: #6c757d !important;
+      color: #6c757d !important;
+      transform: none !important;
+    }
+
+    .stock-warning {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      color: #ffc107;
+      margin-top: 4px;
+    }
   </style>
 <% end %>
 
@@ -794,6 +820,7 @@ function hideLoading() {
   document.getElementById('loading-overlay').classList.add('d-none');
 }
 
+// Atualizar texto do botão baseado no checkbox
 document.addEventListener('DOMContentLoaded', function() {
   const integrateCheckbox = document.getElementById('integrate-shopify');
   const finalizeBtn = document.getElementById('finalize-btn');
@@ -808,18 +835,24 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   integrateCheckbox.addEventListener('change', updateButtonText);
-  updateButtonText();
+  updateButtonText(); // Inicializar
   
+  // Controlar exibição da seção de pagamento múltiplo
   paymentMethodSelect.addEventListener('change', function() {
     const multiPaymentSection = document.getElementById('multi-payment-section');
     if (this.value === 'multi') {
       multiPaymentSection.style.display = 'block';
-      addPaymentMethod();
+      addPaymentMethod(); // Adicionar primeiro método automaticamente
     } else {
       multiPaymentSection.style.display = 'none';
       clearPaymentMethods();
     }
   });
+  
+  // Verificar estoque de todos os itens do carrinho
+  setTimeout(() => {
+    checkAllCartItemsStock();
+  }, 1000);
 });
 
 function addPaymentMethod() {
@@ -1146,6 +1179,48 @@ function updateCartQuantity(productId, newQuantity) {
     return;
   }
 
+  // Verificar estoque antes de aumentar quantidade
+  checkStockBeforeUpdate(productId, newQuantity);
+}
+
+function checkStockBeforeUpdate(productId, newQuantity) {
+  showLoading('Verificando estoque...');
+
+  fetch('/pos/check_stock', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      product_id: productId,
+      quantity: newQuantity
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    
+    if (data.success && data.has_sufficient_stock) {
+      // Estoque suficiente, pode atualizar
+      performCartQuantityUpdate(productId, newQuantity);
+    } else {
+      // Estoque insuficiente
+      const availableStock = data.available_quantity || 0;
+      alert(`Estoque insuficiente! Disponível: ${availableStock} unidades.\n${data.message || ''}`);
+      
+      // Atualizar os botões para refletir o limite de estoque
+      updateCartItemButtons(productId, availableStock);
+    }
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Erro ao verificar estoque:', error);
+    alert('Erro ao verificar estoque. Tente novamente.');
+  });
+}
+
+function performCartQuantityUpdate(productId, newQuantity) {
   showLoading('Atualizando quantidade...');
 
   fetch('/pos/update_cart_quantity', {
@@ -1173,6 +1248,59 @@ function updateCartQuantity(productId, newQuantity) {
     hideLoading();
     console.error('Erro:', error);
     alert('Erro ao atualizar quantidade');
+  });
+}
+
+function updateCartItemButtons(productId, maxStock) {
+  const cartItem = document.querySelector(`[data-product-id="${productId}"]`);
+  if (!cartItem) return;
+  
+  const quantitySpan = cartItem.querySelector('.cart-quantity');
+  const currentQuantity = parseInt(quantitySpan.textContent);
+  const plusButton = cartItem.querySelector('.btn-outline-success');
+  
+  // Desabilitar botão + se já atingiu o limite
+  if (currentQuantity >= maxStock) {
+    plusButton.disabled = true;
+    plusButton.classList.add('opacity-50');
+    plusButton.title = `Estoque máximo: ${maxStock} unidades`;
+  } else {
+    plusButton.disabled = false;
+    plusButton.classList.remove('opacity-50');
+    plusButton.title = '';
+  }
+}
+
+// Função para verificar estoque de todos os itens do carrinho ao carregar a página
+function checkAllCartItemsStock() {
+  const cartItems = document.querySelectorAll('.cart-item');
+  
+  cartItems.forEach(item => {
+    const productId = item.dataset.productId;
+    const currentQuantity = parseInt(item.querySelector('.cart-quantity').textContent);
+    
+    // Verificar estoque atual para cada item
+    fetch('/pos/check_stock', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        product_id: productId,
+        quantity: currentQuantity + 1 // Verificar se pode adicionar mais 1
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success || !data.has_sufficient_stock) {
+        // Não pode adicionar mais, desabilitar botão +
+        updateCartItemButtons(productId, data.available_quantity || currentQuantity);
+      }
+    })
+    .catch(error => {
+      console.error('Erro ao verificar estoque do item:', productId, error);
+    });
   });
 }
 
@@ -1326,8 +1454,10 @@ document.getElementById('checkout-form').addEventListener('submit', function(e) 
   const formData = new FormData(this);
   const data = Object.fromEntries(formData.entries());
   
+  // Converter checkbox para boolean
   data.integrate_shopify = document.getElementById('integrate-shopify').checked;
   
+  // Adicionar dados de pagamento múltiplo se necessário
   if (data.payment_method === 'multi') {
     const multiPayments = getMultiPaymentData();
     if (multiPayments.length === 0) {

@@ -151,6 +151,42 @@ class PosController < ApplicationController
     product_id = params[:product_id]
     new_quantity = params[:quantity].to_i
     
+    # Verificar estoque antes de atualizar
+    product = Product.find_by(id: product_id)
+    
+    if product.nil?
+      render json: { 
+        success: false, 
+        message: 'Produto não encontrado' 
+      }
+      return
+    end
+
+    # Verificar estoque no Shopify
+    begin
+      session_obj = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
+      stock_info = get_product_stock(product, session_obj)
+      available_quantity = stock_info[:quantity]
+
+      if new_quantity > available_quantity
+        render json: { 
+          success: false, 
+          message: "Estoque insuficiente! Disponível: #{available_quantity} unidades",
+          available_quantity: available_quantity,
+          has_sufficient_stock: false
+        }
+        return
+      end
+    rescue => e
+      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
+      render json: { 
+        success: false, 
+        message: 'Erro ao verificar estoque. Tente novamente.'
+      }
+      return
+    end
+    
+    # Prosseguir com a atualização se o estoque for suficiente
     result = @cart_service.update_item_quantity(product_id, new_quantity)
     
     if result[:success]
@@ -162,7 +198,8 @@ class PosController < ApplicationController
         cart_count: cart_summary[:total_items],
         subtotal: cart_summary[:subtotal],
         total: cart_summary[:total],
-        item_total: result[:item_total]
+        item_total: result[:item_total],
+        available_quantity: available_quantity
       }
 
       if cart_summary[:applied_coupon]
@@ -499,6 +536,56 @@ class PosController < ApplicationController
       render json: { 
         success: false, 
         message: result[:error] || 'Erro ao remover cupom'
+      }
+    end
+  end
+
+  def check_stock
+    product_id = params[:product_id]
+    quantity = params[:quantity].to_i
+    store_type = params[:store_type] || 'lagoa_seca'
+    
+    product = Product.find_by(id: product_id)
+
+    if product.nil?
+      render json: { 
+        success: false, 
+        message: 'Produto não encontrado' 
+      }
+      return
+    end
+
+    begin
+      session_obj = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
+      stock_info = get_product_stock(product, session_obj)
+      available_quantity = stock_info[:quantity]
+
+      if available_quantity >= quantity
+        render json: { 
+          success: true, 
+          has_sufficient_stock: true,
+          available_quantity: available_quantity,
+          requested_quantity: quantity,
+          product_sku: product.sku,
+          message: 'Estoque disponível' 
+        }
+      else
+        render json: { 
+          success: true, 
+          has_sufficient_stock: false,
+          available_quantity: available_quantity,
+          requested_quantity: quantity,
+          product_sku: product.sku,
+          message: "Estoque insuficiente. Disponível: #{available_quantity}, Solicitado: #{quantity}" 
+        }
+      end
+    rescue => e
+      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
+      render json: { 
+        success: false, 
+        message: 'Erro ao verificar estoque no Shopify',
+        available_quantity: 0,
+        has_sufficient_stock: false
       }
     end
   end
