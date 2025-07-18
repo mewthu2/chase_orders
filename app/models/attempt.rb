@@ -1,6 +1,6 @@
 class Attempt < ApplicationRecord
-  enum status: [:fail, :error, :success, :processing]
-  enum kinds: [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order]
+  enum status: %i[fail error success processing]
+  enum kinds: %i[:create_correios_order send_xml emission_invoice get_tracking create_note_tiny2 emission_invoice_tiny2 transfer_tiny_to_shopify_order transfer_shopify_order_to_lixn]
   # Callbacks
   # Associacoes
 
