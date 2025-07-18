@@ -37,7 +37,7 @@ class BaseShopifyLixnJob < ActiveJob::Base
     @current_orders ||= {}
     return @current_orders[kind] unless order
 
-    @current_orders[kind] ||= [@current_orders[kind]].flatten.concat([order].flatten)
+    @current_orders[kind] = [@current_orders[kind]].flatten.concat([order].flatten)
   end
 
   # Returns the current full orders array, initializing it if it doesn't exist.
@@ -49,7 +49,7 @@ class BaseShopifyLixnJob < ActiveJob::Base
     @current_orders ||= {}
     return @current_orders[id] unless full_order
 
-    @current_orders[id] ||= full_order
+    @current_orders[id] = full_order
   end
 
 
@@ -97,6 +97,7 @@ class BaseShopifyLixnJob < ActiveJob::Base
   # @return [String, nil] The next page URL if available, otherwise nil.
   def parse_next_page(response = nil)
     return unless response
+
     header_link = response.headers['link'].to_a.first
     return unless header_link.present?
 
@@ -120,7 +121,7 @@ class BaseShopifyLixnJob < ActiveJob::Base
     Attempt.find_or_create_by(
       shopify_order_id: shopify_order_id, kinds: Attempt.kinds[:transfer_shopify_order_to_lixn]
     ).update!(
-      status: success_id ? :error : :success,
+      status: success_id ? :success : :error,
       lixn_order_id: success_id,
       tracking: "#{kind}|#{success_id ? 'success' : 'error'}:",
       classification: success_id ? 'create_lixn_orders_from_shopify_job' : 'exception',
