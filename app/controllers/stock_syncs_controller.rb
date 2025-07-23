@@ -35,7 +35,7 @@ class StockSyncsController < ApplicationController
       redirect_to stock_syncs_path, alert: 'Já existe uma sincronização em execução!'
       return
     end
-    
+
     attempt = Attempt.create!(
       kinds: :sync_correios_stock,
       status: :processing,

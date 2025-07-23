@@ -16,7 +16,6 @@ class UpdateShopifyStockFromCorreiosJob < ActiveJob::Base
 
       products.each_with_index do |product, index|
         update_product_stock(product, index + 1)
-        sleep(0.5)
       end
 
       success_message = "Sincronização concluída! #{@stats[:success]}/#{@stats[:total]} produtos atualizados com sucesso."
@@ -27,7 +26,6 @@ class UpdateShopifyStockFromCorreiosJob < ActiveJob::Base
       )
 
       puts success_message
-
     rescue StandardError => e
       error_message = "Erro durante a sincronização: #{e.message}"
       @attempt.update!(
@@ -98,12 +96,10 @@ class UpdateShopifyStockFromCorreiosJob < ActiveJob::Base
     location_id = ENV.fetch('LOCATION_LOG')
 
     begin
-
       update_inventory_quantity(session, product, quantity, location_id)
 
       puts "Estoque atualizado com sucesso para #{product.sku}: #{quantity} unidades"
       true
-
     rescue ShopifyAPI::Errors::HttpResponseError => e
       error_msg = "Erro da API Shopify para produto #{product.sku}: #{e.message}"
       puts error_msg
