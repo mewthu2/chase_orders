@@ -1,4 +1,4 @@
-class StockSyncController < ApplicationController
+class StockSyncsController < ApplicationController
   before_action :set_config, only: [:show, :update_config, :execute_now, :toggle_status]
 
   def index
@@ -13,13 +13,13 @@ class StockSyncController < ApplicationController
   def update_config
     params[:stock_sync_config][:days_of_week] ||= []
     params[:stock_sync_config][:hours] ||= []
-
+    
     config_params_processed = config_params.dup
     config_params_processed[:days_of_week] = config_params_processed[:days_of_week].map(&:to_i).to_json
     config_params_processed[:hours] = config_params_processed[:hours].map(&:to_i).to_json
 
     if @config.update(config_params_processed)
-      redirect_to stock_sync_index_path, notice: 'Configuração atualizada com sucesso!'
+      redirect_to stock_syncs_path, notice: 'Configuração atualizada com sucesso!'
     else
       @recent_attempts = Attempt.where(kinds: :sync_correios_stock)
                                 .order(created_at: :desc)
@@ -32,10 +32,10 @@ class StockSyncController < ApplicationController
 
   def execute_now
     if current_execution
-      redirect_to stock_sync_index_path, alert: 'Já existe uma sincronização em execução!'
+      redirect_to stock_syncs_path, alert: 'Já existe uma sincronização em execução!'
       return
     end
-
+    
     attempt = Attempt.create!(
       kinds: :sync_correios_stock,
       status: :processing,
@@ -44,14 +44,43 @@ class StockSyncController < ApplicationController
     )
 
     UpdateShopifyStockFromCorreiosJob.perform_later(attempt.id)
-
-    redirect_to stock_sync_index_path, notice: 'Sincronização iniciada manualmente!'
+    redirect_to stock_syncs_path, notice: 'Sincronização iniciada manualmente!'
   end
 
   def toggle_status
-    @config.update!(enabled: !@config.enabled?)
-    status = @config.enabled? ? 'ativada' : 'desativada'
-    redirect_to stock_sync_index_path, notice: "Sincronização automática #{status}!"
+    begin
+      @config.update!(enabled: !@config.enabled?)
+      status = @config.enabled? ? 'ativada' : 'desativada'
+      
+      respond_to do |format|
+        format.html { 
+          redirect_to stock_syncs_path, 
+          notice: "Sincronização automática #{status}!" 
+        }
+        format.json { 
+          render json: { 
+            success: true, 
+            enabled: @config.enabled?,
+            message: "Sincronização automática #{status}!"
+          }
+        }
+      end
+    rescue => e
+      Rails.logger.error "Erro ao alterar status: #{e.message}"
+      
+      respond_to do |format|
+        format.html { 
+          redirect_to stock_syncs_path, 
+          alert: 'Erro ao alterar status da sincronização. Tente novamente.' 
+        }
+        format.json { 
+          render json: { 
+            success: false, 
+            message: 'Erro ao alterar status da sincronização.' 
+          }, status: :unprocessable_entity
+        }
+      end
+    end
   end
 
   private
@@ -65,14 +94,13 @@ class StockSyncController < ApplicationController
   end
 
   def current_execution
-    Attempt.where(kinds: :sync_correios_stock)
+    Attempt.where(kinds: :sync_correios_stock, status: :processing)
            .order(created_at: :desc)
            .first
   end
 
   def calculate_stats
     attempts = Attempt.where(kinds: :sync_correios_stock)
-
     {
       total: attempts.count,
       success: attempts.where(status: :success).count,
