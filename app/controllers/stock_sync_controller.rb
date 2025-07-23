@@ -5,7 +5,7 @@ class StockSyncController < ApplicationController
     @config = StockSyncConfig.current_config
     @recent_attempts = Attempt.where(kinds: :sync_correios_stock)
                               .order(created_at: :desc)
-                              .limit(20)
+                              .limit(10)
     @stats = calculate_stats
     @current_execution = current_execution
   end
@@ -23,7 +23,7 @@ class StockSyncController < ApplicationController
     else
       @recent_attempts = Attempt.where(kinds: :sync_correios_stock)
                                 .order(created_at: :desc)
-                                .limit(20)
+                                .limit(10)
       @stats = calculate_stats
       @current_execution = current_execution
       render :index, alert: 'Erro ao atualizar configuração.'
@@ -65,13 +65,13 @@ class StockSyncController < ApplicationController
   end
 
   def current_execution
-    Attempt.where(kinds: 7, status: :processing)
+    Attempt.where(kinds: :sync_correios_stock)
            .order(created_at: :desc)
            .first
   end
 
   def calculate_stats
-    attempts = Attempt.where(kinds: 7)
+    attempts = Attempt.where(kinds: :sync_correios_stock)
 
     {
       total: attempts.count,
@@ -79,7 +79,7 @@ class StockSyncController < ApplicationController
       failed: attempts.where(status: [:fail, :error]).count,
       processing: attempts.where(status: :processing).count,
       last_execution: attempts.order(created_at: :desc).first&.created_at,
-      success_rate: attempts.count.zero? ? (attempts.where(status: :success).count.to_f / attempts.count * 100).round(1) : 0
+      success_rate: attempts.count.positive? ? (attempts.where(status: :success).count.to_f / attempts.count * 100).round(1) : 0
     }
   end
 end
