@@ -37,43 +37,52 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :order_pdvs, only: [:index, :show, :edit, :update] do
-    member do
-      post :integrate
-      post :add_product
-      delete :remove_product
-    end
-    collection do
-      post :search_product
-    end
-  end
+  # resources :order_pdvs, only: [:index, :show, :edit, :update] do
+  #   member do
+  #     post :integrate
+  #     post :add_product
+  #     delete :remove_product
+  #   end
+  #   collection do
+  #     post :search_product
+  #   end
+    
+  #   resources :order_parcels, only: [:index, :show, :update] do
+  #     member do
+  #       post :check_payment_status
+  #       post :mark_as_paid
+  #       post :mark_as_failed
+  #     end
+  #   end
+  # end
 
-  resources :pos, only: [:index] do
-    collection do
-      get :get_cart_data  # Nova rota
-      post :search_product
-      post :search_coupon
-      post :apply_coupon
-      delete :remove_coupon
-      post :get_product_details
-      post :add_to_cart
-      patch :update_cart_quantity
-      delete :remove_from_cart
-      delete :clear_cart
-      post :create_order
-      post :create_order_without_integration
-      post :check_stock
-    end
-  end
+  # resources :pos, only: [:index] do
+  #   collection do
+  #     get :get_cart_data
+  #     post :restore_cart_from_backup
+  #     post :search_product
+  #     post :search_coupon
+  #     post :apply_coupon
+  #     delete :remove_coupon
+  #     post :get_product_details
+  #     post :add_to_cart
+  #     patch :update_cart_quantity
+  #     delete :remove_from_cart
+  #     delete :clear_cart
+  #     post :create_order
+  #     post :create_order_without_integration
+  #     post :check_stock
+  #   end
+  # end
 
-  resources :discounts, only: [:index] do
-    collection do
-      post :search
-      patch :toggle_status
-      post :sync
-      get :logs
-    end
-  end
+  # resources :discounts, only: [:index] do
+  #   collection do
+  #     post :search
+  #     patch :toggle_status
+  #     post :sync
+  #     get :logs
+  #   end
+  # end
 
   resources :logs, only: [:index]
   

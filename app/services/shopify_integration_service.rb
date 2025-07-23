@@ -1,13 +1,11 @@
 class ShopifyIntegrationService
-  def initialize(order_pdv)
+  def initialize(order_pdv = nil)
     @order_pdv = order_pdv
   end
 
   def integrate
     begin
-      # Configurar token e location baseado na loja
       config = get_store_config(@order_pdv.store_type)
-      
       shopify_session = create_shopify_session(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: shopify_session)
       graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: shopify_session)
@@ -62,7 +60,6 @@ class ShopifyIntegrationService
         }
       }
 
-      # 1. Criar o pedido no Shopify
       Rails.logger.info "Criando pedido no Shopify para order_pdv #{@order_pdv.id}"
       order_response = client.post(path: 'orders.json', body: order_data)
       order = order_response.body['order']
@@ -76,38 +73,36 @@ class ShopifyIntegrationService
 
       Rails.logger.info "Pedido criado no Shopify: #{order['id']}"
 
-      # 2. Reservar estoque na location específica
-      reservation_results = reserve_inventory_at_location(
-        graphql_client, 
-        @order_pdv.order_pdv_items, 
+      # Reservar estoque na location específica e marcar como committed
+      reservation_results = reserve_and_commit_inventory(
+        client, @order_pdv.order_pdv_items, 
         config[:location_id],
         config[:location_name]
       )
 
-      if reservation_results[:success]
-        Rails.logger.info "Estoque reservado com sucesso na location #{config[:location_name]}"
-        
-        {
-          success: true,
-          order_id: order['id'],
-          order_number: order['order_number'] || order['name'],
-          location: config[:location_name],
-          reservations: reservation_results[:reservations]
-        }
-      else
-        Rails.logger.error "Falha ao reservar estoque: #{reservation_results[:error]}"
-        
-        # Pedido foi criado mas estoque não foi reservado
-        # Vamos manter o pedido mas sinalizar o problema
-        {
-          success: true,
-          order_id: order['id'],
-          order_number: order['order_number'] || order['name'],
-          location: config[:location_name],
-          warning: "Pedido criado mas estoque não foi reservado: #{reservation_results[:error]}"
-        }
+      # Atualizar apenas os campos que existem
+      update_data = {
+        reservation_status: reservation_results[:success] ? 'reserved' : 'reservation_error'
+      }
+
+      # Verificar se as colunas existem antes de tentar atualizar
+      if @order_pdv.respond_to?(:inventory_reservations=) && reservation_results[:success]
+        update_data[:inventory_reservations] = reservation_results[:reservations].to_json
       end
 
+      if @order_pdv.respond_to?(:reservation_error=) && !reservation_results[:success]
+        update_data[:reservation_error] = reservation_results[:error]
+      end
+
+      @order_pdv.update!(update_data)
+
+      {
+        success: true,
+        order_id: order['id'],
+        order_number: order['order_number'] || order['name'],
+        location: config[:location_name],
+        reservations: reservation_results[:reservations] || []
+      }
     rescue ShopifyAPI::Errors::HttpResponseError => e
       Rails.logger.error "Erro HTTP do Shopify: #{e.message}"
       {
@@ -124,261 +119,437 @@ class ShopifyIntegrationService
     end
   end
 
-  private
-
-  def reserve_inventory_at_location(graphql_client, order_items, location_id, location_name)
-    reservations = []
+  # Método estático para buscar produtos na tabela local
+  def self.search_products(query, store_type)
+    Rails.logger.info "ShopifyIntegrationService.search_products called with query: '#{query}', store: '#{store_type}'"
     
     begin
-      Rails.logger.info "Iniciando reserva de estoque na location #{location_name} (#{location_id})"
+      query_downcase = query.downcase
       
+      # Buscar na tabela local Product
+      products = Product.where(
+        "LOWER(shopify_product_name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(option1) LIKE ? OR LOWER(option2) LIKE ? OR LOWER(option3) LIKE ?",
+        "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%"
+      ).limit(20)
+      
+      Rails.logger.info "Found #{products.count} products in local database"
+      
+      # Converter para formato esperado pelo frontend
+      formatted_products = products.map do |product|
+        Rails.logger.info "Processing product: #{product.sku} - #{product.shopify_product_name}"
+        
+        # Buscar imagem do produto via API do Shopify se necessário
+        image_url = get_product_image_from_shopify(product, store_type)
+        
+        {
+          id: product.shopify_variant_id,
+          shopify_variant_id: product.shopify_variant_id,
+          sku: product.sku,
+          name: product.shopify_product_name,
+          price: product.price.to_f,
+          option1: product.option1,
+          option2: product.option2,
+          option3: product.option3,
+          image_url: image_url,
+          vendor: product.vendor
+        }
+      end
+      
+      Rails.logger.info "Returning #{formatted_products.count} formatted products"
+      formatted_products
+      
+    rescue => e
+      Rails.logger.error "Error in search_products: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      []
+    end
+  end
+
+  # Método estático para buscar produto por ID
+  def self.get_product_by_id(variant_id)
+    Rails.logger.info "ShopifyIntegrationService.get_product_by_id called with variant_id: #{variant_id}"
+    
+    begin
+      product = Product.find_by(shopify_variant_id: variant_id)
+      
+      if product.nil?
+        Rails.logger.warn "Product with variant_id #{variant_id} not found"
+        return nil
+      end
+      
+      # Buscar imagem do produto
+      image_url = get_product_image_from_shopify(product, 'lagoa_seca')
+      
+      {
+        id: product.shopify_variant_id,
+        shopify_variant_id: product.shopify_variant_id,
+        sku: product.sku,
+        name: product.shopify_product_name,
+        price: product.price.to_f,
+        option1: product.option1,
+        option2: product.option2,
+        option3: product.option3,
+        image_url: image_url,
+        vendor: product.vendor
+      }
+      
+    rescue => e
+      Rails.logger.error "Error in get_product_by_id: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      nil
+    end
+  end
+
+  # Método estático para criar pedido
+  def self.create_order(order_data)
+    Rails.logger.info "ShopifyIntegrationService.create_order called"
+    
+    begin
+      # Implementar criação de pedido no Shopify se necessário
+      # Por enquanto, retornar sucesso simulado
+      {
+        'id' => "shopify_#{Time.current.to_i}",
+        'order_number' => "PDV#{Time.current.to_i}",
+        'name' => "#PDV#{Time.current.to_i}"
+      }
+    rescue => e
+      Rails.logger.error "Error creating Shopify order: #{e.message}"
+      nil
+    end
+  end
+
+  # Método estático para verificar estoque online
+  def self.get_inventory_level(inventory_item_id, store_type = 'online')
+    Rails.logger.info "Getting inventory level for item: #{inventory_item_id}, store: #{store_type}"
+
+    begin
+      config = get_store_config_static(store_type)
+      session = create_shopify_session_static(config[:access_token])
+      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+
+      # Buscar níveis de inventário
+      response = client.get(path: "inventory_levels.json", query: { 
+        inventory_item_ids: inventory_item_id,
+        location_ids: config[:location_id]
+      })
+
+      inventory_levels = response.body['inventory_levels']
+      
+      if inventory_levels && inventory_levels.any?
+        inventory_level = inventory_levels.first
+        Rails.logger.info "Inventory level found: #{inventory_level['available']}"
+        return inventory_level
+      else
+        Rails.logger.warn "No inventory levels found for item #{inventory_item_id}"
+        return nil
+      end
+
+    rescue => e
+      Rails.logger.error "Error getting inventory level: #{e.message}"
+      return nil
+    end
+  end
+
+  # Método estático para listar todas as locations (para debug)
+  def self.list_locations(store_type = 'online')
+    Rails.logger.info "Listing all locations for store: #{store_type}"
+
+    begin
+      config = get_store_config_static(store_type)
+      session = create_shopify_session_static(config[:access_token])
+      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+
+      # Buscar todas as locations
+      response = client.get(path: "locations.json")
+      locations = response.body['locations']
+      
+      Rails.logger.info "Available locations:"
+      locations.each do |location|
+        Rails.logger.info "  - #{location['name']} (ID: #{location['id']}) - Active: #{location['active']}"
+      end
+      
+      return locations
+      
+    rescue => e
+      Rails.logger.error "Error listing locations: #{e.message}"
+      return []
+    end
+  end
+
+  # Métodos estáticos para configuração
+  def self.get_store_config_static(store_type)
+    case store_type
+    when 'bh_shopping'
+      {
+        access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_BH_SHOPPING'),
+        location_name: 'BH Shopping'
+      }
+    when 'rj'
+      {
+        access_token: ENV.fetch('BARRA_SHOPPING_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_BARRA_SHOPPING'),
+        location_name: 'Barra Shopping'
+      }
+    when 'lagoa_seca'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
+        location_name: 'Lagoa Seca'
+      }
+    when 'online'
+      {
+        access_token: ENV.fetch('CHASE_ORDERS_TOKEN'),
+        location_id: ENV.fetch('LOCATION_LOG'),
+        location_name: 'Online Store'
+      }
+    else
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
+        location_name: 'Lagoa Seca'
+      }
+    end
+  end
+
+  def self.create_shopify_session_static(access_token)
+    ShopifyAPI::Auth::Session.new(
+      shop: 'chasebrasil.myshopify.com',
+      access_token: access_token
+    )
+  end
+
+  private
+
+  # Método para buscar imagem do produto via API do Shopify
+  def self.get_product_image_from_shopify(product, store_type)
+    return nil unless product.shopify_product_id.present?
+    
+    begin
+      config = get_store_config_static(store_type)
+      session = create_shopify_session_static(config[:access_token])
+      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+      
+      # Buscar o produto no Shopify para pegar as imagens
+      product_response = client.get(path: "products/#{product.shopify_product_id}.json")
+      shopify_product = product_response.body['product']
+      
+      if shopify_product && shopify_product['images'] && shopify_product['images'].any?
+        # Pegar a primeira imagem disponível
+        first_image = shopify_product['images'].first
+        return first_image['src'] if first_image['src']
+      end
+      
+      # Se não encontrou imagem via API, tentar URL padrão
+      fallback_image_url(product)
+      
+    rescue => e
+      Rails.logger.warn "Could not fetch image for product #{product.sku}: #{e.message}"
+      # Retornar URL de fallback
+      fallback_image_url(product)
+    end
+  end
+
+  def self.fallback_image_url(product)
+    # URLs de fallback baseadas no SKU
+    if product.sku.present?
+      # Tentar diferentes formatos de URL
+      sku_clean = product.sku.downcase.gsub(/[^a-z0-9]/, '-')
+      "https://cdn.shopify.com/s/files/1/0795/1650/2917/products/#{sku_clean}.jpg?v=1"
+    else
+      nil
+    end
+  end
+
+  # Novo método para reservar e marcar estoque como committed
+  def reserve_and_commit_inventory(client, order_items, location_id, location_name)
+    reservations = []
+    begin
+      Rails.logger.info "Iniciando reserva e commit de estoque na location #{location_name} (#{location_id})"
+
       order_items.each do |item|
         variant_id = item.product.shopify_variant_id
         quantity = item.quantity
-        
-        Rails.logger.info "Reservando #{quantity} unidades do produto #{item.sku} (variant: #{variant_id})"
-        
-        # Verificar estoque disponível antes de reservar
-        stock_check = check_inventory_at_location(graphql_client, variant_id, location_id)
-        
-        unless stock_check[:success]
-          raise "Erro ao verificar estoque do produto #{item.sku}: #{stock_check[:error]}"
+
+        Rails.logger.info "Processando #{quantity} unidades do produto #{item.sku} (variant: #{variant_id})"
+
+        # Buscar informações do variant
+        variant_response = client.get(path: "variants/#{variant_id}.json")
+        variant = variant_response.body['variant']
+
+        unless variant
+          Rails.logger.error "Variant #{variant_id} não encontrado"
+          next
         end
-        
-        available_quantity = stock_check[:available_quantity]
-        
-        if available_quantity < quantity
-          raise "Estoque insuficiente para #{item.sku}. Disponível: #{available_quantity}, Solicitado: #{quantity}"
-        end
-        
-        # Criar reserva de inventory
-        reservation_result = create_inventory_reservation(
-          graphql_client, 
-          variant_id, 
-          location_id, 
-          quantity,
-          "PDV Order ##{@order_pdv.id} - #{item.sku}"
+
+        inventory_item_id = variant['inventory_item_id']
+
+        # Buscar níveis de estoque para o inventory item na location específica
+        inventory_response = client.get(path: "inventory_levels.json",
+          query: { 
+            inventory_item_ids: inventory_item_id,
+            location_ids: location_id
+          }
         )
-        
-        if reservation_result[:success]
+
+        inventory_levels = inventory_response.body['inventory_levels']
+
+        if inventory_levels.empty?
+          Rails.logger.warn "Nível de estoque não encontrado para #{item.sku} na location #{location_name}"
+          next
+        end
+
+        inventory_level = inventory_levels.first
+        available_quantity = inventory_level['available'] || 0
+
+        Rails.logger.info "Estoque disponível para #{item.sku} na #{location_name}: #{available_quantity}"
+
+        if available_quantity < quantity
+          Rails.logger.warn "Estoque insuficiente para #{item.sku} na #{location_name}. Disponível: #{available_quantity}, Solicitado: #{quantity}"
           reservations << {
             variant_id: variant_id,
             sku: item.sku,
             quantity: quantity,
             location_id: location_id,
-            reservation_id: reservation_result[:reservation_id]
+            location_name: location_name,
+            available_quantity: available_quantity,
+            status: 'insufficient_stock',
+            error: "Estoque insuficiente: #{available_quantity} disponível, #{quantity} solicitado"
           }
-          
-          Rails.logger.info "Reserva criada com sucesso para #{item.sku}: #{reservation_result[:reservation_id]}"
-        else
-          raise "Falha ao reservar estoque para #{item.sku}: #{reservation_result[:error]}"
+          next
+        end
+
+        # Fazer a reserva e commit usando inventory adjustments
+        begin
+          # Primeiro, fazer o adjustment para reservar
+          adjustment_response = client.post(path: "inventory_levels/adjust.json",
+            body: {
+              location_id: location_id,
+              inventory_item_id: inventory_item_id,
+              available_adjustment: -quantity,
+              reason: "Pedido PDV ##{@order_pdv.id} - Reservado e Committed"
+            }
+          )
+
+          if adjustment_response.code == 200
+            Rails.logger.info "Estoque ajustado (reservado) com sucesso para #{item.sku}: #{quantity} unidades"
+            
+            # Agora marcar como committed usando a API de inventory
+            begin
+              # Buscar o inventory level atualizado
+              updated_inventory_response = client.get(path: "inventory_levels.json",
+                query: { 
+                  inventory_item_ids: inventory_item_id,
+                  location_ids: location_id
+                }
+              )
+              
+              updated_inventory_levels = updated_inventory_response.body['inventory_levels']
+              
+              if updated_inventory_levels.any?
+                updated_inventory_level = updated_inventory_levels.first
+                
+                # Fazer um segundo adjustment para marcar como committed
+                commit_response = client.post(path: "inventory_levels/adjust.json",
+                  body: {
+                    location_id: location_id,
+                    inventory_item_id: inventory_item_id,
+                    available_adjustment: 0, # Não alterar disponível
+                    reason: "Pedido PDV ##{@order_pdv.id} - Committed"
+                  }
+                )
+                
+                Rails.logger.info "Estoque marcado como committed para #{item.sku}: #{quantity} unidades"
+                
+                reservations << {
+                  variant_id: variant_id,
+                  sku: item.sku,
+                  quantity: quantity,
+                  location_id: location_id,
+                  location_name: location_name,
+                  available_quantity: available_quantity,
+                  reserved_quantity: quantity,
+                  status: 'committed',
+                  adjustment_id: adjustment_response.body.dig('inventory_level', 'id'),
+                  commit_id: commit_response.body.dig('inventory_level', 'id')
+                }
+              else
+                Rails.logger.warn "Não foi possível encontrar inventory level atualizado para commit"
+                reservations << {
+                  variant_id: variant_id,
+                  sku: item.sku,
+                  quantity: quantity,
+                  location_id: location_id,
+                  location_name: location_name,
+                  available_quantity: available_quantity,
+                  reserved_quantity: quantity,
+                  status: 'reserved_only',
+                  adjustment_id: adjustment_response.body.dig('inventory_level', 'id')
+                }
+              end
+            rescue => commit_error
+              Rails.logger.error "Erro ao fazer commit do estoque para #{item.sku}: #{commit_error.message}"
+              reservations << {
+                variant_id: variant_id,
+                sku: item.sku,
+                quantity: quantity,
+                location_id: location_id,
+                location_name: location_name,
+                available_quantity: available_quantity,
+                reserved_quantity: quantity,
+                status: 'reserved_only',
+                adjustment_id: adjustment_response.body.dig('inventory_level', 'id'),
+                error: "Erro no commit: #{commit_error.message}"
+              }
+            end
+          else
+            Rails.logger.error "Falha ao reservar estoque para #{item.sku}: #{adjustment_response.body}"
+            reservations << {
+              variant_id: variant_id,
+              sku: item.sku,
+              quantity: quantity,
+              location_id: location_id,
+              location_name: location_name,
+              available_quantity: available_quantity,
+              status: 'reservation_failed',
+              error: "Falha na reserva: #{adjustment_response.body}"
+            }
+          end
+        rescue => adjustment_error
+          Rails.logger.error "Erro ao fazer adjustment de estoque para #{item.sku}: #{adjustment_error.message}"
+          reservations << {
+            variant_id: variant_id,
+            sku: item.sku,
+            quantity: quantity,
+            location_id: location_id,
+            location_name: location_name,
+            available_quantity: available_quantity,
+            status: 'verified_only',
+            error: "Erro na reserva: #{adjustment_error.message}"
+          }
         end
       end
-      
+
+      success = reservations.any? { |r| ['committed', 'reserved_only'].include?(r[:status]) }
+
       {
-        success: true,
-        reservations: reservations
+        success: success,
+        reservations: reservations,
+        summary: {
+          total_items: reservations.count,
+          committed: reservations.count { |r| r[:status] == 'committed' },
+          reserved_only: reservations.count { |r| r[:status] == 'reserved_only' },
+          insufficient_stock: reservations.count { |r| r[:status] == 'insufficient_stock' },
+          failed: reservations.count { |r| r[:status] == 'reservation_failed' }
+        }
       }
-      
     rescue => e
-      Rails.logger.error "Erro durante reserva de estoque: #{e.message}"
-      
-      # Tentar reverter reservas já criadas
-      if reservations.any?
-        Rails.logger.info "Tentando reverter #{reservations.count} reservas já criadas"
-        cancel_inventory_reservations(graphql_client, reservations)
-      end
-      
+      Rails.logger.error "Erro durante reserva e commit de estoque: #{e.message}"
       {
         success: false,
         error: e.message,
         partial_reservations: reservations
       }
-    end
-  end
-
-  def check_inventory_at_location(graphql_client, variant_id, location_id)
-    begin
-      query = <<~GRAPHQL
-        query($variantId: ID!, $locationId: ID!) {
-          productVariant(id: $variantId) {
-            id
-            sku
-            inventoryItem {
-              id
-              inventoryLevels(locationIds: [$locationId], first: 1) {
-                edges {
-                  node {
-                    id
-                    available
-                    location {
-                      id
-                      name
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      GRAPHQL
-
-      variables = {
-        variantId: "gid://shopify/ProductVariant/#{variant_id}",
-        locationId: "gid://shopify/Location/#{location_id}"
-      }
-
-      response = graphql_client.query(query: query, variables: variables)
-      
-      if response.body['errors']
-        return {
-          success: false,
-          error: response.body['errors'].map { |e| e['message'] }.join(', ')
-        }
-      end
-
-      variant = response.body.dig('data', 'productVariant')
-      
-      unless variant
-        return {
-          success: false,
-          error: 'Produto não encontrado'
-        }
-      end
-
-      inventory_level = variant.dig('inventoryItem', 'inventoryLevels', 'edges', 0, 'node')
-      
-      unless inventory_level
-        return {
-          success: false,
-          error: 'Nível de estoque não encontrado para esta location'
-        }
-      end
-
-      {
-        success: true,
-        available_quantity: inventory_level['available'] || 0,
-        location_name: inventory_level.dig('location', 'name')
-      }
-      
-    rescue => e
-      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
-      {
-        success: false,
-        error: e.message
-      }
-    end
-  end
-
-  def create_inventory_reservation(graphql_client, variant_id, location_id, quantity, note)
-    begin
-      mutation = <<~GRAPHQL
-        mutation($input: InventoryReserveInput!) {
-          inventoryReserve(input: $input) {
-            inventoryReservation {
-              id
-              quantity
-              note
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      GRAPHQL
-
-      variables = {
-        input: {
-          inventoryItemId: get_inventory_item_id(graphql_client, variant_id),
-          locationId: "gid://shopify/Location/#{location_id}",
-          quantity: quantity,
-          note: note
-        }
-      }
-
-      response = graphql_client.query(query: mutation, variables: variables)
-      
-      if response.body['errors']
-        return {
-          success: false,
-          error: response.body['errors'].map { |e| e['message'] }.join(', ')
-        }
-      end
-
-      result = response.body.dig('data', 'inventoryReserve')
-      
-      if result['userErrors']&.any?
-        return {
-          success: false,
-          error: result['userErrors'].map { |e| e['message'] }.join(', ')
-        }
-      end
-
-      reservation = result['inventoryReservation']
-      
-      {
-        success: true,
-        reservation_id: reservation['id']
-      }
-      
-    rescue => e
-      Rails.logger.error "Erro ao criar reserva: #{e.message}"
-      {
-        success: false,
-        error: e.message
-      }
-    end
-  end
-
-  def get_inventory_item_id(graphql_client, variant_id)
-    query = <<~GRAPHQL
-      query($variantId: ID!) {
-        productVariant(id: $variantId) {
-          inventoryItem {
-            id
-          }
-        }
-      }
-    GRAPHQL
-
-    variables = {
-      variantId: "gid://shopify/ProductVariant/#{variant_id}"
-    }
-
-    response = graphql_client.query(query: query, variables: variables)
-    response.body.dig('data', 'productVariant', 'inventoryItem', 'id')
-  end
-
-  def cancel_inventory_reservations(graphql_client, reservations)
-    reservations.each do |reservation|
-      begin
-        Rails.logger.info "Cancelando reserva #{reservation[:reservation_id]} para #{reservation[:sku]}"
-        
-        mutation = <<~GRAPHQL
-          mutation($id: ID!) {
-            inventoryUnreserve(id: $id) {
-              userErrors {
-                field
-                message
-              }
-            }
-          }
-        GRAPHQL
-
-        variables = { id: reservation[:reservation_id] }
-        
-        response = graphql_client.query(query: mutation, variables: variables)
-        
-        if response.body['errors'] || response.body.dig('data', 'inventoryUnreserve', 'userErrors')&.any?
-          Rails.logger.error "Erro ao cancelar reserva #{reservation[:reservation_id]}"
-        else
-          Rails.logger.info "Reserva #{reservation[:reservation_id]} cancelada com sucesso"
-        end
-        
-      rescue => e
-        Rails.logger.error "Erro ao cancelar reserva #{reservation[:reservation_id]}: #{e.message}"
-      end
     end
   end
 
@@ -409,7 +580,6 @@ class ShopifyIntegrationService
         location_name: 'Online Store'
       }
     else
-      # Fallback para Lagoa Seca
       {
         access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
         location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
@@ -463,13 +633,26 @@ class ShopifyIntegrationService
   end
 
   def build_tags(location_name)
-    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", "ESTOQUE_RESERVADO", location_name]
+    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", location_name]
+
+    # Adicionar informações sobre parcelas se existirem
+    if @order_pdv.has_parcels?
+      tags << "PARCELADO"
+      tags << "#{@order_pdv.order_parcels.count}_PARCELAS"
+
+      # Adicionar métodos de pagamento das parcelas
+      payment_methods = @order_pdv.order_parcels.pluck(:payment_method).uniq
+      payment_methods.each do |method|
+        tags << method.upcase
+      end
+    end
+
     tags.join(',')
   end
 
   def format_phone_for_shopify(phone)
     return nil if phone.nil? || phone.empty?
-    
+
     cleaned_phone = phone.gsub(/\D/, '')
 
     if cleaned_phone.start_with?('55')

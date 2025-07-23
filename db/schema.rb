@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_15_035029) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_20_183715) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -130,6 +130,24 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_15_035029) do
     t.index ["product_id"], name: "index_order_items_on_product_id"
   end
 
+  create_table "order_parcels", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "order_pdv_id", null: false
+    t.string "payment_method", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "integration_id"
+    t.string "status", default: "pending"
+    t.text "notes"
+    t.json "payment_data"
+    t.datetime "paid_at"
+    t.datetime "failed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["integration_id"], name: "index_order_parcels_on_integration_id"
+    t.index ["order_pdv_id", "status"], name: "index_order_parcels_on_order_pdv_id_and_status"
+    t.index ["order_pdv_id"], name: "index_order_parcels_on_order_pdv_id"
+    t.index ["status"], name: "index_order_parcels_on_status"
+  end
+
   create_table "order_pdv_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "order_pdv_id", null: false
     t.bigint "product_id", null: false
@@ -177,8 +195,13 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_15_035029) do
     t.string "reservation_status"
     t.string "coupon_code"
     t.decimal "coupon_discount_amount", precision: 10, scale: 2, default: "0.0"
+    t.text "multi_payments"
+    t.text "inventory_reservations"
+    t.text "reservation_error"
     t.index ["coupon_code"], name: "index_order_pdvs_on_coupon_code"
     t.index ["created_at"], name: "index_order_pdvs_on_created_at"
+    t.index ["payment_method"], name: "index_order_pdvs_on_payment_method"
+    t.index ["reservation_status"], name: "index_order_pdvs_on_reservation_status"
     t.index ["shopify_order_id"], name: "index_order_pdvs_on_shopify_order_id"
     t.index ["status"], name: "index_order_pdvs_on_status"
     t.index ["user_id"], name: "index_order_pdvs_on_user_id"
@@ -267,6 +290,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_15_035029) do
   add_foreign_key "logs", "users"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
+  add_foreign_key "order_parcels", "order_pdvs"
   add_foreign_key "order_pdv_items", "order_pdvs"
   add_foreign_key "order_pdv_items", "products"
   add_foreign_key "order_pdvs", "users"

@@ -62,11 +62,95 @@ module Shopify::Products
     }
 
     if sync_methods.key?(function)
-      Product.where('updated_at < ?', 24.hours.ago).find_each(batch_size: 100) do |product|
+      Product.where('updated_at < ?', 1.hours.ago).find_each(batch_size: 100) do |product|
         sync_methods[function].call(product)
       end
     else
       puts "Função não reconhecida: #{function}"
+    end
+  end
+
+  def update_all_inventories
+    locations = {
+      lagoa_seca: {
+        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
+        token: ENV.fetch('LAGOA_SECA_TOKEN_APP')
+      },
+      bh_shopping: {
+        location_id: ENV.fetch('LOCATION_BH_SHOPPING'),
+        token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+      },
+      rj: {
+        location_id: ENV.fetch('LOCATION_BARRA_SHOPPING'),
+        token: ENV.fetch('BARRA_SHOPPING_TOKEN_APP')
+      }
+    }
+
+    mutation = <<~GRAPHQL
+      mutation($input: InventorySetQuantitiesInput!) {
+        inventorySetQuantities(input: $input) {
+          inventoryAdjustmentGroup {
+            id
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    GRAPHQL
+
+    locations.each do |location_key, data|
+      stock_field = :"stock_#{location_key}"
+      location_id = "gid://shopify/Location/#{data[:location_id]}"
+      access_token = data[:token]
+
+      products = Product.where.not(shopify_inventory_item_id: nil)
+                        .where("#{stock_field} IS NOT NULL")
+                        .where('updated_at < ?', 24.hours.ago)
+
+      session = ShopifyAPI::Auth::Session.new(
+        shop: 'chasebrasil.myshopify.com',
+        access_token: access_token
+      )
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
+
+      products.each do |product|
+        inventory_item_id = "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}"
+        quantity = product.send(stock_field).to_i
+
+        variables = {
+          input: {
+            name: 'available',
+            reason: 'correction',
+            ignoreCompareQuantity: true,
+            quantities: [
+              {
+                inventoryItemId: inventory_item_id,
+                locationId: location_id,
+                quantity: quantity
+              }
+            ]
+          }
+        }
+
+        begin
+          response = client.query(query: mutation, variables: variables)
+
+          if response.body['errors'].present?
+            Rails.logger.error "GraphQL error: #{response.body['errors']}"
+            puts "Erro ao atualizar produto #{product.id} (GraphQL error)"
+          elsif response.body.dig('data', 'inventorySetQuantities', 'userErrors').present?
+            Rails.logger.error "User error: #{response.body.dig('data', 'inventorySetQuantities', 'userErrors')}"
+            puts "Erro de usuário ao atualizar produto #{product.id}"
+          else
+            puts "Produto #{product.id} atualizado com sucesso em #{location_key}"
+          end
+        rescue StandardError => e
+          Rails.logger.error "Exception ao atualizar produto #{product.id}: #{e.message}"
+          puts "Erro de exceção ao atualizar produto #{product.id}"
+        end
+      end
     end
   end
 
@@ -332,6 +416,8 @@ module Shopify::Products
       product.save!
     end
   end
+
+  
 
   def update_inventory_for_location(tiny_location, shopify_location_id)
     stock_field = :"stock_#{tiny_location}"

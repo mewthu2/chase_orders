@@ -4,7 +4,6 @@ class OrderPdvsController < ApplicationController
 
   def index
     @order_pdvs = OrderPdv.includes(:user)
-                          .by_status(params[:status])
                           .recent
 
     @order_pdvs = @order_pdvs.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
@@ -12,8 +11,7 @@ class OrderPdvsController < ApplicationController
     @status_counts = {
       all: OrderPdv.count,
       pending: OrderPdv.pending.count,
-      integrated: OrderPdv.integrated.count,
-      error: OrderPdv.error.count
+      integrated: OrderPdv.integrated.count
     }
   end
 

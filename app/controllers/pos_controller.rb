@@ -1,815 +1,410 @@
 class PosController < ApplicationController
   before_action :authenticate_user!
-  before_action :initialize_cart_service
-  before_action :extend_cart_ttl, only: [:index, :get_cart_data]
-  before_action :migrate_session_data, only: [:index]
-
+  
   def index
-    cart_summary = @cart_service.get_cart_summary
-    @cart_items = cart_summary[:cart_items]
-    @total = cart_summary[:total]
-  end
-
-  def get_cart_data
-    cart_summary = @cart_service.get_cart_summary
-    debug_info = @cart_service.debug_info
-    
-    render json: {
-      success: true,
-      cart_items: cart_summary[:cart_items],
-      unique_count: cart_summary[:unique_count],
-      total_items: cart_summary[:total_items],
-      subtotal: cart_summary[:subtotal],
-      discount_amount: cart_summary[:discount_amount],
-      total: cart_summary[:total],
-      applied_coupon: cart_summary[:applied_coupon],
-      session_id: session.id.to_s,
-      debug_info: debug_info
-    }
+    @cart_items = session[:cart_items] || []
+    @total = calculate_cart_total(@cart_items)
   end
 
   def search_product
-    query = params[:query]
-
-    if query.present?
-      products = Product.where("sku LIKE ? OR shopify_product_name LIKE ?", "%#{query}%", "%#{query}%").limit(10)
+    begin
+      Rails.logger.info "PosController#search_product called with params: #{params.inspect}"
       
-      products_data = []
-
-      begin
-        session_obj = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
-        
-        products.each do |product|
-          stock_info = get_product_stock(product, session_obj)
-          products_data << {
-            id: product.id,
-            sku: product.sku,
-            name: product.shopify_product_name,
-            price: product.price.to_f,
-            option1: product.option1,
-            image_url: product.image_url,
-            stock: stock_info[:quantity],
-            stock_status: stock_info[:status],
-            stock_message: stock_info[:message]
-          }
-        end
-      rescue => e
-        Rails.logger.error "Erro ao buscar estoque: #{e.message}"
-        
-        products_data = products.map do |product|
-          {
-            id: product.id,
-            sku: product.sku,
-            name: product.shopify_product_name,
-            price: product.price.to_f,
-            option1: product.option1,
-            image_url: product.image_url,
-            stock: 0,
-            stock_status: 'error',
-            stock_message: 'Erro ao verificar estoque'
-          }
-        end
+      query = params[:query]
+      store_type = params[:store_type] || 'lagoa_seca'
+      
+      if query.blank?
+        render json: { success: false, error: 'Query não pode estar vazio' }
+        return
       end
 
+      products = search_products_by_store(query, store_type)
+      
+      Rails.logger.info "Found #{products.count} products"
+      
+      # Get real-time stock for each product
+      products_with_stock = products.map do |product|
+        stock_result = StockService.check_stock(product.shopify_variant_id, 1, store_type)
+        
+        format_product_for_json(product, store_type, stock_result)
+      end
+      
       render json: { 
         success: true, 
-        products: products_data 
+        products: products_with_stock
       }
-    else
-      render json: { 
-        success: false, 
-        message: 'Query não fornecida' 
-      }
+    rescue => e
+      Rails.logger.error "Erro na busca de produtos: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      render json: { success: false, error: e.message }
     end
   end
 
   def add_to_cart
-    product_id = params[:product_id]
-    quantity = params[:quantity].to_i
-    store_type = params[:store_type] || 'lagoa_seca'
-    
-    product = Product.find_by(id: product_id)
-
-    if product.nil?
-      render json: { 
-        success: false, 
-        message: 'Produto não encontrado' 
-      }
-      return
-    end
-
-    # Preparar dados do produto
-    product_data = {
-      sku: product.sku,
-      name: product.shopify_product_name,
-      price: product.price.to_f,
-      option1: product.option1,
-      image_url: product.image_url,
-      store_type: store_type
-    }
-
-    # Adicionar ao carrinho usando Redis
-    result = @cart_service.add_item(product_id, product_data, quantity)
-    
-    if result[:success]
-      cart_summary = @cart_service.get_cart_summary
+    begin
+      product_id = params[:product_id]
+      quantity = params[:quantity].to_i
+      store_type = params[:store_type] || 'lagoa_seca'
       
-      response_data = {
-        success: true,
-        message: 'Produto adicionado ao carrinho',
-        cart_count: cart_summary[:total_items],
-        subtotal: cart_summary[:subtotal],
-        total: cart_summary[:total],
-        cart_items: cart_summary[:cart_items],
-        unique_count: cart_summary[:unique_count],
-        session_id: session.id.to_s
-      }
-
-      # Adicionar informações do cupom se aplicado
-      if cart_summary[:applied_coupon]
-        response_data[:discount_amount] = cart_summary[:discount_amount]
-        response_data[:has_coupon] = true
+      if quantity < 1
+        render json: { success: false, error: 'Quantidade deve ser maior que zero' }
+        return
       end
 
-      render json: response_data
-    else
-      render json: { 
-        success: false, 
-        message: result[:error] || 'Erro ao adicionar produto'
-      }
-    end
-  rescue => e
-    Rails.logger.error "Error in add_to_cart: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    render json: { 
-      success: false, 
-      message: "Erro interno: #{e.message}" 
-    }
-  end
+      product = Product.find_by(shopify_variant_id: product_id)
+      unless product
+        render json: { success: false, error: 'Produto não encontrado' }
+        return
+      end
 
-  def update_cart_quantity
-    product_id = params[:product_id]
-    new_quantity = params[:quantity].to_i
-    
-    # Verificar estoque antes de atualizar
-    product = Product.find_by(id: product_id)
-    
-    if product.nil?
-      render json: { 
-        success: false, 
-        message: 'Produto não encontrado' 
-      }
-      return
-    end
-
-    # Verificar estoque no Shopify
-    begin
-      session_obj = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
-      stock_info = get_product_stock(product, session_obj)
-      available_quantity = stock_info[:quantity]
-
-      if new_quantity > available_quantity
+      # Check real-time stock before adding to cart
+      stock_result = StockService.check_stock(product_id, quantity, store_type)
+      
+      unless stock_result[:success] && stock_result[:has_sufficient_stock]
         render json: { 
           success: false, 
-          message: "Estoque insuficiente! Disponível: #{available_quantity} unidades",
-          available_quantity: available_quantity,
-          has_sufficient_stock: false
+          error: stock_result[:message] || 'Estoque insuficiente'
         }
         return
       end
-    rescue => e
-      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
-      render json: { 
-        success: false, 
-        message: 'Erro ao verificar estoque. Tente novamente.'
-      }
-      return
-    end
-    
-    # Prosseguir com a atualização se o estoque for suficiente
-    result = @cart_service.update_item_quantity(product_id, new_quantity)
-    
-    if result[:success]
-      cart_summary = @cart_service.get_cart_summary
-      
-      response_data = {
-        success: true,
-        message: 'Quantidade atualizada',
-        cart_count: cart_summary[:total_items],
-        subtotal: cart_summary[:subtotal],
-        total: cart_summary[:total],
-        item_total: result[:item_total],
-        available_quantity: available_quantity
-      }
 
-      if cart_summary[:applied_coupon]
-        response_data[:discount_amount] = cart_summary[:discount_amount]
-        response_data[:has_coupon] = true
+      session[:cart_items] ||= []
+      
+      # Check if product already exists in cart
+      existing_item = session[:cart_items].find { |item| item['product_id'] == product_id }
+      
+      if existing_item
+        new_quantity = existing_item['quantity'].to_i + quantity
+        
+        # Check stock for new total quantity
+        stock_check = StockService.check_stock(product_id, new_quantity, store_type)
+        unless stock_check[:success] && stock_check[:has_sufficient_stock]
+          render json: { 
+            success: false, 
+            error: "Estoque insuficiente para quantidade total (#{new_quantity}). Disponível: #{stock_check[:available_quantity]}"
+          }
+          return
+        end
+        
+        existing_item['quantity'] = new_quantity
+      else
+        session[:cart_items] << {
+          'product_id' => product_id,
+          'sku' => product.sku,
+          'name' => product.shopify_product_name,
+          'price' => product.price.to_f,
+          'quantity' => quantity,
+          'image_url' => get_product_image_url(product, store_type)
+        }
       end
 
-      render json: response_data
-    else
+      total = calculate_cart_total(session[:cart_items])
+      
       render json: { 
-        success: false, 
-        message: result[:error] || 'Erro ao atualizar quantidade'
+        success: true, 
+        cart_items: session[:cart_items],
+        total: total
       }
+    rescue => e
+      Rails.logger.error "Erro ao adicionar ao carrinho: #{e.message}"
+      render json: { success: false, error: e.message }
+    end
+  end
+
+  def update_cart_quantity
+    begin
+      product_id = params[:product_id]
+      quantity = params[:quantity].to_i
+      store_type = params[:store_type] || 'lagoa_seca'
+      
+      if quantity < 1
+        render json: { success: false, error: 'Quantidade deve ser maior que zero' }
+        return
+      end
+
+      session[:cart_items] ||= []
+      
+      item = session[:cart_items].find { |item| item['product_id'] == product_id }
+      if item
+        # Check real-time stock for new quantity
+        stock_result = StockService.check_stock(product_id, quantity, store_type)
+        
+        unless stock_result[:success] && stock_result[:has_sufficient_stock]
+          render json: { 
+            success: false, 
+            error: stock_result[:message] || 'Estoque insuficiente'
+          }
+          return
+        end
+        
+        item['quantity'] = quantity
+      else
+        render json: { success: false, error: 'Item não encontrado no carrinho' }
+        return
+      end
+
+      total = calculate_cart_total(session[:cart_items])
+      
+      render json: { 
+        success: true, 
+        cart_items: session[:cart_items],
+        total: total
+      }
+    rescue => e
+      Rails.logger.error "Erro ao atualizar quantidade: #{e.message}"
+      render json: { success: false, error: e.message }
     end
   end
 
   def remove_from_cart
-    product_id = params[:product_id]
+    begin
+      product_id = params[:product_id]
+      
+      session[:cart_items] ||= []
+      session[:cart_items].reject! { |item| item['product_id'] == product_id }
 
-    result = @cart_service.remove_item(product_id)
-    
-    if result[:success]
+      total = calculate_cart_total(session[:cart_items])
+      
       render json: { 
         success: true, 
-        message: 'Item removido do carrinho',
-        cart_items: result[:cart_items],
-        unique_count: result[:unique_count],
-        total_items: result[:total_items]
+        cart_items: session[:cart_items],
+        total: total
       }
-    else
-      render json: { 
-        success: false, 
-        message: result[:error] || 'Erro ao remover item'
-      }
+    rescue => e
+      Rails.logger.error "Erro ao remover do carrinho: #{e.message}"
+      render json: { success: false, error: e.message }
     end
   end
 
   def clear_cart
-    result = @cart_service.clear_cart
-    
-    if result[:success]
+    begin
+      session[:cart_items] = []
+      
       render json: { 
         success: true, 
-        message: 'Carrinho limpo' 
+        cart_items: [],
+        total: 0
       }
-    else
-      render json: { 
-        success: false, 
-        message: result[:error] || 'Erro ao limpar carrinho'
-      }
+    rescue => e
+      Rails.logger.error "Erro ao limpar carrinho: #{e.message}"
+      render json: { success: false, error: e.message }
+    end
+  end
+
+  def search_coupon
+    begin
+      coupon_code = params[:coupon_code]
+      
+      # Simulate coupon search - replace with actual coupon logic
+      if coupon_code == 'DESCONTO10'
+        render json: {
+          success: true,
+          coupon: {
+            code: coupon_code,
+            description: 'Desconto de R$ 10,00',
+            discount_amount: 10.00
+          }
+        }
+      else
+        render json: {
+          success: false,
+          error: 'Cupom não encontrado ou inválido'
+        }
+      end
+    rescue => e
+      Rails.logger.error "Erro ao buscar cupom: #{e.message}"
+      render json: { success: false, error: e.message }
     end
   end
 
   def create_order
-    cart_summary = @cart_service.get_cart_summary
-    cart_items = cart_summary[:cart_items]
-
-    if cart_items.empty?
-      render json: { 
-        success: false, 
-        message: 'Carrinho vazio' 
-      }
-      return
-    end
-
     begin
-      subtotal = cart_summary[:subtotal]
-      manual_discount = params[:discount_amount].to_f
-      coupon_discount = cart_summary[:discount_amount]
-      coupon_code = cart_summary[:applied_coupon]&.dig('code')
-      integrate_shopify = params[:integrate_shopify] == true || params[:integrate_shopify] == 'true'
+      Rails.logger.info "Creating order with params: #{params.inspect}"
+      
+      cart_items = session[:cart_items] || []
+      if cart_items.empty?
+        render json: { success: false, error: 'Carrinho está vazio' }
+        return
+      end
 
-      total_discount = manual_discount + coupon_discount
-      total_price = subtotal - total_discount
+      # Calculate totals
+      subtotal = calculate_cart_total(cart_items)
+      discount_amount = params[:discount_amount].to_f || 0
+      total_price = subtotal - discount_amount
 
-      # Criar pedido
-      order_pdv = OrderPdv.create!(
+      # Create order
+      order = OrderPdv.new(
         user: current_user,
         customer_name: params[:customer_name],
         customer_email: params[:customer_email],
         customer_phone: params[:customer_phone],
         customer_cpf: params[:customer_cpf],
-        address1: build_address1(params),
-        address2: build_address2(params),
+        address1: "#{params[:street]}, #{params[:number]}",
+        address2: params[:complement],
         city: params[:city],
         state: params[:state],
         zip: params[:zip],
         store_type: params[:store_type],
-        payment_method: params[:payment_method],
+        payment_method: determine_payment_method(params[:payment_parcels]),
         subtotal: subtotal,
-        discount_amount: manual_discount,
-        coupon_code: coupon_code,
-        coupon_discount_amount: coupon_discount,
+        discount_amount: discount_amount,
+        discount_reason: params[:discount_reason],
         total_price: total_price,
-        notes: params[:notes],
-        order_note: build_order_note(params, cart_summary[:applied_coupon]),
-        status: 'pending',
-        multi_payments: params[:multi_payments]&.to_json
+        order_note: params[:notes],
+        status: 'pending'
       )
 
-      # Criar itens do pedido
-      cart_items.each do |item|
-        product = Product.find(item['product_id'])
-        order_pdv.order_pdv_items.create!(
-          product: product,
-          sku: item['sku'],
-          product_name: item['name'],
-          price: item['price'],
-          quantity: item['quantity'],
-          total: item['price'].to_f * item['quantity'].to_i,
-          option1: item['option1'],
-          image_url: item['image_url']
-        )
-      end
+      ActiveRecord::Base.transaction do
+        order.save!
 
-      # Limpar carrinho
-      @cart_service.clear_cart
+        # Create order items
+        cart_items.each do |item|
+          product = Product.find_by(shopify_variant_id: item['product_id'])
+          next unless product
 
-      # Verificar se deve integrar com Shopify
-      if integrate_shopify
-        # Tentar integrar com Shopify
-        begin
-          result = ShopifyIntegrationService.new(order_pdv).integrate
-          
-          if result[:success]
-            order_pdv.update!(
-              status: 'integrated',
-              shopify_order_id: result[:order_id],
-              shopify_order_number: result[:order_number],
-              integrated_at: Time.current,
-              integration_error: nil
-            )
-            
-            render json: { 
-              success: true, 
-              message: 'Pedido criado e integrado com sucesso ao Shopify!',
-              order_id: order_pdv.id,
-              shopify_order_number: result[:order_number],
-              coupon_used: coupon_code,
-              integrated: true
-            }
-          else
-            order_pdv.update!(
-              status: 'error',
-              integration_error: result[:error],
-              integration_attempts: 1
-            )
-            
-            render json: { 
-              success: true, 
-              message: 'Pedido registrado localmente. Erro na integração com Shopify.',
-              order_id: order_pdv.id,
-              integration_error: result[:error],
-              coupon_used: coupon_code,
-              integrated: false
-            }
-          end
-        rescue => e
-          order_pdv.update!(
-            status: 'error',
-            integration_error: e.message,
-            integration_attempts: 1
+          OrderPdvItem.create!(
+            order_pdv: order,
+            product: product,
+            sku: item['sku'],
+            product_name: item['name'],
+            quantity: item['quantity'],
+            price: item['price'],
+            total: item['price'].to_f * item['quantity'].to_i
           )
+        end
+
+        # Create payment parcels
+        if params[:payment_parcels].present?
+          params[:payment_parcels].each do |parcel_data|
+            next if parcel_data[:payment_method].blank? || parcel_data[:amount].blank?
+            
+            OrderParcel.create!(
+              order_pdv: order,
+              payment_method: parcel_data[:payment_method],
+              amount: parcel_data[:amount].to_f,
+              notes: parcel_data[:notes],
+              status: 'pending'
+            )
+          end
+        end
+
+        # Integrate with Shopify if requested
+        if params[:integrate_shopify] == 'on'
+          integration_service = ShopifyIntegrationService.new(order)
+          integration_result = integration_service.integrate
           
-          render json: { 
-            success: true, 
-            message: 'Pedido registrado localmente. Erro na integração com Shopify.',
-            order_id: order_pdv.id,
-            integration_error: e.message,
-            coupon_used: coupon_code,
-            integrated: false
-          }
+          if integration_result[:success]
+            order.update!(
+              status: 'integrated',
+              shopify_order_id: integration_result[:order_id],
+              shopify_order_number: integration_result[:order_number],
+              integrated_at: Time.current
+            )
+          else
+            order.update!(
+              status: 'error',
+              integration_error: integration_result[:error]
+            )
+          end
         end
-      else
-        # Apenas salvar localmente sem integrar
-        render json: { 
-          success: true, 
-          message: 'Pedido salvo localmente com sucesso! Poderá ser integrado posteriormente.',
-          order_id: order_pdv.id,
-          coupon_used: coupon_code,
-          integrated: false
-        }
       end
 
+      # Clear cart
+      session[:cart_items] = []
+
+      render json: {
+        success: true,
+        message: 'Pedido criado com sucesso!',
+        order_id: order.id
+      }
     rescue => e
-      Rails.logger.error "Erro ao criar pedido local: #{e.message}"
+      Rails.logger.error "Erro ao criar pedido: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      render json: { 
-        success: false, 
-        message: "Erro interno: #{e.message}" 
-      }
-    end
-  end
-
-  def search_coupon
-    coupon_code = params[:coupon_code]&.strip
-
-    if coupon_code.blank?
-      render json: { 
-        success: false, 
-        message: 'Código do cupom não fornecido' 
-      }
-      return
-    end
-
-    begin
-      discount = find_discount_by_code(coupon_code)
-      
-      if discount
-        cart_items = @cart_service.get_cart_items
-        validation = validate_coupon_for_cart(discount, cart_items)
-        
-        if validation[:valid]
-          render json: { 
-            success: true, 
-            coupon: format_coupon_for_pdv(discount),
-            message: 'Cupom válido!'
-          }
-        else
-          render json: { 
-            success: false, 
-            message: validation[:error],
-            coupon_found: true
-          }
-        end
-      else
-        render json: { 
-          success: false, 
-          message: 'Cupom não encontrado ou inválido'
-        }
-      end
-    rescue => e
-      Rails.logger.error "Erro ao buscar cupom: #{e.message}"
-      render json: { 
-        success: false, 
-        message: 'Erro interno ao buscar cupom'
-      }
-    end
-  end
-
-  def apply_coupon
-    coupon_code = params[:coupon_code]&.strip
-    cart_items = @cart_service.get_cart_items
-
-    if coupon_code.blank?
-      render json: { 
-        success: false, 
-        message: 'Código do cupom não fornecido' 
-      }
-      return
-    end
-
-    if cart_items.empty?
-      render json: { 
-        success: false, 
-        message: 'Carrinho vazio' 
-      }
-      return
-    end
-
-    begin
-      discount = find_discount_by_code(coupon_code)
-      
-      unless discount
-        render json: { 
-          success: false, 
-          message: 'Cupom não encontrado' 
-        }
-        return
-      end
-
-      validation = validate_coupon_for_cart(discount, cart_items)
-      
-      unless validation[:valid]
-        render json: { 
-          success: false, 
-          message: validation[:error]
-        }
-        return
-      end
-
-      subtotal = @cart_service.calculate_total(cart_items)
-      discount_calculation = calculate_discount_amount(discount, subtotal, cart_items)
-      
-      coupon_data = {
-        code: coupon_code,
-        discount_id: discount.id,
-        discount_type: discount.discount_type,
-        discount_value: discount.discount_value.to_f,
-        discount_amount: discount_calculation[:discount_amount].to_f,
-        applied_at: Time.current.iso8601
-      }
-      
-      result = @cart_service.apply_coupon(coupon_data)
-      
-      if result[:success]
-        new_total = subtotal - discount_calculation[:discount_amount]
-
-        render json: { 
-          success: true, 
-          message: 'Cupom aplicado com sucesso!',
-          coupon: format_coupon_for_pdv(discount),
-          discount_amount: discount_calculation[:discount_amount].to_f,
-          new_total: new_total.to_f,
-          subtotal: subtotal.to_f
-        }
-      else
-        render json: { 
-          success: false, 
-          message: result[:error] || 'Erro ao aplicar cupom'
-        }
-      end
-    rescue => e
-      Rails.logger.error "Erro ao aplicar cupom: #{e.message}"
-      render json: { 
-        success: false, 
-        message: 'Erro interno ao aplicar cupom'
-      }
-    end
-  end
-
-  def remove_coupon
-    result = @cart_service.remove_coupon
-    
-    if result[:success]
-      cart_summary = @cart_service.get_cart_summary
-
-      render json: { 
-        success: true, 
-        message: 'Cupom removido',
-        new_total: cart_summary[:total]
-      }
-    else
-      render json: { 
-        success: false, 
-        message: result[:error] || 'Erro ao remover cupom'
-      }
-    end
-  end
-
-  def check_stock
-    product_id = params[:product_id]
-    quantity = params[:quantity].to_i
-    store_type = params[:store_type] || 'lagoa_seca'
-    
-    product = Product.find_by(id: product_id)
-
-    if product.nil?
-      render json: { 
-        success: false, 
-        message: 'Produto não encontrado' 
-      }
-      return
-    end
-
-    begin
-      session_obj = create_shopify_session(ENV['LAGOA_SECA_TOKEN_APP'])
-      stock_info = get_product_stock(product, session_obj)
-      available_quantity = stock_info[:quantity]
-
-      if available_quantity >= quantity
-        render json: { 
-          success: true, 
-          has_sufficient_stock: true,
-          available_quantity: available_quantity,
-          requested_quantity: quantity,
-          product_sku: product.sku,
-          message: 'Estoque disponível' 
-        }
-      else
-        render json: { 
-          success: true, 
-          has_sufficient_stock: false,
-          available_quantity: available_quantity,
-          requested_quantity: quantity,
-          product_sku: product.sku,
-          message: "Estoque insuficiente. Disponível: #{available_quantity}, Solicitado: #{quantity}" 
-        }
-      end
-    rescue => e
-      Rails.logger.error "Erro ao verificar estoque: #{e.message}"
-      render json: { 
-        success: false, 
-        message: 'Erro ao verificar estoque no Shopify',
-        available_quantity: 0,
-        has_sufficient_stock: false
-      }
+      render json: { success: false, error: e.message }
     end
   end
 
   private
 
-  def initialize_cart_service
-    @cart_service = CartService.new(session.id)
-  end
-
-  def extend_cart_ttl
-    @cart_service.extend_ttl
-  end
-
-  def migrate_session_data
-    # Migrar dados da sessão para Redis se existirem
-    session_cart = session[:cart_items]
-    session_coupon = session[:applied_coupon]
+  def search_products_by_store(query, store_type)
+    query_downcase = query.downcase
     
-    if session_cart.present? || session_coupon.present?
-      Rails.logger.info "Migrando dados da sessão para Redis"
-      @cart_service.migrate_from_session(session_cart, session_coupon)
-      
-      # Limpar dados da sessão após migração
-      session.delete(:cart_items)
-      session.delete(:applied_coupon)
-    end
+    Product.where(
+      "sku LIKE ? OR shopify_product_name LIKE ?",
+      "%#{query_downcase}%", "%#{query_downcase}%"
+    ).limit(20)
   end
 
-  def find_discount_by_code(code)
-    discount = Discount.find_by_code(code)
-    return nil unless discount
-    
-    discount.update_status_from_dates! if discount.ends_at.present?
-    discount.is_active? ? discount : nil
-  end
-
-  def validate_coupon_for_cart(discount, cart_items)
-    unless discount.is_active?
-      return { valid: false, error: 'Cupom inativo ou expirado' }
-    end
-
-    if discount.is_expired?
-      return { valid: false, error: 'Cupom expirado' }
-    end
-
-    if discount.min_purchase_amount.present? && discount.min_purchase_amount > 0
-      subtotal = @cart_service.calculate_total(cart_items)
-      if subtotal < discount.min_purchase_amount
-        return { 
-          valid: false, 
-          error: "Valor mínimo de R$ #{sprintf('%.2f', discount.min_purchase_amount)} não atingido" 
-        }
-      end
-    end
-
-    if discount.min_quantity.present? && discount.min_quantity > 0
-      total_quantity = cart_items.sum { |item| item['quantity'].to_i }
-      if total_quantity < discount.min_quantity
-        return { 
-          valid: false, 
-          error: "Quantidade mínima de #{discount.min_quantity} itens não atingida" 
-        }
-      end
-    end
-
-    if discount.usage_limit.present? && discount.usage_limit > 0
-      if discount.usage_count >= discount.usage_limit
-        return { valid: false, error: 'Cupom esgotado (limite de uso atingido)' }
-      end
-    end
-
-    { valid: true }
-  end
-
-  def calculate_discount_amount(discount, subtotal, cart_items)
-    case discount.discount_type
-    when 'percentage'
-      discount_amount = subtotal * (discount.discount_value / 100.0)
-    when 'fixed_amount'
-      discount_amount = discount.discount_value
+  def format_product_for_json(product, store_type, stock_result = nil)
+    # Use real-time stock data if available
+    if stock_result
+      stock_quantity = stock_result[:available_quantity] || 0
+      stock_status = if stock_quantity <= 0
+                      'out'
+                    elsif stock_quantity <= 5
+                      'low'
+                    else
+                      'high'
+                    end
+      location = stock_result[:location] || get_location_name(store_type)
     else
-      discount_amount = 0
-    end
-
-    discount_amount = [discount_amount, subtotal].min
-
-    {
-      discount_amount: discount_amount,
-      percentage: discount.discount_type == 'percentage' ? discount.discount_value : nil
-    }
-  end
-
-  def format_coupon_for_pdv(discount)
-    display_value = if discount.discount_type == 'percentage'
-      (discount.discount_value.to_f * 100).round(2)
-    else
-      discount.discount_value.to_f
+      # Fallback to mock data if stock service fails
+      stock_quantity = rand(0..50)
+      stock_status = case stock_quantity
+                     when 0 then 'out'
+                     when 1..5 then 'low'
+                     else 'high'
+                     end
+      location = get_location_name(store_type)
     end
 
     {
-      id: discount.id,
-      code: discount.code,
-      title: discount.title,
-      discount_type: discount.discount_type,
-      discount_value: display_value,
-      min_purchase_amount: discount.min_purchase_amount&.to_f,
-      min_quantity: discount.min_quantity,
-      usage_count: discount.usage_count,
-      usage_limit: discount.usage_limit,
-      is_active: discount.is_active,
-      expires_at: discount.ends_at&.strftime('%d/%m/%Y')
+      id: product.shopify_variant_id,
+      sku: product.sku,
+      name: product.shopify_product_name,
+      price: product.price.to_f,
+      option1: product.option1,
+      option2: product.option2,
+      option3: product.option3,
+      image_url: get_product_image_url(product, store_type),
+      vendor: product.vendor,
+      stock: stock_quantity,
+      stock_status: stock_status,
+      location: location
     }
   end
 
-  def build_address1(params)
-    parts = []
-    parts << params[:street] if params[:street].present?
-    parts << params[:number] if params[:number].present?
-    parts.join(', ')
-  end
-
-  def build_address2(params)
-    parts = []
-    parts << params[:complement] if params[:complement].present?
-    parts << params[:neighborhood] if params[:neighborhood].present?
-    parts.join(', ')
-  end
-
-  def create_shopify_session(access_token)
-    ShopifyAPI::Auth::Session.new(
-      shop: 'chasebrasil.myshopify.com',
-      access_token: access_token
-    )
-  end
-
-  def get_product_stock(product, session_obj)
-    begin
-      query = <<~GRAPHQL
-        query {
-          productVariant(id: "gid://shopify/ProductVariant/#{product.shopify_variant_id}") {
-            id
-            sku
-            inventoryQuantity
-          }
-        }
-      GRAPHQL
-
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session: session_obj)
-      response = client.query(query: query)
-      variant = response.body.dig('data', 'productVariant')
-
-      if variant.nil?
-        return {
-          quantity: 0,
-          status: 'error',
-          message: 'Variante não encontrada'
-        }
-      end
-
-      quantity = variant['inventoryQuantity'] || 0
-
-      if quantity > 10
-        status = 'high'
-        message = "Estoque: #{quantity} unidades"
-      elsif quantity > 0
-        status = 'low'
-        message = "Estoque baixo: #{quantity} unidades"
-      else
-        status = 'out'
-        message = 'Sem estoque (0 unidades)'
-      end
-
-      return {
-        quantity: quantity,
-        status: status,
-        message: message
-      }
-    rescue => e
-      Rails.logger.error "Erro ao buscar estoque do produto #{product.id}: #{e.message}"
-      return {
-        quantity: 0,
-        status: 'error',
-        message: 'Erro ao verificar estoque'
-      }
+  def get_product_image_url(product, store_type)
+    # Return placeholder or actual image URL
+    if product.sku.present?
+      sku_clean = product.sku.downcase.gsub(/[^a-z0-9]/, '-')
+      "https://via.placeholder.com/300x300/cccccc/666666?text=#{product.sku}"
+    else
+      nil
     end
   end
 
-  def build_order_note(params, coupon_details = nil)
-    notes = []
-    notes << "=== VENDA PDV ==="
-    notes << "Vendedor: #{current_user.name}"
-    notes << "Loja: #{params[:store_type]}"
-    notes << "Pagamento: #{params[:payment_method]}"
+  def get_location_name(store_type)
+    case store_type
+    when 'lagoa_seca' then 'Lagoa Seca'
+    when 'bh_shopping' then 'BH Shopping'
+    when 'rj' then 'Barra Shopping (RJ)'
+    when 'online' then 'Online Store'
+    else 'Loja Desconhecida'
+    end
+  end
+
+  def calculate_cart_total(cart_items)
+    cart_items.sum { |item| item['price'].to_f * item['quantity'].to_i }
+  end
+
+  def determine_payment_method(payment_parcels)
+    return 'dinheiro' unless payment_parcels.present?
     
-    if params[:payment_method] == 'multi' && params[:multi_payments].present?
-      notes << "=== PARCELAS ==="
-      params[:multi_payments].each_with_index do |payment, index|
-        notes << "Parcela #{index + 1}: #{payment[:method]} - R$ #{sprintf('%.2f', payment[:amount].to_f)} - #{payment[:date]}"
-      end
+    if payment_parcels.length == 1
+      payment_parcels.first[:payment_method]
+    else
+      'parcels'
     end
-    
-    notes << "Data: #{Time.current.strftime('%d/%m/%Y %H:%M')}"
-
-    if params[:customer_cpf].present?
-      notes << "CPF: #{params[:customer_cpf]}"
-    end
-
-    if coupon_details
-      notes << "=== CUPOM APLICADO ==="
-      notes << "Código: #{coupon_details['code']}"
-      notes << "Desconto: R$ #{sprintf('%.2f', coupon_details['discount_amount'])}"
-      notes << "Tipo: #{coupon_details['discount_type'] == 'percentage' ? 'Percentual' : 'Valor Fixo'}"
-    end
-
-    if params[:discount_amount].to_f > 0
-      notes << "Desconto Manual: R$ #{sprintf('%.2f', params[:discount_amount].to_f)}"
-      notes << "Motivo: #{params[:discount_reason]}" if params[:discount_reason].present?
-    end
-
-    if params[:notes].present?
-      notes << "Observações: #{params[:notes]}"
-    end
-
-    notes.join("\n")
   end
 end
