@@ -300,7 +300,7 @@
         $('#stock_result').html('<i class="fas fa-spinner fa-spin me-2"></i>Buscando...');
 
         $.ajax({
-          url: '<%= stock_dashboard_index_path %>',
+          url: '<%= stockend_dashboard_index_path %>',
           type: 'GET',
           data: { item_code: itemCode },
           dataType: 'json',
