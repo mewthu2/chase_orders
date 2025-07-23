@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_20_183715) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_23_020242) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -256,6 +256,15 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_20_183715) do
     t.string "stock_tiny_2"
     t.string "tags"
     t.text "image_url"
+  end
+
+  create_table "stock_sync_configs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.boolean "enabled", default: false, null: false
+    t.text "days_of_week", null: false
+    t.text "hours", null: false
+    t.datetime "last_execution"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

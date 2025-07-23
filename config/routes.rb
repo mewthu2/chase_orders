@@ -84,6 +84,14 @@ Rails.application.routes.draw do
   #   end
   # end
 
+  resources :stock_sync, only: [:index] do
+    collection do
+      patch :update_config
+      post :execute_now
+      patch :toggle_status
+    end
+  end
+
   resources :logs, only: [:index]
   
   resources :users do

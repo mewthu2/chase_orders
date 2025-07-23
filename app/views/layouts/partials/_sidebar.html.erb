@@ -50,6 +50,11 @@
                 <%= link_to api_correios_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(api_correios_dashboard_index_path)}", title: "API Correios" do %>
                   <i class="fas fa-cogs"></i>
                 <% end %>
+                <%= link_to stock_sync_index_path, 
+                    class: "nav-mini-link nav-stock #{'active' if current_page?(stock_sync_index_path)}", 
+                    title: "Sincronização de Estoque" do %>
+                  <i class="fas fa-sync-alt"></i>
+                <% end %>
               </div>
             </div>
           </div>

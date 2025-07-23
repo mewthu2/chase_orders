@@ -1,0 +1,740 @@
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-content">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <div class="loading-text">
+      <h4 class="text-white mb-2">Processando...</h4>
+      <p class="text-white-50 mb-0" id="loadingMessage">Aguarde enquanto processamos sua solicitação</p>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid py-4">
+  <% title 'Sincronização de Estoque Correios' %>
+  <%= render 'layouts/partials/messages' %>
+
+  <!-- Status de Execução Atual -->
+  <% if @current_execution %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-warning shadow-lg">
+          <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">
+              <i class="fas fa-spinner fa-spin me-2"></i>Sincronização em Execução
+            </h6>
+            <div class="d-flex align-items-center gap-3">
+              <span class="badge bg-dark text-warning px-3 py-2">
+                <i class="fas fa-clock me-1"></i>
+                <span id="executionTimer">Calculando...</span>
+              </span>
+              <button onclick="window.location.reload()" class="btn btn-sm btn-dark">
+                <i class="fas fa-sync-alt me-1"></i>Atualizar
+              </button>
+            </div>
+          </div>
+          <div class="card-body bg-black">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="spinner-border text-warning" role="status" style="width: 2rem; height: 2rem;">
+                    <span class="visually-hidden">Carregando...</span>
+                  </div>
+                  <div>
+                    <h6 class="text-white mb-1">
+                      <%= @current_execution.tracking&.include?('manual_execution') ? 'Execução Manual' : 'Execução Automática' %>
+                    </h6>
+                    <p class="text-white-50 mb-0">
+                      <strong>Iniciado:</strong> <%= @current_execution.created_at.strftime('%d/%m/%Y às %H:%M:%S') %><br>
+                      <strong>Mensagem:</strong> <%= @current_execution.message %>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 text-end">
+                <div class="progress mb-2" style="height: 8px;">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                       role="progressbar" style="width: 100%"></div>
+                </div>
+                <small class="text-white-50">Processando produtos...</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const startTime = new Date('<%= @current_execution.created_at.iso8601 %>');
+        const timerElement = document.getElementById('executionTimer');
+        
+        function updateTimer() {
+          const now = new Date();
+          const diff = now - startTime;
+          
+          const minutes = Math.floor(diff / 60000);
+          const seconds = Math.floor((diff % 60000) / 1000);
+          
+          if (minutes > 0) {
+            timerElement.textContent = `${minutes}m ${seconds}s`;
+          } else {
+            timerElement.textContent = `${seconds}s`;
+          }
+        }
+
+        updateTimer();
+        
+        const interval = setInterval(updateTimer, 1000);
+
+        setTimeout(function() {
+          window.location.reload();
+        }, 30000);
+      });
+    </script>
+  <% end %>
+
+  <% if current_user&.admin? || current_user&.profile_id == 1 %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-dark shadow-lg">
+          <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-chart-bar me-2"></i>Estatísticas da Sincronização
+            </h6>
+            <div class="d-flex gap-2">
+              <%= link_to execute_now_stock_sync_index_path, 
+                  method: :post,
+                  class: "btn btn-sm btn-primary execute-now-btn #{'disabled' if @current_execution}",
+                  data: { confirm: @current_execution ? nil : "Tem certeza que deseja executar a sincronização agora?" } do %>
+                <i class="fas fa-sync me-1"></i>
+                <%= @current_execution ? 'Executando...' : 'Executar Agora' %>
+              <% end %>
+              <%= link_to toggle_status_stock_sync_index_path, 
+                  method: :patch,
+                  class: "btn btn-sm #{@config.enabled? ? 'btn-danger' : 'btn-success'} toggle-status-btn" do %>
+                <i class="fas #{@config.enabled? ? 'fa-pause' : 'fa-play'} me-1"></i>
+                <%= @config.enabled? ? 'Desativar' : 'Ativar' %> Automático
+              <% end %>
+            </div>
+          </div>
+          <div class="card-body bg-black">
+            <div class="row text-center">
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-success mb-1"><%= @stats[:success] %></h4>
+                  <small class="text-white-50">Sincronizações Bem-sucedidas</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-danger mb-1"><%= @stats[:failed] %></h4>
+                  <small class="text-white-50">Sincronizações Falharam</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-warning mb-1"><%= @stats[:processing] %></h4>
+                  <small class="text-white-50">Em Processamento</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="p-3">
+                  <h4 class="text-info mb-1"><%= @stats[:success_rate] %>%</h4>
+                  <small class="text-white-50">Taxa de Sucesso</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Status da Configuração -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-cogs me-2"></i>Status da Sincronização Automática
+            <% if @config.enabled? %>
+              <small class="text-success ms-2">
+                <i class="fas fa-check-circle me-1"></i>Ativo
+              </small>
+            <% else %>
+              <small class="text-danger ms-2">
+                <i class="fas fa-times-circle me-1"></i>Inativo
+              </small>
+            <% end %>
+          </h5>
+        </div>
+        <div class="card-body bg-black">
+          <div class="row justify-content-center">
+            <div class="col-md-10">
+              <% if @config.enabled? %>
+                <div class="alert alert-success bg-dark border-success mb-4">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle me-3 text-success"></i>
+                    <div>
+                      <strong class="text-white">Sincronização Automática Ativa</strong>
+                      <p class="text-white-50 mb-0 mt-1">
+                        Executando nos dias: <strong><%= @config.days_of_week_names.join(', ') %></strong><br>
+                        Horários: <strong><%= @config.hours_array.map { |h| sprintf('%02d:00', h) }.join(', ') %></strong>
+                        <% if @config.last_execution %>
+                          <br>Última execução: <strong><%= @config.last_execution.strftime('%d/%m/%Y às %H:%M') %></strong>
+                        <% end %>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              <% else %>
+                <div class="alert alert-warning bg-dark border-warning mb-4">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-3 text-warning"></i>
+                    <div>
+                      <strong class="text-white">Sincronização Automática Desativada</strong>
+                      <p class="text-white-50 mb-0 mt-1">Configure os horários abaixo e ative para começar a sincronização automática</p>
+                    </div>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuração de Horários -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-calendar-alt me-2"></i>Configuração de Horários
+          </h5>
+        </div>
+        <div class="card-body bg-black">
+          <%= form_with model: @config, url: update_config_stock_sync_index_path, method: :patch, local: true, id: "configForm" do |form| %>
+            <div class="row g-4">
+              <!-- Dias da Semana -->
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary h-100">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-calendar-week me-2"></i>Dias da Semana
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="row g-2">
+                      <% [
+                        [0, 'Domingo'], [1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], 
+                        [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado']
+                      ].each do |day_value, day_name| %>
+                        <div class="col-12">
+                          <label class="day-checkbox-label <%= @config.days_of_week_array.include?(day_value) ? 'active' : '' %>">
+                            <%= check_box_tag 'stock_sync_config[days_of_week][]', day_value, 
+                                @config.days_of_week_array.include?(day_value),
+                                class: "day-checkbox" %>
+                            <div class="day-checkbox-content">
+                              <i class="fas fa-calendar-day me-2"></i>
+                              <span><%= day_name %></span>
+                              <i class="fas fa-check check-icon"></i>
+                            </div>
+                          </label>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Horários -->
+              <div class="col-md-6">
+                <div class="card bg-black border border-secondary h-100">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-clock me-2"></i>Horários (24h)
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="row g-2">
+                      <% (0..23).step(2).each do |hour| %>
+                        <div class="col-6">
+                          <label class="hour-checkbox-label <%= @config.hours_array.include?(hour) ? 'active' : '' %>">
+                            <%= check_box_tag 'stock_sync_config[hours][]', hour, 
+                                @config.hours_array.include?(hour),
+                                class: "hour-checkbox" %>
+                            <div class="hour-checkbox-content">
+                              <i class="fas fa-clock me-2"></i>
+                              <span><%= sprintf('%02d:00', hour) %></span>
+                              <i class="fas fa-check check-icon"></i>
+                            </div>
+                          </label>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="card bg-black border border-secondary">
+                  <div class="card-header bg-dark">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-save me-2"></i>Ações
+                    </h6>
+                  </div>
+                  <div class="card-body bg-black">
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                      <%= form.submit "Salvar Configuração", 
+                          class: "btn btn-primary btn-lg px-4 save-config-btn" %>
+                      
+                      <button type="button" onclick="window.location.reload()" class="btn btn-secondary btn-lg px-4">
+                        <i class="fas fa-sync-alt me-2"></i>Atualizar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Execuções Recentes -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-history me-2"></i>Execuções Recentes
+          </h5>
+        </div>
+        <div class="card-body bg-black p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">ID</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Status</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Data/Hora</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Tipo</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Mensagem</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @recent_attempts.each do |attempt| %>
+                  <tr class="border-secondary">
+                    <td class="px-4 py-3 text-white font-monospace">#<%= attempt.id %></td>
+                    <td class="px-4 py-3">
+                      <span class="badge px-3 py-2 <%= case attempt.status
+                                                      when 'success' then 'bg-success text-white'
+                                                      when 'processing' then 'bg-warning text-dark'  
+                                                      when 'fail', 'error' then 'bg-danger text-white'
+                                                      end %>">
+                        <i class="fas <%= case attempt.status
+                                        when 'success' then 'fa-check'
+                                        when 'processing' then 'fa-spinner fa-spin'
+                                        when 'fail', 'error' then 'fa-times'
+                                        end %> me-1"></i>
+                        <%= attempt.status.humanize %>
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                      <%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <% if attempt.tracking&.include?('manual_execution') %>
+                        <span class="badge bg-info text-white px-2 py-1">
+                          <i class="fas fa-hand-pointer me-1"></i>Manual
+                        </span>
+                      <% else %>
+                        <span class="badge bg-primary text-white px-2 py-1">
+                          <i class="fas fa-robot me-1"></i>Automático
+                        </span>
+                      <% end %>
+                    </td>
+                    <td class="px-4 py-3 text-white-50" style="max-width: 300px;">
+                      <div class="text-truncate" title="<%= attempt.message %>">
+                        <%= attempt.message %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+            
+            <% if @recent_attempts.empty? %>
+              <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-white-50 mb-3"></i>
+                <p class="text-white-50 mb-0">Nenhuma execução encontrada</p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.form-control::placeholder {
+  color: #adb5bd;
+  opacity: 1;
+}
+
+.form-control:focus {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.badge {
+  font-weight: 500;
+  color: #ffffff !important;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.loading-content {
+  text-align: center;
+  background: rgba(33, 37, 41, 0.95);
+  padding: 3rem 2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2rem;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+}
+
+.spinner-ring:nth-child(1) {
+  animation-delay: 0s;
+  border-top-color: #007bff;
+}
+
+.spinner-ring:nth-child(2) {
+  animation-delay: -0.3s;
+  border-top-color: #28a745;
+  width: 90%;
+  height: 90%;
+  top: 5%;
+  left: 5%;
+}
+
+.spinner-ring:nth-child(3) {
+  animation-delay: -0.6s;
+  border-top-color: #ffc107;
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+}
+
+.spinner-ring:nth-child(4) {
+  animation-delay: -0.9s;
+  border-top-color: #dc3545;
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loading-text h4 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.loading-text p {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.alert {
+  border-radius: 6px;
+}
+
+.alert .text-white {
+  color: #ffffff !important;
+}
+
+.card-header h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.day-checkbox-label {
+  display: block;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.day-checkbox-label:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.day-checkbox-label.active {
+  background: rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+}
+
+.day-checkbox {
+  display: none;
+}
+
+.day-checkbox-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+}
+
+.check-icon {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.day-checkbox-label.active .check-icon {
+  opacity: 1;
+  color: #28a745;
+}
+
+.hour-checkbox-label {
+  display: block;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: center;
+}
+
+.hour-checkbox-label:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.hour-checkbox-label.active {
+  background: rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+}
+
+.hour-checkbox {
+  display: none;
+}
+
+.hour-checkbox-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.hour-checkbox-label.active .hour-checkbox-content {
+  color: #fff;
+  font-weight: 600;
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-dark td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+</style>
+<% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const loadingMessage = document.getElementById('loadingMessage');
+
+  const loadingMessages = {
+    execute: 'Executando sincronização de estoque...',
+    toggle: 'Alterando status da sincronização...',
+    save: 'Salvando configuração...'
+  };
+
+  function showLoading(action = 'execute') {
+    loadingMessage.textContent = loadingMessages[action] || 'Processando...';
+    loadingOverlay.classList.add('show');
+  }
+
+  function hideLoading() {
+    loadingOverlay.classList.remove('show');
+  }
+
+  document.querySelectorAll('.day-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      const label = this.closest('.day-checkbox-label');
+      if (this.checked) {
+        label.classList.add('active');
+      } else {
+        label.classList.remove('active');
+      }
+    });
+  });
+
+  document.querySelectorAll('.hour-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      const label = this.closest('.hour-checkbox-label');
+      if (this.checked) {
+        label.classList.add('active');
+      } else {
+        label.classList.remove('active');
+      }
+    });
+  });
+
+  document.querySelectorAll('.execute-now-btn').forEach(function(button) {
+    if (!button.classList.contains('disabled')) {
+      button.addEventListener('click', function(e) {
+        const confirmMessage = this.getAttribute('data-confirm');
+        if (confirmMessage) {
+          const confirmed = confirm(confirmMessage);
+          if (confirmed) {
+            showLoading('execute');
+          } else {
+            e.preventDefault();
+            return false;
+          }
+        } else {
+          showLoading('execute');
+        }
+      });
+    }
+  });
+
+  document.querySelectorAll('.toggle-status-btn').forEach(function(button) {
+    button.addEventListener('click', function(e) {
+      showLoading('toggle');
+    });
+  });
+
+  const configForm = document.getElementById('configForm');
+  if (configForm) {
+    configForm.addEventListener('submit', function(e) {
+      showLoading('save');
+    });
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(hideLoading, 500);
+  });
+
+  window.addEventListener('pageshow', function() {
+    hideLoading();
+  });
+});
+</script>
