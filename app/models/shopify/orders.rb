@@ -507,7 +507,6 @@ class Shopify::Orders
 
     def list_all_products(function)
       response = client_shopify_rest.get(path: 'products', query: { limit: 150 })
-      process_inventory_items(response)
 
       case function
       when 'create_update_shopify_products'

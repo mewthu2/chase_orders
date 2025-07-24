@@ -21,7 +21,7 @@ module Shopify::Products
           access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP')
         )
 
-        client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+        client = ShopifyAPI::Clients::Rest::Admin.new(session:)
 
         response = client.get(path: "products/#{product.shopify_product_id}.json")
         shopify_product = response.body['product']
