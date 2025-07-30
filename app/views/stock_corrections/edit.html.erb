@@ -171,7 +171,8 @@
                   <tr class="border-secondary" 
                       data-item-id="<%= item.id %>" 
                       data-product-sku="<%= item.product.sku %>"
-                      data-product-id="<%= item.product.id %>">
+                      data-product-id="<%= item.product.id %>"
+                      data-item-executed="<%= item.executed? %>">
                     <td class="px-3 py-3" style="width: 120px;">
                       <span class="font-monospace text-white fw-medium">
                         <%= item.product.sku %>
@@ -215,17 +216,38 @@
                                class="form-check-input bg-dark border-secondary correction-checkbox"
                                data-item-id="<%= item.id %>"
                                <%= 'checked' if item.needs_correction? %>
-                               <%= 'disabled' if item.checked? || item.executed? %>>
+                               <%= 'disabled' if item.checked? %>>
                       </div>
                     </td>
                     
                     <td class="px-3 py-3 text-center" style="width: 100px;">
-                      <input type="number" 
-                             class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
-                             style="width: 80px; margin: 0 auto;"
-                             data-item-id="<%= item.id %>"
-                             value="<%= item.corrected_stock %>"
-                             <%= 'disabled' unless item.needs_correction? && !item.executed? %>>
+                      <% if item.executed? %>
+                        <!-- Para itens executados, mostrar valor atual mas permitir edição -->
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                          <span class="current-stock-display badge bg-success text-white px-2 py-1" 
+                                data-item-id="<%= item.id %>">
+                            <%= item.corrected_stock %> un.
+                          </span>
+                          <button class="btn btn-sm btn-outline-light edit-stock-btn" 
+                                  data-item-id="<%= item.id %>"
+                                  title="Editar estoque">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                        </div>
+                        <input type="number" 
+                               class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
+                               style="width: 80px; margin: 0 auto; display: none;"
+                               data-item-id="<%= item.id %>"
+                               value="<%= item.corrected_stock %>">
+                      <% else %>
+                        <!-- Para itens não executados, comportamento normal -->
+                        <input type="number" 
+                               class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
+                               style="width: 80px; margin: 0 auto;"
+                               data-item-id="<%= item.id %>"
+                               value="<%= item.corrected_stock %>"
+                               <%= 'disabled' unless item.needs_correction? %>>
+                      <% end %>
                     </td>
                     
                     <td class="px-3 py-3" style="width: 200px;">
@@ -237,9 +259,25 @@
                                value="<%= item.correction_reason %>"
                                required>
                       <% elsif item.needs_correction? && item.executed? %>
-                        <small class="text-success">
-                          <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 25) %>
-                        </small>
+                        <!-- Para itens executados, mostrar motivo mas permitir edição -->
+                        <div class="executed-reason-container" data-item-id="<%= item.id %>">
+                          <div class="current-reason-display d-flex align-items-center gap-1">
+                            <small class="text-success flex-grow-1">
+                              <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 20) %>
+                            </small>
+                            <button class="btn btn-sm btn-outline-light edit-reason-btn" 
+                                    data-item-id="<%= item.id %>"
+                                    title="Editar motivo">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                          </div>
+                          <input type="text" 
+                                 class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
+                                 data-item-id="<%= item.id %>"
+                                 value="<%= item.correction_reason %>"
+                                 style="display: none;"
+                                 required>
+                        </div>
                       <% else %>
                         <span class="text-white-50">-</span>
                       <% end %>
@@ -501,6 +539,21 @@ animation: fa-spin 2s infinite linear;
 100% { transform: rotate(360deg); }
 }
 
+/* Estilos para edição inline */
+.current-stock-display,
+.current-reason-display {
+cursor: pointer;
+}
+
+.current-stock-display:hover,
+.current-reason-display:hover {
+background-color: rgba(255, 255, 255, 0.1);
+}
+
+.executed-reason-container {
+min-height: 32px;
+}
+
 /* Responsividade */
 @media (max-width: 1200px) {
 .table-fixed th:nth-child(2),
@@ -612,6 +665,134 @@ function toggleIntegrateButton(itemId) {
     console.log('⚠️ Alguns elementos não encontrados');
   }
 }
+
+// Função para alternar modo de edição do estoque
+function toggleStockEdit(itemId, enable) {
+  const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+  const display = row.querySelector('.current-stock-display');
+  const input = row.querySelector('.corrected-stock-input');
+  const editBtn = row.querySelector('.edit-stock-btn');
+  
+  if (enable) {
+    display.style.display = 'none';
+    input.style.display = 'block';
+    input.focus();
+    input.select();
+    editBtn.innerHTML = '<i class="fas fa-check"></i>';
+    editBtn.classList.remove('btn-outline-light');
+    editBtn.classList.add('btn-success');
+    editBtn.title = 'Salvar';
+  } else {
+    display.style.display = 'flex';
+    input.style.display = 'none';
+    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+    editBtn.classList.remove('btn-success');
+    editBtn.classList.add('btn-outline-light');
+    editBtn.title = 'Editar estoque';
+    
+    // Atualizar o display com o novo valor
+    display.textContent = `${input.value} un.`;
+    
+    // Atualizar no backend
+    updateItem(itemId, { corrected_stock: input.value });
+    
+    // Verificar botão de integração
+    toggleIntegrateButton(itemId);
+  }
+}
+
+// Função para alternar modo de edição do motivo
+function toggleReasonEdit(itemId, enable) {
+  const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
+  const display = container.querySelector('.current-reason-display');
+  const input = container.querySelector('.correction-reason-input');
+  const editBtn = container.querySelector('.edit-reason-btn');
+  
+  if (enable) {
+    display.style.display = 'none';
+    input.style.display = 'block';
+    input.focus();
+    input.select();
+    editBtn.innerHTML = '<i class="fas fa-check"></i>';
+    editBtn.classList.remove('btn-outline-light');
+    editBtn.classList.add('btn-success');
+    editBtn.title = 'Salvar';
+  } else {
+    display.style.display = 'flex';
+    input.style.display = 'none';
+    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+    editBtn.classList.remove('btn-success');
+    editBtn.classList.add('btn-outline-light');
+    editBtn.title = 'Editar motivo';
+    
+    // Atualizar o display com o novo valor
+    const reasonText = display.querySelector('small');
+    reasonText.innerHTML = `<i class="fas fa-check me-1"></i>${input.value.length > 20 ? input.value.substring(0, 20) + '...' : input.value}`;
+    
+    // Atualizar no backend
+    updateItem(itemId, { correction_reason: input.value });
+    
+    // Verificar botão de integração
+    toggleIntegrateButton(itemId);
+  }
+}
+
+// Event listeners para edição de estoque
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.edit-stock-btn')) {
+    const btn = e.target.closest('.edit-stock-btn');
+    const itemId = btn.dataset.itemId;
+    const isEditing = btn.classList.contains('btn-success');
+    
+    console.log('📊 Alternando edição de estoque:', itemId, isEditing ? 'salvar' : 'editar');
+    
+    if (isEditing) {
+      // Salvar
+      toggleStockEdit(itemId, false);
+    } else {
+      // Editar
+      toggleStockEdit(itemId, true);
+    }
+  }
+});
+
+// Event listeners para edição de motivo
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.edit-reason-btn')) {
+    const btn = e.target.closest('.edit-reason-btn');
+    const itemId = btn.dataset.itemId;
+    const isEditing = btn.classList.contains('btn-success');
+    
+    console.log('📝 Alternando edição de motivo:', itemId, isEditing ? 'salvar' : 'editar');
+    
+    if (isEditing) {
+      // Salvar
+      toggleReasonEdit(itemId, false);
+    } else {
+      // Editar
+      toggleReasonEdit(itemId, true);
+    }
+  }
+});
+
+// Salvar com Enter nos inputs de edição
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (e.target.classList.contains('corrected-stock-input')) {
+      const itemId = e.target.dataset.itemId;
+      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+      if (row.dataset.itemExecuted === 'true') {
+        toggleStockEdit(itemId, false);
+      }
+    } else if (e.target.classList.contains('correction-reason-input')) {
+      const itemId = e.target.dataset.itemId;
+      const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
+      if (container) {
+        toggleReasonEdit(itemId, false);
+      }
+    }
+  }
+});
 
 // Botão "Marcar Todos"
 document.getElementById('markAllBtn').addEventListener('click', function() {
@@ -755,23 +936,33 @@ document.querySelectorAll('.correction-checkbox').forEach(checkbox => {
   });
 });
 
-// Atualizar estoque corrigido
+// Atualizar estoque corrigido (apenas para itens não executados)
 document.addEventListener('input', function(e) {
   if (e.target.classList.contains('corrected-stock-input')) {
-    console.log('📊 Estoque alterado:', e.target.dataset.itemId, e.target.value);
     const itemId = e.target.dataset.itemId;
-    updateItem(itemId, { corrected_stock: e.target.value });
-    toggleIntegrateButton(itemId);
+    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    
+    // Só atualizar automaticamente se não for item executado
+    if (row.dataset.itemExecuted !== 'true') {
+      console.log('📊 Estoque alterado:', itemId, e.target.value);
+      updateItem(itemId, { corrected_stock: e.target.value });
+      toggleIntegrateButton(itemId);
+    }
   }
 });
 
-// Atualizar motivo da correção
+// Atualizar motivo da correção (apenas para itens não executados)
 document.addEventListener('input', function(e) {
   if (e.target.classList.contains('correction-reason-input')) {
-    console.log('📝 Motivo alterado:', e.target.dataset.itemId, e.target.value);
     const itemId = e.target.dataset.itemId;
-    updateItem(itemId, { correction_reason: e.target.value });
-    toggleIntegrateButton(itemId);
+    const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
+    
+    // Só atualizar automaticamente se não for item executado
+    if (!container) {
+      console.log('📝 Motivo alterado:', itemId, e.target.value);
+      updateItem(itemId, { correction_reason: e.target.value });
+      toggleIntegrateButton(itemId);
+    }
   }
 });
 
@@ -838,7 +1029,7 @@ document.addEventListener('click', function(e) {
       correctedStock = stockInput.value;
     } else {
       // Se não tem input visível, pegar do badge de estoque atual
-      const stockBadge = row.querySelector('.badge');
+      const stockBadge = row.querySelector('.current-stock-display');
       if (stockBadge) {
         correctedStock = stockBadge.textContent.replace(' un.', '').trim();
       }
