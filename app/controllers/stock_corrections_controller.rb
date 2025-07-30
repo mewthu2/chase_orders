@@ -132,7 +132,15 @@ class StockCorrectionsController < ApplicationController
   end
   
   def execute_item
-    @item = StockCorrectionItem.find(params[:id])
+    # CORREÇÃO: Usar o parâmetro correto do item
+    item_id = params[:item_id] || params[:id]
+    @item = StockCorrectionItem.find(item_id)
+    
+    Rails.logger.info "=== EXECUTE ITEM DEBUG ==="
+    Rails.logger.info "Params: #{params.inspect}"
+    Rails.logger.info "Item ID from params: #{item_id}"
+    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
+    Rails.logger.info "=========================="
     
     if @item.execute_correction!
       render json: { success: true, message: 'Correção executada com sucesso!' }
@@ -169,7 +177,15 @@ class StockCorrectionsController < ApplicationController
   end
   
   def sync_item_with_shopify
-    @item = StockCorrectionItem.find(params[:id])
+    # CORREÇÃO: Usar o parâmetro correto do item
+    item_id = params[:item_id] || params[:id]
+    @item = StockCorrectionItem.find(item_id)
+    
+    Rails.logger.info "=== SYNC ITEM DEBUG ==="
+    Rails.logger.info "Params: #{params.inspect}"
+    Rails.logger.info "Item ID from params: #{item_id}"
+    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
+    Rails.logger.info "======================="
     
     if @item.sync_with_shopify!
       render json: { 
@@ -188,9 +204,19 @@ class StockCorrectionsController < ApplicationController
   end
   
   def integrate_item_correction
-    @item = StockCorrectionItem.find(params[:id])
+    # CORREÇÃO: Usar o parâmetro correto do item
+    item_id = params[:item_id] || params[:id]
+    @item = StockCorrectionItem.find(item_id)
     corrected_stock = params[:corrected_stock].to_i
     correction_reason = params[:correction_reason]
+    
+    Rails.logger.info "=== INTEGRATE ITEM DEBUG ==="
+    Rails.logger.info "Params: #{params.inspect}"
+    Rails.logger.info "Item ID from params: #{item_id}"
+    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku} (Product ID: #{@item.product.id})"
+    Rails.logger.info "Corrected stock: #{corrected_stock}"
+    Rails.logger.info "Correction reason: #{correction_reason}"
+    Rails.logger.info "============================="
     
     Rails.logger.info "=== Starting integration for item #{@item.id} ==="
     Rails.logger.info "Parameters - stock: #{corrected_stock}, reason: #{correction_reason}"
@@ -351,7 +377,14 @@ class StockCorrectionsController < ApplicationController
   end
   
   def check_shopify_inventory
-    @item = StockCorrectionItem.find(params[:item_id])
+    item_id = params[:item_id]
+    @item = StockCorrectionItem.find(item_id)
+    
+    Rails.logger.info "=== CHECK SHOPIFY INVENTORY DEBUG ==="
+    Rails.logger.info "Params: #{params.inspect}"
+    Rails.logger.info "Item ID from params: #{item_id}"
+    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
+    Rails.logger.info "=================================="
     
     result = ShopifyInventoryService.check_inventory_level(@item.product, @item.stock_correction.location)
     
