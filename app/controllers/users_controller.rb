@@ -9,7 +9,6 @@ class UsersController < ApplicationController
     @page = 1 if @page < 1
     @per_page = 10
     @offset = (@page - 1) * @per_page
-    
     @users = User.limit(@per_page).offset(@offset).order(:name)
     @total_users = User.count
     @total_pages = (@total_users.to_f / @per_page).ceil
@@ -23,7 +22,12 @@ class UsersController < ApplicationController
   end
 
   def create
-    @user = User.new(user_params)
+    @user = User.new(admin_user_params)
+    
+    # Se é admin criando usuário, pode definir locations permitidas
+    if current_user_admin? && params[:user][:allowed_location_keys].present?
+      @user.set_allowed_locations(params[:user][:allowed_location_keys])
+    end
     
     if @user.save
       redirect_to users_path, notice: 'Usuário criado com sucesso.'
@@ -45,6 +49,11 @@ class UsersController < ApplicationController
     # Parâmetros permitidos baseados no tipo de usuário
     permitted_params = current_user_admin? ? admin_user_params : user_self_params
     
+    # Se é admin editando outro usuário, pode alterar locations permitidas
+    if current_user_admin? && @user != current_user && params[:user][:allowed_location_keys].present?
+      @user.set_allowed_locations(params[:user][:allowed_location_keys])
+    end
+
     # Remove senha se estiver vazia (para não alterar)
     if permitted_params[:password].blank?
       permitted_params.delete(:password)

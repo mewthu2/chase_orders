@@ -22,11 +22,29 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :products do
+  resources :products, only: [:index] do
     collection do
+      get :inventory
+      post :search_inventory
       post :run_product_update
     end
   end
+  
+  resources :stock_corrections do
+    member do
+      post :execute_all
+      post :execute_item
+      post :update_shopify_stock
+      post :sync_item_with_shopify
+      post :integrate_item_correction
+      get :debug_locations
+      get :check_shopify_inventory
+    end
+  end
+  
+  resources :stock_correction_items, only: [:update]
+  
+  resources :available_locations
 
   resources :motors, only: [:index]
   resources :orders

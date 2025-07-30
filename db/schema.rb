@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_23_161500) do
+ActiveRecord::Schema[7.2].define(version: 2025_07_30_071201) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -259,6 +259,44 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_23_161500) do
     t.text "image_url"
   end
 
+  create_table "stock_correction_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "stock_correction_id", null: false
+    t.bigint "product_id", null: false
+    t.boolean "checked", default: false
+    t.boolean "needs_correction", default: false
+    t.integer "current_stock"
+    t.integer "corrected_stock"
+    t.string "correction_reason"
+    t.boolean "executed", default: false
+    t.datetime "executed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "last_shopify_sync_at"
+    t.string "shopify_sync_status", default: "pending"
+    t.text "shopify_sync_error"
+    t.index ["last_shopify_sync_at"], name: "index_stock_correction_items_on_last_shopify_sync_at"
+    t.index ["needs_correction"], name: "index_stock_correction_items_on_needs_correction"
+    t.index ["product_id"], name: "index_stock_correction_items_on_product_id"
+    t.index ["shopify_sync_status"], name: "index_stock_correction_items_on_shopify_sync_status"
+    t.index ["stock_correction_id", "product_id"], name: "idx_on_stock_correction_id_product_id_f0f4e197f0", unique: true
+    t.index ["stock_correction_id"], name: "index_stock_correction_items_on_stock_correction_id"
+  end
+
+  create_table "stock_corrections", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.date "correction_date", null: false
+    t.string "reason", null: false
+    t.string "location", null: false
+    t.string "status", default: "pending"
+    t.text "notes"
+    t.datetime "executed_at"
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["correction_date"], name: "index_stock_corrections_on_correction_date"
+    t.index ["location", "status"], name: "index_stock_corrections_on_location_and_status"
+    t.index ["user_id"], name: "index_stock_corrections_on_user_id"
+  end
+
   create_table "stock_sync_configs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.boolean "enabled", default: false, null: false
     t.text "days_of_week", null: false
@@ -290,6 +328,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_23_161500) do
     t.datetime "updated_at", null: false
     t.integer "profile_id", default: 2
     t.boolean "active", default: true, null: false
+    t.json "allowed_locations"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["profile_id"], name: "index_users_on_profile_id"
@@ -306,4 +345,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_23_161500) do
   add_foreign_key "order_pdvs", "users"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
+  add_foreign_key "stock_correction_items", "products"
+  add_foreign_key "stock_correction_items", "stock_corrections"
+  add_foreign_key "stock_corrections", "users"
 end

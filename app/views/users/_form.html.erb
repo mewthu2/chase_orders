@@ -1,5 +1,5 @@
 <div class="container-fluid py-4">
-  <div class="row justify-content-center">
+  <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark">
@@ -8,7 +8,6 @@
             <%= @user.new_record? ? 'Novo Usuário' : 'Editar Usuário' %>
           </h5>
         </div>
-        
         <div class="card-body bg-black">
           <%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
             <% if @user.errors.any? %>
@@ -22,72 +21,166 @@
               </div>
             <% end %>
 
+            <!-- Informações Básicas -->
             <div class="row g-4">
               <div class="col-md-4">
-                <label class="form-label text-white">Nome *</label>
+                <label class="form-label text-white fw-bold">Nome *</label>
                 <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
                 <div class="invalid-feedback">
                   Por favor, informe o nome.
                 </div>
               </div>
-              
               <div class="col-md-4">
-                <label class="form-label text-white">Email *</label>
+                <label class="form-label text-white fw-bold">Email *</label>
                 <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
                 <div class="invalid-feedback">
                   Por favor, informe um email válido.
                 </div>
               </div>
-
               <div class="col-md-4">
-                <label class="form-label text-white">Telefone</label>
+                <label class="form-label text-white fw-bold">Telefone</label>
                 <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
               </div>
             </div>
 
-            <div class="row g-4 mt-2">
+            <!-- Segurança e Acesso -->
+            <div class="row g-4 mt-3">
               <div class="col-md-4">
-                <label class="form-label text-white">Senha <%= @user.new_record? ? '*' : '(deixe em branco para manter)' %></label>
-                <%= form.password_field :password, class: 'form-control bg-dark text-white border-secondary', 
-                    required: @user.new_record?, autocomplete: 'new-password' %>
+                <label class="form-label text-white fw-bold">Senha <%= @user.new_record? ? '*' : '' %></label>
+                <%= form.password_field :password, 
+                                        class: 'form-control bg-dark text-white border-secondary', 
+                                        required: @user.new_record?, 
+                                        autocomplete: 'new-password' %>
                 <div class="invalid-feedback">
                   Por favor, informe a senha.
                 </div>
+                <% unless @user.new_record? %>
+                  <small class="text-muted">Deixe em branco para manter a senha atual</small>
+                <% end %>
               </div>
-              
               <div class="col-md-4">
-                <label class="form-label text-white">Confirmar Senha</label>
-                <%= form.password_field :password_confirmation, class: 'form-control bg-dark text-white border-secondary', 
-                    autocomplete: 'new-password' %>
+                <label class="form-label text-white fw-bold">Confirmar Senha</label>
+                <%= form.password_field :password_confirmation, 
+                                        class: 'form-control bg-dark text-white border-secondary', 
+                                        autocomplete: 'new-password' %>
+                <div class="invalid-feedback">
+                  As senhas não coincidem.
+                </div>
               </div>
-
               <div class="col-md-4">
-                <label class="form-label text-white">Perfil *</label>
-                <%= form.select :profile_id, options_for_select([
-                  ['Selecione um perfil', ''],
-                  ['Administrador', 1],
-                  ['Gerente', 2],
-                  ['Usuário', 3]
-                ], @user.profile_id), {}, { class: 'form-select bg-dark text-white border-secondary', required: true } %>
+                <label class="form-label text-white fw-bold">Perfil do Usuário *</label>
+                <%= form.select :profile_id, 
+                                options_for_select([
+                                  ['Selecione um perfil', ''],
+                                  ['Administrador', 1],
+                                  ['Gerente', 2],
+                                  ['Usuário', 3]
+                                ], @user.profile_id), 
+                                {}, 
+                                { class: 'form-select bg-dark text-white border-secondary', required: true } %>
                 <div class="invalid-feedback">
                   Por favor, selecione um perfil.
                 </div>
-                <small class="text-muted">
-                  <strong>Administrador:</strong> Acesso total ao sistema<br>
-                  <strong>Gerente:</strong> Acesso limitado de gerenciamento<br>
-                  <strong>Usuário:</strong> Acesso básico
-                </small>
               </div>
             </div>
 
+            <!-- Status da Conta -->
             <div class="row g-4 mt-3">
               <div class="col-md-6">
                 <div class="form-check form-switch">
-                  <%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @user.new_record? ? true : @user.active? %>
-                  <label class="form-check-label text-white">
+                  <%= form.check_box :active, 
+                                      class: 'form-check-input', 
+                                      role: 'switch', 
+                                      checked: @user.new_record? ? true : @user.active? %>
+                  <label class="form-check-label text-white fw-bold">
                     Usuário Ativo
                   </label>
-                  <small class="d-block text-muted">Usuários inativos não podem fazer login no sistema</small>
+                  <small class="d-block text-muted">Controle se o usuário pode fazer login no sistema</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Controle de Acesso por Location -->
+            <div class="mt-4" id="locationsSection">
+              <div class="card bg-dark border border-secondary">
+                <div class="card-header bg-secondary">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-map-marker-alt me-2"></i>Controle de Acesso por Location
+                    </h6>
+                    <span class="badge bg-info text-white" id="selectedCount">0 selecionadas</span>
+                  </div>
+                </div>
+                <div class="card-body bg-dark">
+                  <div class="alert alert-info bg-dark bg-opacity-15 border-info mb-3">
+                    <div class="d-flex align-items-start">
+                      <i class="fas fa-info-circle text-info me-2 mt-1"></i>
+                      <div>
+                        <strong class="text-white">Importante:</strong>
+                        <p class="mb-0 text-white" id="locationHelpText">
+                          Selecione as locations que este usuário poderá acessar. Administradores têm acesso automático a todas as locations.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div id="locationsContent">
+                    <!-- Controles de Seleção -->
+                    <div class="d-flex gap-2 mb-4 flex-wrap" id="locationControls">
+                      <button type="button" class="btn btn-outline-success btn-sm" id="selectAllLocations">
+                        <i class="fas fa-check-double me-1"></i>Selecionar Todas
+                      </button>
+                      <button type="button" class="btn btn-outline-danger btn-sm" id="deselectAllLocations">
+                        <i class="fas fa-times me-1"></i>Desmarcar Todas
+                      </button>
+                    </div>
+
+                    <!-- Grid de Locations -->
+                    <div class="row g-3">
+                      <% User::AVAILABLE_LOCATIONS.each do |key, data| %>
+                        <div class="col-md-6 col-xl-4">
+                          <div class="location-card">
+                            <div class="form-check">
+                              <%= check_box_tag "user[allowed_location_keys][]", 
+                                                key, 
+                                                @user.allowed_location_keys.include?(key),
+                                                { 
+                                                  class: 'form-check-input location-checkbox',
+                                                  id: "location_#{key}"
+                                                } %>
+                              <label class="form-check-label w-100" for="location_<%= key %>">
+                                <div class="location-header">
+                                  <div class="location-icon">
+                                    <i class="fas fa-store"></i>
+                                  </div>
+                                  <div class="location-info">
+                                    <h6 class="location-name text-white mb-1"><%= data[:name] %></h6>
+                                    <small class="location-key text-muted">
+                                      <i class="fas fa-key me-1"></i><%= key %>
+                                    </small>
+                                    <br>
+                                    <small class="shopify-id text-success">
+                                      <i class="fab fa-shopify me-1"></i>ID: <%= data[:shopify_id] %>
+                                    </small>
+                                  </div>
+                                  <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      <% end %>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top border-secondary">
+                      <small class="text-muted d-flex align-items-center">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>
+                        O usuário só poderá acessar as locations selecionadas no controle de estoque.
+                      </small>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -112,80 +205,302 @@
 </div>
 
 <% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
-    
-    .bg-black {
-      background-color: #121212 !important;
-    }
-    
-    .form-control:focus,
-    .form-select:focus {
-      border-color: #4299e1;
-      box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
-    }
-    
-    .form-check-input:checked {
-      background-color: #4299e1;
-      border-color: #4299e1;
-    }
-    
-    .form-check-input:focus {
-      border-color: #4299e1;
-      box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
-    }
-    
-    .btn-lg {
-      padding: 0.75rem 2rem;
-      font-size: 1.1rem;
-    }
-    
-    .card {
-      border-radius: 0.5rem;
-    }
-    
-    .form-label {
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-    }
-    
-    .invalid-feedback {
-      display: block;
-    }
-  </style>
+<style>
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+}
+
+.form-check-input:checked {
+  background-color: #4299e1;
+  border-color: #4299e1;
+}
+
+.form-check-input:focus {
+  border-color: #4299e1;
+  box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25);
+}
+
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+}
+
+.card {
+  border-radius: 0.5rem;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.invalid-feedback {
+  display: block;
+}
+
+.location-card {
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 2px solid #495057;
+  background: linear-gradient(135deg, rgba(73, 80, 87, 0.2) 0%, rgba(52, 58, 64, 0.2) 100%);
+  transition: all 0.3s ease;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.location-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4299e1, #3182ce);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.location-card:hover {
+  border-color: #4299e1;
+  background: linear-gradient(135deg, rgba(66, 153, 225, 0.15) 0%, rgba(49, 130, 206, 0.1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(66, 153, 225, 0.15);
+}
+
+.location-card:hover::before {
+  transform: scaleX(1);
+}
+
+.location-checkbox {
+  display: none;
+}
+
+.location-checkbox:checked + label .location-card {
+  border-color: #4299e1;
+  background: linear-gradient(135deg, rgba(66, 153, 225, 0.2) 0%, rgba(49, 130, 206, 0.15) 100%);
+}
+
+.location-checkbox:checked + label .location-card::before {
+  transform: scaleX(1);
+}
+
+.location-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.location-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.location-info {
+  flex: 1;
+}
+
+.location-name {
+  font-weight: 600;
+  margin: 0;
+}
+
+.location-key {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.shopify-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.check-indicator {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #6c757d;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.location-checkbox:checked + label .check-indicator {
+  background-color: #4299e1;
+  border-color: #4299e1;
+  color: white;
+}
+
+.form-switch .form-check-input {
+  width: 2.5rem;
+  height: 1.25rem;
+}
+</style>
 <% end %>
 
 <% content_for :scripts do %>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Bootstrap form validation
-      const forms = document.querySelectorAll('.needs-validation');
-      Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-          if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-          form.classList.add('was-validated');
-        }, false);
-      });
-
-      const phoneInput = document.querySelector('input[name="user[phone]"]');
-      if (phoneInput) {
-        phoneInput.addEventListener('input', function(e) {
-          let value = e.target.value.replace(/\D/g, '');
-          if (value.length <= 11) {
-            value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-            if (value.length < 14) {
-              value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-            }
-          }
-          e.target.value = value;
-        });
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Bootstrap form validation
+  const forms = document.querySelectorAll('.needs-validation');
+  Array.from(forms).forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
       }
+      form.classList.add('was-validated');
+    }, false);
+  });
+
+  // Formatação do telefone
+  const phoneInput = document.querySelector('input[name="user[phone]"]');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        if (value.length < 14) {
+          value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+        }
+      }
+      e.target.value = value;
     });
-  </script>
+  }
+
+  // Location checkboxes
+  const locationCheckboxes = document.querySelectorAll('.location-checkbox');
+  const selectAllBtn = document.getElementById('selectAllLocations');
+  const deselectAllBtn = document.getElementById('deselectAllLocations');
+  const selectedCounter = document.getElementById('selectedCount');
+  const profileSelect = document.querySelector('select[name="user[profile_id]"]');
+  const locationsSection = document.getElementById('locationsSection');
+  const locationControls = document.getElementById('locationControls');
+  const locationHelpText = document.getElementById('locationHelpText');
+
+  function updateSelectedCount() {
+    const checkedCount = document.querySelectorAll('.location-checkbox:checked').length;
+    const totalCount = locationCheckboxes.length;
+    
+    if (selectedCounter) {
+      selectedCounter.textContent = `${checkedCount} de ${totalCount} selecionadas`;
+      
+      if (checkedCount === 0) {
+        selectedCounter.className = 'badge bg-secondary text-white';
+      } else if (checkedCount === totalCount) {
+        selectedCounter.className = 'badge bg-success text-white';
+      } else {
+        selectedCounter.className = 'badge bg-info text-white';
+      }
+    }
+  }
+
+  function toggleLocationsSection() {
+    if (!profileSelect || !locationsSection) return;
+    
+    const isAdmin = profileSelect.value === '1';
+    
+    if (isAdmin) {
+      locationControls.style.display = 'none';
+      locationCheckboxes.forEach(checkbox => {
+        checkbox.closest('.col-md-6').style.display = 'none';
+      });
+      
+      if (locationHelpText) {
+        locationHelpText.textContent = 'Administradores têm acesso automático a todas as locations.';
+      }
+      
+      if (selectedCounter) {
+        selectedCounter.textContent = 'Todas (Admin)';
+        selectedCounter.className = 'badge bg-warning text-dark';
+      }
+    } else {
+      locationControls.style.display = 'flex';
+      locationCheckboxes.forEach(checkbox => {
+        checkbox.closest('.col-md-6').style.display = 'block';
+      });
+      
+      if (locationHelpText) {
+        locationHelpText.textContent = 'Selecione as locations que este usuário poderá acessar. Se nenhuma for selecionada, o usuário não terá acesso ao controle de estoque.';
+      }
+      
+      updateSelectedCount();
+    }
+  }
+
+  // Initialize location checkboxes
+  locationCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+  });
+
+  updateSelectedCount();
+
+  // Select/Deselect all buttons
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', function() {
+      locationCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
+      updateSelectedCount();
+    });
+  }
+
+  if (deselectAllBtn) {
+    deselectAllBtn.addEventListener('click', function() {
+      locationCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateSelectedCount();
+    });
+  }
+
+  // Profile change handler
+  if (profileSelect) {
+    profileSelect.addEventListener('change', toggleLocationsSection);
+    toggleLocationsSection(); // Initial call
+  }
+
+  // Password validation
+  const passwordField = document.querySelector('input[name="user[password]"]');
+  const confirmPasswordField = document.querySelector('input[name="user[password_confirmation]"]');
+
+  if (passwordField && confirmPasswordField) {
+    function validatePasswords() {
+      if (passwordField.value && confirmPasswordField.value) {
+        if (passwordField.value !== confirmPasswordField.value) {
+          confirmPasswordField.setCustomValidity('As senhas não coincidem');
+        } else {
+          confirmPasswordField.setCustomValidity('');
+        }
+      } else {
+        confirmPasswordField.setCustomValidity('');
+      }
+    }
+
+    passwordField.addEventListener('input', validatePasswords);
+    confirmPasswordField.addEventListener('input', validatePasswords);
+  }
+});
+</script>
 <% end %>

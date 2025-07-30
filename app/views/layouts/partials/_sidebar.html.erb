@@ -5,71 +5,109 @@
     </div>
     <div class="nav-carousel" id="navCarousel">
       <div class="nav-items">
+        <!-- Home -->
         <div class="nav-item">
           <%= link_to root_path, class: "nav-link #{'active' if current_page?(root_path)}", title: "Home" do %>
             <i class="fas fa-home"></i>
             <span class="nav-text">Home</span>
           <% end %>
         </div>
-        <div class="nav-item">
-          <%= link_to edit_user_path(current_user), class: "nav-link #{'active' if current_page?(edit_user_path(current_user))}", title: "Meu Perfil" do %>
-            <i class="fas fa-user-edit"></i>
-            <span class="nav-text">Perfil</span>
-          <% end %>
+
+        <!-- Usuários Collapsible Section (Perfil + Usuários) -->
+        <div class="nav-item nav-group-collapsible">
+          <div class="nav-group-header-collapsible" onclick="toggleUsuarios()">
+            <div class="nav-group-title">
+              <i class="fas fa-users"></i>
+              <span class="nav-text">Usuários</span>
+            </div>
+            <i class="fas fa-chevron-right collapse-icon" id="usuariosIcon"></i>
+          </div>
+          <div class="nav-group-dropdown" id="usuariosDropdown">
+            <div class="dropdown-content">
+              <%= link_to edit_user_path(current_user), class: "dropdown-link #{'active' if current_page?(edit_user_path(current_user))}" do %>
+                <i class="fas fa-user-edit"></i>
+                <span>Meu Perfil</span>
+              <% end %>
+              <% if current_user&.profile_id == 1 %>
+                <%= link_to users_path, class: "dropdown-link #{'active' if controller_name == 'users'}" do %>
+                  <i class="fas fa-users-cog"></i>
+                  <span>Gerenciar Usuários</span>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
         </div>
 
+        <!-- Correios Collapsible Section - Only for Admin -->
         <% if current_user&.profile_id == 1 %>
-          <div class="nav-item">
-            <%= link_to ranking_sellers_dashboard_index_path, class: "nav-link #{'active' if current_page?(ranking_sellers_dashboard_index_path)}", title: "Ranking Vendedores" do %>
-              <i class="fas fa-chart-line"></i>
-              <span class="nav-text">Ranking</span>
-            <% end %>
-          </div>
-          <div class="nav-item nav-group">
-            <div class="nav-group-content">
-              <div class="nav-group-header">
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleCorreios()">
+              <div class="nav-group-title">
                 <i class="fas fa-mail-bulk"></i>
                 <span class="nav-text">Correios</span>
               </div>
-              <div class="nav-group-items">
-                <%= link_to order_correios_tracking_dashboard_index_path, class: "nav-mini-link nav-tracking #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}", title: "Acompanhamento de Pedidos" do %>
+              <i class="fas fa-chevron-right collapse-icon" id="correiosIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="correiosDropdown">
+              <div class="dropdown-content">
+                <%= link_to order_correios_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}" do %>
                   <i class="fas fa-route"></i>
+                  <span>Acompanhamento de Pedidos</span>
                 <% end %>
-                <%= link_to order_correios_create_dashboard_index_path, class: "nav-mini-link nav-create #{'active' if current_page?(order_correios_create_dashboard_index_path)}", title: "Criação de Pedidos no Correios" do %>
+                <%= link_to order_correios_create_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}" do %>
                   <i class="fas fa-plus-circle"></i>
+                  <span>Criação de Pedidos</span>
                 <% end %>
-                <%= link_to invoice_emition_dashboard_index_path, class: "nav-mini-link nav-invoice #{'active' if current_page?(invoice_emition_dashboard_index_path)}", title: "Emissão de Notas" do %>
+                <%= link_to invoice_emition_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}" do %>
                   <i class="fas fa-file-invoice"></i>
+                  <span>Emissão de Notas</span>
                 <% end %>
-                <%= link_to send_xml_dashboard_index_path, class: "nav-mini-link nav-xml #{'active' if current_page?(send_xml_dashboard_index_path)}", title: "Enviar XML" do %>
+                <%= link_to send_xml_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_dashboard_index_path)}" do %>
                   <i class="fas fa-file-code"></i>
+                  <span>Enviar XML</span>
                 <% end %>
-                <%= link_to push_tracking_dashboard_index_path, class: "nav-mini-link nav-push #{'active' if current_page?(push_tracking_dashboard_index_path)}", title: "Rastreamento" do %>
+                <%= link_to push_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_dashboard_index_path)}" do %>
                   <i class="fas fa-shipping-fast"></i>
+                  <span>Rastreamento</span>
                 <% end %>
-                <%= link_to api_correios_dashboard_index_path, class: "nav-mini-link #{'active' if current_page?(api_correios_dashboard_index_path)}", title: "API Correios" do %>
+                <%= link_to api_correios_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_dashboard_index_path)}" do %>
                   <i class="fas fa-cogs"></i>
+                  <span>API Correios</span>
                 <% end %>
-                <%= link_to stock_syncs_path, 
-                    class: "nav-mini-link nav-stock #{'active' if current_page?(stock_syncs_path)}", 
-                    title: "Sincronização de Estoque" do %>
+                <%= link_to stock_syncs_path, class: "dropdown-link #{'active' if current_page?(stock_syncs_path)}" do %>
                   <i class="fas fa-sync-alt"></i>
+                  <span>Sincronização de Estoque</span>
                 <% end %>
               </div>
             </div>
           </div>
-          <div class="nav-item">
-            <%= link_to users_path, class: "nav-link #{'active' if controller_name == 'users'}", title: "Usuários" do %>
-              <i class="fas fa-users"></i>
-              <span class="nav-text">Usuários</span>
-            <% end %>
+        <% end %>
+          <!-- Produtos Collapsible Section -->
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
+              <div class="nav-group-title">
+                <i class="fas fa-box"></i>
+                <span class="nav-text">Produtos</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="produtosIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="produtosDropdown">
+              <div class="dropdown-content">
+                <% if current_user&.profile_id == 1 %>
+                  <%= link_to products_path, class: "dropdown-link #{'active' if current_page?(products_path)}" do %>
+                    <i class="fas fa-list"></i>
+                    <span>Lista de Produtos</span>
+                  <% end %>
+                <% end %>
+                <%= link_to inventory_products_path, class: "dropdown-link #{'active' if current_page?(inventory_products_path)}" do %>
+                  <i class="fas fa-warehouse"></i>
+                  <span>Controle de Estoque</span>
+                <% end %>
+              </div>
+            </div>
           </div>
-          <div class="nav-item">
-            <%= link_to products_path, class: "nav-link #{'active' if current_page?(products_path)}", title: "Produtos" do %>
-              <i class="fas fa-box"></i>
-              <span class="nav-text">Produtos</span>
-            <% end %>
-          </div>
+        <% if current_user&.profile_id == 1 %>
+          <!-- Logs -->
           <div class="nav-item">
             <%= link_to logs_path, class: "nav-link #{'active' if current_page?(logs_path)}", title: "Logs" do %>
               <i class="fas fa-history"></i>
@@ -79,12 +117,14 @@
         <% end %>
       </div>
     </div>
+
+    <!-- User Section -->
     <div class="nav-user">
       <div class="user-info">
         <span class="user-name"><%= current_user.name %></span>
         <span class="user-role">
           <% case current_user.profile_id
-          when 1 %>
+             when 1 %>
             Admin
           <% when 2 %>
             Gerente
@@ -94,8 +134,8 @@
         </span>
       </div>
       <%= link_to destroy_user_session_path, method: :delete, class: 'logout-btn',
-          data: { confirm: 'Tem certeza que deseja sair?' },
-          title: 'Sair' do %>
+                  data: { confirm: 'Tem certeza que deseja sair?' },
+                  title: 'Sair' do %>
         <i class="fas fa-sign-out-alt"></i>
       <% end %>
     </div>
@@ -139,8 +179,9 @@
 .nav-carousel {
   flex: 1;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible !important;
   padding: 0.5rem 0;
+  scroll-behavior: smooth;
 }
 
 .nav-items {
@@ -193,197 +234,118 @@
   white-space: nowrap;
 }
 
-.nav-group {
+/* Collapsible Sections */
+.nav-group-collapsible {
+  position: static !important;
+}
+
+.nav-group-header-collapsible {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 0.5rem 1rem;
+  color: #a0aec0;
   border-radius: 0.5rem;
   transition: all 0.2s ease;
-  min-width: 280px;
+  min-width: 120px;
   height: 50px;
   background-color: rgba(66, 153, 225, 0.05);
   border: 1px solid rgba(66, 153, 225, 0.2);
+  cursor: pointer;
 }
 
-.nav-group:hover {
+.nav-group-header-collapsible:hover {
+  color: #ffffff;
   background-color: rgba(66, 153, 225, 0.1);
   transform: translateY(-2px);
 }
 
-.nav-group-pdv {
-  background-color: rgba(40, 167, 69, 0.05) !important;
-  border: 1px solid rgba(40, 167, 69, 0.2) !important;
-  min-width: 200px;
-}
-
-.nav-group-pdv:hover {
-  background-color: rgba(40, 167, 69, 0.1) !important;
-  border-color: rgba(40, 167, 69, 0.3) !important;
-  transform: translateY(-2px);
-}
-
-.nav-group-pdv .nav-group-header {
-  color: rgba(40, 167, 69, 0.9);
-}
-
-.nav-group-pdv .nav-group-header i {
-  color: rgba(40, 167, 69, 0.8);
-}
-
-.nav-group-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-}
-
-.nav-group-header {
+.nav-group-title {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
 }
 
-.nav-group-header i {
-  font-size: 1rem;
-  color: #a0aec0;
-  margin-bottom: 0.125rem;
+.nav-group-title i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
 }
 
-.nav-group-header .nav-text {
-  font-size: 0.65rem;
-  color: #a0aec0;
+.collapse-icon {
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
 }
 
-.nav-group-items {
+.collapse-icon.rotated {
+  transform: rotate(90deg);
+}
+
+.nav-group-dropdown {
+  position: fixed !important;
+  top: 70px !important;
+  left: auto;
+  right: auto;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid #2d3748;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+  z-index: 99999 !important;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.nav-group-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-content {
+  padding: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+}
+
+.dropdown-link {
   display: flex;
-  gap: 0.375rem;
   align-items: center;
-}
-
-.nav-mini-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 0.25rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
   color: #a0aec0;
   text-decoration: none;
+  border-radius: 0.375rem;
   transition: all 0.2s ease;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
 }
 
-.nav-mini-link:hover {
+.dropdown-link:hover {
   color: #ffffff;
-  background-color: rgba(66, 153, 225, 0.3);
-  transform: scale(1.1);
-  border-color: rgba(66, 153, 225, 0.5);
+  background-color: rgba(66, 153, 225, 0.1);
 }
 
-.nav-mini-link.active {
+.dropdown-link.active {
   color: #ffffff;
-  background-color: rgba(66, 153, 225, 0.5);
-  border-color: rgba(66, 153, 225, 0.7);
+  background-color: rgba(66, 153, 225, 0.2);
+  border: 1px solid rgba(66, 153, 225, 0.4);
 }
 
-.nav-create {
-  background-color: rgba(0, 123, 255, 0.2) !important;
-  border-color: rgba(0, 123, 255, 0.4) !important;
+.dropdown-link i {
+  font-size: 0.9rem;
+  width: 16px;
+  text-align: center;
 }
 
-.nav-create:hover {
-  background-color: rgba(0, 123, 255, 0.3) !important;
-  border-color: rgba(0, 123, 255, 0.5) !important;
-}
-
-.nav-create.active {
-  background-color: rgba(0, 123, 255, 0.5) !important;
-  border-color: rgba(0, 123, 255, 0.7) !important;
-}
-
-.nav-invoice {
-  background-color: rgba(25, 135, 84, 0.2) !important;
-  border-color: rgba(25, 135, 84, 0.4) !important;
-}
-
-.nav-invoice:hover {
-  background-color: rgba(25, 135, 84, 0.3) !important;
-  border-color: rgba(25, 135, 84, 0.5) !important;
-}
-
-.nav-invoice.active {
-  background-color: rgba(25, 135, 84, 0.5) !important;
-  border-color: rgba(25, 135, 84, 0.7) !important;
-}
-
-.nav-xml {
-  background-color: rgba(255, 193, 7, 0.2) !important;
-  border-color: rgba(255, 193, 7, 0.4) !important;
-  color: #000 !important;
-}
-
-.nav-xml:hover {
-  background-color: rgba(255, 193, 7, 0.3) !important;
-  border-color: rgba(255, 193, 7, 0.5) !important;
-  color: #000 !important;
-}
-
-.nav-xml.active {
-  background-color: rgba(255, 193, 7, 0.5) !important;
-  border-color: rgba(255, 193, 7, 0.7) !important;
-  color: #000 !important;
-}
-
-.nav-push {
-  background-color: rgba(220, 53, 69, 0.2) !important;
-  border-color: rgba(220, 53, 69, 0.4) !important;
-}
-
-.nav-push:hover {
-  background-color: rgba(220, 53, 69, 0.3) !important;
-  border-color: rgba(220, 53, 69, 0.5) !important;
-}
-
-.nav-push.active {
-  background-color: rgba(220, 53, 69, 0.5) !important;
-  border-color: rgba(220, 53, 69, 0.7) !important;
-}
-
-.nav-pos {
-  background-color: rgba(40, 167, 69, 0.2) !important;
-  border-color: rgba(40, 167, 69, 0.4) !important;
-}
-
-.nav-pos:hover {
-  background-color: rgba(40, 167, 69, 0.3) !important;
-  border-color: rgba(40, 167, 69, 0.5) !important;
-}
-
-.nav-pos.active {
-  background-color: rgba(40, 167, 69, 0.5) !important;
-  border-color: rgba(40, 167, 69, 0.7) !important;
-}
-
-.nav-orders {
-  background-color: rgba(108, 117, 125, 0.2) !important;
-  border-color: rgba(108, 117, 125, 0.4) !important;
-}
-
-.nav-orders:hover {
-  background-color: rgba(108, 117, 125, 0.3) !important;
-  border-color: rgba(108, 117, 125, 0.5) !important;
-}
-
-.nav-orders.active {
-  background-color: rgba(108, 117, 125, 0.5) !important;
-  border-color: rgba(108, 117, 125, 0.7) !important;
-}
-
-.nav-mini-link i {
-  font-size: 0.75rem;
+.dropdown-link span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-user {
@@ -438,6 +400,7 @@
   min-height: calc(100vh - 70px);
 }
 
+/* Scrollbar styling */
 .nav-carousel::-webkit-scrollbar {
   height: 3px;
 }
@@ -455,6 +418,7 @@
   background: #718096;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
   .nav-carousel-container {
     padding: 0 0.5rem;
@@ -480,35 +444,18 @@
     font-size: 0.65rem;
   }
 
-  .nav-group {
-    min-width: 220px;
+  .nav-group-header-collapsible {
+    min-width: 100px;
     height: 45px;
     padding: 0.25rem 0.75rem;
   }
 
-  .nav-group-pdv {
-    min-width: 160px;
+  .dropdown-content {
+    grid-template-columns: 1fr;
   }
 
-  .nav-group-content {
-    gap: 0.5rem;
-  }
-
-  .nav-group-header .nav-text {
-    font-size: 0.6rem;
-  }
-
-  .nav-group-items {
-    gap: 0.25rem;
-  }
-
-  .nav-mini-link {
-    width: 20px;
-    height: 20px;
-  }
-
-  .nav-mini-link i {
-    font-size: 0.7rem;
+  .nav-group-dropdown {
+    min-width: 240px;
   }
 
   .user-info {
@@ -541,110 +488,189 @@
     font-size: 0.6rem;
   }
 
-  .nav-group {
-    min-width: 180px;
+  .nav-group-header-collapsible {
+    min-width: 80px;
     height: 40px;
     padding: 0.25rem 0.5rem;
   }
 
-  .nav-group-pdv {
-    min-width: 140px;
+  .nav-group-dropdown {
+    min-width: 200px;
   }
-
-  .nav-group-content {
-    gap: 0.375rem;
-  }
-
-  .nav-group-header .nav-text {
-    font-size: 0.55rem;
-  }
-
-  .nav-group-items {
-    gap: 0.2rem;
-  }
-
-  .nav-mini-link {
-    width: 18px;
-    height: 18px;
-  }
-
-  .nav-mini-link i {
-    font-size: 0.65rem;
-  }
-}
-
-.nav-carousel {
-  scroll-behavior: smooth;
-}
-
-.nav-carousel::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 20px;
-  background: linear-gradient(to left, rgba(26, 26, 46, 0.8), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.nav-carousel:hover::after {
-  opacity: 1;
 }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const carousel = document.getElementById('navCarousel');
-  if (!carousel) return;
+document.addEventListener("DOMContentLoaded", () => {
+  const carousel = document.getElementById("navCarousel")
+  if (!carousel) return
 
-  const activeItem = carousel.querySelector('.nav-link.active, .nav-mini-link.active');
+  // Auto scroll to active item
+  const activeItem = carousel.querySelector(".nav-link.active, .dropdown-link.active")
   if (activeItem) {
     setTimeout(() => {
       activeItem.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
-    }, 100);
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      })
+    }, 100)
   }
 
-  carousel.addEventListener('wheel', function(e) {
+  // Mouse wheel horizontal scroll
+  carousel.addEventListener("wheel", (e) => {
     if (e.deltaY !== 0) {
-      e.preventDefault();
-      carousel.scrollLeft += e.deltaY;
+      e.preventDefault()
+      carousel.scrollLeft += e.deltaY
     }
-  });
+  })
 
-  let isDown = false;
-  let startX;
-  let scrollLeft;
+  // Mouse drag scroll
+  let isDown = false
+  let startX
+  let scrollLeft
 
-  carousel.addEventListener('mousedown', function(e) {
-    isDown = true;
-    startX = e.pageX - carousel.offsetLeft;
-    scrollLeft = carousel.scrollLeft;
-    carousel.style.cursor = 'grabbing';
-  });
+  carousel.addEventListener("mousedown", (e) => {
+    isDown = true
+    startX = e.pageX - carousel.offsetLeft
+    scrollLeft = carousel.scrollLeft
+    carousel.style.cursor = "grabbing"
+  })
 
-  carousel.addEventListener('mouseleave', function() {
-    isDown = false;
-    carousel.style.cursor = 'grab';
-  });
+  carousel.addEventListener("mouseleave", () => {
+    isDown = false
+    carousel.style.cursor = "grab"
+  })
 
-  carousel.addEventListener('mouseup', function() {
-    isDown = false;
-    carousel.style.cursor = 'grab';
-  });
+  carousel.addEventListener("mouseup", () => {
+    isDown = false
+    carousel.style.cursor = "grab"
+  })
 
-  carousel.addEventListener('mousemove', function(e) {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - carousel.offsetLeft;
-    const walk = (x - startX) * 2;
-    carousel.scrollLeft = scrollLeft - walk;
-  });
-});
+  carousel.addEventListener("mousemove", (e) => {
+    if (!isDown) return
+    e.preventDefault()
+    const x = e.pageX - carousel.offsetLeft
+    const walk = (x - startX) * 2
+    carousel.scrollLeft = scrollLeft - walk
+  })
+
+  // Close dropdowns when clicking outside
+  document.addEventListener("click", (e) => {
+    const correiosDropdown = document.getElementById("correiosDropdown")
+    const correiosHeader = document.querySelector('[onclick="toggleCorreios()"]')
+    const usuariosDropdown = document.getElementById("usuariosDropdown")
+    const usuariosHeader = document.querySelector('[onclick="toggleUsuarios()"]')
+    const produtosDropdown = document.getElementById("produtosDropdown")
+    const produtosHeader = document.querySelector('[onclick="toggleProdutos()"]')
+
+    // Close Correios dropdown
+    if (correiosDropdown && correiosHeader && !correiosHeader.contains(e.target) && !correiosDropdown.contains(e.target)) {
+      correiosDropdown.classList.remove("show")
+      document.getElementById("correiosIcon").classList.remove("rotated")
+    }
+
+    // Close Usuarios dropdown
+    if (usuariosDropdown && usuariosHeader && !usuariosHeader.contains(e.target) && !usuariosDropdown.contains(e.target)) {
+      usuariosDropdown.classList.remove("show")
+      document.getElementById("usuariosIcon").classList.remove("rotated")
+    }
+
+    // Close Produtos dropdown
+    if (produtosDropdown && produtosHeader && !produtosHeader.contains(e.target) && !produtosDropdown.contains(e.target)) {
+      produtosDropdown.classList.remove("show")
+      document.getElementById("produtosIcon").classList.remove("rotated")
+    }
+  })
+})
+
+// Toggle Correios dropdown
+function toggleCorreios() {
+  const dropdown = document.getElementById("correiosDropdown")
+  const icon = document.getElementById("correiosIcon")
+  const usuariosDropdown = document.getElementById("usuariosDropdown")
+  const usuariosIcon = document.getElementById("usuariosIcon")
+  const produtosDropdown = document.getElementById("produtosDropdown")
+  const produtosIcon = document.getElementById("produtosIcon")
+  const button = document.querySelector('[onclick="toggleCorreios()"]')
+
+  // Close other dropdowns if open
+  if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
+    usuariosDropdown.classList.remove("show")
+    usuariosIcon.classList.remove("rotated")
+  }
+  if (produtosDropdown && produtosDropdown.classList.contains("show")) {
+    produtosDropdown.classList.remove("show")
+    produtosIcon.classList.remove("rotated")
+  }
+
+  // Position dropdown relative to button
+  if (button && dropdown) {
+    const rect = button.getBoundingClientRect()
+    dropdown.style.left = rect.left + 'px'
+  }
+
+  dropdown.classList.toggle("show")
+  icon.classList.toggle("rotated")
+}
+
+// Toggle Usuarios dropdown
+function toggleUsuarios() {
+  const dropdown = document.getElementById("usuariosDropdown")
+  const icon = document.getElementById("usuariosIcon")
+  const correiosDropdown = document.getElementById("correiosDropdown")
+  const correiosIcon = document.getElementById("correiosIcon")
+  const produtosDropdown = document.getElementById("produtosDropdown")
+  const produtosIcon = document.getElementById("produtosIcon")
+  const button = document.querySelector('[onclick="toggleUsuarios()"]')
+
+  // Close other dropdowns if open
+  if (correiosDropdown && correiosDropdown.classList.contains("show")) {
+    correiosDropdown.classList.remove("show")
+    correiosIcon.classList.remove("rotated")
+  }
+  if (produtosDropdown && produtosDropdown.classList.contains("show")) {
+    produtosDropdown.classList.remove("show")
+    produtosIcon.classList.remove("rotated")
+  }
+
+  // Position dropdown relative to button
+  if (button && dropdown) {
+    const rect = button.getBoundingClientRect()
+    dropdown.style.left = rect.left + 'px'
+  }
+
+  dropdown.classList.toggle("show")
+  icon.classList.toggle("rotated")
+}
+
+// Toggle Produtos dropdown
+function toggleProdutos() {
+  const dropdown = document.getElementById("produtosDropdown")
+  const icon = document.getElementById("produtosIcon")
+  const correiosDropdown = document.getElementById("correiosDropdown")
+  const correiosIcon = document.getElementById("correiosIcon")
+  const usuariosDropdown = document.getElementById("usuariosDropdown")
+  const usuariosIcon = document.getElementById("usuariosIcon")
+  const button = document.querySelector('[onclick="toggleProdutos()"]')
+
+  // Close other dropdowns if open
+  if (correiosDropdown && correiosDropdown.classList.contains("show")) {
+    correiosDropdown.classList.remove("show")
+    correiosIcon.classList.remove("rotated")
+  }
+  if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
+    usuariosDropdown.classList.remove("show")
+    usuariosIcon.classList.remove("rotated")
+  }
+
+  // Position dropdown relative to button
+  if (button && dropdown) {
+    const rect = button.getBoundingClientRect()
+    dropdown.style.left = rect.left + 'px'
+  }
+
+  dropdown.classList.toggle("show")
+  icon.classList.toggle("rotated")
+}
 </script>

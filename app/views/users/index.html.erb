@@ -1,160 +1,169 @@
 <div class="container-fluid py-4">
-  <div class="row">
+  <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-users me-2"></i>
-            Gerenciar Usuários
-          </h5>
-          <%= link_to new_user_path, class: 'btn btn-success btn-sm' do %>
-            <i class="fas fa-plus me-2"></i>Novo Usuário
-          <% end %>
-        </div>
-        
-        <div class="card-body bg-black p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0">
-              <thead class="table-dark">
-                <tr>
-                  <th scope="col">Nome</th>
-                  <th scope="col">Email</th>
-                  <th scope="col">Telefone</th>
-                  <th scope="col">Perfil</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" class="text-center">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @users.each do |user| %>
-                  <tr>
-                    <td class="text-white">
-                      <i class="fas fa-user-circle me-2 text-primary"></i>
-                      <%= user.name %>
-                    </td>
-                    <td class="text-muted"><%= user.email %></td>
-                    <td class="text-muted"><%= user.phone.present? ? user.phone : '-' %></td>
-                    <td>
-                      <% case user.profile_id
-                         when 1 %>
-                        <span class="badge bg-danger">Administrador</span>
-                      <% when 2 %>
-                        <span class="badge bg-warning">Gerente</span>
-                      <% else %>
-                        <span class="badge bg-info">Usuário</span>
-                      <% end %>
-                    </td>
-                    <td>
-                      <% if user.active? %>
-                        <span class="badge bg-success">Ativo</span>
-                      <% else %>
-                        <span class="badge bg-secondary">Inativo</span>
-                      <% end %>
-                    </td>
-                    <td class="text-center">
-                      <div class="btn-group" role="group">
-                        <%= link_to user_path(user), class: 'btn btn-outline-info btn-sm', title: 'Visualizar' do %>
-                          <i class="fas fa-eye"></i>
-                        <% end %>
-                        <%= link_to edit_user_path(user), class: 'btn btn-outline-warning btn-sm', title: 'Editar' do %>
-                          <i class="fas fa-edit"></i>
-                        <% end %>
-                        <%= link_to user_path(user), method: :delete, 
-                            class: 'btn btn-outline-danger btn-sm',
-                            title: 'Excluir',
-                            data: { confirm: 'Tem certeza que deseja excluir este usuário?' } do %>
-                          <i class="fas fa-trash"></i>
-                        <% end %>
-                      </div>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
+          <h4 class="text-white mb-0">
+            <i class="fas fa-users me-2"></i>Gerenciar Usuários
+          </h4>
+          <div class="d-flex gap-2">
+            <%= link_to new_user_path, class: "btn btn-success" do %>
+              <i class="fas fa-plus me-2"></i>Novo Usuário
+            <% end %>
           </div>
-          
-          <!-- Paginação Manual -->
-          <% if @total_pages > 1 %>
-            <div class="d-flex justify-content-between align-items-center p-3 border-top border-secondary">
-              <div class="text-muted">
-                Mostrando <%= (@offset + 1) %> - <%= [@offset + @per_page, @total_users].min %> de <%= @total_users %> usuários
-              </div>
-              
-              <nav aria-label="Paginação de usuários">
-                <ul class="pagination pagination-sm mb-0">
-                  <!-- Primeira página -->
-                  <% if @page > 1 %>
-                    <li class="page-item">
-                      <%= link_to users_path(page: 1), class: 'page-link bg-dark text-white border-secondary' do %>
-                        <i class="fas fa-angle-double-left"></i>
-                      <% end %>
-                    </li>
-                    <li class="page-item">
-                      <%= link_to users_path(page: @page - 1), class: 'page-link bg-dark text-white border-secondary' do %>
-                        <i class="fas fa-angle-left"></i>
-                      <% end %>
-                    </li>
-                  <% else %>
-                    <li class="page-item disabled">
-                      <span class="page-link bg-dark text-muted border-secondary">
-                        <i class="fas fa-angle-double-left"></i>
-                      </span>
-                    </li>
-                    <li class="page-item disabled">
-                      <span class="page-link bg-dark text-muted border-secondary">
-                        <i class="fas fa-angle-left"></i>
-                      </span>
-                    </li>
-                  <% end %>
-                  
-                  <!-- Páginas -->
-                  <% start_page = [@page - 2, 1].max %>
-                  <% end_page = [start_page + 4, @total_pages].min %>
-                  <% start_page = [end_page - 4, 1].max if end_page - start_page < 4 %>
-                  
-                  <% (start_page..end_page).each do |page_num| %>
-                    <% if page_num == @page %>
-                      <li class="page-item active">
-                        <span class="page-link bg-primary border-primary"><%= page_num %></span>
-                      </li>
-                    <% else %>
-                      <li class="page-item">
-                        <%= link_to users_path(page: page_num), class: 'page-link bg-dark text-white border-secondary' do %>
-                          <%= page_num %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body bg-black p-0">
+          <% if @users.any? %>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover mb-0">
+                <thead class="bg-dark">
+                  <tr>
+                    <th class="text-white fw-bold px-4 py-3">Nome</th>
+                    <th class="text-white fw-bold px-4 py-3">Email</th>
+                    <th class="text-white fw-bold px-4 py-3">Telefone</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Perfil</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Status</th>
+                    <th class="text-white fw-bold px-4 py-3">Locations</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @users.each do |user| %>
+                    <tr class="border-secondary">
+                      <td class="px-4 py-3">
+                        <div class="d-flex align-items-center">
+                          <div class="user-avatar me-3">
+                            <i class="fas fa-user"></i>
+                          </div>
+                          <div>
+                            <span class="text-white fw-medium d-block"><%= user.name %></span>
+                            <small class="text-muted">ID: <%= user.id %></small>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="text-white"><%= user.email %></span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="text-white"><%= user.phone.present? ? user.phone : '-' %></span>
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        <span class="badge <%= case user.profile_id
+                          when 1 then 'bg-warning text-dark'
+                          when 2 then 'bg-info text-white'
+                          else 'bg-success text-white'
+                          end %> px-3 py-2">
+                          <%= case user.profile_id
+                            when 1 then 'Admin'
+                            when 2 then 'Gerente'
+                            else 'Usuário'
+                            end %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        <span class="badge <%= user.active? ? 'bg-success' : 'bg-danger' %> text-white px-3 py-2">
+                          <%= user.active? ? 'Ativo' : 'Inativo' %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <% if user.admin? %>
+                          <span class="badge bg-warning text-dark px-2 py-1">
+                            <i class="fas fa-crown me-1"></i>Todas
+                          </span>
+                        <% elsif user.allowed_location_keys.any? %>
+                          <div class="d-flex flex-wrap gap-1">
+                            <% user.allowed_location_keys.first(2).each do |key| %>
+                              <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.7rem;">
+                                <%= User.location_name(key) %>
+                              </span>
+                            <% end %>
+                            <% if user.allowed_location_keys.count > 2 %>
+                              <span class="badge bg-secondary text-white px-2 py-1" style="font-size: 0.7rem;">
+                                +<%= user.allowed_location_keys.count - 2 %>
+                              </span>
+                            <% end %>
+                          </div>
+                        <% else %>
+                          <span class="text-muted">Nenhuma</span>
                         <% end %>
-                      </li>
-                    <% end %>
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                          <%= link_to user, class: "btn btn-sm btn-primary" do %>
+                            <i class="fas fa-eye"></i>
+                          <% end %>
+                          <%= link_to edit_user_path(user), class: "btn btn-sm btn-warning" do %>
+                            <i class="fas fa-edit"></i>
+                          <% end %>
+                          <% unless user == current_user %>
+                            <%= link_to user, method: :delete, 
+                                        class: "btn btn-sm btn-danger",
+                                        confirm: "Tem certeza que deseja excluir este usuário?" do %>
+                              <i class="fas fa-trash"></i>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
                   <% end %>
-                  
-                  <!-- Última página -->
-                  <% if @page < @total_pages %>
-                    <li class="page-item">
-                      <%= link_to users_path(page: @page + 1), class: 'page-link bg-dark text-white border-secondary' do %>
-                        <i class="fas fa-angle-right"></i>
-                      <% end %>
-                    </li>
-                    <li class="page-item">
-                      <%= link_to users_path(page: @total_pages), class: 'page-link bg-dark text-white border-secondary' do %>
-                        <i class="fas fa-angle-double-right"></i>
-                      <% end %>
-                    </li>
-                  <% else %>
-                    <li class="page-item disabled">
-                      <span class="page-link bg-dark text-muted border-secondary">
-                        <i class="fas fa-angle-right"></i>
-                      </span>
-                    </li>
-                    <li class="page-item disabled">
-                      <span class="page-link bg-dark text-muted border-secondary">
-                        <i class="fas fa-angle-double-right"></i>
-                      </span>
-                    </li>
-                  <% end %>
-                </ul>
-              </nav>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <div class="text-center py-5">
+              <i class="fas fa-users fa-3x text-white-50 mb-3"></i>
+              <h5 class="text-white-50">Nenhum usuário encontrado</h5>
+              <p class="text-white-50">Crie o primeiro usuário do sistema</p>
+              <%= link_to new_user_path, class: "btn btn-success mt-3" do %>
+                <i class="fas fa-plus me-2"></i>Novo Usuário
+              <% end %>
             </div>
           <% end %>
         </div>
+
+        <!-- Paginação -->
+        <% if @total_pages > 1 %>
+          <div class="card-footer bg-dark border-top border-secondary">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="text-white-50">
+                Mostrando <%= (@page - 1) * @per_page + 1 %> a 
+                <%= [@page * @per_page, @total_users].min %> de 
+                <%= @total_users %> usuários
+              </div>
+              <div class="d-flex gap-2">
+                <% if @page > 1 %>
+                  <%= link_to users_path(page: @page - 1), class: "btn btn-outline-light btn-sm" do %>
+                    <i class="fas fa-chevron-left"></i> Anterior
+                  <% end %>
+                <% end %>
+
+                <% page_start = [[@page - 2, 1].max, [@total_pages - 4, 1].max].max %>
+                <% page_end = [[page_start + 4, @total_pages].min, [@page + 2, @total_pages].min].max %>
+                
+                <% (page_start..page_end).each do |page_num| %>
+                  <% if page_num == @page %>
+                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
+                  <% else %>
+                    <%= link_to page_num, users_path(page: page_num), class: "btn btn-outline-light btn-sm" %>
+                  <% end %>
+                <% end %>
+
+                <% if @page < @total_pages %>
+                  <%= link_to users_path(page: @page + 1), class: "btn btn-outline-light btn-sm" do %>
+                    Próxima <i class="fas fa-chevron-right"></i>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>
@@ -162,31 +171,58 @@
 
 <% content_for :styles do %>
 <style>
-  body {
-    background-color: #121212;
-    color: #f8f9fa;
-  }
-  
-  .bg-black {
-    background-color: #121212 !important;
-  }
-  
-  .table-dark {
-    --bs-table-bg: #121212;
-    --bs-table-striped-bg: #1a1a1a;
-  }
-  
-  .table-hover tbody tr:hover {
-    background-color: #1a1a1a !important;
-  }
-  
-  .page-link:hover {
-    background-color: #2d3748 !important;
-    border-color: #4a5568 !important;
-  }
-  
-  .card {
-    border-radius: 0.5rem;
-  }
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+}
+
+.text-white {
+  color: #ffffff !important;
+}
+
+.text-muted {
+  color: #9ca3af !important;
+}
 </style>
 <% end %>

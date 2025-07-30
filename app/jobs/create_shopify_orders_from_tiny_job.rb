@@ -56,7 +56,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
       shop: 'chasebrasil.myshopify.com',
       access_token:
     )
-
+ p
     pedido = response['pedido']
     cliente = pedido['cliente']
 

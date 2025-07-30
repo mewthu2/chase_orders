@@ -1,0 +1,509 @@
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h4 class="text-white mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>
+            Conferência #<%= @stock_correction.id %> - <%= @stock_correction.location_name %>
+          </h4>
+          <div class="d-flex gap-2">
+            <% if @stock_correction.items_to_correct.where(executed: true).any? %>
+              <%= link_to update_shopify_stock_stock_correction_path(@stock_correction), 
+                          method: :post,
+                          class: "btn btn-sm btn-warning",
+                          confirm: "Deseja atualizar o estoque na Shopify?" do %>
+                <i class="fab fa-shopify me-1"></i>Integrar Shopify
+              <% end %>
+            <% end %>
+            
+            <% if @stock_correction.pending_items.any? %>
+              <%= link_to execute_all_stock_correction_path(@stock_correction), 
+                          method: :post,
+                          class: "btn btn-sm btn-success",
+                          confirm: "Deseja executar todas as correções pendentes?" do %>
+                <i class="fas fa-play me-1"></i>Executar Todas
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+        <div class="card-body bg-black">
+          <div class="row">
+            <div class="col-md-3">
+              <strong class="text-white">Data:</strong>
+              <p class="text-white-50 mb-2"><%= @stock_correction.correction_date.strftime('%d/%m/%Y') %></p>
+            </div>
+            <div class="col-md-3">
+              <strong class="text-white">Status:</strong>
+              <p class="mb-2">
+                <span class="badge <%= @stock_correction.status == 'executed' ? 'bg-success' : 'bg-warning' %> text-white">
+                  <%= @stock_correction.status.humanize %>
+                </span>
+              </p>
+            </div>
+            <div class="col-md-6">
+              <strong class="text-white">Motivo:</strong>
+              <p class="text-white-50 mb-2"><%= @stock_correction.reason %></p>
+            </div>
+          </div>
+          
+          <% if @stock_correction.notes.present? %>
+            <div class="row">
+              <div class="col-12">
+                <strong class="text-white">Observações:</strong>
+                <p class="text-white-50 mb-0"><%= @stock_correction.notes %></p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body bg-black">
+          <div class="row text-center">
+            <div class="col-md-3">
+              <div class="p-3">
+                <h4 class="text-info mb-1"><%= @stats[:total] %></h4>
+                <small class="text-white-50">Total de Produtos</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h4 class="text-success mb-1"><%= @stats[:checked] %></h4>
+                <small class="text-white-50">Conferidos</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h4 class="text-warning mb-1"><%= @stats[:corrections] %></h4>
+                <small class="text-white-50">Com Correção</small>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="p-3">
+                <h4 class="text-primary mb-1"><%= @stats[:executed] %></h4>
+                <small class="text-white-50">Executados</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Busca -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body bg-black">
+          <%= form_with url: stock_correction_path(@stock_correction), method: :get, local: true, 
+                        class: "row g-3 align-items-end" do |f| %>
+            <div class="col-md-8">
+              <label class="form-label text-white fw-bold">Buscar Produto</label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-dark text-white">
+                  <i class="fas fa-search"></i>
+                </span>
+                <%= f.text_field :search_term, 
+                                 placeholder: "Digite SKU ou nome do produto...", 
+                                 value: @search_term,
+                                 class: "form-control bg-dark text-white border-dark" %>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <%= f.submit "Buscar", class: "btn btn-primary w-100" %>
+            </div>
+            <div class="col-md-2">
+              <%= link_to stock_correction_path(@stock_correction), class: "btn btn-outline-light w-100" do %>
+                <i class="fas fa-times me-1"></i>Limpar
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de Produtos -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-boxes me-2"></i>Produtos para Conferência
+          </h5>
+          <span class="badge bg-primary text-white px-3 py-2">
+            Página <%= @current_page %> de <%= @total_pages %>
+          </span>
+        </div>
+        
+        <div class="card-body bg-black p-0">
+          <% if @stock_correction_items.any? %>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover mb-0">
+                <thead class="bg-dark">
+                  <tr>
+                    <th class="text-white fw-bold px-3 py-2">SKU</th>
+                    <th class="text-white fw-bold px-3 py-2">Produto</th>
+                    <th class="text-white fw-bold px-3 py-2 text-center">Estoque Atual</th>
+                    <th class="text-white fw-bold px-3 py-2 text-center">Conferido</th>
+                    <th class="text-white fw-bold px-3 py-2 text-center">Correção</th>
+                    <th class="text-white fw-bold px-3 py-2 text-center">Novo Estoque</th>
+                    <th class="text-white fw-bold px-3 py-2">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-2 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @stock_correction_items.each do |item| %>
+                    <tr class="border-secondary" data-item-id="<%= item.id %>">
+                      <td class="px-3 py-2">
+                        <span class="font-monospace text-white fw-medium">
+                          <%= item.product.sku %>
+                        </span>
+                      </td>
+                      
+                      <td class="px-3 py-2">
+                        <span class="text-white">
+                          <%= item.product.shopify_product_name || "Produto #{item.product.sku}" %>
+                        </span>
+                      </td>
+                      
+                      <td class="px-3 py-2 text-center">
+                        <span class="badge bg-info text-white px-2 py-1">
+                          <%= item.current_stock %> un.
+                        </span>
+                      </td>
+                      
+                      <td class="px-3 py-2 text-center">
+                        <div class="form-check">
+                          <input type="checkbox" 
+                                 class="form-check-input bg-dark border-secondary checked-checkbox"
+                                 data-item-id="<%= item.id %>"
+                                 <%= 'checked' if item.checked? %>>
+                        </div>
+                      </td>
+                      
+                      <td class="px-3 py-2 text-center">
+                        <div class="form-check">
+                          <input type="checkbox" 
+                                 class="form-check-input bg-dark border-secondary correction-checkbox"
+                                 data-item-id="<%= item.id %>"
+                                 <%= 'checked' if item.needs_correction? %>
+                                 <%= 'disabled' unless item.checked? %>>
+                        </div>
+                      </td>
+                      
+                      <td class="px-3 py-2 text-center">
+                        <input type="number" 
+                               class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
+                               style="width: 80px;"
+                               data-item-id="<%= item.id %>"
+                               value="<%= item.corrected_stock %>"
+                               <%= 'disabled' unless item.needs_correction? %>>
+                      </td>
+                      
+                      <td class="px-3 py-2">
+                        <% if item.needs_correction? %>
+                          <input type="text" 
+                                 class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
+                                 placeholder="Motivo da correção..."
+                                 data-item-id="<%= item.id %>"
+                                 value="<%= item.correction_reason %>"
+                                 required>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
+                      </td>
+                      
+                      <td class="px-3 py-2 text-center">
+                        <% if item.needs_correction? && !item.executed? %>
+                          <button class="btn btn-sm btn-success execute-btn" data-item-id="<%= item.id %>">
+                            <i class="fas fa-play"></i>
+                          </button>
+                        <% elsif item.executed? %>
+                          <i class="fas fa-check-circle text-success fa-lg"></i>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <div class="text-center py-5">
+              <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
+              <h5 class="text-white-50">Nenhum produto encontrado</h5>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Paginação -->
+        <% if @total_pages > 1 %>
+          <div class="card-footer bg-dark border-top border-secondary">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <div class="text-white-50 mb-2 mb-md-0">
+                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
+                <%= [@current_page * @per_page, @total_items].min %> de 
+                <%= @total_items %> produtos
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <!-- Paginação similar à tela de inventory -->
+                <% if @current_page > 1 %>
+                  <%= link_to stock_correction_path(@stock_correction, page: @current_page - 1, search_term: @search_term),
+                              class: "btn btn-outline-light btn-sm" do %>
+                    <i class="fas fa-chevron-left"></i> Anterior
+                  <% end %>
+                <% end %>
+
+                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
+                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
+                
+                <% (page_start..page_end).each do |page_num| %>
+                  <% if page_num == @current_page %>
+                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
+                  <% else %>
+                    <%= link_to page_num, 
+                                stock_correction_path(@stock_correction, page: page_num, search_term: @search_term),
+                                class: "btn btn-outline-light btn-sm" %>
+                  <% end %>
+                <% end %>
+
+                <% if @current_page < @total_pages %>
+                  <%= link_to stock_correction_path(@stock_correction, page: @current_page + 1, search_term: @search_term),
+                              class: "btn btn-outline-light btn-sm" do %>
+                    Próxima <i class="fas fa-chevron-right"></i>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-start">
+        <%= link_to stock_corrections_path, class: "btn btn-outline-light" do %>
+          <i class="fas fa-arrow-left me-2"></i>Voltar para Lista
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.form-control, .form-select {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: #495057;
+  border-color: #6c757d;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+.font-monospace {
+  font-family: 'Courier New', monospace;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+</style>
+<% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Função para atualizar item via AJAX
+  function updateItem(itemId, data) {
+    fetch(`/stock_correction_items/${itemId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ stock_correction_item: data })
+    });
+  }
+  
+  // Lógica para checkbox "conferido"
+  document.querySelectorAll('.checked-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const itemId = this.dataset.itemId;
+      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+      const correctionCheckbox = row.querySelector('.correction-checkbox');
+      const stockInput = row.querySelector('.corrected-stock-input');
+      const reasonInput = row.querySelector('.correction-reason-input');
+      
+      if (this.checked) {
+        // Se conferido, DESABILITAR correção (lógica invertida)
+        correctionCheckbox.disabled = true;
+        correctionCheckbox.checked = false;
+        if (stockInput) stockInput.disabled = true;
+        if (reasonInput) {
+          reasonInput.style.display = 'none';
+          reasonInput.value = '';
+        }
+        
+        // Esconder o campo de motivo
+        const reasonCell = reasonInput ? reasonInput.parentElement : null;
+        if (reasonCell) {
+          reasonCell.innerHTML = '<span class="text-white-50">-</span>';
+        }
+      } else {
+        // Se não conferido, HABILITAR correção
+        correctionCheckbox.disabled = false;
+      }
+      
+      // Atualizar no backend
+      updateItem(itemId, { checked: this.checked });
+    });
+  });
+  
+  // Lógica para checkbox "correção"
+  document.querySelectorAll('.correction-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      const itemId = this.dataset.itemId;
+      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+      const stockInput = row.querySelector('.corrected-stock-input');
+      const reasonCell = row.querySelector('td:nth-child(7)'); // Coluna do motivo
+      
+      if (this.checked) {
+        // Habilitar campos de correção
+        stockInput.disabled = false;
+        stockInput.required = true;
+        
+        // Mostrar campo de motivo
+        reasonCell.innerHTML = `
+          <input type="text" 
+                 class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
+                 placeholder="Motivo da correção..."
+                 data-item-id="${itemId}"
+                 required>
+        `;
+      } else {
+        // Desabilitar campos de correção
+        stockInput.disabled = true;
+        stockInput.required = false;
+        stockInput.value = '';
+        
+        // Esconder campo de motivo
+        reasonCell.innerHTML = '<span class="text-white-50">-</span>';
+      }
+      
+      // Atualizar no backend
+      updateItem(itemId, { needs_correction: this.checked });
+    });
+  });
+  
+  // Atualizar estoque corrigido
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('corrected-stock-input')) {
+      const itemId = e.target.dataset.itemId;
+      updateItem(itemId, { corrected_stock: e.target.value });
+    }
+  });
+  
+  // Atualizar motivo da correção
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('correction-reason-input')) {
+      const itemId = e.target.dataset.itemId;
+      updateItem(itemId, { correction_reason: e.target.value });
+    }
+  });
+  
+  // Executar correção individual
+  document.querySelectorAll('.execute-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const itemId = this.dataset.itemId;
+      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+      const stockInput = row.querySelector('.corrected-stock-input');
+      const reasonInput = row.querySelector('.correction-reason-input');
+      
+      // Validar campos obrigatórios
+      if (!stockInput.value || !reasonInput.value) {
+        alert('Por favor, preencha o novo estoque e o motivo da correção.');
+        return;
+      }
+      
+      if (confirm('Deseja executar esta correção?')) {
+        fetch(`/stock_corrections/<%= @stock_correction.id %>/execute_item`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ id: itemId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Atualizar interface
+            this.outerHTML = '<i class="fas fa-check-circle text-success fa-lg"></i>';
+            alert('Correção executada com sucesso!');
+          } else {
+            alert('Erro ao executar correção: ' + data.message);
+          }
+        });
+      }
+    });
+  });
+});
+</script>
