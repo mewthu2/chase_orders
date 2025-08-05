@@ -56,10 +56,10 @@ class OrderPdvsController < ApplicationController
           integrated_at: Time.current,
           integration_error: nil
         )
-        
+
         if request.xhr? || request.format.json?
-          render json: { 
-            success: true, 
+          render json: {
+            success: true,
             message: 'Pedido integrado com sucesso ao Shopify!',
             order_number: result[:order_number]
           }
@@ -72,7 +72,7 @@ class OrderPdvsController < ApplicationController
           integration_error: result[:error],
           integration_attempts: @order_pdv.integration_attempts + 1
         )
-        
+
         if request.xhr? || request.format.json?
           render json: { 
             success: false, 
@@ -82,16 +82,16 @@ class OrderPdvsController < ApplicationController
           redirect_to @order_pdv, alert: "Erro na integração: #{result[:error]}"
         end
       end
-    rescue => e
+    rescue StandardError => e
       @order_pdv.update!(
         status: 'error',
         integration_error: e.message,
         integration_attempts: @order_pdv.integration_attempts + 1
       )
-      
+
       if request.xhr? || request.format.json?
-        render json: { 
-          success: false, 
+        render json: {
+          success: false,
           message: "Erro na integração: #{e.message}"
         }
       else
@@ -102,17 +102,16 @@ class OrderPdvsController < ApplicationController
 
   def search_product
     query = params[:query]
-    order_pdv_id = params[:order_pdv_id]
 
     if query.present?
-      products = Product.where("sku LIKE ? OR shopify_product_name LIKE ?", "%#{query}%", "%#{query}%"
-     ).limit(10)
+      products = Product.where('sku LIKE ? OR shopify_product_name LIKE ?', "%#{query}%", "%#{query}%")                  
+                        .limit(10)
 
       products_data = []
 
       begin
         session = create_shopify_session
-        
+
         products.each do |product|
           stock_info = get_product_stock(product, session)
           products_data << {
@@ -127,9 +126,9 @@ class OrderPdvsController < ApplicationController
             stock_message: stock_info[:message]
           }
         end
-      rescue => e
+      rescue StandardError => e
         Rails.logger.error "Erro ao buscar estoque: #{e.message}"
-        
+
         products_data = products.map do |product|
           {
             id: product.id,
@@ -145,14 +144,14 @@ class OrderPdvsController < ApplicationController
         end
       end
 
-      render json: { 
-        success: true, 
-        products: products_data 
+      render json: {
+        success: true,
+        products: products_data
       }
     else
-      render json: { 
-        success: false, 
-        message: 'Query não fornecida' 
+      render json: {
+        success: false,
+        message: 'Query não fornecida'
       }
     end
   end
@@ -160,28 +159,28 @@ class OrderPdvsController < ApplicationController
   def add_product
     product_id = params[:product_id]
     quantity = params[:quantity].to_i
-    
+
     product = Product.find_by(id: product_id)
 
     if product.nil?
-      render json: { 
-        success: false, 
-        message: 'Produto não encontrado' 
+      render json: {
+        success: false,
+        message: 'Produto não encontrado'
       }
       return
     end
 
-    existing_item = @order_pdv.order_pdv_items.find_by(product: product)
+    existing_item = @order_pdv.order_pdv_items.find_by(product:)
 
     if existing_item
       existing_item.update!(quantity: existing_item.quantity + quantity)
     else
       @order_pdv.order_pdv_items.create!(
-        product: product,
+        product:,
         sku: product.sku,
         product_name: product.shopify_product_name,
         price: product.price,
-        quantity: quantity,
+        quantity:,
         total: product.price * quantity,
         option1: product.option1,
         image_url: product.image_url
@@ -190,8 +189,8 @@ class OrderPdvsController < ApplicationController
 
     recalculate_totals
 
-    render json: { 
-      success: true, 
+    render json: {
+      success: true,
       message: 'Produto adicionado ao pedido',
       total: @order_pdv.formatted_total
     }
@@ -204,15 +203,15 @@ class OrderPdvsController < ApplicationController
     if item
       item.destroy
       recalculate_totals
-      render json: { 
-        success: true, 
+      render json: {
+        success: true,
         message: 'Item removido do pedido',
         total: @order_pdv.formatted_total
       }
     else
-      render json: { 
-        success: false, 
-        message: 'Item não encontrado' 
+      render json: {
+        success: false,
+        message: 'Item não encontrado'
       }
     end
   end
@@ -246,7 +245,6 @@ class OrderPdvsController < ApplicationController
   end
 
   def parse_address(order_pdv)
-    # Tentar separar o endereço existente para edição
     address1_parts = order_pdv.address1&.split(', ') || []
     address2_parts = order_pdv.address2&.split(', ') || []
 
@@ -260,27 +258,27 @@ class OrderPdvsController < ApplicationController
 
   def params_per_page(per_page_param)
     per_page = per_page_param.to_i
-    per_page > 0 ? per_page : 20
+    per_page.positiv? ? per_page : 20
   end
 
   def recalculate_totals
     @order_pdv.order_pdv_items.each do |item|
       item.update_column(:total, item.price * item.quantity)
     end
-    
+
     subtotal = @order_pdv.order_pdv_items.sum(:total)
     total_price = subtotal - (@order_pdv.discount_amount || 0)
-    
+
     @order_pdv.update!(
-      subtotal: subtotal,
-      total_price: total_price
+      subtotal:,
+      total_price:
     )
   end
 
   def create_shopify_session
     ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: ENV['LAGOA_SECA_TOKEN_APP']
+      access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP')
     )
   end
 
@@ -296,8 +294,8 @@ class OrderPdvsController < ApplicationController
         }
       GRAPHQL
 
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
-      response = client.query(query: query)
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+      response = client.query(query:)
       variant = response.body.dig('data', 'productVariant')
 
       if variant.nil?
@@ -313,7 +311,7 @@ class OrderPdvsController < ApplicationController
       if quantity > 10
         status = 'high'
         message = "Estoque: #{quantity} unidades"
-      elsif quantity > 0
+      elsif quantity.positive?
         status = 'low'
         message = "Estoque baixo: #{quantity} unidades"
       else
@@ -321,14 +319,14 @@ class OrderPdvsController < ApplicationController
         message = 'Sem estoque (0 unidades)'
       end
 
-      return {
-        quantity: quantity,
-        status: status,
-        message: message
+      {
+        quantity:,
+        status:,
+        message:
       }
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Erro ao buscar estoque do produto #{product.id}: #{e.message}"
-      return {
+      {
         quantity: 0,
         status: 'error',
         message: 'Erro ao verificar estoque'

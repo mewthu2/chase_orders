@@ -8,22 +8,17 @@
           Conferência #<%= @stock_correction.id %> - <%= @stock_correction.location_name %>
         </h4>
         <div class="d-flex gap-2">
-          <% if @stock_correction.items_to_correct.where(executed: true).any? %>
-            <%= link_to update_shopify_stock_stock_correction_path(@stock_correction), 
-                        method: :post,
-                        class: "btn btn-sm btn-warning",
-                        confirm: "Deseja atualizar o estoque na Shopify?" do %>
-              <i class="fab fa-shopify me-1"></i>Integrar Todos
-            <% end %>
-          <% end %>
-          
-          <% if @stock_correction.pending_items.any? %>
-            <%= link_to execute_all_stock_correction_path(@stock_correction), 
+          <% if @stock_correction.status != 'executed' %>
+            <%= link_to finalize_correction_stock_correction_path(@stock_correction), 
                         method: :post,
                         class: "btn btn-sm btn-success",
-                        confirm: "Deseja executar todas as correções pendentes?" do %>
-              <i class="fas fa-play me-1"></i>Executar Todas
+                        confirm: "Deseja finalizar esta conferência? Esta ação não pode ser desfeita." do %>
+              <i class="fas fa-flag-checkered me-1"></i>Finalizar Conferência
             <% end %>
+          <% else %>
+            <span class="badge bg-success text-white px-3 py-2">
+              <i class="fas fa-check me-1"></i>Conferência Finalizada
+            </span>
           <% end %>
           
           <%= link_to @stock_correction, class: "btn btn-sm btn-info" do %>
@@ -105,14 +100,14 @@
       <div class="card-body bg-black">
         <%= form_with url: edit_stock_correction_path(@stock_correction), method: :get, local: true, 
                       class: "row g-3 align-items-end" do |f| %>
-          <div class="col-md-6">
+          <div class="col-md-8">
             <label class="form-label text-white fw-bold">Buscar Produto</label>
             <div class="input-group">
               <span class="input-group-text bg-dark border-dark text-white">
                 <i class="fas fa-search"></i>
               </span>
               <%= f.text_field :search_term, 
-                               placeholder: "Digite SKU ou nome do produto...", 
+                               placeholder: "Digite SKU exato ou nome do produto...", 
                                value: params[:search_term],
                                class: "form-control bg-dark text-white border-dark" %>
             </div>
@@ -125,32 +120,140 @@
               <i class="fas fa-times me-1"></i>Limpar
             <% end %>
           </div>
-          <div class="col-md-2">
-            <button type="button" class="btn btn-success w-100" id="markAllBtn">
-              <i class="fas fa-check-double me-1"></i>Marcar Todos
-            </button>
-          </div>
         <% end %>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Lista de Produtos -->
+<!-- Produto da Busca Atual -->
+<% if @search_item %>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-warning shadow-lg">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0">
+            <i class="fas fa-search me-2"></i>Produto Encontrado
+          </h5>
+        </div>
+        
+        <div class="card-body bg-black p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="text-white fw-bold px-3 py-3">SKU</th>
+                  <th class="text-white fw-bold px-3 py-3">Produto</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center">Estoque Atual</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center">Ação</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center">Novo Estoque</th>
+                  <th class="text-white fw-bold px-3 py-3">Motivo</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center">Salvar</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-secondary" 
+                    data-item-id="<%= @search_item.id %>" 
+                    data-product-sku="<%= @search_item.product.sku %>"
+                    data-product-id="<%= @search_item.product.id %>">
+                  <td class="px-3 py-3">
+                    <span class="font-monospace text-white fw-medium">
+                      <%= @search_item.product.sku %>
+                    </span>
+                    <br><small class="text-white-50">Item #<%= @search_item.id %></small>
+                  </td>
+                  
+                  <td class="px-3 py-3">
+                    <div>
+                      <span class="text-white d-block">
+                        <%= @search_item.product.shopify_product_name || "Produto #{@search_item.product.sku}" %>
+                      </span>
+                      <% if @search_item.product.shopify_variant_id.present? %>
+                        <small class="text-white-50">
+                          <i class="fab fa-shopify me-1"></i>ID: <%= @search_item.product.shopify_variant_id %>
+                        </small>
+                      <% end %>
+                    </div>
+                  </td>
+                  
+                  <td class="px-3 py-3 text-center">
+                    <span class="badge bg-info text-white px-2 py-1">
+                      <%= @search_item.current_stock %> un.
+                    </span>
+                  </td>
+                  
+                  <td class="px-3 py-3 text-center">
+                    <select class="form-select form-select-sm bg-dark text-white border-dark action-dropdown"
+                            data-item-id="<%= @search_item.id %>">
+                      <option value="">Selecione...</option>
+                      <option value="checked">Conferido</option>
+                      <option value="correction">Correção</option>
+                    </select>
+                  </td>
+                  
+                  <td class="px-3 py-3 text-center">
+                    <input type="number" 
+                           class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
+                           style="width: 100px; margin: 0 auto; display: none;"
+                           data-item-id="<%= @search_item.id %>"
+                           placeholder="Novo estoque"
+                           required>
+                  </td>
+                  
+                  <td class="px-3 py-3">
+                    <input type="text" 
+                           class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
+                           style="display: none;"
+                           data-item-id="<%= @search_item.id %>"
+                           placeholder="Motivo da correção..."
+                           required>
+                  </td>
+                  
+                  <td class="px-3 py-3 text-center">
+                    <button class="btn btn-sm btn-success save-item-btn" 
+                            data-item-id="<%= @search_item.id %>"
+                            style="display: none;"
+                            title="Salvar e integrar com Shopify">
+                      <i class="fas fa-save"></i> Salvar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% elsif @search_term.present? %>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="alert alert-warning bg-dark border-warning text-white">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Nenhum produto encontrado para "<strong><%= @search_term %></strong>". 
+        Verifique se o SKU está correto ou se o produto existe na base de dados.
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<!-- Lista de Produtos Processados -->
 <div class="row">
   <div class="col-12">
     <div class="card bg-black border border-dark shadow-lg">
       <div class="card-header bg-dark d-flex justify-content-between align-items-center">
         <h5 class="text-white mb-0">
-          <i class="fas fa-boxes me-2"></i>Produtos para Conferência
+          <i class="fas fa-check-circle me-2"></i>Produtos Processados
         </h5>
-        <span class="badge bg-primary text-white px-3 py-2">
-          Página <%= @current_page %> de <%= @total_pages %>
-        </span>
+        <% if @total_processed > 0 %>
+          <span class="badge bg-success text-white px-3 py-2">
+            <%= @total_processed %> produto(s) processado(s)
+          </span>
+        <% end %>
       </div>
       
       <div class="card-body bg-black p-0">
-        <% if @stock_correction_items.any? %>
+        <% if @processed_items.any? %>
           <div class="table-responsive">
             <table class="table table-dark table-hover mb-0 table-fixed">
               <thead class="bg-dark">
@@ -158,27 +261,20 @@
                   <th class="text-white fw-bold px-3 py-3" style="width: 120px;">SKU</th>
                   <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
                   <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Estoque Atual</th>
-                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Conferido</th>
-                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Correção</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Status</th>
                   <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Novo Estoque</th>
                   <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
-                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Última Sync</th>
-                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 180px;">Ações</th>
+                  <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Sincronização</th>
                 </tr>
               </thead>
               <tbody>
-                <% @stock_correction_items.each do |item| %>
-                  <tr class="border-secondary" 
-                      data-item-id="<%= item.id %>" 
-                      data-product-sku="<%= item.product.sku %>"
-                      data-product-id="<%= item.product.id %>"
-                      data-item-executed="<%= item.executed? %>">
+                <% @processed_items.each do |item| %>
+                  <tr class="border-secondary">
                     <td class="px-3 py-3" style="width: 120px;">
                       <span class="font-monospace text-white fw-medium">
                         <%= item.product.sku %>
                       </span>
                       <br><small class="text-white-50">Item #<%= item.id %></small>
-                      <br><small class="text-info">Prod #<%= item.product.id %></small>
                     </td>
                     
                     <td class="px-3 py-3" style="width: 250px;">
@@ -200,84 +296,33 @@
                       </span>
                     </td>
                     
-                    <td class="px-3 py-3 text-center" style="width: 80px;">
-                      <div class="form-check d-flex justify-content-center">
-                        <input type="checkbox" 
-                               class="form-check-input bg-dark border-secondary checked-checkbox"
-                               data-item-id="<%= item.id %>"
-                               <%= 'checked' if item.checked? %>
-                               <%= 'disabled' if item.executed? %>>
-                      </div>
-                    </td>
-                    
-                    <td class="px-3 py-3 text-center" style="width: 80px;">
-                      <div class="form-check d-flex justify-content-center">
-                        <input type="checkbox" 
-                               class="form-check-input bg-dark border-secondary correction-checkbox"
-                               data-item-id="<%= item.id %>"
-                               <%= 'checked' if item.needs_correction? %>
-                               <%= 'disabled' if item.checked? %>>
-                      </div>
+                    <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <% if item.checked? %>
+                        <span class="badge bg-success text-white px-2 py-1">
+                          <i class="fas fa-check me-1"></i>Conferido
+                        </span>
+                      <% elsif item.needs_correction? %>
+                        <span class="badge bg-warning text-white px-2 py-1">
+                          <i class="fas fa-edit me-1"></i>Corrigido
+                        </span>
+                      <% end %>
                     </td>
                     
                     <td class="px-3 py-3 text-center" style="width: 100px;">
-                      <% if item.executed? %>
-                        <!-- Para itens executados, mostrar valor atual mas permitir edição -->
-                        <div class="d-flex align-items-center justify-content-center gap-1">
-                          <span class="current-stock-display badge bg-success text-white px-2 py-1" 
-                                data-item-id="<%= item.id %>">
-                            <%= item.corrected_stock %> un.
-                          </span>
-                          <button class="btn btn-sm btn-outline-light edit-stock-btn" 
-                                  data-item-id="<%= item.id %>"
-                                  title="Editar estoque">
-                            <i class="fas fa-edit"></i>
-                          </button>
-                        </div>
-                        <input type="number" 
-                               class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
-                               style="width: 80px; margin: 0 auto; display: none;"
-                               data-item-id="<%= item.id %>"
-                               value="<%= item.corrected_stock %>">
+                      <% if item.needs_correction? %>
+                        <span class="badge bg-success text-white px-2 py-1">
+                          <%= item.corrected_stock %> un.
+                        </span>
                       <% else %>
-                        <!-- Para itens não executados, comportamento normal -->
-                        <input type="number" 
-                               class="form-control form-control-sm bg-dark text-white border-dark text-center corrected-stock-input"
-                               style="width: 80px; margin: 0 auto;"
-                               data-item-id="<%= item.id %>"
-                               value="<%= item.corrected_stock %>"
-                               <%= 'disabled' unless item.needs_correction? %>>
+                        <span class="text-white-50">-</span>
                       <% end %>
                     </td>
                     
                     <td class="px-3 py-3" style="width: 200px;">
-                      <% if item.needs_correction? && !item.executed? %>
-                        <input type="text" 
-                               class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
-                               placeholder="Motivo da correção..."
-                               data-item-id="<%= item.id %>"
-                               value="<%= item.correction_reason %>"
-                               required>
-                      <% elsif item.needs_correction? && item.executed? %>
-                        <!-- Para itens executados, mostrar motivo mas permitir edição -->
-                        <div class="executed-reason-container" data-item-id="<%= item.id %>">
-                          <div class="current-reason-display d-flex align-items-center gap-1">
-                            <small class="text-success flex-grow-1">
-                              <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 20) %>
-                            </small>
-                            <button class="btn btn-sm btn-outline-light edit-reason-btn" 
-                                    data-item-id="<%= item.id %>"
-                                    title="Editar motivo">
-                              <i class="fas fa-edit"></i>
-                            </button>
-                          </div>
-                          <input type="text" 
-                                 class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
-                                 data-item-id="<%= item.id %>"
-                                 value="<%= item.correction_reason %>"
-                                 style="display: none;"
-                                 required>
-                        </div>
+                      <% if item.needs_correction? %>
+                        <small class="text-success">
+                          <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 25) %>
+                        </small>
                       <% else %>
                         <span class="text-white-50">-</span>
                       <% end %>
@@ -295,81 +340,9 @@
                         </div>
                       <% else %>
                         <span class="badge bg-secondary text-white px-2 py-1">
-                          Nunca
+                          Processado
                         </span>
                       <% end %>
-                      
-                      <% if item.shopify_sync_status == 'error' && item.shopify_sync_error.present? %>
-                        <br><small class="text-danger" title="<%= item.shopify_sync_error %>">
-                          <i class="fas fa-exclamation-triangle"></i> Erro
-                        </small>
-                      <% end %>
-                    </td>
-                    
-                    <td class="px-3 py-3 text-center" style="width: 180px;">
-                      <div class="d-flex gap-1 justify-content-center flex-wrap" data-item-actions="<%= item.id %>">
-                        <!-- Botão para verificar estoque atual na Shopify -->
-                        <button class="btn btn-sm btn-secondary check-shopify-btn" 
-                                data-item-id="<%= item.id %>" 
-                                data-product-sku="<%= item.product.sku %>"
-                                data-product-id="<%= item.product.id %>"
-                                title="Verificar estoque atual na Shopify">
-                          <i class="fas fa-search"></i>
-                        </button>
-                        
-                        <% if item.needs_correction? && !item.executed? %>
-                          <button class="btn btn-sm btn-success execute-btn" 
-                                  data-item-id="<%= item.id %>" 
-                                  data-product-sku="<%= item.product.sku %>"
-                                  data-product-id="<%= item.product.id %>"
-                                  title="Executar correção no banco local">
-                            <i class="fas fa-play"></i>
-                          </button>
-                          
-                          <!-- Botão de integração - sempre presente quando há correção -->
-                          <button class="btn btn-sm btn-warning integrate-correction-btn" 
-                                  data-item-id="<%= item.id %>" 
-                                  data-product-sku="<%= item.product.sku %>"
-                                  data-product-id="<%= item.product.id %>"
-                                  title="Integrar correção diretamente com Shopify"
-                                  style="<%= item.corrected_stock.blank? || item.correction_reason.blank? ? 'display: none;' : '' %>">
-                            <i class="fab fa-shopify"></i>
-                          </button>
-                          
-                        <% elsif item.executed? %>
-                          <span class="text-success me-1" title="Correção executada no banco local">
-                            <i class="fas fa-check-circle fa-lg"></i>
-                          </span>
-                          
-                          <!-- Botão para re-integrar -->
-                          <button class="btn btn-sm btn-warning integrate-correction-btn" 
-                                  data-item-id="<%= item.id %>" 
-                                  data-product-sku="<%= item.product.sku %>"
-                                  data-product-id="<%= item.product.id %>"
-                                  title="Re-integrar com Shopify">
-                            <i class="fab fa-shopify"></i>
-                          </button>
-                        <% end %>
-                        
-                        <% if item.executed? && item.product.shopify_variant_id.present? %>
-                          <button class="btn btn-sm btn-info sync-shopify-btn" 
-                                  data-item-id="<%= item.id %>" 
-                                  data-product-sku="<%= item.product.sku %>"
-                                  data-product-id="<%= item.product.id %>"
-                                  title="Sincronizar com Shopify"
-                                  <%= 'disabled' if item.shopify_sync_status == 'syncing' %>>
-                            <% if item.shopify_sync_status == 'syncing' %>
-                              <i class="fas fa-spinner fa-spin"></i>
-                            <% else %>
-                              <i class="fas fa-sync"></i>
-                            <% end %>
-                          </button>
-                        <% elsif item.executed? && item.product.shopify_variant_id.blank? %>
-                          <small class="text-white-50" title="Produto sem Shopify Variant ID">
-                            <i class="fas fa-exclamation-triangle"></i>
-                          </small>
-                        <% end %>
-                      </div>
                     </td>
                   </tr>
                 <% end %>
@@ -378,20 +351,21 @@
           </div>
         <% else %>
           <div class="text-center py-5">
-            <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
-            <h5 class="text-white-50">Nenhum produto encontrado</h5>
+            <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
+            <h5 class="text-white-50">Nenhum produto processado ainda</h5>
+            <p class="text-white-50">Use a busca acima para encontrar e processar produtos</p>
           </div>
         <% end %>
       </div>
 
-      <!-- Paginação -->
+      <!-- Paginação dos Produtos Processados -->
       <% if @total_pages > 1 %>
         <div class="card-footer bg-dark border-top border-secondary">
           <div class="d-flex justify-content-between align-items-center flex-wrap">
             <div class="text-white-50 mb-2 mb-md-0">
               Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
-              <%= [@current_page * @per_page, @total_items].min %> de 
-              <%= @total_items %> produtos
+              <%= [@current_page * @per_page, @total_processed].min %> de 
+              <%= @total_processed %> produtos processados
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <% if @current_page > 1 %>
@@ -463,15 +437,6 @@ color: #fff;
 box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-.form-check-input:checked {
-background-color: #0d6efd;
-border-color: #0d6efd;
-}
-
-.form-check-input:focus {
-box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
 .table-dark {
 --bs-table-bg: transparent;
 }
@@ -494,7 +459,7 @@ vertical-align: middle;
 }
 
 .table-fixed td:nth-child(2),
-.table-fixed td:nth-child(7) {
+.table-fixed td:nth-child(6) {
 white-space: normal;
 word-wrap: break-word;
 }
@@ -520,7 +485,7 @@ box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 font-weight: 500;
 }
 
-.form-control-sm {
+.form-control-sm, .form-select-sm {
 padding: 0.25rem 0.5rem;
 font-size: 0.875rem;
 }
@@ -539,19 +504,13 @@ animation: fa-spin 2s infinite linear;
 100% { transform: rotate(360deg); }
 }
 
-/* Estilos para edição inline */
-.current-stock-display,
-.current-reason-display {
-cursor: pointer;
+/* Destaque para produto da busca */
+.border-warning {
+border-color: #ffc107 !important;
 }
 
-.current-stock-display:hover,
-.current-reason-display:hover {
-background-color: rgba(255, 255, 255, 0.1);
-}
-
-.executed-reason-container {
-min-height: 32px;
+.bg-warning {
+background-color: #ffc107 !important;
 }
 
 /* Responsividade */
@@ -561,8 +520,8 @@ min-height: 32px;
   width: 200px !important;
 }
 
-.table-fixed th:nth-child(7),
-.table-fixed td:nth-child(7) {
+.table-fixed th:nth-child(6),
+.table-fixed td:nth-child(6) {
   width: 150px !important;
 }
 }
@@ -582,7 +541,7 @@ min-height: 32px;
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-console.log('🚀 Script carregado - Debug Mode ON');
+console.log('🚀 Script carregado - Interface Separada');
 
 // Função para obter CSRF token
 function getCSRFToken() {
@@ -590,606 +549,207 @@ function getCSRFToken() {
   return token ? token.getAttribute('content') : '';
 }
 
-// Função para validar ação antes de executar
-function validateItemAction(button, actionName) {
-  const itemId = button.getAttribute('data-item-id');
-  const productSku = button.getAttribute('data-product-sku');
-  const productId = button.getAttribute('data-product-id');
+// Função para mostrar/esconder campos baseado na seleção do dropdown
+function toggleFields(itemId, actionType) {
+  const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+  const stockInput = row.querySelector('.corrected-stock-input');
+  const reasonInput = row.querySelector('.correction-reason-input');
+  const saveBtn = row.querySelector('.save-item-btn');
   
-  console.log(`🎯 ${actionName} - Validação:`, {
-    itemId,
-    productSku,
-    productId,
-    buttonElement: button
-  });
+  console.log('🔄 Alternando campos para item:', itemId, 'ação:', actionType);
   
-  // Confirmar com o usuário
-  const confirmed = confirm(`Confirmar ${actionName}?\n\nItem ID: ${itemId}\nProduct ID: ${productId}\nSKU: ${productSku}`);
+  // Esconder todos os campos primeiro
+  stockInput.style.display = 'none';
+  reasonInput.style.display = 'none';
+  saveBtn.style.display = 'none';
   
-  if (!confirmed) {
-    console.log('❌ Ação cancelada pelo usuário');
-    return false;
+  // Limpar valores
+  stockInput.value = '';
+  reasonInput.value = '';
+  
+  if (actionType === 'checked') {
+    // Para conferido, só mostrar o botão salvar
+    saveBtn.style.display = 'inline-block';
+    console.log('✅ Modo conferido - só botão salvar');
+    
+  } else if (actionType === 'correction') {
+    // Para correção, mostrar campos obrigatórios e botão salvar
+    stockInput.style.display = 'block';
+    reasonInput.style.display = 'block';
+    saveBtn.style.display = 'inline-block';
+    
+    // Focar no primeiro campo
+    stockInput.focus();
+    console.log('🔧 Modo correção - campos obrigatórios visíveis');
+  }
+}
+
+// Função para validar campos obrigatórios
+function validateFields(itemId, actionType) {
+  const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+  
+  if (actionType === 'correction') {
+    const stockInput = row.querySelector('.corrected-stock-input');
+    const reasonInput = row.querySelector('.correction-reason-input');
+    
+    if (!stockInput.value || !reasonInput.value) {
+      alert('Por favor, preencha o novo estoque e o motivo da correção.');
+      return false;
+    }
+    
+    if (parseInt(stockInput.value) < 0) {
+      alert('O estoque não pode ser negativo.');
+      return false;
+    }
   }
   
   return true;
 }
 
-// Função para atualizar item via AJAX
-function updateItem(itemId, data) {
-  console.log('📝 Atualizando item:', itemId, data);
-  fetch(`/stock_correction_items/${itemId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': getCSRFToken()
-    },
-    body: JSON.stringify({ stock_correction_item: data })
-  });
-}
-
-// Função para mostrar/esconder botão de integração
-function toggleIntegrateButton(itemId) {
-  console.log('🔍 Verificando botão de integração para item:', itemId);
-  const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-  if (!row) {
-    console.error('❌ Row não encontrada para item:', itemId);
-    return;
-  }
-  
-  const stockInput = row.querySelector('.corrected-stock-input');
-  const reasonInput = row.querySelector('.correction-reason-input');
-  const integrateBtn = row.querySelector('.integrate-correction-btn');
-  
-  console.log('🔍 Elementos encontrados:', {
-    stockInput: !!stockInput,
-    reasonInput: !!reasonInput,
-    integrateBtn: !!integrateBtn,
-    stockValue: stockInput?.value,
-    reasonValue: reasonInput?.value
-  });
-  
-  if (integrateBtn && stockInput && reasonInput) {
-    const hasStock = stockInput.value && stockInput.value.trim() !== '';
-    const hasReason = reasonInput.value && reasonInput.value.trim() !== '';
+// Event listener para mudança no dropdown
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('action-dropdown')) {
+    const itemId = e.target.dataset.itemId;
+    const actionType = e.target.value;
     
-    console.log('✅ Validação:', { hasStock, hasReason });
+    console.log('📋 Dropdown alterado:', itemId, actionType);
     
-    if (hasStock && hasReason) {
-      integrateBtn.style.display = 'inline-block';
-      console.log('✅ Mostrando botão de integração');
+    if (actionType) {
+      toggleFields(itemId, actionType);
     } else {
-      integrateBtn.style.display = 'none';
-      console.log('❌ Escondendo botão de integração');
-    }
-  } else {
-    console.log('⚠️ Alguns elementos não encontrados');
-  }
-}
-
-// Função para alternar modo de edição do estoque
-function toggleStockEdit(itemId, enable) {
-  const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-  const display = row.querySelector('.current-stock-display');
-  const input = row.querySelector('.corrected-stock-input');
-  const editBtn = row.querySelector('.edit-stock-btn');
-  
-  if (enable) {
-    display.style.display = 'none';
-    input.style.display = 'block';
-    input.focus();
-    input.select();
-    editBtn.innerHTML = '<i class="fas fa-check"></i>';
-    editBtn.classList.remove('btn-outline-light');
-    editBtn.classList.add('btn-success');
-    editBtn.title = 'Salvar';
-  } else {
-    display.style.display = 'flex';
-    input.style.display = 'none';
-    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-    editBtn.classList.remove('btn-success');
-    editBtn.classList.add('btn-outline-light');
-    editBtn.title = 'Editar estoque';
-    
-    // Atualizar o display com o novo valor
-    display.textContent = `${input.value} un.`;
-    
-    // Atualizar no backend
-    updateItem(itemId, { corrected_stock: input.value });
-    
-    // Verificar botão de integração
-    toggleIntegrateButton(itemId);
-  }
-}
-
-// Função para alternar modo de edição do motivo
-function toggleReasonEdit(itemId, enable) {
-  const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
-  const display = container.querySelector('.current-reason-display');
-  const input = container.querySelector('.correction-reason-input');
-  const editBtn = container.querySelector('.edit-reason-btn');
-  
-  if (enable) {
-    display.style.display = 'none';
-    input.style.display = 'block';
-    input.focus();
-    input.select();
-    editBtn.innerHTML = '<i class="fas fa-check"></i>';
-    editBtn.classList.remove('btn-outline-light');
-    editBtn.classList.add('btn-success');
-    editBtn.title = 'Salvar';
-  } else {
-    display.style.display = 'flex';
-    input.style.display = 'none';
-    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-    editBtn.classList.remove('btn-success');
-    editBtn.classList.add('btn-outline-light');
-    editBtn.title = 'Editar motivo';
-    
-    // Atualizar o display com o novo valor
-    const reasonText = display.querySelector('small');
-    reasonText.innerHTML = `<i class="fas fa-check me-1"></i>${input.value.length > 20 ? input.value.substring(0, 20) + '...' : input.value}`;
-    
-    // Atualizar no backend
-    updateItem(itemId, { correction_reason: input.value });
-    
-    // Verificar botão de integração
-    toggleIntegrateButton(itemId);
-  }
-}
-
-// Event listeners para edição de estoque
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.edit-stock-btn')) {
-    const btn = e.target.closest('.edit-stock-btn');
-    const itemId = btn.dataset.itemId;
-    const isEditing = btn.classList.contains('btn-success');
-    
-    console.log('📊 Alternando edição de estoque:', itemId, isEditing ? 'salvar' : 'editar');
-    
-    if (isEditing) {
-      // Salvar
-      toggleStockEdit(itemId, false);
-    } else {
-      // Editar
-      toggleStockEdit(itemId, true);
+      // Se voltou para "Selecione...", esconder tudo
+      toggleFields(itemId, '');
     }
   }
 });
 
-// Event listeners para edição de motivo
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.edit-reason-btn')) {
-    const btn = e.target.closest('.edit-reason-btn');
-    const itemId = btn.dataset.itemId;
-    const isEditing = btn.classList.contains('btn-success');
+// Event listener para validação em tempo real
+document.addEventListener('input', function(e) {
+  if (e.target.classList.contains('corrected-stock-input') || 
+      e.target.classList.contains('correction-reason-input')) {
     
-    console.log('📝 Alternando edição de motivo:', itemId, isEditing ? 'salvar' : 'editar');
+    const itemId = e.target.dataset.itemId;
+    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const dropdown = row.querySelector('.action-dropdown');
+    const saveBtn = row.querySelector('.save-item-btn');
     
-    if (isEditing) {
-      // Salvar
-      toggleReasonEdit(itemId, false);
-    } else {
-      // Editar
-      toggleReasonEdit(itemId, true);
-    }
-  }
-});
-
-// Salvar com Enter nos inputs de edição
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    if (e.target.classList.contains('corrected-stock-input')) {
-      const itemId = e.target.dataset.itemId;
-      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-      if (row.dataset.itemExecuted === 'true') {
-        toggleStockEdit(itemId, false);
-      }
-    } else if (e.target.classList.contains('correction-reason-input')) {
-      const itemId = e.target.dataset.itemId;
-      const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
-      if (container) {
-        toggleReasonEdit(itemId, false);
-      }
-    }
-  }
-});
-
-// Botão "Marcar Todos"
-document.getElementById('markAllBtn').addEventListener('click', function() {
-  console.log('📋 Marcando todos os itens');
-  const checkboxes = document.querySelectorAll('.checked-checkbox:not(:disabled)');
-  checkboxes.forEach(checkbox => {
-    if (!checkbox.checked) {
-      checkbox.checked = true;
-      const itemId = checkbox.dataset.itemId;
-      updateItem(itemId, { checked: true });
-      
-      // Desabilitar correção quando marcar como conferido
-      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-      const correctionCheckbox = row.querySelector('.correction-checkbox');
+    // Verificar se todos os campos obrigatórios estão preenchidos
+    if (dropdown.value === 'correction') {
       const stockInput = row.querySelector('.corrected-stock-input');
       const reasonInput = row.querySelector('.correction-reason-input');
       
-      correctionCheckbox.disabled = true;
-      correctionCheckbox.checked = false;
-      if (stockInput) stockInput.disabled = true;
-      if (reasonInput) {
-        reasonInput.style.display = 'none';
-        reasonInput.value = '';
+      if (stockInput.value && reasonInput.value) {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('btn-secondary');
+        saveBtn.classList.add('btn-success');
+      } else {
+        saveBtn.disabled = true;
+        saveBtn.classList.remove('btn-success');
+        saveBtn.classList.add('btn-secondary');
       }
-      
-      updateItem(itemId, { needs_correction: false });
-    }
-  });
-});
-
-// Lógica para checkbox "conferido"
-document.querySelectorAll('.checked-checkbox').forEach(checkbox => {
-  checkbox.addEventListener('change', function() {
-    console.log('☑️ Checkbox conferido alterado:', this.dataset.itemId);
-    const itemId = this.dataset.itemId;
-    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-    const correctionCheckbox = row.querySelector('.correction-checkbox');
-    const stockInput = row.querySelector('.corrected-stock-input');
-    const reasonInput = row.querySelector('.correction-reason-input');
-    
-    if (this.checked) {
-      // Se conferido, DESABILITAR correção
-      correctionCheckbox.disabled = true;
-      correctionCheckbox.checked = false;
-      if (stockInput) stockInput.disabled = true;
-      if (reasonInput) {
-        reasonInput.style.display = 'none';
-        reasonInput.value = '';
-      }
-      
-      // Esconder o campo de motivo
-      const reasonCell = reasonInput ? reasonInput.parentElement : null;
-      if (reasonCell) {
-        reasonCell.innerHTML = '<span class="text-white-50">-</span>';
-      }
-      
-      updateItem(itemId, { needs_correction: false });
-    } else {
-      // Se não conferido, HABILITAR correção
-      correctionCheckbox.disabled = false;
-    }
-    
-    // Atualizar no backend
-    updateItem(itemId, { checked: this.checked });
-  });
-});
-
-// Lógica para checkbox "correção"
-document.querySelectorAll('.correction-checkbox').forEach(checkbox => {
-  checkbox.addEventListener('change', function() {
-    console.log('🔧 Checkbox correção alterado:', this.dataset.itemId);
-    const itemId = this.dataset.itemId;
-    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-    const stockInput = row.querySelector('.corrected-stock-input');
-    const reasonCell = row.querySelector('td:nth-child(7)'); // Coluna do motivo
-    const actionsCell = row.querySelector('td:last-child .d-flex');
-  
-    if (this.checked) {
-      console.log('✅ Habilitando correção para item:', itemId);
-      // Habilitar campos de correção
-      stockInput.disabled = false;
-      stockInput.required = true;
-      
-      // Mostrar campo de motivo
-      reasonCell.innerHTML = `
-        <input type="text" 
-               class="form-control form-control-sm bg-dark text-white border-dark correction-reason-input"
-               placeholder="Motivo da correção..."
-               data-item-id="${itemId}"
-               required>
-      `;
-      
-      // Adicionar botão de integração se não existir
-      let integrateBtn = actionsCell.querySelector('.integrate-correction-btn');
-      if (!integrateBtn) {
-        console.log('➕ Criando botão de integração para item:', itemId);
-        integrateBtn = document.createElement('button');
-        integrateBtn.className = 'btn btn-sm btn-warning integrate-correction-btn';
-        integrateBtn.setAttribute('data-item-id', itemId);
-        integrateBtn.setAttribute('data-product-sku', row.getAttribute('data-product-sku'));
-        integrateBtn.setAttribute('data-product-id', row.getAttribute('data-product-id'));
-        integrateBtn.setAttribute('title', 'Integrar correção diretamente com Shopify');
-        integrateBtn.style.display = 'none'; // Inicialmente escondido
-        integrateBtn.innerHTML = '<i class="fab fa-shopify"></i>';
-        
-        // Inserir após o botão de execução
-        const executeBtn = actionsCell.querySelector('.execute-btn');
-        if (executeBtn) {
-          executeBtn.parentNode.insertBefore(integrateBtn, executeBtn.nextSibling);
-        } else {
-          // Se não tem botão de execução, inserir após o botão de busca
-          const searchBtn = actionsCell.querySelector('.check-shopify-btn');
-          if (searchBtn) {
-            searchBtn.parentNode.insertBefore(integrateBtn, searchBtn.nextSibling);
-          }
-        }
-      }
-      
-      // Verificar se deve mostrar o botão
-      setTimeout(() => toggleIntegrateButton(itemId), 100);
-      
-    } else {
-      console.log('❌ Desabilitando correção para item:', itemId);
-      // Desabilitar campos de correção
-      stockInput.disabled = true;
-      stockInput.required = false;
-      stockInput.value = '';
-      
-      // Esconder campo de motivo
-      reasonCell.innerHTML = '<span class="text-white-50">-</span>';
-      
-      // Remover botão de integração
-      const integrateBtn = actionsCell.querySelector('.integrate-correction-btn');
-      if (integrateBtn) {
-        integrateBtn.remove();
-      }
-    }
-    
-    // Atualizar no backend
-    updateItem(itemId, { needs_correction: this.checked });
-  });
-});
-
-// Atualizar estoque corrigido (apenas para itens não executados)
-document.addEventListener('input', function(e) {
-  if (e.target.classList.contains('corrected-stock-input')) {
-    const itemId = e.target.dataset.itemId;
-    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-    
-    // Só atualizar automaticamente se não for item executado
-    if (row.dataset.itemExecuted !== 'true') {
-      console.log('📊 Estoque alterado:', itemId, e.target.value);
-      updateItem(itemId, { corrected_stock: e.target.value });
-      toggleIntegrateButton(itemId);
     }
   }
 });
 
-// Atualizar motivo da correção (apenas para itens não executados)
-document.addEventListener('input', function(e) {
-  if (e.target.classList.contains('correction-reason-input')) {
-    const itemId = e.target.dataset.itemId;
-    const container = document.querySelector(`.executed-reason-container[data-item-id="${itemId}"]`);
-    
-    // Só atualizar automaticamente se não for item executado
-    if (!container) {
-      console.log('📝 Motivo alterado:', itemId, e.target.value);
-      updateItem(itemId, { correction_reason: e.target.value });
-      toggleIntegrateButton(itemId);
-    }
-  }
-});
-
-// Executar correção individual
+// Event listener para salvar item
 document.addEventListener('click', function(e) {
-  if (e.target.closest('.execute-btn')) {
-    console.log('▶️ Executando correção');
-    const btn = e.target.closest('.execute-btn');
-    
-    if (!validateItemAction(btn, 'EXECUTAR CORREÇÃO')) return;
-    
+  if (e.target.closest('.save-item-btn')) {
+    const btn = e.target.closest('.save-item-btn');
     const itemId = btn.dataset.itemId;
     const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-    const stockInput = row.querySelector('.corrected-stock-input');
-    const reasonInput = row.querySelector('.correction-reason-input');
+    const dropdown = row.querySelector('.action-dropdown');
+    const actionType = dropdown.value;
+    
+    console.log('💾 Salvando item:', itemId, 'ação:', actionType);
+    
+    if (!actionType) {
+      alert('Por favor, selecione uma ação primeiro.');
+      return;
+    }
     
     // Validar campos obrigatórios
-    if (!stockInput.value || !reasonInput.value) {
-      alert('Por favor, preencha o novo estoque e o motivo da correção.');
+    if (!validateFields(itemId, actionType)) {
       return;
     }
     
-    const correctionId = '<%= @stock_correction.id %>';
-    fetch(`/stock_corrections/${correctionId}/execute_item`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': getCSRFToken()
-      },
-      body: JSON.stringify({ item_id: itemId })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Correção executada com sucesso no banco local!');
-        location.reload();
-      } else {
-        alert('Erro ao executar correção: ' + data.message);
-      }
-    });
-  }
-});
-
-// Integrar correção específica com Shopify
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.integrate-correction-btn')) {
-    console.log('🔗 Integrando correção');
-    const btn = e.target.closest('.integrate-correction-btn');
+    // Preparar dados
+    const data = {
+      item_id: itemId,
+      action_type: actionType
+    };
     
-    if (!validateItemAction(btn, 'INTEGRAR COM SHOPIFY')) return;
-    
-    const itemId = btn.dataset.itemId;
-    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
-    const stockInput = row.querySelector('.corrected-stock-input');
-    const reasonInput = row.querySelector('.correction-reason-input');
-    const icon = btn.querySelector('i');
-    
-    if (btn.disabled) return;
-    
-    // Para itens já executados, usar valores salvos ou padrão
-    let correctedStock, correctionReason;
-    
-    if (stockInput && stockInput.value) {
-      correctedStock = stockInput.value;
-    } else {
-      // Se não tem input visível, pegar do badge de estoque atual
-      const stockBadge = row.querySelector('.current-stock-display');
-      if (stockBadge) {
-        correctedStock = stockBadge.textContent.replace(' un.', '').trim();
-      }
-    }
-    
-    if (reasonInput && reasonInput.value) {
-      correctionReason = reasonInput.value;
-    } else {
-      // Se não tem input visível, usar motivo padrão
-      correctionReason = 'Re-integração manual';
-    }
-    
-    console.log('📋 Dados para integração:', { itemId, correctedStock, correctionReason });
-    
-    // Validar se temos os dados necessários
-    if (!correctedStock) {
-      alert('Não foi possível determinar o estoque corrigido.');
-      return;
+    if (actionType === 'correction') {
+      const stockInput = row.querySelector('.corrected-stock-input');
+      const reasonInput = row.querySelector('.correction-reason-input');
+      
+      data.corrected_stock = stockInput.value;
+      data.correction_reason = reasonInput.value;
     }
     
     // Mostrar loading
-    btn.disabled = true;
-    icon.className = 'fas fa-spinner fa-spin';
+    const icon = btn.querySelector('i');
+    const originalIcon = icon.className;
+    const originalText = btn.innerHTML;
     
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    
+    // Enviar para o servidor
     const correctionId = '<%= @stock_correction.id %>';
-    fetch(`/stock_corrections/${correctionId}/integrate_item_correction`, {
+    fetch(`/stock_corrections/${correctionId}/save_item_correction`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-Token': getCSRFToken()
       },
-      body: JSON.stringify({ 
-        item_id: itemId,
-        corrected_stock: correctedStock,
-        correction_reason: correctionReason
-      })
+      body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
-      console.log('📨 Resposta da integração:', data);
+      console.log('📨 Resposta do servidor:', data);
+      
       if (data.success) {
-        alert('Produto integrado com Shopify com sucesso!');
+        // Mostrar mensagem de sucesso
+        alert(data.message);
+        
+        // Recarregar a página para mostrar o novo estado
         location.reload();
       } else {
-        alert('Erro ao integrar correção: ' + data.message);
+        alert('Erro: ' + data.message);
+        
+        // Restaurar botão
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }
     })
     .catch(error => {
       console.error('❌ Erro na requisição:', error);
       alert('Erro na requisição: ' + error.message);
-    })
-    .finally(() => {
+      
       // Restaurar botão
       btn.disabled = false;
-      icon.className = 'fab fa-shopify';
+      btn.innerHTML = originalText;
     });
   }
 });
 
-// Sincronizar com Shopify individual
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.sync-shopify-btn')) {
-    console.log('🔄 Sincronizando com Shopify');
-    const btn = e.target.closest('.sync-shopify-btn');
-    
-    if (!validateItemAction(btn, 'SINCRONIZAR COM SHOPIFY')) return;
-    
-    const itemId = btn.dataset.itemId;
-    const icon = btn.querySelector('i');
-    
-    if (btn.disabled) return;
-    
-    // Mostrar loading
-    btn.disabled = true;
-    icon.className = 'fas fa-spinner fa-spin';
-    
-    const correctionId = '<%= @stock_correction.id %>';
-    fetch(`/stock_corrections/${correctionId}/sync_item_with_shopify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': getCSRFToken()
-      },
-      body: JSON.stringify({ item_id: itemId })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Produto sincronizado com Shopify com sucesso!');
-        location.reload();
-      } else {
-        alert('Erro ao sincronizar: ' + data.message);
+// Permitir salvar com Enter nos campos de input
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (e.target.classList.contains('corrected-stock-input') || 
+        e.target.classList.contains('correction-reason-input')) {
+      
+      const itemId = e.target.dataset.itemId;
+      const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+      const saveBtn = row.querySelector('.save-item-btn');
+      
+      if (saveBtn && !saveBtn.disabled) {
+        saveBtn.click();
       }
-    })
-    .catch(error => {
-      alert('Erro na requisição: ' + error.message);
-    })
-    .finally(() => {
-      // Restaurar botão
-      btn.disabled = false;
-      icon.className = 'fas fa-sync';
-    });
+    }
   }
 });
 
-// Verificar estoque atual na Shopify
-document.addEventListener('click', function(e) {
-  if (e.target.closest('.check-shopify-btn')) {
-    console.log('🔍 Verificando estoque na Shopify');
-    const btn = e.target.closest('.check-shopify-btn');
-    const itemId = btn.dataset.itemId;
-    const icon = btn.querySelector('i');
-    
-    if (btn.disabled) return;
-    
-    // Mostrar loading
-    btn.disabled = true;
-    icon.className = 'fas fa-spinner fa-spin';
-    
-    const correctionId = '<%= @stock_correction.id %>';
-    fetch(`/stock_corrections/${correctionId}/check_shopify_inventory?item_id=${itemId}`, {
-      method: 'GET',
-      headers: {
-        'X-CSRF-Token': getCSRFToken()
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const inventory = data.inventory;
-        alert(`Estoque atual na Shopify:
-
-Location: ${inventory.location_name}
-Disponível: ${inventory.available}
-Em Mãos: ${inventory.on_hand}
-Comprometido: ${inventory.committed}
-Chegando: ${inventory.incoming}
-Rastreado: ${inventory.tracked ? 'Sim' : 'Não'}`);
-      } else {
-        alert('Erro ao consultar estoque: ' + data.message);
-      }
-    })
-    .catch(error => {
-      alert('Erro na requisição: ' + error.message);
-    })
-    .finally(() => {
-      // Restaurar botão
-      btn.disabled = false;
-      icon.className = 'fas fa-search';
-    });
-  }
-});
-
-// Verificar botões de integração existentes na inicialização
-document.querySelectorAll('.integrate-correction-btn').forEach(btn => {
-  const itemId = btn.dataset.itemId;
-  console.log('🔍 Verificando botão existente:', itemId);
-  toggleIntegrateButton(itemId);
-});
-
-console.log('✅ Script inicializado completamente');
+console.log('✅ Script inicializado - Interface separada pronta');
 });
 </script>

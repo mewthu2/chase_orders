@@ -1,5 +1,5 @@
 class StockCorrectionsController < ApplicationController
-  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :execute_all, :execute_item, :update_shopify_stock, :sync_item_with_shopify, :integrate_item_correction, :debug_locations, :check_shopify_inventory]
+  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :execute_all, :execute_item, :update_shopify_stock, :sync_item_with_shopify, :integrate_item_correction, :debug_locations, :check_shopify_inventory, :finalize_correction, :save_item_correction]
   before_action :check_location_permission, only: [:new, :create, :show, :edit]
   
   def index
@@ -13,24 +13,33 @@ class StockCorrectionsController < ApplicationController
     @per_page = 20
     @search_term = params[:search_term] || ''
     
-    # Base query dos items da correção
-    items_query = @stock_correction.stock_correction_items.includes(:product)
+    # Produtos já processados (conferidos ou com correção)
+    processed_items_query = @stock_correction.stock_correction_items
+                                            .includes(:product)
+                                            .where(executed: true)
     
-    # Aplicar filtro de busca se houver
-    if @search_term.present?
-      items_query = items_query.joins(:product)
-                        .where('LOWER(products.sku) LIKE ? OR LOWER(products.shopify_product_name) LIKE ?',
-                               "%#{@search_term.downcase}%", "%#{@search_term.downcase}%")
-    end
-    
-    # Paginação
-    @total_items = items_query.count
-    @total_pages = (@total_items.to_f / @per_page).ceil
+    # Paginação dos produtos processados
+    @total_processed = processed_items_query.count
+    @total_pages = (@total_processed.to_f / @per_page).ceil
     
     offset = (@current_page - 1) * @per_page
-    @stock_correction_items = items_query.order('products.sku')
-                                        .limit(@per_page)
-                                        .offset(offset)
+    @processed_items = processed_items_query.order('products.sku')
+                                          .limit(@per_page)
+                                          .offset(offset)
+    
+    # Produto da busca atual (se houver)
+    @search_item = nil
+    if @search_term.present?
+      search_item_query = @stock_correction.stock_correction_items
+                                          .includes(:product)
+                                          .joins(:product)
+                                          .where('LOWER(products.sku) = ? OR LOWER(products.shopify_product_name) LIKE ?',
+                                                 @search_term.downcase, "%#{@search_term.downcase}%")
+                                          .where(executed: false)
+                                          .first
+      
+      @search_item = search_item_query
+    end
     
     # Estatísticas
     @stats = {
@@ -77,7 +86,7 @@ class StockCorrectionsController < ApplicationController
     if @stock_correction.save
       # Criar items para todos os produtos da location após salvar
       create_correction_items(@stock_correction)
-      redirect_to edit_stock_correction_path(@stock_correction), notice: 'Conferência criada com sucesso! Agora você pode conferir os produtos.'
+      redirect_to edit_stock_correction_path(@stock_correction), notice: 'Conferência criada com sucesso! Use a busca para encontrar produtos.'
     else
       @location = @stock_correction.location || current_user.default_location
       @available_locations = current_user.available_locations_for_user
@@ -90,24 +99,33 @@ class StockCorrectionsController < ApplicationController
     @per_page = 20
     @search_term = params[:search_term] || ''
     
-    # Base query dos items da correção
-    items_query = @stock_correction.stock_correction_items.includes(:product)
+    # Produtos já processados (conferidos ou com correção)
+    processed_items_query = @stock_correction.stock_correction_items
+                                            .includes(:product)
+                                            .where(executed: true)
     
-    # Aplicar filtro de busca se houver
-    if @search_term.present?
-      items_query = items_query.joins(:product)
-                      .where('LOWER(products.sku) LIKE ? OR LOWER(products.shopify_product_name) LIKE ?',
-                             "%#{@search_term.downcase}%", "%#{@search_term.downcase}%")
-    end
-    
-    # Paginação
-    @total_items = items_query.count
-    @total_pages = (@total_items.to_f / @per_page).ceil
+    # Paginação dos produtos processados
+    @total_processed = processed_items_query.count
+    @total_pages = (@total_processed.to_f / @per_page).ceil
     
     offset = (@current_page - 1) * @per_page
-    @stock_correction_items = items_query.order('products.sku')
-                                      .limit(@per_page)
-                                      .offset(offset)
+    @processed_items = processed_items_query.order('products.sku')
+                                          .limit(@per_page)
+                                          .offset(offset)
+    
+    # Produto da busca atual (se houver)
+    @search_item = nil
+    if @search_term.present?
+      search_item_query = @stock_correction.stock_correction_items
+                                          .includes(:product)
+                                          .joins(:product)
+                                          .where('LOWER(products.sku) = ? OR LOWER(products.shopify_product_name) LIKE ?',
+                                                 @search_term.downcase, "%#{@search_term.downcase}%")
+                                          .where(executed: false)
+                                          .first
+      
+      @search_item = search_item_query
+    end
   end
   
   def update
@@ -353,6 +371,115 @@ class StockCorrectionsController < ApplicationController
         success: false, 
         message: "Erro inesperado: #{e.message}"
       }
+    end
+  end
+
+  # Nova action para salvar item e integrar automaticamente
+  def save_item_correction
+    item_id = params[:item_id]
+    @item = StockCorrectionItem.find(item_id)
+    action_type = params[:action_type] # 'checked' ou 'correction'
+    corrected_stock = params[:corrected_stock]
+    correction_reason = params[:correction_reason]
+    
+    Rails.logger.info "=== SAVE ITEM CORRECTION ==="
+    Rails.logger.info "Item ID: #{item_id}"
+    Rails.logger.info "Action Type: #{action_type}"
+    Rails.logger.info "Corrected Stock: #{corrected_stock}"
+    Rails.logger.info "Correction Reason: #{correction_reason}"
+    Rails.logger.info "=========================="
+    
+    begin
+      case action_type
+      when 'checked'
+        # Marcar como conferido
+        @item.update!(
+          checked: true,
+          needs_correction: false,
+          executed: true,
+          executed_at: Time.current
+        )
+        
+        render json: { 
+          success: true, 
+          message: 'Item marcado como conferido com sucesso!',
+          action: 'checked'
+        }
+        
+      when 'correction'
+        # Validar campos obrigatórios
+        if corrected_stock.blank? || correction_reason.blank?
+          render json: { 
+            success: false, 
+            message: 'Estoque corrigido e motivo são obrigatórios para correção'
+          }
+          return
+        end
+        
+        # Atualizar item com correção
+        @item.update!(
+          needs_correction: true,
+          corrected_stock: corrected_stock.to_i,
+          correction_reason: correction_reason,
+          executed: true,
+          executed_at: Time.current
+        )
+        
+        # Atualizar estoque local
+        if update_local_stock(@item, corrected_stock.to_i)
+          # Tentar sincronizar com Shopify
+          sync_result = @item.sync_with_shopify!
+          
+          if sync_result
+            render json: { 
+              success: true, 
+              message: 'Correção salva e integrada com Shopify com sucesso!',
+              action: 'correction',
+              sync_status: @item.shopify_sync_status,
+              sync_time: @item.last_shopify_sync_at&.strftime('%d/%m/%Y %H:%M')
+            }
+          else
+            render json: { 
+              success: false, 
+              message: "Correção salva no banco local, mas erro na integração Shopify: #{@item.shopify_sync_error}"
+            }
+          end
+        else
+          render json: { 
+            success: false, 
+            message: 'Erro ao atualizar estoque local'
+          }
+        end
+        
+      else
+        render json: { 
+          success: false, 
+          message: 'Tipo de ação inválido'
+        }
+      end
+      
+    rescue ActiveRecord::RecordInvalid => e
+      render json: { 
+        success: false, 
+        message: "Erro de validação: #{e.record.errors.full_messages.join(', ')}"
+      }
+    rescue => e
+      Rails.logger.error "Error in save_item_correction: #{e.message}"
+      render json: { 
+        success: false, 
+        message: "Erro inesperado: #{e.message}"
+      }
+    end
+  end
+
+  # Nova action para finalizar conferência
+  def finalize_correction
+    begin
+      @stock_correction.update!(status: 'executed', executed_at: Time.current)
+      
+      redirect_to stock_corrections_path, notice: 'Conferência finalizada com sucesso!'
+    rescue => e
+      redirect_to edit_stock_correction_path(@stock_correction), alert: "Erro ao finalizar conferência: #{e.message}"
     end
   end
   

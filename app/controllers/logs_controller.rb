@@ -7,14 +7,14 @@ class LogsController < ApplicationController
     @per_page = 20
     @page = (params[:page] || 1).to_i
     @page = 1 if @page < 1
-    
+
     @total_count = @logs.count
     @total_pages = (@total_count.to_f / @per_page).ceil
     @page = @total_pages if @page > @total_pages && @total_pages > 0
-    
+
     offset = (@page - 1) * @per_page
     @logs = @logs.limit(@per_page).offset(offset)
-    
+
     @prev_page = @page > 1 ? @page - 1 : nil
     @next_page = @page < @total_pages ? @page + 1 : nil
   end
@@ -32,17 +32,11 @@ class LogsController < ApplicationController
       )
     end
 
-    if params[:user_id].present?
-      logs = logs.where(user_id: params[:user_id])
-    end
+    logs = logs.where(user_id: params[:user_id]) if params[:user_id].present?
 
-    if params[:action_type].present?
-      logs = logs.where(action_type: params[:action_type])
-    end
+    logs = logs.where(action_type: params[:action_type]) if params[:action_type].present?
 
-    if params[:resource_type].present?
-      logs = logs.where(resource_type: params[:resource_type])
-    end
+    logs = logs.where(resource_type: params[:resource_type]) if params[:resource_type].present?
 
     if params[:success].present?
       case params[:success]
@@ -54,21 +48,13 @@ class LogsController < ApplicationController
     end
 
     if params[:date_from].present?
-      begin
-        date_from = Date.parse(params[:date_from]).beginning_of_day
-        logs = logs.where('logs.created_at >= ?', date_from)
-      rescue ArgumentError
-        # Invalid date format, ignore filter
-      end
+      date_from = Date.parse(params[:date_from]).beginning_of_day
+      logs = logs.where('logs.created_at >= ?', date_from)
     end
 
     if params[:date_to].present?
-      begin
-        date_to = Date.parse(params[:date_to]).end_of_day
-        logs = logs.where('logs.created_at <= ?', date_to)
-      rescue ArgumentError
-        # Invalid date format, ignore filter
-      end
+      date_to = Date.parse(params[:date_to]).end_of_day
+      logs = logs.where('logs.created_at <= ?', date_to)
     end
 
     if params[:sort].present?
@@ -95,8 +81,7 @@ class LogsController < ApplicationController
   end
 
   def admin_only!
-    unless current_user&.admin?
-      redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
-    end
+    return unless current_user&.admin?
+    redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
   end
 end
