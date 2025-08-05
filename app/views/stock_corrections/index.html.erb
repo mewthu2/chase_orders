@@ -60,7 +60,7 @@
               </div>
               <div class="col-md-3">
                 <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-info mb-2">Executada</span>
+                  <span class="badge bg-info text-dark mb-2">Executada</span>
                   <h6 class="text-info">Finalizada</h6>
                   <small class="text-white-50">Correções aplicadas no sistema local</small>
                 </div>
@@ -92,6 +92,11 @@
           <h4 class="text-white mb-0">
             <i class="fas fa-clipboard-list me-2"></i>
             Histórico de Conferências
+            <% unless current_user.admin? %>
+              <small class="text-warning ms-2">
+                <i class="fas fa-lock me-1"></i>Suas locations permitidas
+              </small>
+            <% end %>
           </h4>
           <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
             <i class="fas fa-plus me-2"></i>Nova Conferência
@@ -173,7 +178,7 @@
                       </td>
                       
                       <td class="px-3 py-3">
-                        <span class="badge bg-info text-white px-2 py-1">
+                        <span class="badge bg-info text-dark px-2 py-1">
                           <i class="fas fa-map-marker-alt me-1"></i>
                           <%= correction.location_name %>
                         </span>
@@ -204,7 +209,7 @@
                             <i class="fas fa-check me-1"></i>Concluída
                           </span>
                         <% elsif correction.items_to_correct.where(executed: true).any? %>
-                          <span class="badge bg-info text-white px-2 py-1">
+                          <span class="badge bg-info text-dark px-2 py-1">
                             <i class="fas fa-clock me-1"></i>Parcial
                           </span>
                         <% elsif correction.items_to_correct.any? %>
@@ -221,7 +226,7 @@
                       <td class="px-3 py-3 text-center">
                         <div class="d-flex gap-1 justify-content-center flex-wrap">
                           <%= link_to correction, 
-                                      class: "btn btn-sm btn-info",
+                                      class: "btn btn-sm btn-info text-dark",
                                       title: "Visualizar detalhes" do %>
                             <i class="fas fa-eye"></i>
                           <% end %>

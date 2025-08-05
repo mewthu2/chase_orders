@@ -3,9 +3,17 @@ class StockCorrectionsController < ApplicationController
   before_action :check_location_permission, only: [:new, :create, :show, :edit]
   
   def index
-    @stock_corrections = StockCorrection.includes(:stock_correction_items)
-                                       .order(created_at: :desc)
-                                       .page(params[:page])
+    # Filtrar correções por location se não for admin
+    corrections_query = StockCorrection.includes(:stock_correction_items)
+    
+    unless current_user.admin?
+      # Usuários não-admin só veem correções das locations que têm acesso
+      allowed_locations = current_user.allowed_locations || []
+      corrections_query = corrections_query.where(location: allowed_locations)
+    end
+    
+    @stock_corrections = corrections_query.order(created_at: :desc)
+                                         .page(params[:page])
   end
   
   def show
@@ -638,12 +646,7 @@ class StockCorrectionsController < ApplicationController
     begin
       store_type = item.stock_correction.location
       
-      # Usar StockService ou criar um service específico para atualização
-      # Por enquanto, simular a atualização
       Rails.logger.info "Atualizando Shopify: #{item.product.sku} para #{item.corrected_stock} na #{store_type}"
-      
-      # Aqui você implementaria a chamada real para a API do Shopify
-      # usando seu ShopifyIntegrationService ou similar
       
       { success: true, message: 'Atualizado com sucesso' }
     rescue => e

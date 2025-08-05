@@ -103,27 +103,23 @@
             </small>
           </h5>
           <div class="d-flex gap-2">
-            <%= link_to new_stock_correction_path(location: @selected_location), 
-                        class: "btn btn-sm btn-warning",
+            <%= link_to new_stock_correction_path(location: @selected_location), class: "btn btn-sm btn-warning",
                         title: "Criar nova conferência de estoque para verificar divergências" do %>
               <i class="fas fa-clipboard-check me-1"></i>Nova Conferência
             <% end %>
-            <%= link_to stock_corrections_path, 
-                        class: "btn btn-sm btn-info",
+            <%= link_to stock_corrections_path, class: "btn btn-sm btn-info text-dark",
                         title: "Ver histórico de todas as conferências realizadas" do %>
               <i class="fas fa-history me-1"></i>Histórico
             <% end %>
             <%= link_to inventory_products_path(location: @selected_location, search_term: @search_term, page: @current_page), 
-                        class: "btn btn-sm btn-primary", 
-                        id: "refreshBtn",
+                        class: "btn btn-sm btn-primary", id: "refreshBtn",
                         title: "Atualizar dados em tempo real da Shopify" do %>
               <i class="fas fa-sync me-1"></i>Atualizar
             <% end %>
           </div>
         </div>
         <div class="card-body bg-black">
-          <%= form_with url: search_inventory_products_path, method: :post, local: true, 
-                        class: "row g-3 align-items-end", id: "searchForm" do |f| %>
+          <%= form_with url: search_inventory_products_path, method: :post, local: true, class: "row g-3 align-items-end", id: "searchForm" do |f| %>
             <div class="col-md-8">
               <label class="form-label text-white fw-bold">Buscar Produto</label>
               <div class="input-group">
@@ -140,6 +136,7 @@
                 Busca por ID, SKU, Shopify Inventory Item ID ou Custo
               </small>
             </div>
+            
             <div class="col-md-3">
               <label class="form-label text-white fw-bold">Location</label>
               <div class="input-group">
@@ -158,6 +155,7 @@
                 </small>
               <% end %>
             </div>
+            
             <div class="col-md-1">
               <%= f.submit "Buscar", class: "btn btn-primary w-100", id: "searchBtn" %>
             </div>
@@ -180,7 +178,7 @@
           </h5>
           <div class="d-flex align-items-center gap-3">
             <% if @search_term.present? %>
-              <span class="badge bg-info text-white px-3 py-2">
+              <span class="badge bg-info text-dark px-3 py-2">
                 <i class="fas fa-filter me-1"></i>Filtrado: "<%= @search_term %>"
               </span>
             <% end %>
@@ -215,8 +213,7 @@
                       </td>
                       <td class="px-4 py-3">
                         <div>
-                          <span class="text-white fw-medium d-block">
-                            <%= format_product_name(product) %>
+                          <span class="text-white fw-medium d-block"><%= format_product_name(product) %>
                           </span>
                           <% if product.shopify_inventory_item_id.present? %>
                             <small class="text-white-50">
@@ -250,8 +247,7 @@
                 <p class="text-white-50">
                   Nenhum resultado para "<strong><%= @search_term %></strong>"
                 </p>
-                <%= link_to inventory_products_path(location: @selected_location), 
-                            class: "btn btn-outline-light" do %>
+                <%= link_to inventory_products_path(location: @selected_location), class: "btn btn-outline-light" do %>
                   <i class="fas fa-times me-2"></i>Limpar Filtros
                 <% end %>
               <% else %>
@@ -266,9 +262,7 @@
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
               <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
-                <%= [@current_page * @per_page, @total_products].min %> de 
-                <%= @total_products %> produtos
+                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_products].min %> de <%= @total_products %> produtos
                 <% if @search_term.present? %>
                   <span class="text-info">(filtrados)</span>
                 <% end %>
@@ -292,10 +286,9 @@
                 <!-- Números das páginas -->
                 <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
                 <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
-                
+
                 <% if page_start > 1 %>
-                  <%= link_to "1", 
-                              inventory_products_path(location: @selected_location, search_term: @search_term, page: 1),
+                  <%= link_to "1", inventory_products_path(location: @selected_location, search_term: @search_term, page: 1),
                               class: "btn btn-outline-light btn-sm pagination-btn" %>
                   <% if page_start > 2 %>
                     <span class="btn btn-outline-light btn-sm disabled">...</span>
@@ -306,8 +299,7 @@
                   <% if page_num == @current_page %>
                     <button class="btn btn-primary btn-sm"><%= page_num %></button>
                   <% else %>
-                    <%= link_to page_num, 
-                                inventory_products_path(location: @selected_location, search_term: @search_term, page: page_num),
+                    <%= link_to page_num, inventory_products_path(location: @selected_location, search_term: @search_term, page: page_num),
                                 class: "btn btn-outline-light btn-sm pagination-btn" %>
                   <% end %>
                 <% end %>
@@ -316,8 +308,7 @@
                   <% if page_end < @total_pages - 1 %>
                     <span class="btn btn-outline-light btn-sm disabled">...</span>
                   <% end %>
-                  <%= link_to @total_pages, 
-                              inventory_products_path(location: @selected_location, search_term: @search_term, page: @total_pages),
+                  <%= link_to @total_pages, inventory_products_path(location: @selected_location, search_term: @search_term, page: @total_pages),
                               class: "btn btn-outline-light btn-sm pagination-btn" %>
                 <% end %>
 
