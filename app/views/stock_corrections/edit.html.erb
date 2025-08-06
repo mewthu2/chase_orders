@@ -1,479 +1,334 @@
 <div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h4 class="text-white mb-0">
-            <i class="fas fa-edit me-2"></i>
-            Editando Conferência #<%= @stock_correction.id %> - <%= @stock_correction.location_name %>
-          </h4>
-          <div class="d-flex gap-2">
-            <% if @stock_correction.status != 'executed' %>
-              <%= link_to finalize_correction_stock_correction_path(@stock_correction), 
-                          method: :post,
-                          class: "btn btn-sm btn-success",
-                          confirm: "Deseja finalizar esta conferência? Esta ação não pode ser desfeita." do %>
-                <i class="fas fa-flag-checkered me-1"></i>Finalizar Conferência
-              <% end %>
-            <% else %>
-              <span class="badge bg-success text-dark px-3 py-2">
-                <i class="fas fa-check me-1"></i>Conferência Finalizada
-              </span>
-            <% end %>
-            
-            <%= link_to @stock_correction, class: "btn btn-sm btn-info text-dark" do %>
-              <i class="fas fa-eye me-1"></i>Visualizar
-            <% end %>
-          </div>
-        </div>
-        <div class="card-body bg-black">
-          <%= form_with model: @stock_correction, local: true, class: "row g-3" do |f| %>
-            <div class="col-md-3">
-              <label class="form-label text-white fw-bold">Data:</label>
-              <%= f.date_field :correction_date, 
-                               class: "form-control bg-dark text-white border-dark",
-                               disabled: (@stock_correction.status == 'executed' && !current_user.admin?) %>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label text-white fw-bold">Location:</label>
-              <%= f.select :location, 
-                           options_for_select([
-                             ['Lagoa Seca', 'lagoa_seca'],
-                             ['BH Shopping', 'bh_shopping'],
-                             ['RJ - Barra Shopping', 'rj']
-                           ], @stock_correction.location),
-                           {},
-                           { class: "form-select bg-dark text-white border-dark",
-                             disabled: (@stock_correction.status == 'executed' && !current_user.admin?) } %>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label text-white fw-bold">Motivo:</label>
-              <%= f.text_field :reason, 
-                               class: "form-control bg-dark text-white border-dark",
-                               disabled: (@stock_correction.status == 'executed' && !current_user.admin?) %>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-              <%= f.submit "Salvar Alterações", 
-                           class: "btn btn-primary w-100",
-                           disabled: (@stock_correction.status == 'executed' && !current_user.admin?) %>
-            </div>
-            <div class="col-12">
-              <label class="form-label text-white fw-bold">Observações:</label>
-              <%= f.text_area :notes, 
-                              rows: 2,
-                              class: "form-control bg-dark text-white border-dark",
-                              disabled: (@stock_correction.status == 'executed' && !current_user.admin?) %>
-            </div>
-          <% end %>
-          
-          <hr class="border-secondary my-3">
-          
-          <div class="row">
-            <div class="col-md-3">
-              <div class="p-3 text-center">
-                <h4 class="text-info mb-1"><%= @stock_correction.stock_correction_items.count %></h4>
-                <small class="text-white-50">Total de Produtos</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 text-center">
-                <h4 class="text-success mb-1"><%= @stock_correction.checked_items.count %></h4>
-                <small class="text-white-50">Conferidos</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 text-center">
-                <h4 class="text-warning mb-1"><%= @stock_correction.items_to_correct.count %></h4>
-                <small class="text-white-50">Com Correção</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="p-3 text-center">
-                <h4 class="text-primary mb-1"><%= @stock_correction.stock_correction_items.where(executed: true).count %></h4>
-                <small class="text-white-50">Executados</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Busca -->
-  <% if @stock_correction.status != 'executed' || current_user.admin? %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card bg-black border border-dark shadow-lg">
-          <div class="card-body bg-black">
-            <%= form_with url: edit_stock_correction_path(@stock_correction), method: :get, local: true, 
-                          class: "row g-3 align-items-end" do |f| %>
-              <div class="col-md-8">
-                <label class="form-label text-white fw-bold">Buscar Produto</label>
-                <div class="input-group">
-                  <span class="input-group-text bg-dark border-dark text-white">
-                    <i class="fas fa-search"></i>
-                  </span>
-                  <%= f.text_field :search_term, 
-                                   placeholder: "Digite SKU exato ou nome do produto...", 
-                                   value: @search_term,
-                                   class: "form-control bg-dark text-white border-dark" %>
-                </div>
-              </div>
-              <div class="col-md-2">
-                <%= f.submit "Buscar", class: "btn btn-primary w-100" %>
-              </div>
-              <div class="col-md-2">
-                <%= link_to edit_stock_correction_path(@stock_correction), class: "btn btn-outline-light w-100" do %>
-                  <i class="fas fa-times me-1"></i>Limpar
-                <% end %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Produto da Busca Atual -->
-    <% if @search_item %>
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card bg-black border border-info shadow-lg">
-            <div class="card-header bg-info text-dark">
-              <h5 class="mb-0">
-                <i class="fas fa-search me-2"></i>Produto Encontrado - Aguardando Conferência
-              </h5>
-            </div>
-            
-            <div class="card-body bg-black">
-              <div class="row align-items-center">
-                <div class="col-md-8">
-                  <div class="mb-3">
-                    <h6 class="text-white mb-2">
-                      <%= format_product_name_for_correction(@search_item.product) %>
-                    </h6>
-                    <div class="d-flex gap-3 mb-2">
-                      <span class="badge bg-info text-dark px-2 py-1">
-                        Estoque Atual: <%= @search_item.current_stock %> un.
-                      </span>
-                      <% if @search_item.product.shopify_variant_id.present? %>
-                        <small class="text-white-50">
-                          <i class="fab fa-shopify me-1"></i>ID: <%= @search_item.product.shopify_variant_id %>
-                        </small>
-                      <% end %>
-                    </div>
-                  </div>
-                  
-                  <!-- Formulário de Correção -->
-                  <div class="row g-3">
-                    <div class="col-md-4">
-                      <label class="form-label text-white fw-bold">Novo Estoque</label>
-                      <input type="number" 
-                             id="corrected_stock_<%= @search_item.id %>" 
-                             class="form-control bg-dark text-white border-dark" 
-                             placeholder="Digite o estoque correto"
-                             min="0">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label text-white fw-bold">Motivo da Correção</label>
-                      <input type="text" 
-                             id="correction_reason_<%= @search_item.id %>" 
-                             class="form-control bg-dark text-white border-dark" 
-                             placeholder="Ex: Produto danificado, erro de contagem...">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                      <div class="w-100">
-                        <button type="button" 
-                                class="btn btn-success w-100 mb-2" 
-                                onclick="saveItemCorrection(<%= @search_item.id %>, 'checked')">
-                          <i class="fas fa-check me-1"></i>Conferido
-                        </button>
-                        <button type="button" 
-                                class="btn btn-warning text-dark w-100" 
-                                onclick="saveItemCorrection(<%= @search_item.id %>, 'correction')">
-                          <i class="fas fa-edit me-1"></i>Corrigir
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="col-md-4">
-                  <div class="text-center">
-                    <i class="fas fa-clipboard-check fa-3x text-info mb-3"></i>
-                    <p class="text-white-50 mb-0">
-                      Confira o estoque físico e escolha uma ação
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    <% elsif @search_term.present? %>
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="alert alert-warning bg-dark border-warning text-white">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            Nenhum produto encontrado para "<strong><%= @search_term %></strong>". 
-            Verifique se o SKU está correto ou se o produto existe na base de dados.
-          </div>
-        </div>
-      </div>
-    <% end %>
-  <% else %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="alert alert-info bg-dark border-info text-white">
-          <i class="fas fa-info-circle me-2"></i>
-          Esta conferência foi finalizada. Apenas administradores podem fazer alterações.
-        </div>
-      </div>
-    </div>
-  <% end %>
-
-  <!-- Lista de Produtos Processados -->
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-check-circle me-2"></i>Produtos Processados
-          </h5>
-          <% if @total_processed > 0 %>
-            <span class="badge bg-success text-dark px-3 py-2">
-              <%= @total_processed %> produto(s) processado(s)
-            </span>
-          <% end %>
-        </div>
-        
-        <div class="card-body bg-black p-0">
-          <% if @processed_items.any? %>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0 table-fixed">
-                <thead class="bg-dark">
-                  <tr>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 300px;">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Atual</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Novo Estoque</th>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Sincronização</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @processed_items.each do |item| %>
-                    <tr class="border-secondary">
-                      <td class="px-3 py-3" style="width: 300px;">
-                        <div>
-                          <span class="text-white fw-medium d-block">
-                            <%= format_product_name_for_correction(item.product) %>
-                          </span>
-                          <small class="text-white-50">
-                            SKU: <%= item.product.sku %>
-                          </small>
-                          <% if item.product.shopify_variant_id.present? %>
-                            <br><small class="text-white-50">
-                              <i class="fab fa-shopify me-1"></i>ID: <%= item.product.shopify_variant_id %>
-                            </small>
-                          <% end %>
-                        </div>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <span class="badge bg-info text-dark px-2 py-1">
-                          <%= item.current_stock %> un.
-                        </span>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <% if item.checked? %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Conferido
-                          </span>
-                        <% elsif item.needs_correction? %>
-                          <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-edit me-1"></i>Corrigido
-                          </span>
-                        <% end %>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <% if item.needs_correction? %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <%= item.corrected_stock %> un.
-                          </span>
-                        <% else %>
-                          <span class="text-white-50">-</span>
-                        <% end %>
-                      </td>
-                      
-                      <td class="px-3 py-3" style="width: 200px;">
-                        <% if item.needs_correction? %>
-                          <small class="text-success">
-                            <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 25) %>
-                          </small>
-                        <% else %>
-                          <span class="text-white-50">-</span>
-                        <% end %>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center" style="width: 150px;">
-                        <% if item.last_shopify_sync_at.present? %>
-                          <div>
-                            <span class="badge <%= item.shopify_sync_status_badge_class %> text-dark px-2 py-1">
-                              <%= item.shopify_sync_status_text %>
-                            </span>
-                            <br><small class="text-white-50">
-                              <%= item.last_shopify_sync_at.strftime('%d/%m %H:%M') %>
-                            </small>
-                          </div>
-                        <% else %>
-                          <span class="badge bg-secondary text-white px-2 py-1">
-                            Processado
-                          </span>
-                        <% end %>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% else %>
-            <div class="text-center py-5">
-              <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
-              <h5 class="text-white-50">Nenhum produto processado ainda</h5>
-              <p class="text-white-50">Use a busca acima para encontrar produtos e fazer a conferência</p>
-            </div>
-          <% end %>
+          <div>
+            <h4 class="text-white mb-1">
+              <i class="fas fa-edit me-2"></i>Editar Conferência #<%= @stock_correction.id %>
+            </h4>
+            <small class="text-white-50">
+              <i class="fas fa-map-marker-alt me-1"></i>
+              <%= location_display_name(@location) %> - 
+              <%= @stock_correction.correction_date.strftime('%d/%m/%Y') %>
+            </small>
+          </div>
+          <div class="d-flex gap-2">
+            <%= link_to stock_corrections_path, class: "btn btn-outline-light" do %>
+              <i class="fas fa-arrow-left me-1"></i>Voltar
+            <% end %>
+            <% if @stock_correction.status != 'executed' %>
+              <%= link_to finalize_correction_stock_correction_path(@stock_correction), 
+                          method: :patch,
+                          class: "btn btn-success",
+                          data: { confirm: "Tem certeza que deseja finalizar esta conferência?" } do %>
+                <i class="fas fa-check me-1"></i>Finalizar
+              <% end %>
+            <% else %>
+              <% if current_user.admin? %>
+                <%= link_to reopen_stock_correction_path(@stock_correction), 
+                            method: :patch,
+                            class: "btn btn-warning",
+                            data: { confirm: "Tem certeza que deseja reabrir esta conferência?" } do %>
+                  <i class="fas fa-undo me-1"></i>Reabrir
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
         </div>
 
-        <!-- Paginação dos Produtos Processados -->
-        <% if @total_pages > 1 %>
-          <div class="card-footer bg-dark border-top border-secondary">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-              <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
-                <%= [@current_page * @per_page, @total_processed].min %> de 
-                <%= @total_processed %> produtos processados
-              </div>
-              <div class="d-flex gap-2 flex-wrap">
-                <% if @current_page > 1 %>
-                  <%= link_to edit_stock_correction_path(@stock_correction, page: @current_page - 1, search_term: @search_term),
-                              class: "btn btn-outline-light btn-sm" do %>
-                    <i class="fas fa-chevron-left"></i> Anterior
+        <div class="card-body bg-black">
+          <!-- Busca de Produto -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card bg-dark border border-secondary">
+                <div class="card-header bg-secondary">
+                  <h6 class="text-white mb-0">
+                    <i class="fas fa-search me-2"></i>Buscar Produto para Correção
+                  </h6>
+                </div>
+                <div class="card-body">
+                  <%= form_with url: edit_stock_correction_path(@stock_correction), 
+                                method: :get, local: true, class: "row g-3" do |f| %>
+                    <div class="col-md-8">
+                      <%= f.text_field :search_term, 
+                                       value: @search_term,
+                                       placeholder: "Digite o SKU do produto...",
+                                       class: "form-control bg-dark text-white border-dark" %>
+                    </div>
+                    <div class="col-md-4">
+                      <%= f.submit "Buscar", class: "btn btn-primary w-100" %>
+                    </div>
                   <% end %>
-                <% end %>
-
-                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
-                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
-                
-                <% (page_start..page_end).each do |page_num| %>
-                  <% if page_num == @current_page %>
-                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
-                  <% else %>
-                    <%= link_to page_num, 
-                                edit_stock_correction_path(@stock_correction, page: page_num, search_term: @search_term),
-                                class: "btn btn-outline-light btn-sm" %>
+                  
+                  <% if @search_error %>
+                    <div class="alert alert-danger mt-3">
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                      <%= @search_error %>
+                    </div>
                   <% end %>
-                <% end %>
-
-                <% if @current_page < @total_pages %>
-                  <%= link_to edit_stock_correction_path(@stock_correction, page: @current_page + 1, search_term: @search_term),
-                              class: "btn btn-outline-light btn-sm" do %>
-                    Próxima <i class="fas fa-chevron-right"></i>
-                  <% end %>
-                <% end %>
+                </div>
               </div>
             </div>
           </div>
-        <% end %>
-      </div>
-    </div>
-  </div>
 
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-start">
-        <%= link_to stock_corrections_path, class: "btn btn-outline-light" do %>
-          <i class="fas fa-arrow-left me-2"></i>Voltar para Lista
-        <% end %>
+          <!-- Item Encontrado -->
+          <% if @search_item %>
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="card bg-success border border-success">
+                  <div class="card-header bg-success">
+                    <h6 class="text-white mb-0">
+                      <i class="fas fa-check-circle me-2"></i>Produto Encontrado
+                    </h6>
+                  </div>
+                  <div class="card-body bg-dark">
+                    <div class="table-responsive">
+                      <table class="table table-dark mb-0">
+                        <thead>
+                          <tr>
+                            <th class="text-white">Produto</th>
+                            <th class="text-white text-center">Estoque Atual</th>
+                            <th class="text-white text-center">Fonte</th>
+                            <th class="text-white text-center">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td class="px-3 py-3">
+                              <div>
+                                <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(@search_item.product) %></span>
+                                <small class="text-warning fw-bold font-monospace">
+                                  SKU: <%= @search_item.product.sku %>
+                                </small>
+                                <% if @search_item.product.shopify_variant_id.present? %>
+                                  <br><small class="text-white-50">
+                                    <i class="fab fa-shopify me-1"></i>ID: <%= @search_item.product.shopify_variant_id %>
+                                  </small>
+                                <% end %>
+                              </div>
+                            </td>
+                            <td class="text-center">
+                              <span class="badge <%= stock_badge_class(@search_item.real_stock) %> px-2 py-1">
+                                <%= @search_item.real_stock %> un.
+                              </span>
+                            </td>
+                            <td class="text-center">
+                              <%= stock_source_indicator(@search_item) %>
+                            </td>
+                            <td class="text-center">
+                              <button class="btn btn-primary btn-sm" 
+                                      onclick="openCorrectionModal('<%= @search_item.product.sku %>', 
+                                                                   '<%= @search_item.product.id %>', 
+                                                                   <%= @search_item.real_stock %>)">
+                                <i class="fas fa-edit me-1"></i>Corrigir
+                              </button>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Lista de Produtos com Correção -->
+          <div class="row">
+            <div class="col-12">
+              <div class="card bg-dark border border-secondary">
+                <div class="card-header bg-secondary d-flex justify-content-between align-items-center">
+                  <h6 class="text-white mb-0">
+                    <i class="fas fa-edit me-2"></i>Produtos com Correção
+                  </h6>
+                  <span class="badge bg-warning text-dark px-3 py-2">
+                    <%= @total_processed %> produto(s) corrigido(s)
+                  </span>
+                </div>
+                
+                <div class="card-body p-0">
+                  <% if @processed_items.any? %>
+                    <div class="table-responsive">
+                      <table class="table table-dark table-hover mb-0">
+                        <thead class="bg-dark">
+                          <tr>
+                            <th class="text-white fw-bold px-3 py-3">Produto</th>
+                            <th class="text-white fw-bold px-3 py-3 text-center">Estoque Atual</th>
+                            <th class="text-white fw-bold px-3 py-3 text-center">Estoque Corrigido</th>
+                            <th class="text-white fw-bold px-3 py-3">Motivo</th>
+                            <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
+                            <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% @processed_items.each do |item| %>
+                            <tr class="border-secondary">
+                              <td class="px-3 py-3">
+                                <div>
+                                  <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(item.product) %></span>
+                                  <small class="text-warning fw-bold font-monospace">
+                                    SKU: <%= item.product.sku %>
+                                  </small>
+                                  <% if item.product.shopify_variant_id.present? %>
+                                    <br><small class="text-white-50">
+                                      <i class="fab fa-shopify me-1"></i>ID: <%= item.product.shopify_variant_id %>
+                                    </small>
+                                  <% end %>
+                                </div>
+                              </td>
+                              <td class="px-3 py-3 text-center">
+                                <span class="badge <%= stock_badge_class(item.real_stock) %> px-2 py-1">
+                                  <%= item.real_stock %> un.
+                                </span>
+                              </td>
+                              <td class="px-3 py-3 text-center">
+                                <span class="badge bg-success text-white px-2 py-1">
+                                  <%= item.corrected_stock %> un.
+                                </span>
+                              </td>
+                              <td class="px-3 py-3">
+                                <small class="text-success">
+                                  <i class="fas fa-check me-1"></i>
+                                  <%= truncate(item.correction_reason, length: 25) %>
+                                </small>
+                              </td>
+                              <td class="px-3 py-3 text-center">
+                                <% if item.executed? %>
+                                  <span class="badge bg-success text-white px-2 py-1">
+                                    <i class="fas fa-check me-1"></i>Executado
+                                  </span>
+                                <% else %>
+                                  <span class="badge bg-warning text-dark px-2 py-1">
+                                    <i class="fas fa-clock me-1"></i>Pendente
+                                  </span>
+                                <% end %>
+                              </td>
+                              <td class="px-3 py-3 text-center">
+                                <% unless @stock_correction.status == 'executed' %>
+                                  <button class="btn btn-primary btn-sm" 
+                                          onclick="openCorrectionModal('<%= item.product.sku %>', 
+                                                                       '<%= item.product.id %>', 
+                                                                       <%= item.real_stock || item.current_stock %>)">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                  </button>
+                                <% else %>
+                                  <span class="text-white-50">
+                                    <i class="fas fa-lock me-1"></i>Finalizado
+                                  </span>
+                                <% end %>
+                              </td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Paginação -->
+                    <% if @total_pages > 1 %>
+                      <div class="card-footer bg-dark border-top border-secondary">
+                        <div class="d-flex justify-content-center">
+                          <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                              <% if @current_page > 1 %>
+                                <li class="page-item">
+                                  <%= link_to edit_stock_correction_path(@stock_correction, page: @current_page - 1), 
+                                              class: "page-link bg-dark text-white border-secondary" do %>
+                                    <i class="fas fa-chevron-left"></i>
+                                  <% end %>
+                                </li>
+                              <% end %>
+
+                              <% (1..@total_pages).each do |page| %>
+                                <li class="page-item <%= 'active' if page == @current_page %>">
+                                  <%= link_to page, 
+                                              edit_stock_correction_path(@stock_correction, page: page),
+                                              class: "page-link #{'bg-primary border-primary' if page == @current_page} #{'bg-dark text-white border-secondary' unless page == @current_page}" %>
+                                </li>
+                              <% end %>
+
+                              <% if @current_page < @total_pages %>
+                                <li class="page-item">
+                                  <%= link_to edit_stock_correction_path(@stock_correction, page: @current_page + 1), 
+                                              class: "page-link bg-dark text-white border-secondary" do %>
+                                    <i class="fas fa-chevron-right"></i>
+                                  <% end %>
+                                </li>
+                              <% end %>
+                            </ul>
+                          </nav>
+                        </div>
+                      </div>
+                    <% end %>
+                  <% else %>
+                    <div class="text-center py-5">
+                      <i class="fas fa-edit fa-3x text-white-50 mb-3"></i>
+                      <h5 class="text-white-50">Nenhum produto com correção ainda</h5>
+                      <p class="text-white-50">Use a busca acima para adicionar produtos à conferência</p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-function saveItemCorrection(itemId, actionType) {
-  const correctedStock = document.getElementById(`corrected_stock_${itemId}`).value;
-  const correctionReason = document.getElementById(`correction_reason_${itemId}`).value;
-  
-  // Validações
-  if (actionType === 'correction') {
-    if (!correctedStock || correctedStock === '') {
-      alert('Por favor, informe o novo estoque.');
-      return;
-    }
-    if (!correctionReason || correctionReason.trim() === '') {
-      alert('Por favor, informe o motivo da correção.');
-      return;
-    }
-  }
-  
-  // Mostrar loading
-  const buttons = document.querySelectorAll(`button[onclick*="${itemId}"]`);
-  buttons.forEach(btn => {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processando...';
-  });
-  
-  // Fazer requisição
-  fetch(`/stock_corrections/<%= @stock_correction.id %>/save_item_correction`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
-    },
-    body: JSON.stringify({
-      item_id: itemId,
-      action_type: actionType,
-      corrected_stock: correctedStock,
-      correction_reason: correctionReason
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // Recarregar a página para mostrar o item processado
-      window.location.reload();
-    } else {
-      alert(data.message || 'Erro ao processar item');
-      // Restaurar botões
-      buttons.forEach((btn, index) => {
-        btn.disabled = false;
-        if (index === 0) {
-          btn.innerHTML = '<i class="fas fa-check me-1"></i>Conferido';
-        } else {
-          btn.innerHTML = '<i class="fas fa-edit me-1"></i>Corrigir';
-        }
-      });
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Erro de conexão');
-    // Restaurar botões
-    buttons.forEach((btn, index) => {
-      btn.disabled = false;
-      if (index === 0) {
-        btn.innerHTML = '<i class="fas fa-check me-1"></i>Conferido';
-      } else {
-        btn.innerHTML = '<i class="fas fa-edit me-1"></i>Corrigir';
-      }
-    });
-  });
-}
-</script>
+<!-- Modal de Correção -->
+<div class="modal fade" id="correctionModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark border border-secondary">
+      <div class="modal-header bg-secondary border-bottom border-secondary">
+        <h5 class="modal-title text-white">
+          <i class="fas fa-edit me-2"></i>Corrigir Estoque
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="correctionForm">
+          <input type="hidden" id="productId" name="product_id">
+          <input type="hidden" id="itemId" name="item_id">
+          
+          <div class="mb-3">
+            <label class="form-label text-white fw-bold">SKU do Produto</label>
+            <input type="text" id="productSku" class="form-control bg-dark text-white border-dark" readonly>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-white fw-bold">Estoque Real Atual</label>
+            <input type="number" id="currentStock" class="form-control bg-dark text-white border-dark" readonly>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-white fw-bold">Novo Estoque</label>
+            <input type="number" id="correctedStock" name="corrected_stock" 
+                   class="form-control bg-dark text-white border-dark" 
+                   min="0" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label text-white fw-bold">Motivo da Correção</label>
+            <textarea id="correctionReason" name="correction_reason" 
+                      class="form-control bg-dark text-white border-dark" 
+                      rows="3" required 
+                      placeholder="Descreva o motivo da correção..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer bg-dark border-top border-secondary">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-success" onclick="saveCorrection()">
+          <i class="fas fa-save me-1"></i>Salvar Correção
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <% content_for :styles do %>
 <style>
@@ -486,23 +341,10 @@ body {
   background-color: #121212 !important;
 }
 
-.form-control, .form-select {
+.form-control, .form-select, .form-control:focus, .form-select:focus {
   background-color: #343a40;
   border-color: #495057;
   color: #fff;
-}
-
-.form-control:focus, .form-select:focus {
-  background-color: #495057;
-  border-color: #6c757d;
-  color: #fff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.form-control:disabled, .form-select:disabled {
-  background-color: #2d3436;
-  border-color: #495057;
-  color: #6c757d;
 }
 
 .table-dark {
@@ -513,87 +355,57 @@ body {
   background-color: rgba(255, 255, 255, 0.075);
 }
 
-.table-fixed {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.table-fixed th,
-.table-fixed td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.table-fixed td:nth-child(1),
-.table-fixed td:nth-child(5) {
-  white-space: normal;
-  word-wrap: break-word;
-}
-
 .font-monospace {
   font-family: 'Courier New', monospace;
-}
-
-.card {
-  border-radius: 8px;
-}
-
-.btn {
-  border-radius: 6px;
-  font-weight: 500;
 }
 
 .shadow-lg {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
 
-.badge {
-  font-weight: 500;
-}
-
-.form-control-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
-
-/* Destaque para produto da busca */
-.border-info {
-  border-color: #0dcaf0 !important;
-}
-
-.bg-info {
-  background-color: #0dcaf0 !important;
-}
-
-/* Responsividade */
-@media (max-width: 1200px) {
-  .table-fixed th:nth-child(1),
-  .table-fixed td:nth-child(1) {
-    width: 250px !important;
-  }
-
-  .table-fixed th:nth-child(5),
-  .table-fixed td:nth-child(5) {
-    width: 150px !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-
-  .btn-sm {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.8rem;
-  }
+.text-warning {
+  color: #ffc107 !important;
 }
 </style>
+<% end %>
+
+<% content_for :javascript do %>
+<script>
+function openCorrectionModal(sku, productId, currentStock) {
+  document.getElementById('productSku').value = sku;
+  document.getElementById('productId').value = productId;
+  document.getElementById('currentStock').value = currentStock;
+  document.getElementById('correctedStock').value = currentStock;
+  document.getElementById('correctionReason').value = '';
+  
+  new bootstrap.Modal(document.getElementById('correctionModal')).show();
+}
+
+function saveCorrection() {
+  const form = document.getElementById('correctionForm');
+  const formData = new FormData(form);
+  formData.append('action_type', 'correction');
+  
+  fetch('<%= save_item_correction_stock_correction_path(@stock_correction) %>', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content,
+      'Accept': 'application/json'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro: ' + data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Erro ao salvar correção');
+  });
+}
+</script>
 <% end %>

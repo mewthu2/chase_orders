@@ -1,625 +1,417 @@
 class StockCorrectionsController < ApplicationController
-  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :execute_all, :execute_item, :update_shopify_stock, :sync_item_with_shopify, :integrate_item_correction, :debug_locations, :check_shopify_inventory, :finalize_correction, :save_item_correction]
-  before_action :check_location_permission, only: [:new, :create, :show, :edit]
-  before_action :check_edit_permission, only: [:edit, :update]
-  
+  before_action :authenticate_user!
+  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :finalize_correction, :execute_all, :update_shopify_stock, :save_item_correction, :reopen]
+  before_action :check_edit_permission, only: [:edit, :update, :save_item_correction]
+
   def index
-    # Filtrar correções por location se não for admin
-    corrections_query = StockCorrection.includes(:stock_correction_items)
-    
-    unless current_user.admin?
-      # Usuários não-admin só veem correções das locations que têm acesso
-      allowed_locations = current_user.allowed_locations || []
-      corrections_query = corrections_query.where(location: allowed_locations)
-    end
-    
-    @stock_corrections = corrections_query.order(created_at: :desc)
-                                         .page(params[:page])
-    
-    # Calcular estatísticas corretas
-    @total_corrections = @stock_corrections.count
-    @pending_corrections = @stock_corrections.where(status: ['pending', nil]).count
-    @completed_corrections = @stock_corrections.where(status: 'executed').count
-    @synced_corrections = @stock_corrections.joins(:stock_correction_items)
+    # Paginação manual
+    @per_page = 10
+    @current_page = (params[:page] || 1).to_i
+    offset = (@current_page - 1) * @per_page
+
+    # Buscar correções baseado no perfil do usuário
+    if current_user.admin?
+      @stock_corrections = StockCorrection.includes(:stock_correction_items)
+                                         .order(created_at: :desc)
+                                         .limit(@per_page)
+                                         .offset(offset)
+      
+      # Estatísticas para admin (todas as correções)
+      @total_corrections = StockCorrection.count
+      @pending_corrections = StockCorrection.where(status: [nil, 'pending']).count
+      @completed_corrections = StockCorrection.where(status: 'executed').count
+      @synced_corrections = StockCorrection.joins(:stock_correction_items)
+                                          .where(stock_correction_items: { 
+                                            last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
+                                          })
+                                          .distinct.count
+    else
+      # Para usuários não-admin, filtrar por locations permitidas
+      allowed_locations = current_user.allowed_location_keys
+      @stock_corrections = StockCorrection.where(location: allowed_locations)
+                                         .includes(:stock_correction_items)
+                                         .order(created_at: :desc)
+                                         .limit(@per_page)
+                                         .offset(offset)
+      
+      # Estatísticas para usuário (apenas suas locations)
+      base_corrections = StockCorrection.where(location: allowed_locations)
+      @total_corrections = base_corrections.count
+      @pending_corrections = base_corrections.where(status: [nil, 'pending']).count
+      @completed_corrections = base_corrections.where(status: 'executed').count
+      @synced_corrections = base_corrections.joins(:stock_correction_items)
                                            .where(stock_correction_items: { 
-                                             last_shopify_sync_at: Time.zone.now.beginning_of_day..Time.zone.now.end_of_day 
+                                             last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
                                            })
                                            .distinct.count
+    end
+
+    # Calcular total de páginas
+    @total_pages = (@total_corrections.to_f / @per_page).ceil
   end
-  
+
   def show
-    @current_page = params[:page]&.to_i || 1
+    # Paginação para o show
     @per_page = 20
-    @search_term = params[:search_term] || ''
+    @current_page = (params[:page] || 1).to_i
     
-    # Produtos já processados (conferidos ou com correção)
-    processed_items_query = @stock_correction.stock_correction_items
-                                            .includes(:product)
-                                            .where(executed: true)
+    # Busca de produto específico
+    if params[:search_term].present?
+      @search_term = params[:search_term].strip
+      @search_item = @stock_correction.stock_correction_items
+                                     .joins(:product)
+                                     .where(products: { sku: @search_term })
+                                     .includes(:product)
+                                     .first
+    end
     
-    # Paginação dos produtos processados
-    @total_processed = processed_items_query.count
+    # Itens processados com paginação - APENAS OS QUE TIVERAM CORREÇÃO
+    @total_processed = @stock_correction.stock_correction_items.where(needs_correction: true).count
     @total_pages = (@total_processed.to_f / @per_page).ceil
     
     offset = (@current_page - 1) * @per_page
-    @processed_items = processed_items_query.order('products.sku')
-                                          .limit(@per_page)
-                                          .offset(offset)
-    
-    # Produto da busca atual (se houver)
-    @search_item = nil
-    if @search_term.present?
-      search_item_query = @stock_correction.stock_correction_items
-                                          .includes(:product)
-                                          .joins(:product)
-                                          .where('LOWER(products.sku) = ? OR LOWER(products.shopify_product_name) LIKE ?',
-                                                 @search_term.downcase, "%#{@search_term.downcase}%")
-                                          .where(executed: false)
-                                          .first
-      
-      @search_item = search_item_query
-    end
-    
+    @processed_items = @stock_correction.stock_correction_items
+                                       .where(needs_correction: true)
+                                       .includes(:product)
+                                       .order(:created_at)
+                                       .limit(@per_page)
+                                       .offset(offset)
+  
+    # SEMPRE buscar estoque real da Shopify para todos os itens
+    fetch_real_time_stock_for_items(@processed_items)
+    fetch_real_time_stock_for_items([@search_item].compact) if @search_item
+  
     # Estatísticas
     @stats = {
       total: @stock_correction.stock_correction_items.count,
-      checked: @stock_correction.checked_items.count,
-      corrections: @stock_correction.items_to_correct.count,
-      executed: @stock_correction.stock_correction_items.where(executed: true).count
+      corrections: @stock_correction.stock_correction_items.where(needs_correction: true).count,
+      executed: @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).count
     }
   end
-  
+
   def new
     @stock_correction = StockCorrection.new
-    
-    # Verificar se a location do parâmetro é permitida para o usuário
-    requested_location = params[:location]
-    if requested_location.present?
-      unless current_user.can_access_location?(requested_location)
-        flash[:alert] = "Você não tem permissão para acessar a location '#{User.location_name(requested_location)}'"
-        redirect_to stock_corrections_path and return
-      end
-      @location = requested_location
-    else
-      # Se não especificou location, usar a primeira permitida
-      @location = current_user.default_location
-      unless @location
-        flash[:alert] = "Você não tem permissão para acessar nenhuma location. Entre em contato com o administrador."
-        redirect_to stock_corrections_path and return
-      end
-    end
-    
-    # Obter apenas as locations que o usuário pode acessar
     @available_locations = current_user.available_locations_for_user
+    
+    # Definir location padrão
+    @location = params[:location] || current_user.default_location
+    
+    # Verificar se o usuário tem acesso à location
+    unless current_user.can_access_location?(@location)
+      @location = current_user.default_location
+    end
   end
-  
+
   def create
     @stock_correction = StockCorrection.new(stock_correction_params)
-    
+    @stock_correction.status = 'pending'
+
     # Verificar se o usuário pode acessar a location especificada
     unless current_user.can_access_location?(@stock_correction.location)
       flash[:alert] = "Você não tem permissão para criar conferências na location '#{User.location_name(@stock_correction.location)}'"
       redirect_to stock_corrections_path and return
     end
-    
+
     if @stock_correction.save
       # Criar items para todos os produtos da location após salvar
       create_correction_items(@stock_correction)
-      redirect_to edit_stock_correction_path(@stock_correction), notice: 'Conferência criada com sucesso! Use a busca para encontrar produtos.'
+      redirect_to edit_stock_correction_path(@stock_correction), notice: 'Conferência criada com sucesso!'
     else
-      @location = @stock_correction.location || current_user.default_location
       @available_locations = current_user.available_locations_for_user
-      render :new
+      render :new, status: :unprocessable_entity
     end
   end
-  
+
   def edit
-    @current_page = params[:page]&.to_i || 1
+    @location = @stock_correction.location
+  
+    # Paginação para o edit
     @per_page = 20
-    @search_term = params[:search_term] || ''
+    @current_page = (params[:page] || 1).to_i
+
+    # Busca de produto específico
+    if params[:search_term].present?
+      @search_term = params[:search_term].strip
+      product = Product.find_by(sku: @search_term)
     
-    # Produtos já processados (conferidos ou com correção)
-    processed_items_query = @stock_correction.stock_correction_items
-                                            .includes(:product)
-                                            .where(executed: true)
-    
-    # Paginação dos produtos processados
-    @total_processed = processed_items_query.count
-    @total_pages = (@total_processed.to_f / @per_page).ceil
-    
-    offset = (@current_page - 1) * @per_page
-    @processed_items = processed_items_query.order('products.sku')
-                                          .limit(@per_page)
-                                          .offset(offset)
-    
-    # Produto da busca atual (se houver)
-    @search_item = nil
-    if @search_term.present?
-      search_item_query = @stock_correction.stock_correction_items
-                                          .includes(:product)
-                                          .joins(:product)
-                                          .where('LOWER(products.sku) = ? OR LOWER(products.shopify_product_name) LIKE ?',
-                                                 @search_term.downcase, "%#{@search_term.downcase}%")
-                                          .where(executed: false)
-                                          .first
+      if product
+        existing_item = @stock_correction.stock_correction_items.find_by(product: product)
       
-      @search_item = search_item_query
+        if existing_item.nil?
+          current_stock = stock_for_location(product, @location)
+        
+          # Buscar estoque real da Shopify
+          real_stock = fetch_shopify_stock(product, @location)
+        
+          @search_item = @stock_correction.stock_correction_items.build(
+            product: product,
+            current_stock: current_stock,
+            corrected_stock: real_stock || current_stock
+          )
+          @search_item.real_stock = real_stock
+          @search_item.stock_source = real_stock ? 'shopify_real_time' : 'database_fallback'
+        else
+          @search_error = "Produto já foi adicionado à conferência"
+        end
+      else
+        @search_error = "Produto não encontrado"
+      end
     end
-  end
+
+    # Paginação dos itens - APENAS OS QUE TIVERAM CORREÇÃO
+    @total_processed = @stock_correction.stock_correction_items.where(needs_correction: true).count
+    @total_pages = (@total_processed.to_f / @per_page).ceil
   
+    offset = (@current_page - 1) * @per_page
+    @processed_items = @stock_correction.stock_correction_items
+                                       .where(needs_correction: true)
+                                       .includes(:product)
+                                       .order(:created_at)
+                                       .limit(@per_page)
+                                       .offset(offset)
+  
+    # SEMPRE buscar estoque real da Shopify para todos os itens
+    fetch_real_time_stock_for_items(@processed_items)
+  end
+
   def update
+    # Bloquear mudança de location e data se não for admin
+    if !current_user.admin? && (@stock_correction.location != stock_correction_params[:location] || @stock_correction.correction_date.to_s != stock_correction_params[:correction_date])
+      redirect_to edit_stock_correction_path(@stock_correction), 
+                  alert: 'Apenas administradores podem alterar location e data da conferência.'
+      return
+    end
+
     if @stock_correction.update(stock_correction_params)
-      redirect_to @stock_correction, notice: 'Conferência atualizada com sucesso!'
+      redirect_to edit_stock_correction_path(@stock_correction), 
+                  notice: 'Conferência atualizada com sucesso!'
     else
-      render :edit
+      render :edit, status: :unprocessable_entity
     end
   end
-  
+
   def destroy
     @stock_correction.destroy
     redirect_to stock_corrections_path, notice: 'Conferência removida com sucesso!'
   end
-  
-  def execute_all
-    if @stock_correction.execute_corrections!
-      redirect_to @stock_correction, notice: 'Correções executadas com sucesso!'
-    else
-      redirect_to @stock_correction, alert: 'Erro ao executar correções!'
-    end
-  end
-  
-  def execute_item
-    # CORREÇÃO: Usar o parâmetro correto do item
-    item_id = params[:item_id] || params[:id]
-    @item = StockCorrectionItem.find(item_id)
-    
-    Rails.logger.info "=== EXECUTE ITEM DEBUG ==="
-    Rails.logger.info "Params: #{params.inspect}"
-    Rails.logger.info "Item ID from params: #{item_id}"
-    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
-    Rails.logger.info "=========================="
-    
-    if @item.execute_correction!
-      render json: { success: true, message: 'Correção executada com sucesso!' }
-    else
-      render json: { success: false, message: 'Erro ao executar correção!' }
-    end
-  end
-  
-  def update_shopify_stock
-    begin
-      updated_count = 0
-      errors = []
-      
-      @stock_correction.items_to_correct.where(executed: true).each do |item|
-        result = update_product_shopify_stock(item)
-        if result[:success]
-          updated_count += 1
-        else
-          errors << "#{item.product.sku}: #{result[:message]}"
-        end
-      end
-      
-      if errors.empty?
-        flash[:notice] = "#{updated_count} produtos atualizados na Shopify com sucesso!"
-      else
-        flash[:alert] = "Alguns produtos não foram atualizados: #{errors.join(', ')}"
-      end
-      
-    rescue => e
-      flash[:alert] = "Erro ao atualizar Shopify: #{e.message}"
-    end
-    
-    redirect_to @stock_correction
-  end
-  
-  def sync_item_with_shopify
-    # CORREÇÃO: Usar o parâmetro correto do item
-    item_id = params[:item_id] || params[:id]
-    @item = StockCorrectionItem.find(item_id)
-    
-    Rails.logger.info "=== SYNC ITEM DEBUG ==="
-    Rails.logger.info "Params: #{params.inspect}"
-    Rails.logger.info "Item ID from params: #{item_id}"
-    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
-    Rails.logger.info "======================="
-    
-    if @item.sync_with_shopify!
-      render json: { 
-        success: true, 
-        message: 'Produto sincronizado com Shopify com sucesso!',
-        sync_status: @item.shopify_sync_status,
-        sync_time: @item.last_shopify_sync_at&.strftime('%d/%m/%Y %H:%M')
-      }
-    else
-      render json: { 
-        success: false, 
-        message: @item.shopify_sync_error || 'Erro ao sincronizar com Shopify',
-        sync_status: @item.shopify_sync_status
-      }
-    end
-  end
-  
-  def integrate_item_correction
-    # CORREÇÃO: Usar o parâmetro correto do item
-    item_id = params[:item_id] || params[:id]
-    @item = StockCorrectionItem.find(item_id)
-    corrected_stock = params[:corrected_stock].to_i
-    correction_reason = params[:correction_reason]
-    
-    Rails.logger.info "=== INTEGRATE ITEM DEBUG ==="
-    Rails.logger.info "Params: #{params.inspect}"
-    Rails.logger.info "Item ID from params: #{item_id}"
-    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku} (Product ID: #{@item.product.id})"
-    Rails.logger.info "Corrected stock: #{corrected_stock}"
-    Rails.logger.info "Correction reason: #{correction_reason}"
-    Rails.logger.info "============================="
-    
-    Rails.logger.info "=== Starting integration for item #{@item.id} ==="
-    Rails.logger.info "Parameters - stock: #{corrected_stock}, reason: #{correction_reason}"
-    Rails.logger.info "Item current state - needs_correction: #{@item.needs_correction?}, executed: #{@item.executed?}"
-    Rails.logger.info "Item current values - corrected_stock: #{@item.corrected_stock}, correction_reason: #{@item.correction_reason}"
-    
-    begin
-      # Validar dados
-      if corrected_stock.blank? || correction_reason.blank?
-        Rails.logger.error "Validation failed - missing stock or reason"
-        render json: { 
-          success: false, 
-          message: 'Estoque corrigido e motivo são obrigatórios'
-        }
-        return
-      end
-      
-      # Debug do produto
-      Rails.logger.info "Product info - ID: #{@item.product.id}, SKU: #{@item.product.sku}"
-      Rails.logger.info "Product stock fields - lagoa_seca: #{@item.product.stock_lagoa_seca}, bh_shopping: #{@item.product.stock_bh_shopping}, rj: #{@item.product.stock_rj}"
-      Rails.logger.info "Product shopify_inventory_item_id: #{@item.product.shopify_inventory_item_id}"
-      
-      # Primeiro, atualizar os dados do item
-      Rails.logger.info "Updating item data..."
-      @item.assign_attributes(
-        corrected_stock: corrected_stock,
-        correction_reason: correction_reason,
-        needs_correction: true
-      )
-      
-      Rails.logger.info "Item attributes assigned - corrected_stock: #{@item.corrected_stock}, correction_reason: #{@item.correction_reason}, needs_correction: #{@item.needs_correction?}"
-      
-      if @item.valid?
-        Rails.logger.info "Item is valid, saving..."
-        @item.save!
-        Rails.logger.info "Item saved successfully"
-      else
-        Rails.logger.error "Item validation failed: #{@item.errors.full_messages.join(', ')}"
-        render json: { 
-          success: false, 
-          message: "Erro de validação: #{@item.errors.full_messages.join(', ')}"
-        }
-        return
-      end
-      
-      # Se já foi executado, pular direto para sincronização
-      if @item.executed?
-        Rails.logger.info "Item already executed, skipping to Shopify sync..."
-        
-        # Atualizar estoque local primeiro com o novo valor
-        Rails.logger.info "Updating local stock with new value..."
-        if update_local_stock(@item, corrected_stock)
-          Rails.logger.info "Local stock updated successfully"
-          
-          # Tentar sincronizar com Shopify
-          sync_result = @item.sync_with_shopify!
-          Rails.logger.info "Sync result: #{sync_result}"
-          
-          if sync_result
-            Rails.logger.info "Shopify sync successful"
-            render json: { 
-              success: true, 
-              message: 'Correção atualizada e integrada com Shopify com sucesso!',
-              sync_status: @item.shopify_sync_status,
-              sync_time: @item.last_shopify_sync_at&.strftime('%d/%m/%Y %H:%M')
-            }
-          else
-            Rails.logger.warn "Shopify sync failed"
-            # NÃO marcar como integrado se houver erro
-            render json: { 
-              success: false, 
-              message: "Erro na integração Shopify: #{@item.shopify_sync_error}",
-              sync_status: @item.shopify_sync_status
-            }
-          end
-        else
-          Rails.logger.error "Failed to update local stock"
-          render json: { 
-            success: false, 
-            message: 'Erro ao atualizar estoque local'
-          }
-        end
-      else
-        # Executar a correção normalmente
-        Rails.logger.info "Executing correction..."
-        execution_result = @item.execute_correction!
-        Rails.logger.info "Execution result: #{execution_result}"
-        
-        if execution_result
-          Rails.logger.info "Correction executed successfully, attempting Shopify sync..."
-          
-          # Tentar sincronizar com Shopify imediatamente
-          sync_result = @item.sync_with_shopify!
-          Rails.logger.info "Sync result: #{sync_result}"
-          
-          if sync_result
-            Rails.logger.info "Shopify sync successful"
-            render json: { 
-              success: true, 
-              message: 'Correção executada e integrada com Shopify com sucesso!',
-              sync_status: @item.shopify_sync_status,
-              sync_time: @item.last_shopify_sync_at&.strftime('%d/%m/%Y %H:%M')
-            }
-          else
-            Rails.logger.warn "Correction executed but Shopify sync failed"
-            # NÃO marcar como integrado se houver erro na sincronização
-            render json: { 
-              success: false, 
-              message: "Correção executada no banco local, mas erro na integração Shopify: #{@item.shopify_sync_error}",
-              sync_status: @item.shopify_sync_status
-            }
-          end
-        else
-          Rails.logger.error "Failed to execute correction"
-          render json: { 
-            success: false, 
-            message: 'Erro ao executar correção no banco local'
-          }
-        end
-      end
-      
-    rescue ActiveRecord::RecordInvalid => e
-      Rails.logger.error "Validation error: #{e.message}"
-      Rails.logger.error "Record errors: #{e.record.errors.full_messages.join(', ')}"
-      render json: { 
-        success: false, 
-        message: "Erro de validação: #{e.record.errors.full_messages.join(', ')}"
-      }
-    rescue => e
-      Rails.logger.error "Unexpected error in integrate_item_correction: #{e.message}"
-      Rails.logger.error "Error class: #{e.class}"
-      Rails.logger.error e.backtrace.join("\n")
-      render json: { 
-        success: false, 
-        message: "Erro inesperado: #{e.message}"
-      }
-    end
-  end
 
-  # Nova action para salvar item e integrar automaticamente
-  def save_item_correction
-    item_id = params[:item_id]
-    @item = StockCorrectionItem.find(item_id)
-    action_type = params[:action_type] # 'checked' ou 'correction'
-    corrected_stock = params[:corrected_stock]
-    correction_reason = params[:correction_reason]
-    
-    Rails.logger.info "=== SAVE ITEM CORRECTION ==="
-    Rails.logger.info "Item ID: #{item_id}"
-    Rails.logger.info "Action Type: #{action_type}"
-    Rails.logger.info "Corrected Stock: #{corrected_stock}"
-    Rails.logger.info "Correction Reason: #{correction_reason}"
-    Rails.logger.info "=========================="
-    
-    begin
-      case action_type
-      when 'checked'
-        # Marcar como conferido
-        @item.update!(
-          checked: true,
-          needs_correction: false,
-          executed: true,
-          executed_at: Time.current
-        )
-        
-        render json: { 
-          success: true, 
-          message: 'Item marcado como conferido com sucesso!',
-          action: 'checked'
-        }
-        
-      when 'correction'
-        # Validar campos obrigatórios
-        if corrected_stock.blank? || correction_reason.blank?
-          render json: { 
-            success: false, 
-            message: 'Estoque corrigido e motivo são obrigatórios para correção'
-          }
-          return
-        end
-        
-        # Atualizar item com correção
-        @item.update!(
-          needs_correction: true,
-          corrected_stock: corrected_stock.to_i,
-          correction_reason: correction_reason,
-          executed: true,
-          executed_at: Time.current
-        )
-        
-        # Atualizar estoque local
-        if update_local_stock(@item, corrected_stock.to_i)
-          # Tentar sincronizar com Shopify
-          sync_result = @item.sync_with_shopify!
-          
-          if sync_result
-            render json: { 
-              success: true, 
-              message: 'Correção salva e integrada com Shopify com sucesso!',
-              action: 'correction',
-              sync_status: @item.shopify_sync_status,
-              sync_time: @item.last_shopify_sync_at&.strftime('%d/%m/%Y %H:%M')
-            }
-          else
-            render json: { 
-              success: false, 
-              message: "Correção salva no banco local, mas erro na integração Shopify: #{@item.shopify_sync_error}"
-            }
-          end
-        else
-          render json: { 
-            success: false, 
-            message: 'Erro ao atualizar estoque local'
-          }
-        end
-        
-      else
-        render json: { 
-          success: false, 
-          message: 'Tipo de ação inválido'
-        }
-      end
-      
-    rescue ActiveRecord::RecordInvalid => e
-      render json: { 
-        success: false, 
-        message: "Erro de validação: #{e.record.errors.full_messages.join(', ')}"
-      }
-    rescue => e
-      Rails.logger.error "Error in save_item_correction: #{e.message}"
-      render json: { 
-        success: false, 
-        message: "Erro inesperado: #{e.message}"
-      }
-    end
-  end
-
-  # Nova action para finalizar conferência
   def finalize_correction
     begin
-      @stock_correction.update!(status: 'executed', executed_at: Time.current)
+      ActiveRecord::Base.transaction do
+        # Atualizar status
+        @stock_correction.update!(status: 'executed', executed_at: Time.current)
+        
+        # Sincronizar todos os itens com a Shopify que precisam de correção
+        @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).each do |item|
+          sync_item_with_shopify(item)
+        end
+      end
       
-      redirect_to stock_corrections_path, notice: 'Conferência finalizada com sucesso!'
+      redirect_to stock_corrections_path, notice: 'Conferência finalizada e sincronizada com sucesso!'
     rescue => e
-      redirect_to edit_stock_correction_path(@stock_correction), alert: "Erro ao finalizar conferência: #{e.message}"
+      Rails.logger.error "Erro ao finalizar conferência: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      redirect_to stock_corrections_path, 
+                  alert: "Erro ao finalizar conferência: #{e.message}"
     end
   end
-  
-  def debug_locations
-    Rails.logger.info "=== DEBUGGING SHOPIFY LOCATIONS ==="
-    
-    locations = ShopifyInventoryService.list_locations
-    
-    render json: {
-      success: true,
-      message: 'Locations listed in logs',
-      locations: locations.map do |edge|
-        location = edge['node']
-        {
-          id: location['id'].gsub('gid://shopify/Location/', ''),
-          name: location['name'],
-          city: location.dig('address', 'city'),
-          province: location.dig('address', 'province')
-        }
-      end
-    }
-  end
-  
-  def check_shopify_inventory
-    item_id = params[:item_id]
-    @item = StockCorrectionItem.find(item_id)
-    
-    Rails.logger.info "=== CHECK SHOPIFY INVENTORY DEBUG ==="
-    Rails.logger.info "Params: #{params.inspect}"
-    Rails.logger.info "Item ID from params: #{item_id}"
-    Rails.logger.info "Found item: #{@item.id} for product: #{@item.product.sku}"
-    Rails.logger.info "=================================="
-    
-    result = ShopifyInventoryService.check_inventory_level(@item.product, @item.stock_correction.location)
-    
-    if result[:success]
-      render json: {
-        success: true,
-        message: 'Estoque consultado com sucesso',
-        inventory: {
-          available: result[:available],
-          on_hand: result[:on_hand],
-          committed: result[:committed],
-          incoming: result[:incoming],
-          tracked: result[:tracked],
-          location_name: result[:location_name]
-        }
-      }
+
+  def reopen
+    # Apenas admins podem reabrir conferências
+    unless current_user.admin?
+      redirect_to stock_corrections_path, alert: 'Apenas administradores podem reabrir conferências.'
+      return
+    end
+
+    if @stock_correction.update(status: 'pending', executed_at: nil)
+      redirect_to stock_corrections_path, notice: 'Conferência reaberta com sucesso!'
     else
-      render json: {
-        success: false,
-        message: result[:message],
-        tracked: result[:tracked]
-      }
+      redirect_to stock_corrections_path, alert: 'Erro ao reabrir conferência.'
     end
   end
-  
-  private
-  
-  def set_stock_correction
-    @stock_correction = StockCorrection.find(params[:id])
-  end
-  
-  def check_location_permission
-    # Para ações que envolvem uma stock_correction específica
-    if @stock_correction&.location.present?
-      unless current_user.can_access_location?(@stock_correction.location)
-        flash[:alert] = "Você não tem permissão para acessar esta conferência na location '#{User.location_name(@stock_correction.location)}'"
-        redirect_to stock_corrections_path and return
+
+  def execute_all
+    executed_count = 0
+    
+    @stock_correction.stock_correction_items.where(executed: false).each do |item|
+      if item.update(executed: true, executed_at: Time.current)
+        executed_count += 1
       end
     end
     
-    # Para new e create, verificar se o usuário tem pelo menos uma location
-    if action_name.in?(['new', 'create']) && !current_user.has_location_access?
-      flash[:alert] = "Você não tem permissão para acessar nenhuma location. Entre em contato com o administrador."
-      redirect_to stock_corrections_path and return
+    redirect_to edit_stock_correction_path(@stock_correction), 
+                notice: "#{executed_count} correções executadas com sucesso!"
+  end
+
+  def update_shopify_stock
+    synced_count = 0
+    errors = []
+    
+    @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).each do |item|
+      begin
+        sync_item_with_shopify(item)
+        synced_count += 1
+      rescue => e
+        errors << "#{item.product.sku}: #{e.message}"
+      end
+    end
+    
+    if errors.any?
+      redirect_to edit_stock_correction_path(@stock_correction), 
+                  alert: "Sincronizados: #{synced_count}. Erros: #{errors.join(', ')}"
+    else
+      redirect_to edit_stock_correction_path(@stock_correction), 
+                  notice: "#{synced_count} produtos sincronizados com a Shopify!"
     end
   end
-  
+
+  def save_item_correction
+    item_id = params[:item_id]
+    action_type = params[:action_type]
+    corrected_stock = params[:corrected_stock]
+    correction_reason = params[:correction_reason]
+
+    item = @stock_correction.stock_correction_items.find(item_id)
+    
+    case action_type
+    when 'correction'
+      item.update!(
+        needs_correction: true,
+        corrected_stock: corrected_stock.to_i,
+        correction_reason: correction_reason,
+        executed: true,
+        executed_at: Time.current
+      )
+    end
+
+    render json: { success: true, message: 'Item processado com sucesso!' }
+  rescue => e
+    render json: { success: false, message: e.message }
+  end
+
+  private
+
+  def set_stock_correction
+    if current_user.admin?
+      @stock_correction = StockCorrection.find(params[:id])
+    else
+      # Usuários não-admin só podem acessar correções de suas locations
+      allowed_locations = current_user.allowed_location_keys
+      @stock_correction = StockCorrection.where(location: allowed_locations).find(params[:id])
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_to stock_corrections_path, alert: 'Conferência não encontrada ou sem permissão de acesso.'
+  end
+
   def check_edit_permission
-    # Se a conferência foi finalizada e o usuário não é admin, não pode editar
     if @stock_correction.status == 'executed' && !current_user.admin?
-      flash[:alert] = "Esta conferência foi finalizada e não pode mais ser editada. Apenas administradores podem editar conferências finalizadas."
-      redirect_to @stock_correction and return
+      redirect_to @stock_correction, 
+                  alert: 'Apenas administradores podem editar conferências finalizadas.'
     end
   end
-  
+
   def stock_correction_params
-    params.require(:stock_correction).permit(
-      :correction_date, :reason, :location, :notes
-    )
+    params.require(:stock_correction).permit(:location, :correction_date, :reason, :notes)
   end
-  
-  def update_local_stock(item, new_stock)
-    location = item.stock_correction.location
-    product = item.product
+
+  def stock_for_location(product, location)
+    case location
+    when 'lagoa_seca'
+      product.stock_lagoa_seca || 0
+    when 'bh_shopping'
+      product.stock_bh_shopping || 0
+    when 'rj'
+      product.stock_rj || 0
+    else
+      0
+    end
+  end
+
+  def fetch_shopify_stock(product, location)
+    return nil unless product.shopify_variant_id.present?
     
     begin
-      case location
-      when 'lagoa_seca'
-        Rails.logger.info "Updating stock_lagoa_seca from #{product.stock_lagoa_seca} to #{new_stock}"
-        product.update!(stock_lagoa_seca: new_stock)
-      when 'bh_shopping'
-        Rails.logger.info "Updating stock_bh_shopping from #{product.stock_bh_shopping} to #{new_stock}"
-        product.update!(stock_bh_shopping: new_stock)
-      when 'rj'
-        Rails.logger.info "Updating stock_rj from #{product.stock_rj} to #{new_stock}"
-        product.update!(stock_rj: new_stock)
-      else
-        Rails.logger.error "Unknown location: #{location}"
-        return false
-      end
+      Rails.logger.info "Fetching real-time stock for #{product.sku} at #{location}"
+      stock_result = StockService.check_stock(product.shopify_variant_id, 1, location)
       
-      Rails.logger.info "Local stock updated successfully for #{product.sku}"
-      true
+      # Extrair o valor numérico do resultado
+      stock = if stock_result.is_a?(Hash)
+                stock_result[:available_quantity] || stock_result['available_quantity'] || 0
+              else
+                stock_result.to_i
+              end
+      
+      Rails.logger.info "Real-time stock for #{product.sku}: #{stock}"
+      stock
     rescue => e
-      Rails.logger.error "Error updating local stock: #{e.message}"
-      false
+      Rails.logger.error "Error fetching Shopify stock for #{product.sku}: #{e.message}"
+      nil
     end
   end
-  
+
+  def fetch_real_time_stock_for_items(items)
+    items.each do |item|
+      if item.product.shopify_variant_id.present?
+        real_stock = fetch_shopify_stock(item.product, @stock_correction.location)
+        
+        # Adicionar atributos virtuais para exibição
+        item.define_singleton_method(:real_stock) { real_stock || stock_for_location(item.product, @stock_correction.location) }
+        item.define_singleton_method(:stock_source) do
+          if real_stock
+            'shopify_real_time'
+          elsif item.product.shopify_variant_id.present?
+            'database_fallback'
+          else
+            'no_shopify_id'
+          end
+        end
+      else
+        item.define_singleton_method(:real_stock) { stock_for_location(item.product, @stock_correction.location) }
+        item.define_singleton_method(:stock_source) { 'no_shopify_id' }
+      end
+    end
+  end
+
+  def sync_item_with_shopify(item)
+    return unless item.product.shopify_variant_id.present?
+    
+    begin
+      result = ShopifyInventoryService.update_inventory(
+        item.product,
+        @stock_correction.location,
+        item.corrected_stock || item.current_stock,
+        'correction'
+      )
+      
+      if result[:success]
+        item.update!(
+          shopify_sync_status: 'synced',
+          shopify_sync_error: nil,
+          last_shopify_sync_at: Time.current
+        )
+        Rails.logger.info "Successfully synced #{item.product.sku} with Shopify"
+      else
+        item.update!(
+          shopify_sync_status: 'error',
+          shopify_sync_error: result[:message],
+          last_shopify_sync_at: Time.current
+        )
+        Rails.logger.error "Failed to sync #{item.product.sku} with Shopify: #{result[:message]}"
+        raise StandardError, result[:message]
+      end
+    rescue => e
+      # CORRIGIDO: usar shopify_sync_error ao invés de shopify_sync_message
+      item.update!(
+        shopify_sync_status: 'error',
+        shopify_sync_error: e.message,
+        last_shopify_sync_at: Time.current
+      )
+      
+      Rails.logger.error "Failed to sync #{item.product.sku} with Shopify: #{e.message}"
+      raise e
+    end
+  end
+
   def create_correction_items(stock_correction)
     Rails.logger.info "Creating correction items for stock_correction #{stock_correction.id} in location #{stock_correction.location}"
     
@@ -648,6 +440,7 @@ class StockCorrectionsController < ApplicationController
           current_stock: current_stock,
           checked: false,
           needs_correction: false,
+          executed: false,
           created_at: Time.current,
           updated_at: Time.current
         }
@@ -656,25 +449,6 @@ class StockCorrectionsController < ApplicationController
       StockCorrectionItem.insert_all(items_data)
     end
     
-    Rails.logger.info "Created #{products_count} correction items (only products with shopify_inventory_item_id)"
-  end
-  
-  def update_product_shopify_stock(item)
-    return { success: false, message: 'Produto sem variant_id' } unless item.product.shopify_variant_id.present?
-    
-    begin
-      store_type = item.stock_correction.location
-      
-      # Usar StockService ou criar um service específico para atualização
-      # Por enquanto, simular a atualização
-      Rails.logger.info "Atualizando Shopify: #{item.product.sku} para #{item.corrected_stock} na #{store_type}"
-      
-      # Aqui você implementaria a chamada real para a API do Shopify
-      # usando seu ShopifyIntegrationService ou similar
-      
-      { success: true, message: 'Atualizado com sucesso' }
-    rescue => e
-      { success: false, message: e.message }
-    end
+    Rails.logger.info "Created #{products_count} correction items"
   end
 end

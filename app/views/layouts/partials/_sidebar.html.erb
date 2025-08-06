@@ -93,12 +93,6 @@
             </div>
             <div class="nav-group-dropdown" id="produtosDropdown">
               <div class="dropdown-content">
-                <% if current_user&.profile_id == 1 %>
-                  <%= link_to products_path, class: "dropdown-link #{'active' if current_page?(products_path)}" do %>
-                    <i class="fas fa-list"></i>
-                    <span>Lista de Produtos</span>
-                  <% end %>
-                <% end %>
                 <%= link_to inventory_products_path, class: "dropdown-link #{'active' if current_page?(inventory_products_path)}" do %>
                   <i class="fas fa-warehouse"></i>
                   <span>Controle de Estoque</span>

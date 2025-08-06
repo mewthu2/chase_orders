@@ -1,62 +1,54 @@
 module ProductsHelper
   def format_product_name(product)
-    return "Produto sem nome" unless product.shopify_product_name.present?
-    
-    # Extrair a variante do SKU (última parte após o último hífen)
-    variant = product.sku.split('-').last if product.sku.present?
-    
-    if variant.present? && variant.length <= 3 # Assumindo que variantes são curtas (G, M, P, etc.)
-      "#{product.shopify_product_name} - #{variant} (SKU: #{product.sku})"
+    if product.shopify_product_name.present?
+      truncate(product.shopify_product_name, length: 60)
     else
-      "#{product.shopify_product_name} (SKU: #{product.sku})"
+      "Produto ##{product.id}"
     end
   end
 
   def format_product_name_for_correction(product)
-    return "Produto sem nome" unless product.shopify_product_name.present?
+    return 'Produto sem nome' unless product
     
-    # Extrair a variante do SKU (última parte após o último hífen)
-    variant = product.sku.split('-').last if product.sku.present?
-    
-    if variant.present? && variant.length <= 3 # Assumindo que variantes são curtas (G, M, P, etc.)
-      "#{product.shopify_product_name} - #{variant}"
+    if product.shopify_product_name.present?
+      truncate(product.shopify_product_name, length: 50)
     else
-      product.shopify_product_name
+      "SKU: #{product.sku}"
     end
   end
 
   def get_stock_for_location(product, location)
     case location
     when 'lagoa_seca'
-      product.stock_lagoa_seca
+      product.stock_lagoa_seca&.to_i || 0
     when 'bh_shopping'
-      product.stock_bh_shopping
+      product.stock_bh_shopping&.to_i || 0
     when 'rj'
-      product.stock_rj
+      product.stock_rj&.to_i || 0
     else
-      nil
+      0
     end
   end
 
-  def stock_badge_class(stock)
-    return 'bg-secondary' if stock.nil?
+  def stock_badge_class(stock_value)
+    stock = extract_stock_value(stock_value)
     
-    case stock.to_i
+    case stock
     when 0
-      'bg-danger'
+      'bg-danger text-white'
     when 1..5
-      'bg-warning'
+      'bg-warning text-dark'
     when 6..20
-      'bg-info'
+      'bg-info text-dark'
     else
-      'bg-success'
+      'bg-success text-dark'
     end
   end
 
   def stock_icon_class(stock)
-    return 'fas fa-question-circle text-secondary' if stock.nil?
+    stock_value = extract_stock_value(stock)
     
-    case stock.to_i
+    case stock_value
     when 0
       'fas fa-times-circle text-danger'
     when 1..5
@@ -69,14 +61,73 @@ module ProductsHelper
   end
 
   def stock_source_indicator(product)
-    if product.shopify_inventory_item_id.present?
-      content_tag :span, class: "badge bg-success text-dark px-2 py-1" do
-        content_tag(:i, "", class: "fab fa-shopify me-1") + "Shopify"
+    if product.respond_to?(:stock_source)
+      case product.stock_source
+      when 'shopify_real_time'
+        content_tag :span, class: "badge bg-success text-white px-2 py-1" do
+          content_tag(:i, '', class: "fab fa-shopify me-1") + "Shopify"
+        end
+      when 'database_fallback'
+        content_tag :span, class: "badge bg-warning text-dark px-2 py-1" do
+          content_tag(:i, '', class: "fas fa-database me-1") + "Banco"
+        end
+      when 'no_shopify_id'
+        content_tag :span, class: "badge bg-secondary text-white px-2 py-1" do
+          content_tag(:i, '', class: "fas fa-exclamation-triangle me-1") + "N/A"
+        end
+      else
+        content_tag :span, class: "badge bg-success text-white px-2 py-1" do
+          content_tag(:i, '', class: "fab fa-shopify me-1") + "Shopify"
+        end
       end
     else
-      content_tag :span, class: "badge bg-secondary text-white px-2 py-1" do
-        content_tag(:i, "", class: "fas fa-database me-1") + "Local"
+      content_tag :span, class: "badge bg-success text-white px-2 py-1" do
+        content_tag(:i, '', class: "fab fa-shopify me-1") + "Shopify"
       end
+    end
+  end
+
+  def stock_for_location(product, location)
+    case location
+    when 'lagoa_seca'
+      product.stock_lagoa_seca || 0
+    when 'bh_shopping'
+      product.stock_bh_shopping || 0
+    when 'rj'
+      product.stock_rj || 0
+    else
+      0
+    end
+  end
+
+  def location_display_name(location)
+    case location
+    when 'lagoa_seca'
+      'Lagoa Seca'
+    when 'bh_shopping'
+      'BH Shopping'
+    when 'rj'
+      'Rio de Janeiro'
+    else
+      location.humanize
+    end
+  end
+
+  def extract_stock_value(stock_value)
+    return 0 if stock_value.nil?
+    
+    if stock_value.is_a?(Hash)
+      stock_value[:available_quantity] || stock_value['available_quantity'] || 0
+    else
+      stock_value.to_i
+    end
+  end
+
+  def next_direction(column)
+    if params[:sort] == column && params[:direction] == 'asc'
+      'desc'
+    else
+      'asc'
     end
   end
 end

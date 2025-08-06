@@ -1,131 +1,63 @@
 <div class="container-fluid py-4">
-  <!-- Tutorial -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-dark border border-warning shadow-lg">
-        <div class="card-header bg-warning text-dark">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">
-              <i class="fas fa-book-open me-2"></i>Tutorial - Histórico de Conferências
-            </h6>
-            <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#correctionsTutorial">
-              <i class="fas fa-chevron-down"></i>
-            </button>
-          </div>
-        </div>
-        <div class="collapse" id="correctionsTutorial">
-          <div class="card-body bg-dark text-white">
-            <div class="row g-3 mb-4">
-              <div class="col-md-4">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <i class="fas fa-plus-circle fa-2x text-success mb-2"></i>
-                  <h6>1. Nova Conferência</h6>
-                  <small class="text-white-50">Clique em "Nova Conferência" para iniciar uma verificação de estoque</small>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <i class="fas fa-list-alt fa-2x text-info mb-2"></i>
-                  <h6>2. Acompanhar Status</h6>
-                  <small class="text-white-50">Veja o progresso de cada conferência: pendente, em andamento ou concluída</small>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                  <h6>3. Analisar Resultados</h6>
-                  <small class="text-white-50">Visualize estatísticas e relatórios de cada conferência realizada</small>
-                </div>
-              </div>
-            </div>
-            
-            <h6 class="text-white border-bottom border-secondary pb-2 mb-3">
-              <i class="fas fa-info-circle me-2"></i>Status das Conferências
-            </h6>
-            
-            <div class="row g-3">
-              <div class="col-md-3">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-secondary mb-2">Pendente</span>
-                  <h6 class="text-secondary">Não Iniciada</h6>
-                  <small class="text-white-50">Conferência criada mas ainda não foi iniciada</small>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-warning text-dark mb-2">Em Andamento</span>
-                  <h6 class="text-warning">Processando</h6>
-                  <small class="text-white-50">Produtos sendo conferidos e corrigidos</small>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-info text-dark mb-2">Executada</span>
-                  <h6 class="text-info">Finalizada</h6>
-                  <small class="text-white-50">Correções aplicadas no sistema local</small>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-success text-dark mb-2">Sincronizada</span>
-                  <h6 class="text-success">Completa</h6>
-                  <small class="text-white-50">Dados sincronizados com a Shopify</small>
-                </div>
-              </div>
-            </div>
-            
-            <div class="alert alert-warning bg-dark border-warning text-white mt-3" role="alert">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              <strong>Importante:</strong> Sempre finalize as conferências executando as correções e sincronizando com a Shopify.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <% content_for :title, 'Conferências de Estoque' %>
+  <%= render 'layouts/partials/messages' if defined?(render) %>
 
-  <!-- Header -->
+  <!-- Header com estatísticas -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h4 class="text-white mb-0">
-            <i class="fas fa-clipboard-list me-2"></i>
-            Histórico de Conferências
-            <% unless current_user.admin? %>
-              <small class="text-warning ms-2">
-                <i class="fas fa-lock me-1"></i>Suas locations permitidas
-              </small>
-            <% end %>
+            <i class="fas fa-clipboard-list me-2"></i>Conferências de Estoque
           </h4>
-          <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
+          <%= link_to new_stock_correction_path, class: "btn btn-warning text-dark" do %>
             <i class="fas fa-plus me-2"></i>Nova Conferência
           <% end %>
         </div>
         <div class="card-body bg-black">
-          <div class="row">
+          <div class="row g-3">
             <div class="col-md-3">
-              <div class="text-center p-3">
-                <h4 class="text-info mb-1"><%= @total_corrections %></h4>
-                <small class="text-white">Total de Conferências</small>
+              <div class="stat-card bg-primary">
+                <div class="stat-icon">
+                  <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div class="stat-content">
+                  <h3 class="text-dark mb-0"><%= @total_corrections %></h3>
+                  <p class="text-dark mb-0">Total de Conferências</p>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="text-center p-3">
-                <h4 class="text-warning mb-1"><%= @pending_corrections %></h4>
-                <small class="text-white">Em Andamento</small>
+              <div class="stat-card bg-warning">
+                <div class="stat-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                  <h3 class="text-dark mb-0"><%= @pending_corrections %></h3>
+                  <p class="text-dark mb-0">Pendentes</p>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="text-center p-3">
-                <h4 class="text-success mb-1"><%= @completed_corrections %></h4>
-                <small class="text-white">Concluídas</small>
+              <div class="stat-card bg-success">
+                <div class="stat-icon">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                  <h3 class="text-white mb-0"><%= @completed_corrections %></h3>
+                  <p class="text-white mb-0">Finalizadas</p>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="text-center p-3">
-                <h4 class="text-primary mb-1"><%= @synced_corrections %></h4>
-                <small class="text-white">Sincronizadas</small>
+              <div class="stat-card bg-info">
+                <div class="stat-icon">
+                  <i class="fas fa-sync"></i>
+                </div>
+                <div class="stat-content">
+                  <h3 class="text-dark mb-0"><%= @synced_corrections %></h3>
+                  <p class="text-dark mb-0">Sincronizadas Hoje</p>
+                </div>
               </div>
             </div>
           </div>
@@ -140,7 +72,7 @@
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark">
           <h5 class="text-white mb-0">
-            <i class="fas fa-history me-2"></i>Conferências Realizadas
+            <i class="fas fa-list me-2"></i>Histórico de Conferências
           </h5>
         </div>
         <div class="card-body bg-black p-0">
@@ -149,108 +81,80 @@
               <table class="table table-dark table-hover mb-0">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-3 py-3">#</th>
-                    <th class="text-white fw-bold px-3 py-3">Data</th>
-                    <th class="text-white fw-bold px-3 py-3">Localização</th>
-                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Produtos</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Correções</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
+                    <th class="text-white fw-bold px-4 py-3">ID</th>
+                    <th class="text-white fw-bold px-4 py-3">Data</th>
+                    <th class="text-white fw-bold px-4 py-3">Motivo</th>
+                    <th class="text-white fw-bold px-4 py-3">Location</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Status</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Itens</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% @stock_corrections.each do |correction| %>
                     <tr class="border-secondary">
-                      <td class="px-3 py-3">
-                        <span class="font-monospace text-white fw-medium">
-                          #<%= correction.id %>
-                        </span>
+                      <td class="px-4 py-3">
+                        <span class="text-white-50">#<%= correction.id %></span>
                       </td>
-                      
-                      <td class="px-3 py-3">
-                        <span class="text-white d-block">
-                          <%= correction.correction_date.strftime('%d/%m/%Y') %>
-                        </span>
-                        <small class="text-white-50">
-                          <%= correction.created_at.strftime('%H:%M') %>
+                      <td class="px-4 py-3">
+                        <span class="text-white"><%= correction.correction_date.strftime('%d/%m/%Y') %></span>
+                        <small class="text-white-50 d-block">
+                          Criada: <%= correction.created_at.strftime('%d/%m/%Y %H:%M') %>
                         </small>
                       </td>
-                      
-                      <td class="px-3 py-3">
-                        <span class="badge bg-info text-dark px-2 py-1">
+                      <td class="px-4 py-3">
+                        <span class="text-white"><%= correction.reason %></span>
+                        <% if correction.notes.present? %>
+                          <small class="text-white-50 d-block">
+                            <i class="fas fa-sticky-note me-1"></i><%= correction.notes %>
+                          </small>
+                        <% end %>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="badge bg-secondary text-white px-2 py-1">
                           <i class="fas fa-map-marker-alt me-1"></i>
-                          <%= correction.location_name %>
+                          <%= User.location_name(correction.location) %>
                         </span>
                       </td>
-                      
-                      <td class="px-3 py-3">
-                        <span class="text-white">
-                          <%= truncate(correction.reason || 'Conferência de rotina', length: 30) %>
-                        </span>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center">
-                        <span class="badge bg-primary text-white px-2 py-1">
-                          <%= correction.stock_correction_items.count %> itens
-                        </span>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center">
-                        <% corrections_count = correction.items_to_correct.count %>
-                        <span class="badge <%= corrections_count > 0 ? 'bg-warning text-dark' : 'bg-success text-dark' %> px-2 py-1">
-                          <%= corrections_count %> correções
-                        </span>
-                      </td>
-                      
-                      <td class="px-3 py-3 text-center">
-                        <% if correction.status == 'executed' %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Finalizada
+                      <td class="px-4 py-3 text-center">
+                        <% case correction.status %>
+                        <% when 'executed' %>
+                          <span class="badge bg-success text-white px-3 py-2">
+                            <i class="fas fa-check-circle me-1"></i>Finalizada
                           </span>
-                        <% elsif correction.items_to_correct.where(executed: true).any? %>
-                          <span class="badge bg-info text-dark px-2 py-1">
-                            <i class="fas fa-clock me-1"></i>Em Andamento
-                          </span>
+                          <% if correction.executed_at %>
+                            <small class="text-success d-block">
+                              <%= correction.executed_at.strftime('%d/%m/%Y %H:%M') %>
+                            </small>
+                          <% end %>
                         <% else %>
-                          <span class="badge bg-secondary text-white px-2 py-1">
-                            <i class="fas fa-hourglass-half me-1"></i>Pendente
+                          <span class="badge bg-warning text-dark px-3 py-2">
+                            <i class="fas fa-clock me-1"></i>Pendente
                           </span>
                         <% end %>
                       </td>
-                      
-                      <td class="px-3 py-3 text-center">
-                        <div class="d-flex gap-1 justify-content-center flex-wrap">
-                          <%= link_to correction, 
-                                      class: "btn btn-sm btn-info text-dark",
-                                      title: "Visualizar detalhes" do %>
+                      <td class="px-4 py-3 text-center">
+                        <span class="badge bg-info text-dark px-2 py-1">
+                          <%= correction.stock_correction_items.count %> itens
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        <div class="btn-group" role="group">
+                          <%= link_to correction, class: "btn btn-sm btn-outline-light", title: "Visualizar" do %>
                             <i class="fas fa-eye"></i>
                           <% end %>
-                          
                           <% if correction.status != 'executed' || current_user.admin? %>
-                            <%= link_to edit_stock_correction_path(correction), 
-                                        class: "btn btn-sm btn-warning text-dark",
-                                        title: "Editar conferência" do %>
+                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-sm btn-outline-primary", title: "Editar" do %>
                               <i class="fas fa-edit"></i>
                             <% end %>
                           <% end %>
-                          
-                          <% if correction.items_to_correct.any? && correction.items_to_correct.where(executed: false).any? %>
-                            <%= link_to execute_all_stock_correction_path(correction), 
-                                        method: :post,
-                                        class: "btn btn-sm btn-success text-dark",
-                                        title: "Executar todas as correções",
-                                        confirm: "Deseja executar todas as correções pendentes?" do %>
-                              <i class="fas fa-play"></i>
+                          <% if current_user.admin? %>
+                            <%= link_to correction, method: :delete, 
+                                class: "btn btn-sm btn-outline-danger", 
+                                title: "Excluir",
+                                confirm: "Tem certeza que deseja excluir esta conferência?" do %>
+                              <i class="fas fa-trash"></i>
                             <% end %>
-                          <% end %>
-                          
-                          <%= link_to correction, 
-                                      method: :delete,
-                                      class: "btn btn-sm btn-danger",
-                                      title: "Excluir conferência",
-                                      confirm: "Tem certeza que deseja excluir esta conferência?" do %>
-                            <i class="fas fa-trash"></i>
                           <% end %>
                         </div>
                       </td>
@@ -263,10 +167,78 @@
             <div class="text-center py-5">
               <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
               <h5 class="text-white-50">Nenhuma conferência encontrada</h5>
-              <p class="text-white-50">Clique em "Nova Conferência" para começar.</p>
+              <p class="text-white-50">Crie sua primeira conferência de estoque</p>
+              <%= link_to new_stock_correction_path, class: "btn btn-warning text-dark" do %>
+                <i class="fas fa-plus me-2"></i>Nova Conferência
+              <% end %>
             </div>
           <% end %>
         </div>
+
+        <!-- Paginação -->
+        <% if @total_pages > 1 %>
+          <div class="card-footer bg-dark border-top border-secondary">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <div class="text-white-50 mb-2 mb-md-0">
+                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_corrections].min %> de <%= @total_corrections %> conferências
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <!-- Botão Anterior -->
+                <% if @current_page > 1 %>
+                  <%= link_to stock_corrections_path(page: @current_page - 1),
+                      class: "btn btn-outline-light btn-sm" do %>
+                    <i class="fas fa-chevron-left"></i> Anterior
+                  <% end %>
+                <% else %>
+                  <button class="btn btn-outline-light btn-sm" disabled>
+                    <i class="fas fa-chevron-left"></i> Anterior
+                  </button>
+                <% end %>
+
+                <!-- Números das páginas -->
+                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
+                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
+
+                <% if page_start > 1 %>
+                  <%= link_to "1", stock_corrections_path(page: 1),
+                      class: "btn btn-outline-light btn-sm" %>
+                  <% if page_start > 2 %>
+                    <span class="btn btn-outline-light btn-sm disabled">...</span>
+                  <% end %>
+                <% end %>
+
+                <% (page_start..page_end).each do |page_num| %>
+                  <% if page_num == @current_page %>
+                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
+                  <% else %>
+                    <%= link_to page_num, stock_corrections_path(page: page_num),
+                        class: "btn btn-outline-light btn-sm" %>
+                  <% end %>
+                <% end %>
+
+                <% if page_end < @total_pages %>
+                  <% if page_end < @total_pages - 1 %>
+                    <span class="btn btn-outline-light btn-sm disabled">...</span>
+                  <% end %>
+                  <%= link_to @total_pages, stock_corrections_path(page: @total_pages),
+                      class: "btn btn-outline-light btn-sm" %>
+                <% end %>
+
+                <!-- Botão Próxima -->
+                <% if @current_page < @total_pages %>
+                  <%= link_to stock_corrections_path(page: @current_page + 1),
+                      class: "btn btn-outline-light btn-sm" do %>
+                    Próxima <i class="fas fa-chevron-right"></i>
+                  <% end %>
+                <% else %>
+                  <button class="btn btn-outline-light btn-sm" disabled>
+                    Próxima <i class="fas fa-chevron-right"></i>
+                  </button>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>
@@ -283,16 +255,8 @@ body {
   background-color: #121212 !important;
 }
 
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.075);
-}
-
-.font-monospace {
-  font-family: 'Courier New', monospace;
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 
 .card {
@@ -308,42 +272,74 @@ body {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
 
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  gap: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.stat-content h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-content p {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
 .badge {
   font-weight: 500;
 }
 
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
-
-/* Animações suaves */
-.card, .btn {
-  transition: all 0.3s ease;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-}
-
-.table tbody tr {
-  transition: background-color 0.2s ease;
-}
-
-/* Responsividade */
 @media (max-width: 768px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-  
-  .d-flex.gap-1 {
+  .stat-card {
     flex-direction: column;
-    gap: 0.5rem !important;
+    text-align: center;
+    gap: 0.5rem;
   }
   
-  .btn-sm {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.8rem;
+  .stat-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .btn-group {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .card-footer .d-flex {
+    flex-direction: column;
+    gap: 1rem;
   }
 }
 </style>

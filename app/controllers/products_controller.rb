@@ -1,4 +1,6 @@
 class ProductsController < ApplicationController
+  before_action :authenticate_user!
+
   def index
     @products = filter_products
     @motors = Motor.where(job_name: 'Atualização de produtos').order(id: :desc).limit(1)
@@ -6,53 +8,47 @@ class ProductsController < ApplicationController
   end
 
   def inventory
-    @current_page = params[:page]&.to_i || 1
+    @selected_location = params[:location] || current_user.default_location || 'lagoa_seca'
+    @search_term = params[:search_term]
+    @current_page = (params[:page] || 1).to_i
     @per_page = 20
-    @selected_location = params[:location] || get_default_location_for_user
-    @search_term = params[:search_term] || ''
-    
-    # Verificar se o usuário tem acesso à location selecionada
-    unless current_user.can_access_location?(@selected_location)
-      @selected_location = get_default_location_for_user
-    end
-  
-    # Base query - produtos com SKU válido E shopify_inventory_item_id
-    products_query = Product.where.not(sku: [nil, ''])
-                          .where.not(shopify_inventory_item_id: [nil, ''])
-  
-    # Aplicar filtro de busca se houver
+
+    # Não carregar produtos inicialmente - apenas quando houver busca
     if @search_term.present?
-      products_query = products_query.search(@search_term)
+      # Buscar produtos com base no termo de pesquisa
+      products_query = Product.where.not(sku: [nil, ''])
+                              .where.not(shopify_inventory_item_id: [nil, ''])
+                              .where("products.id LIKE ? OR
+                                      products.sku LIKE ? OR
+                                      products.shopify_inventory_item_id LIKE ? OR
+                                      products.cost LIKE ?",
+                                     "%#{@search_term}%", "%#{@search_term}%", "%#{@search_term}%", "%#{@search_term}%"
+                              )
+
+      @total_products = products_query.count
+      @total_pages = (@total_products.to_f / @per_page).ceil
+      
+      offset = (@current_page - 1) * @per_page
+      @products = products_query.order(:sku).limit(@per_page).offset(offset)
+
+      # Buscar estoque real da Shopify para os produtos encontrados
+      fetch_shopify_stock_for_products(@products, @selected_location)
+    else
+      # Não carregar produtos se não houver busca
+      @products = []
+      @total_products = 0
+      @total_pages = 0
     end
-  
-    # Paginação
-    @total_products = products_query.count
-    @total_pages = (@total_products.to_f / @per_page).ceil
-  
-    offset = (@current_page - 1) * @per_page
-    @products = products_query.limit(@per_page).offset(offset).order(:sku)
-  
-    # Buscar estoque em tempo real da Shopify para os produtos da página atual
-    fetch_shopify_stock_for_products(@products, @selected_location)
-  
-    # Estatísticas por location
-    calculate_statistics
-  
+    
     respond_to do |format|
       format.html
       format.json { render json: inventory_json_response }
     end
   end
-  
+
   def search_inventory
-    # Verificar se o usuário tem acesso à location
-    location = params[:location]
-    unless current_user.can_access_location?(location)
-      location = get_default_location_for_user
-    end
-    
     redirect_to inventory_products_path(
-      location: location,
+      location: params[:location],
       search_term: params[:search_term],
       page: 1
     )
@@ -65,7 +61,7 @@ class ProductsController < ApplicationController
   end
 
   private
-  
+
   def get_default_location_for_user
     available_locations = current_user.available_locations_for_user
     available_locations.any? ? available_locations.first.last : 'lagoa_seca'
@@ -75,46 +71,24 @@ class ProductsController < ApplicationController
     return if products.empty?
 
     Rails.logger.info "Fetching real-time stock for #{products.count} products in location: #{location}"
-
-    begin
-      # Converter location para o formato esperado pelo StockService
-      store_type = convert_location_to_store_type(location)
     
-      # Buscar estoque em tempo real apenas para produtos com shopify_inventory_item_id
-      products.each do |product|
-        if product.shopify_inventory_item_id.present?
-          # Usar o StockService para buscar estoque em tempo real
-          stock_result = StockService.check_stock(product.shopify_variant_id, 1, store_type)
-        
-          if stock_result[:success]
-            real_stock = stock_result[:available_quantity] || 0
-            Rails.logger.info "Real-time stock for #{product.sku}: #{real_stock}"
-          else
-            Rails.logger.warn "Failed to get stock for #{product.sku}: #{stock_result[:message]}"
-            real_stock = get_fallback_stock(product, location)
-          end
-        
-          # Adicionar método singleton para o estoque real
-          product.define_singleton_method(:real_stock) { real_stock }
-          product.define_singleton_method(:stock_source) { stock_result[:success] ? 'real_time' : 'fallback' }
-        else
-          Rails.logger.warn "Product #{product.sku} missing shopify_inventory_item_id - skipping"
-          # Não adicionar este produto aos resultados ou marcar como sem inventory_item_id
-          fallback_stock = get_fallback_stock(product, location)
-          product.define_singleton_method(:real_stock) { fallback_stock }
-          product.define_singleton_method(:stock_source) { 'no_shopify_id' }
-        end
-      end
+    products.each do |product|
+      next unless product.shopify_inventory_item_id.present?
 
-    rescue => e
-      Rails.logger.error "Error fetching real-time stock: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-    
-      # Em caso de erro, usar estoque do banco como fallback
-      products.each do |product|
+      begin
+        # Usar o StockService para buscar estoque real
+        real_stock = StockService.check_stock(product.shopify_variant_id, 1, location)
+        Rails.logger.info "Real-time stock for #{product.sku}: #{real_stock}"
+
+        # Adicionar método singleton para o estoque real
+        product.define_singleton_method(:real_stock) { real_stock }
+        product.define_singleton_method(:stock_source) { 'shopify_real_time' }
+      rescue => e
+        Rails.logger.error "Error fetching stock for #{product.sku}: #{e.message}"
+        # Usar estoque do banco como fallback
         fallback_stock = get_fallback_stock(product, location)
         product.define_singleton_method(:real_stock) { fallback_stock }
-        product.define_singleton_method(:stock_source) { 'fallback' }
+        product.define_singleton_method(:stock_source) { 'database_fallback' }
       end
     end
   end
@@ -148,7 +122,7 @@ class ProductsController < ApplicationController
       0
     end
   end
-  
+
   def inventory_json_response
     {
       products: @products.map do |product|
@@ -168,11 +142,11 @@ class ProductsController < ApplicationController
       stats: @stats
     }
   end
-  
+
   def get_stock_for_location(product, location)
     # Se o produto tem estoque real da Shopify, usar esse
     return product.real_stock if product.respond_to?(:real_stock)
-    
+
     # Caso contrário, usar o estoque do banco (fallback)
     case location
     when 'lagoa_seca'
@@ -278,7 +252,7 @@ class ProductsController < ApplicationController
     else
       products = products.order(updated_at: :desc)
     end
-
+    
     products
   end
 
@@ -301,19 +275,19 @@ class ProductsController < ApplicationController
     else
       # Fallback para estatísticas do banco
       stock_field = case @selected_location
-                   when 'lagoa_seca' then 'stock_lagoa_seca'
-                   when 'bh_shopping' then 'stock_bh_shopping'
-                   when 'rj' then 'stock_rj'
-                   when 'log' then 'stock_log'
-                   else 'stock_lagoa_seca'
-                   end
+      when 'lagoa_seca' then 'stock_lagoa_seca'
+      when 'bh_shopping' then 'stock_bh_shopping'
+      when 'rj' then 'stock_rj'
+      when 'log' then 'stock_log'
+      else 'stock_lagoa_seca'
+      end
       
       base_query = if @search_term.present?
-                     Product.where.not(sku: [nil, '']).search(@search_term)
-                   else
-                     Product.where.not(sku: [nil, ''])
-                   end
-      
+        Product.where.not(sku: [nil, '']).search(@search_term)
+      else
+        Product.where.not(sku: [nil, ''])
+      end
+
       @stats = {
         total: @total_products,
         with_stock: base_query.where("#{stock_field} > 0").count,
