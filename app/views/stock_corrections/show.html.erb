@@ -92,135 +92,60 @@
     </div>
   </div>
 
-  <!-- Busca -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-body bg-black">
-          <%= form_with url: stock_correction_path(@stock_correction), method: :get, local: true, class: "row g-3 align-items-end" do |f| %>
-            <div class="col-md-8">
-              <label class="form-label text-white fw-bold">Buscar Produto</label>
-              <div class="input-group">
-                <span class="input-group-text bg-dark border-dark text-white">
-                  <i class="fas fa-search"></i>
-                </span>
-                <%= f.text_field :search_term, placeholder: "Digite SKU exato ou nome do produto...", value: @search_term,
-                                 class: "form-control bg-dark text-white border-dark" %>
-              </div>
-            </div>
-            <div class="col-md-2">
-              <%= f.submit "Buscar", class: "btn btn-primary w-100" %>
-            </div>
-            <div class="col-md-2">
-              <%= link_to stock_correction_path(@stock_correction), class: "btn btn-outline-light w-100" do %>
-                <i class="fas fa-times me-1"></i>Limpar
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Filtro de Busca -->
+  <% 
+    # Filtrar produtos corrigidos localmente - CORRIGIDO PARA MYSQL
+    all_corrected_items = @stock_correction.stock_correction_items.where(needs_correction: true)
+    
+    if @search_term.present?
+      filtered_items = all_corrected_items.joins(:product).where(
+        "products.sku LIKE ? OR products.shopify_product_name LIKE ?", 
+        "%#{@search_term}%", 
+        "%#{@search_term}%"
+      )
+    else
+      filtered_items = all_corrected_items
+    end
+    
+    # Paginação
+    per_page = 20
+    current_page = params[:page].to_i > 0 ? params[:page].to_i : 1
+    total_filtered = filtered_items.count
+    total_pages = (total_filtered.to_f / per_page).ceil
+    
+    paginated_items = filtered_items
+      .includes(:product)
+      .order(:id)
+      .offset((current_page - 1) * per_page)
+      .limit(per_page)
+  %>
 
-  <!-- Produto da Busca Atual -->
-  <% if @search_item %>
+  <% if all_corrected_items.any? %>
     <div class="row mb-4">
       <div class="col-12">
-        <div class="card bg-black border border-info shadow-lg">
-          <div class="card-header bg-info text-dark">
-            <h5 class="mb-0">
-              <i class="fas fa-search me-2"></i>Produto Encontrado
-              <% if @search_item.needs_correction? %>
-                <span class="badge bg-warning text-dark ms-2">
-                  <i class="fas fa-edit me-1"></i>Com Correção
-                </span>
-              <% else %>
-                <span class="badge bg-secondary text-white ms-2">
-                  <i class="fas fa-info me-1"></i>Sem Correção
-                </span>
-              <% end %>
-            </h5>
+        <div class="card bg-black border border-dark shadow-lg">
+          <div class="card-body bg-black">
+            <%= form_with url: stock_correction_path(@stock_correction), method: :get, local: true, class: "row g-3 align-items-end" do |f| %>
+              <div class="col-md-8">
+                <label class="form-label text-white fw-bold">Filtrar Produtos Corrigidos</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-dark border-dark text-white">
+                    <i class="fas fa-filter"></i>
+                  </span>
+                  <%= f.text_field :search_term, placeholder: "Digite SKU ou nome do produto para filtrar...", value: @search_term,
+                                   class: "form-control bg-dark text-white border-dark" %>
+                </div>
+              </div>
+              <div class="col-md-2">
+                <%= f.submit "Filtrar", class: "btn btn-primary w-100" %>
+              </div>
+              <div class="col-md-2">
+                <%= link_to stock_correction_path(@stock_correction), class: "btn btn-outline-light w-100" do %>
+                  <i class="fas fa-times me-1"></i>Limpar
+                <% end %>
+              </div>
+            <% end %>
           </div>
-          <div class="card-body bg-black p-0">
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0">
-                <thead class="bg-dark">
-                  <tr>
-                    <th class="text-white fw-bold px-3 py-3">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Estoque Atual</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Estoque Corrigido</th>
-                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-secondary">
-                    <td class="px-3 py-3">
-                      <div>
-                        <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(@search_item.product) %></span>
-                        <small class="text-warning fw-bold font-monospace">
-                          SKU: <%= @search_item.product.sku %>
-                        </small>
-                        <% if @search_item.product.shopify_variant_id.present? %>
-                          <br><small class="text-white-50">
-                            <i class="fab fa-shopify me-1"></i>ID: <%= @search_item.product.shopify_variant_id %>
-                          </small>
-                        <% end %>
-                      </div>
-                    </td>
-                    <td class="px-3 py-3 text-center">
-                      <span class="badge <%= stock_badge_class(@search_item.real_stock) %> px-2 py-1">
-                        <%= @search_item.real_stock %> un.
-                      </span>
-                    </td>
-                    <td class="px-3 py-3 text-center">
-                      <% if @search_item.executed? %>
-                        <% if @search_item.needs_correction? %>
-                          <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-edit me-1"></i>Corrigido
-                          </span>
-                        <% else %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Processado
-                          </span>
-                        <% end %>
-                      <% else %>
-                        <span class="badge bg-secondary text-white px-2 py-1">
-                          Pendente
-                        </span>
-                      <% end %>
-                    </td>
-                    <td class="px-3 py-3 text-center">
-                      <% if @search_item.needs_correction? %>
-                        <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
-                      <% else %>
-                        <span class="text-white-50">-</span>
-                      <% end %>
-                    </td>
-                    <td class="px-3 py-3">
-                      <% if @search_item.needs_correction? %>
-                        <small class="text-success">
-                          <i class="fas fa-check me-1"></i><%= truncate(@search_item.correction_reason, length: 30) %>
-                        </small>
-                      <% else %>
-                        <span class="text-white-50">-</span>
-                      <% end %>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  <% elsif @search_term.present? %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="alert alert-warning bg-dark border-warning text-white">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Nenhum produto encontrado para "<strong><%= @search_term %></strong>".
-          Verifique se o SKU está correto ou se o produto existe na base de dados.
         </div>
       </div>
     </div>
@@ -233,30 +158,34 @@
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h5 class="text-white mb-0">
             <i class="fas fa-check-circle me-2"></i>Produtos com Correção
+            <% if @search_term.present? %>
+              <small class="text-white-50 ms-2">- Filtro: "<%= @search_term %>"</small>
+            <% end %>
           </h5>
-          <% if @total_processed > 0 %>
+          <% if total_filtered > 0 %>
             <span class="badge bg-success text-dark px-3 py-2">
-              <%= @total_processed %> produto(s) corrigido(s)
+              <%= total_filtered %> produto(s) 
+              <%= @search_term.present? ? "encontrado(s)" : "corrigido(s)" %>
             </span>
           <% end %>
         </div>
         <div class="card-body bg-black p-0">
-          <% if @processed_items.any? %>
+          <% if paginated_items.any? %>
             <div class="table-responsive">
               <table class="table table-dark table-hover mb-0 table-fixed">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 300px;">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Corrigido</th>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Data Execução</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 280px;">Produto</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 140px;">Estoque</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 220px;">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Data Execução</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <% @processed_items.each do |item| %>
+                  <% paginated_items.each do |item| %>
                     <tr class="border-secondary">
-                      <td class="px-3 py-3" style="width: 300px;">
+                      <td class="px-3 py-3" style="width: 280px;">
                         <div>
                           <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(item.product) %></span>
                           <small class="text-warning fw-bold font-monospace">
@@ -269,41 +198,42 @@
                           <% end %>
                         </div>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <% if item.needs_correction? %>
-                          <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-edit me-1"></i>Corrigido
-                          </span>
-                        <% else %>
+                      <td class="px-3 py-3 text-center" style="width: 100px;">
+                        <% if item.executed? %>
                           <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Processado
+                            <i class="fas fa-check-circle me-1"></i>Executado
+                          </span>
+                        <% else %>
+                          <span class="badge bg-warning text-dark px-2 py-1">
+                            <i class="fas fa-edit me-1"></i>Pendente
                           </span>
                         <% end %>
                       </td>
+                      <td class="px-3 py-3 text-center" style="width: 140px;">
+                        <% if item.stock_before.present? && item.corrected_stock.present? %>
+                          <div>
+                            <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= item.stock_before %></span></small>
+                            <small class="text-white-50 d-block">Corrigido: <span class="text-success"><%= item.corrected_stock %></span></small>
+                          </div>
+                        <% elsif item.corrected_stock.present? %>
+                          <span class="badge bg-info text-dark px-2 py-1"><%= item.corrected_stock %> un.</span>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
+                      </td>
+                      <td class="px-3 py-3" style="width: 220px;">
+                        <small class="text-success">
+                          <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 30) %>
+                        </small>
+                      </td>
                       <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <% if item.needs_correction? %>
-                          <span class="badge bg-success text-dark px-2 py-1"><%= item.corrected_stock %> un.</span>
-                        <% else %>
-                          <span class="text-white-50">-</span>
-                        <% end %>
-                      </td>
-                      <td class="px-3 py-3" style="width: 250px;">
-                        <% if item.needs_correction? %>
-                          <small class="text-success">
-                            <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 35) %>
-                          </small>
-                        <% else %>
-                          <span class="text-white-50">-</span>
-                        <% end %>
-                      </td>
-                      <td class="px-3 py-3 text-center" style="width: 150px;">
                         <% if item.executed_at.present? %>
                           <small class="text-white-50">
                             <%= item.executed_at.strftime('%d/%m/%Y') %><br>
                             <%= item.executed_at.strftime('%H:%M') %>
                           </small>
                         <% else %>
-                          <span class="text-white-50">-</span>
+                          <span class="text-white-50">Pendente</span>
                         <% end %>
                       </td>
                     </tr>
@@ -313,38 +243,48 @@
             </div>
           <% else %>
             <div class="text-center py-5">
-              <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
-              <h5 class="text-white-50">Nenhum produto com correção ainda</h5>
-              <p class="text-white-50">Os produtos com correção aparecerão aqui</p>
+              <% if @search_term.present? %>
+                <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
+                <h5 class="text-white-50">Nenhum produto encontrado</h5>
+                <p class="text-white-50">Não há produtos corrigidos que correspondam ao filtro "<strong><%= @search_term %></strong>"</p>
+                <%= link_to stock_correction_path(@stock_correction), class: "btn btn-outline-light btn-sm" do %>
+                  <i class="fas fa-times me-1"></i>Limpar Filtro
+                <% end %>
+              <% else %>
+                <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
+                <h5 class="text-white-50">Nenhum produto com correção ainda</h5>
+                <p class="text-white-50">Os produtos com correção aparecerão aqui</p>
+              <% end %>
             </div>
           <% end %>
         </div>
         <!-- Paginação dos Produtos Processados -->
-        <% if @total_pages > 1 %>
+        <% if total_pages > 1 %>
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
               <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_processed].min %> de <%= @total_processed %> produtos processados
+                Mostrando <%= ((current_page - 1) * per_page) + 1 %> a <%= [current_page * per_page, total_filtered].min %> de <%= total_filtered %> produtos
+                <%= @search_term.present? ? "encontrados" : "corrigidos" %>
               </div>
               <div class="d-flex gap-2 flex-wrap">
-                <% if @current_page > 1 %>
-                  <%= link_to stock_correction_path(@stock_correction, page: @current_page - 1, search_term: @search_term),
+                <% if current_page > 1 %>
+                  <%= link_to stock_correction_path(@stock_correction, page: current_page - 1, search_term: @search_term),
                               class: "btn btn-outline-light btn-sm" do %>
                     <i class="fas fa-chevron-left"></i> Anterior
                   <% end %>
                 <% end %>
-                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
-                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
+                <% page_start = [[current_page - 2, 1].max, [total_pages - 4, 1].max].max %>
+                <% page_end = [[page_start + 4, total_pages].min, [current_page + 2, total_pages].min].max %>
                 <% (page_start..page_end).each do |page_num| %>
-                  <% if page_num == @current_page %>
+                  <% if page_num == current_page %>
                     <button class="btn btn-primary btn-sm"><%= page_num %></button>
                   <% else %>
                     <%= link_to page_num, stock_correction_path(@stock_correction, page: page_num, search_term: @search_term),
                                 class: "btn btn-outline-light btn-sm" %>
                   <% end %>
                 <% end %>
-                <% if @current_page < @total_pages %>
-                  <%= link_to stock_correction_path(@stock_correction, page: @current_page + 1, search_term: @search_term),
+                <% if current_page < total_pages %>
+                  <%= link_to stock_correction_path(@stock_correction, page: current_page + 1, search_term: @search_term),
                               class: "btn btn-outline-light btn-sm" do %>
                     Próxima <i class="fas fa-chevron-right"></i>
                   <% end %>
@@ -469,7 +409,7 @@ body {
   }
   .table-fixed th:nth-child(4),
   .table-fixed td:nth-child(4) {
-    width: 200px !important;
+    width: 180px !important;
   }
 }
 

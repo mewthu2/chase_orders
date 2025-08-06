@@ -76,7 +76,7 @@ class StockCorrectionsController < ApplicationController
                                        .order(:created_at)
                                        .limit(@per_page)
                                        .offset(offset)
-  
+
     # APENAS buscar estoque real da Shopify para o item pesquisado
     fetch_real_time_stock_for_items([@search_item].compact) if @search_item
   
@@ -191,7 +191,7 @@ class StockCorrectionsController < ApplicationController
                                        .order(:created_at)
                                        .limit(@per_page)
                                        .offset(offset)
-  
+
     # APENAS buscar estoque real da Shopify para o item pesquisado
     fetch_real_time_stock_for_items([@search_item].compact) if @search_item
     
@@ -292,6 +292,11 @@ class StockCorrectionsController < ApplicationController
       product = Product.find(product_id)
       current_stock = stock_for_location(product, @stock_correction.location)
       item.current_stock = current_stock
+    end
+
+    # Salvar o estoque anterior antes da correção
+    if item.stock_before.blank?
+      item.stock_before = item.current_stock || 0
     end
 
     # Atualizar com a correção
@@ -461,6 +466,7 @@ class StockCorrectionsController < ApplicationController
           stock_correction_id: stock_correction.id,
           product_id: product.id,
           current_stock: current_stock,
+          stock_before: current_stock, # Salvar o estoque inicial
           checked: false,
           needs_correction: false,
           executed: false,

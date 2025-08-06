@@ -27,8 +27,7 @@
                 <i class="fas fa-check-circle me-1"></i>Conferência Finalizada
               </span>
               <% if current_user.admin? %>
-                <%= link_to reopen_stock_correction_path(@stock_correction), 
-                            method: :patch,
+                <%= link_to reopen_stock_correction_path(@stock_correction), method: :patch,
                             class: "btn btn-sm btn-warning text-dark",
                             data: { confirm: "Tem certeza que deseja reabrir esta conferência?" } do %>
                   <i class="fas fa-undo me-1"></i>Reabrir
@@ -156,7 +155,7 @@
                     <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Atual</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Novo Estoque</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 140px;">Antes / Corrigido</th>
                     <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
                   </tr>
@@ -198,26 +197,36 @@
                         </span>
                       <% end %>
                     </td>
-                    <td class="px-3 py-3 text-center" style="width: 120px;">
+                    <td class="px-3 py-3 text-center" style="width: 140px;">
                       <% if @stock_correction.status == 'executed' %>
                         <% if @search_item.needs_correction? %>
-                          <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
+                          <div>
+                            <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= @search_item.stock_before || @search_item.current_stock %></span></small>
+                            <small class="text-white-50 d-block">Corrigido: <span class="text-success"><%= @search_item.corrected_stock %></span></small>
+                          </div>
                         <% else %>
                           <span class="text-white-50">-</span>
                         <% end %>
                       <% elsif @search_item.executed? %>
                         <% if @search_item.needs_correction? %>
-                          <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
+                          <div>
+                            <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= @search_item.stock_before || @search_item.current_stock %></span></small>
+                            <small class="text-white-50 d-block">Corrigido: <span class="text-success"><%= @search_item.corrected_stock %></span></small>
+                          </div>
                         <% else %>
                           <span class="text-white-50">-</span>
                         <% end %>
                       <% else %>
-                        <input type="number" 
-                               id="correctedStock_<%= @search_item.product.id %>" 
-                               class="form-control form-control-sm bg-dark text-white border-dark text-center" 
-                               value="<%= @search_item.needs_correction? ? @search_item.corrected_stock : @search_item.real_stock %>" 
-                               min="0" 
-                               style="width: 80px;">
+                        <div>
+                          <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= @search_item.real_stock %></span></small>
+                          <input type="number" 
+                                 id="correctedStock_<%= @search_item.product.id %>" 
+                                 class="form-control form-control-sm bg-dark text-white border-dark text-center mt-1" 
+                                 value="<%= @search_item.needs_correction? ? @search_item.corrected_stock : @search_item.real_stock %>" 
+                                 min="0" 
+                                 style="width: 80px;"
+                                 placeholder="Novo">
+                        </div>
                       <% end %>
                     </td>
                     <td class="px-3 py-3" style="width: 200px;">
@@ -254,8 +263,7 @@
                           <i class="fas fa-lock me-1"></i>Executado
                         </span>
                       <% else %>
-                        <button class="btn btn-success btn-sm" 
-                                onclick="saveCorrection('<%= @search_item.product.id %>')">
+                        <button class="btn btn-success btn-sm" onclick="saveCorrection('<%= @search_item.product.id %>')">
                           <i class="fas fa-save me-1"></i>Salvar
                         </button>
                       <% end %>
@@ -306,7 +314,7 @@
                   <tr>
                     <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Corrigido</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 140px;">Antes / Corrigido</th>
                     <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
                   </tr>
@@ -338,9 +346,12 @@
                           </span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <td class="px-3 py-3 text-center" style="width: 140px;">
                         <% if item.needs_correction? %>
-                          <span class="badge bg-success text-dark px-2 py-1"><%= item.corrected_stock %> un.</span>
+                          <div>
+                            <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= item.stock_before || item.current_stock %></span></small>
+                            <small class="text-white-50 d-block">Corrigido: <span class="text-success"><%= item.corrected_stock %></span></small>
+                          </div>
                         <% else %>
                           <span class="text-white-50">-</span>
                         <% end %>

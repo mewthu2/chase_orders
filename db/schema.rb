@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_30_071201) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_06_230308) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -274,10 +274,12 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_30_071201) do
     t.datetime "last_shopify_sync_at"
     t.string "shopify_sync_status", default: "pending"
     t.text "shopify_sync_error"
+    t.integer "stock_before", default: 0
     t.index ["last_shopify_sync_at"], name: "index_stock_correction_items_on_last_shopify_sync_at"
     t.index ["needs_correction"], name: "index_stock_correction_items_on_needs_correction"
     t.index ["product_id"], name: "index_stock_correction_items_on_product_id"
     t.index ["shopify_sync_status"], name: "index_stock_correction_items_on_shopify_sync_status"
+    t.index ["stock_before"], name: "index_stock_correction_items_on_stock_before"
     t.index ["stock_correction_id", "product_id"], name: "idx_on_stock_correction_id_product_id_f0f4e197f0", unique: true
     t.index ["stock_correction_id"], name: "index_stock_correction_items_on_stock_correction_id"
   end

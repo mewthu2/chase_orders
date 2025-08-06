@@ -7,6 +7,7 @@ class StockCorrectionItem < ApplicationRecord
   validates :correction_reason, presence: true, if: :needs_correction?
 
   before_save :set_current_stock, if: :new_record?
+  before_save :set_stock_before, if: :will_save_change_to_corrected_stock?
 
   def execute_correction!
     Rails.logger.info "=== Starting execute_correction! for item #{id} ==="
@@ -171,6 +172,16 @@ class StockCorrectionItem < ApplicationRecord
     end
   end
 
+  def stock_comparison_text
+    if needs_correction? && stock_before.present? && corrected_stock.present?
+      "Antes: #{stock_before} / Corrigido: #{corrected_stock}"
+    elsif needs_correction? && corrected_stock.present?
+      "Corrigido: #{corrected_stock}"
+    else
+      "-"
+    end
+  end
+
   private
 
   def set_current_stock
@@ -185,6 +196,12 @@ class StockCorrectionItem < ApplicationRecord
                         else
                           0
                         end
+  end
+
+  def set_stock_before
+    if needs_correction? && corrected_stock.present? && stock_before.blank?
+      self.stock_before = current_stock || 0
+    end
   end
 
   def get_shopify_location_id(location)
