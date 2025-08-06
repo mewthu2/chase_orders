@@ -153,17 +153,17 @@
               <table class="table table-dark table-hover mb-0">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-3 py-3">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Estoque Atual</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Estoque Corrigido</th>
-                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Atual</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Novo Estoque</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr class="border-secondary">
-                    <td class="px-3 py-3">
+                    <td class="px-3 py-3" style="width: 250px;">
                       <div>
                         <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(@search_item.product) %></span>
                         <small class="text-warning fw-bold font-monospace">
@@ -176,12 +176,12 @@
                         <% end %>
                       </div>
                     </td>
-                    <td class="px-3 py-3 text-center">
+                    <td class="px-3 py-3 text-center" style="width: 120px;">
                       <span class="badge <%= stock_badge_class(@search_item.real_stock) %> px-2 py-1">
                         <%= @search_item.real_stock %> un.
                       </span>
                     </td>
-                    <td class="px-3 py-3 text-center">
+                    <td class="px-3 py-3 text-center" style="width: 100px;">
                       <% if @search_item.executed? %>
                         <% if @search_item.needs_correction? %>
                           <span class="badge bg-warning text-dark px-2 py-1">
@@ -198,23 +198,55 @@
                         </span>
                       <% end %>
                     </td>
-                    <td class="px-3 py-3 text-center">
-                      <% if @search_item.needs_correction? %>
-                        <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
+                    <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <% if @stock_correction.status == 'executed' %>
+                        <% if @search_item.needs_correction? %>
+                          <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
+                      <% elsif @search_item.executed? %>
+                        <% if @search_item.needs_correction? %>
+                          <span class="badge bg-success text-dark px-2 py-1"><%= @search_item.corrected_stock %> un.</span>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
                       <% else %>
-                        <span class="text-white-50">-</span>
+                        <input type="number" 
+                               id="correctedStock_<%= @search_item.product.id %>" 
+                               class="form-control form-control-sm bg-dark text-white border-dark text-center" 
+                               value="<%= @search_item.needs_correction? ? @search_item.corrected_stock : @search_item.real_stock %>" 
+                               min="0" 
+                               style="width: 80px;">
                       <% end %>
                     </td>
-                    <td class="px-3 py-3">
-                      <% if @search_item.needs_correction? %>
-                        <small class="text-success">
-                          <i class="fas fa-check me-1"></i><%= truncate(@search_item.correction_reason, length: 25) %>
-                        </small>
+                    <td class="px-3 py-3" style="width: 200px;">
+                      <% if @stock_correction.status == 'executed' %>
+                        <% if @search_item.needs_correction? %>
+                          <small class="text-success">
+                            <i class="fas fa-check me-1"></i><%= truncate(@search_item.correction_reason, length: 25) %>
+                          </small>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
+                      <% elsif @search_item.executed? %>
+                        <% if @search_item.needs_correction? %>
+                          <small class="text-success">
+                            <i class="fas fa-check me-1"></i><%= truncate(@search_item.correction_reason, length: 25) %>
+                          </small>
+                        <% else %>
+                          <span class="text-white-50">-</span>
+                        <% end %>
                       <% else %>
-                        <span class="text-white-50">-</span>
+                        <input type="text" 
+                               id="correctionReason_<%= @search_item.product.id %>" 
+                               class="form-control form-control-sm bg-dark text-white border-dark" 
+                               value="<%= @search_item.correction_reason %>" 
+                               placeholder="Motivo da correção..." 
+                               style="width: 180px;">
                       <% end %>
                     </td>
-                    <td class="px-3 py-3 text-center">
+                    <td class="px-3 py-3 text-center" style="width: 100px;">
                       <% if @stock_correction.status == 'executed' %>
                         <span class="text-white-50">Finalizado</span>
                       <% elsif @search_item.executed? %>
@@ -222,10 +254,9 @@
                           <i class="fas fa-lock me-1"></i>Executado
                         </span>
                       <% else %>
-                        <button class="btn btn-primary btn-sm" 
-                                onclick="openCorrectionModal('<%= @search_item.product.sku %>', '<%= @search_item.product.id %>', <%= @search_item.real_stock %>)">
-                          <i class="fas fa-edit me-1"></i>
-                          <%= @search_item.needs_correction? ? 'Editar' : 'Corrigir' %>
+                        <button class="btn btn-success btn-sm" 
+                                onclick="saveCorrection('<%= @search_item.product.id %>')">
+                          <i class="fas fa-save me-1"></i>Salvar
                         </button>
                       <% end %>
                     </td>
@@ -273,17 +304,17 @@
               <table class="table table-dark table-hover mb-0 table-fixed">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 300px;">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Status</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Corrigido</th>
                     <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% @processed_items.each do |item| %>
                     <tr class="border-secondary">
-                      <td class="px-3 py-3" style="width: 300px;">
+                      <td class="px-3 py-3" style="width: 250px;">
                         <div>
                           <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(item.product) %></span>
                           <small class="text-warning fw-bold font-monospace">
@@ -296,7 +327,7 @@
                           <% end %>
                         </div>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <td class="px-3 py-3 text-center" style="width: 100px;">
                         <% if item.needs_correction? %>
                           <span class="badge bg-warning text-dark px-2 py-1">
                             <i class="fas fa-edit me-1"></i>Corrigido
@@ -323,7 +354,7 @@
                           <span class="text-white-50">-</span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 150px;">
+                      <td class="px-3 py-3 text-center" style="width: 100px;">
                         <% if @stock_correction.status == 'executed' %>
                           <span class="text-white-50">
                             <i class="fas fa-lock me-1"></i>Finalizado
@@ -333,10 +364,9 @@
                             <i class="fas fa-check me-1"></i>Executado
                           </span>
                         <% else %>
-                          <button class="btn btn-primary btn-sm" 
-                                  onclick="openCorrectionModal('<%= item.product.sku %>', '<%= item.product.id %>', <%= item.current_stock %>)">
-                            <i class="fas fa-edit me-1"></i>Editar
-                          </button>
+                          <span class="text-white-50">
+                            <i class="fas fa-clock me-1"></i>Pendente
+                          </span>
                         <% end %>
                       </td>
                     </tr>
@@ -395,59 +425,6 @@
         <%= link_to stock_corrections_path, class: "btn btn-outline-light" do %>
           <i class="fas fa-arrow-left me-2"></i>Voltar para Lista
         <% end %>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de Correção -->
-<div class="modal fade" id="correctionModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content bg-dark border border-secondary">
-      <div class="modal-header bg-secondary border-bottom border-secondary">
-        <h5 class="modal-title text-white">
-          <i class="fas fa-edit me-2"></i>Corrigir Estoque
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="correctionForm">
-          <input type="hidden" id="productId" name="product_id">
-          <input type="hidden" id="itemId" name="item_id">
-          
-          <div class="mb-3">
-            <label class="form-label text-white fw-bold">SKU do Produto</label>
-            <input type="text" id="productSku" class="form-control bg-dark text-white border-dark" readonly>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label text-white fw-bold">Estoque Real Atual</label>
-            <input type="number" id="currentStock" class="form-control bg-dark text-white border-dark" readonly>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label text-white fw-bold">Novo Estoque</label>
-            <input type="number" id="correctedStock" name="corrected_stock" 
-                   class="form-control bg-dark text-white border-dark" 
-                   min="0" required>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label text-white fw-bold">Motivo da Correção</label>
-            <textarea id="correctionReason" name="correction_reason" 
-                      class="form-control bg-dark text-white border-dark" 
-                      rows="3" required 
-                      placeholder="Descreva o motivo da correção..."></textarea>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer bg-dark border-top border-secondary">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i>Cancelar
-        </button>
-        <button type="button" class="btn btn-success" onclick="saveCorrection()">
-          <i class="fas fa-save me-1"></i>Salvar Correção
-        </button>
       </div>
     </div>
   </div>
@@ -551,7 +528,7 @@ body {
 @media (max-width: 1200px) {
   .table-fixed th:nth-child(1),
   .table-fixed td:nth-child(1) {
-    width: 250px !important;
+    width: 200px !important;
   }
   .table-fixed th:nth-child(4),
   .table-fixed td:nth-child(4) {
@@ -571,19 +548,24 @@ body {
 </style>
 
 <script>
-function openCorrectionModal(sku, productId, currentStock) {
-  document.getElementById('productSku').value = sku;
-  document.getElementById('productId').value = productId;
-  document.getElementById('currentStock').value = currentStock;
-  document.getElementById('correctedStock').value = currentStock;
-  document.getElementById('correctionReason').value = '';
+function saveCorrection(productId) {
+  const correctedStock = document.getElementById('correctedStock_' + productId).value;
+  const correctionReason = document.getElementById('correctionReason_' + productId).value;
   
-  new bootstrap.Modal(document.getElementById('correctionModal')).show();
-}
-
-function saveCorrection() {
-  const form = document.getElementById('correctionForm');
-  const formData = new FormData(form);
+  if (!correctedStock || correctedStock < 0) {
+    alert('Por favor, informe um estoque válido.');
+    return;
+  }
+  
+  if (!correctionReason.trim()) {
+    alert('Por favor, informe o motivo da correção.');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('product_id', productId);
+  formData.append('corrected_stock', correctedStock);
+  formData.append('correction_reason', correctionReason);
   
   fetch('<%= save_item_correction_stock_correction_path(@stock_correction) %>', {
     method: 'POST',
