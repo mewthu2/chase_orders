@@ -1,6 +1,6 @@
 class StockCorrectionsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :finalize_correction, :execute_all, :update_shopify_stock, :save_item_correction, :reopen]
+  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :finalize_correction, :execute_all, :save_item_correction, :reopen]
   before_action :check_edit_permission, only: [:edit, :update, :save_item_correction]
 
   def index
@@ -77,8 +77,7 @@ class StockCorrectionsController < ApplicationController
                                        .limit(@per_page)
                                        .offset(offset)
   
-    # SEMPRE buscar estoque real da Shopify para todos os itens
-    fetch_real_time_stock_for_items(@processed_items)
+    # APENAS buscar estoque real da Shopify para o item pesquisado
     fetch_real_time_stock_for_items([@search_item].compact) if @search_item
   
     # Estatísticas
@@ -124,34 +123,57 @@ class StockCorrectionsController < ApplicationController
 
   def edit
     @location = @stock_correction.location
-  
+    
     # Paginação para o edit
     @per_page = 20
     @current_page = (params[:page] || 1).to_i
 
-    # Busca de produto específico
+    # Busca de produto específico - LÓGICA CORRIGIDA
     if params[:search_term].present?
       @search_term = params[:search_term].strip
       product = Product.find_by(sku: @search_term)
-    
-      if product
-        existing_item = @stock_correction.stock_correction_items.find_by(product: product)
       
-        if existing_item.nil?
-          current_stock = stock_for_location(product, @location)
+      if product
+        # Verificar se já existe um item COM CORREÇÃO para este produto
+        existing_item_with_correction = @stock_correction.stock_correction_items
+                                                         .where(product: product, needs_correction: true)
+                                                         .first
         
+        if existing_item_with_correction
+          # Se já tem correção, mostrar o item existente
+          @search_item = existing_item_with_correction
+        else
+          # Se não tem correção, buscar ou criar o item
+          existing_item = @stock_correction.stock_correction_items.find_by(product: product)
+          
+          if existing_item
+            # Item existe mas sem correção, usar o existente
+            @search_item = existing_item
+          else
+            # Item não existe, criar um novo
+            current_stock = stock_for_location(product, @location)
+            
+            @search_item = @stock_correction.stock_correction_items.build(
+              product: product,
+              current_stock: current_stock,
+              corrected_stock: current_stock,
+              needs_correction: false,
+              executed: false
+            )
+          end
+          
           # Buscar estoque real da Shopify
           real_stock = fetch_shopify_stock(product, @location)
-        
-          @search_item = @stock_correction.stock_correction_items.build(
-            product: product,
-            current_stock: current_stock,
-            corrected_stock: real_stock || current_stock
-          )
-          @search_item.real_stock = real_stock
-          @search_item.stock_source = real_stock ? 'shopify_real_time' : 'database_fallback'
-        else
-          @search_error = "Produto já foi adicionado à conferência"
+          @search_item.define_singleton_method(:real_stock) { real_stock || stock_for_location(product, @location) }
+          @search_item.define_singleton_method(:stock_source) do
+            if real_stock
+              'shopify_real_time'
+            elsif product.shopify_variant_id.present?
+              'database_fallback'
+            else
+              'no_shopify_id'
+            end
+          end
         end
       else
         @search_error = "Produto não encontrado"
@@ -170,8 +192,15 @@ class StockCorrectionsController < ApplicationController
                                        .limit(@per_page)
                                        .offset(offset)
   
-    # SEMPRE buscar estoque real da Shopify para todos os itens
-    fetch_real_time_stock_for_items(@processed_items)
+    # APENAS buscar estoque real da Shopify para o item pesquisado
+    fetch_real_time_stock_for_items([@search_item].compact) if @search_item
+    
+    # Estatísticas
+    @stats = {
+      total: @stock_correction.stock_correction_items.count,
+      corrections: @stock_correction.stock_correction_items.where(needs_correction: true).count,
+      executed: @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).count
+    }
   end
 
   def update
@@ -198,20 +227,27 @@ class StockCorrectionsController < ApplicationController
   def finalize_correction
     begin
       ActiveRecord::Base.transaction do
-        # Atualizar status
+        # Executar todas as correções pendentes primeiro
+        pending_items = @stock_correction.stock_correction_items.where(needs_correction: true, executed: false)
+        executed_count = 0
+        
+        pending_items.each do |item|
+          if item.update(executed: true, executed_at: Time.current)
+            executed_count += 1
+          end
+        end
+        
+        # Atualizar status da conferência
         @stock_correction.update!(status: 'executed', executed_at: Time.current)
         
-        # Sincronizar todos os itens com a Shopify que precisam de correção
-        @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).each do |item|
-          sync_item_with_shopify(item)
-        end
+        # Mensagem de sucesso
+        redirect_to stock_corrections_path, 
+                    notice: "Conferência finalizada com sucesso! #{executed_count} correções executadas. A integração será feita em tempo real."
       end
-      
-      redirect_to stock_corrections_path, notice: 'Conferência finalizada e sincronizada com sucesso!'
     rescue => e
       Rails.logger.error "Erro ao finalizar conferência: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      redirect_to stock_corrections_path, 
+      redirect_to edit_stock_correction_path(@stock_correction), 
                   alert: "Erro ao finalizar conferência: #{e.message}"
     end
   end
@@ -243,49 +279,37 @@ class StockCorrectionsController < ApplicationController
                 notice: "#{executed_count} correções executadas com sucesso!"
   end
 
-  def update_shopify_stock
-    synced_count = 0
-    errors = []
-    
-    @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).each do |item|
-      begin
-        sync_item_with_shopify(item)
-        synced_count += 1
-      rescue => e
-        errors << "#{item.product.sku}: #{e.message}"
-      end
-    end
-    
-    if errors.any?
-      redirect_to edit_stock_correction_path(@stock_correction), 
-                  alert: "Sincronizados: #{synced_count}. Erros: #{errors.join(', ')}"
-    else
-      redirect_to edit_stock_correction_path(@stock_correction), 
-                  notice: "#{synced_count} produtos sincronizados com a Shopify!"
-    end
-  end
-
   def save_item_correction
-    item_id = params[:item_id]
-    action_type = params[:action_type]
-    corrected_stock = params[:corrected_stock]
+    product_id = params[:product_id]
+    corrected_stock = params[:corrected_stock].to_i
     correction_reason = params[:correction_reason]
 
-    item = @stock_correction.stock_correction_items.find(item_id)
+    # Buscar ou criar o item da conferência
+    item = @stock_correction.stock_correction_items.find_or_initialize_by(product_id: product_id)
     
-    case action_type
-    when 'correction'
-      item.update!(
-        needs_correction: true,
-        corrected_stock: corrected_stock.to_i,
-        correction_reason: correction_reason,
-        executed: true,
-        executed_at: Time.current
-      )
+    if item.new_record?
+      # Se é um novo item, definir o estoque atual
+      product = Product.find(product_id)
+      current_stock = stock_for_location(product, @stock_correction.location)
+      item.current_stock = current_stock
     end
 
-    render json: { success: true, message: 'Item processado com sucesso!' }
+    # Atualizar com a correção
+    item.assign_attributes(
+      corrected_stock: corrected_stock,
+      correction_reason: correction_reason,
+      needs_correction: true,
+      executed: true,
+      executed_at: Time.current
+    )
+
+    if item.save
+      render json: { success: true, message: 'Item processado com sucesso!' }
+    else
+      render json: { success: false, message: item.errors.full_messages.join(', ') }
+    end
   rescue => e
+    Rails.logger.error "Erro ao salvar correção: #{e.message}"
     render json: { success: false, message: e.message }
   end
 
@@ -400,7 +424,6 @@ class StockCorrectionsController < ApplicationController
         raise StandardError, result[:message]
       end
     rescue => e
-      # CORRIGIDO: usar shopify_sync_error ao invés de shopify_sync_message
       item.update!(
         shopify_sync_status: 'error',
         shopify_sync_error: e.message,

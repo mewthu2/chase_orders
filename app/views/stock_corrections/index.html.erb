@@ -135,7 +135,7 @@
                       </td>
                       <td class="px-4 py-3 text-center">
                         <span class="badge bg-info text-dark px-2 py-1">
-                          <%= correction.stock_correction_items.count %> itens
+                          <%= correction.stock_correction_items.where(needs_correction: true).count %> corrigidos
                         </span>
                       </td>
                       <td class="px-4 py-3 text-center">

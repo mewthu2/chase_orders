@@ -8,19 +8,24 @@
             Conferência #<%= @stock_correction.id %> - <%= location_display_name(@stock_correction.location) %>
           </h4>
           <div class="d-flex gap-2">
-            <% if @stock_correction.stock_correction_items.where(needs_correction: true, executed: true).any? %>
-              <%= link_to update_shopify_stock_stock_correction_path(@stock_correction), method: :post,
-                          class: "btn btn-sm btn-warning text-dark",
-                          confirm: "Deseja atualizar o estoque na Shopify?" do %>
-                <i class="fab fa-shopify me-1"></i>Integrar Shopify
+            <% if @stock_correction.status != 'executed' %>
+              <% if @stock_correction.stock_correction_items.where(needs_correction: true, executed: false).any? %>
+                <%= link_to execute_all_stock_correction_path(@stock_correction), method: :post,
+                            class: "btn btn-sm btn-info text-dark",
+                            confirm: "Deseja executar todas as correções pendentes?" do %>
+                  <i class="fas fa-play me-1"></i>Executar Todas
+                <% end %>
               <% end %>
-            <% end %>
-            <% if @stock_correction.stock_correction_items.where(needs_correction: true, executed: false).any? %>
-              <%= link_to execute_all_stock_correction_path(@stock_correction), method: :post,
+              <%= link_to finalize_correction_stock_correction_path(@stock_correction), 
+                          method: :patch,
                           class: "btn btn-sm btn-success text-dark",
-                          confirm: "Deseja executar todas as correções pendentes?" do %>
-                <i class="fas fa-play me-1"></i>Executar Todas
+                          data: { confirm: "Tem certeza que deseja finalizar esta conferência?" } do %>
+                <i class="fas fa-check me-1"></i>Finalizar
               <% end %>
+            <% else %>
+              <span class="badge bg-success text-dark px-3 py-2">
+                <i class="fas fa-check-circle me-1"></i>Conferência Finalizada
+              </span>
             <% end %>
             <%= link_to edit_stock_correction_path(@stock_correction), class: "btn btn-sm btn-info text-dark" do %>
               <i class="fas fa-edit me-1"></i>Editar
@@ -252,10 +257,9 @@
                 <thead class="bg-dark">
                   <tr>
                     <th class="text-white fw-bold px-3 py-3" style="width: 300px;">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Atual</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Estoque Corrigido</th>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Status</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Estoque Corrigido</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Motivo</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 150px;">Sincronização</th>
                   </tr>
                 </thead>
@@ -275,12 +279,7 @@
                           <% end %>
                         </div>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
-                        <span class="badge <%= stock_badge_class(item.real_stock) %> px-2 py-1">
-                          <%= item.real_stock %> un.
-                        </span>
-                      </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <td class="px-3 py-3 text-center" style="width: 150px;">
                         <% if item.needs_correction? %>
                           <span class="badge bg-warning text-dark px-2 py-1">
                             <i class="fas fa-edit me-1"></i>Corrigido
@@ -291,14 +290,14 @@
                           </span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 120px;">
+                      <td class="px-3 py-3 text-center" style="width: 150px;">
                         <% if item.needs_correction? %>
                           <span class="badge bg-success text-dark px-2 py-1"><%= item.corrected_stock %> un.</span>
                         <% else %>
                           <span class="text-white-50">-</span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3" style="width: 200px;">
+                      <td class="px-3 py-3" style="width: 250px;">
                         <% if item.needs_correction? %>
                           <small class="text-success">
                             <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 25) %>
@@ -382,7 +381,6 @@
   </div>
 </div>
 
-<% content_for :styles do %>
 <style>
 body {
   background-color: #121212;
@@ -428,7 +426,7 @@ body {
 }
 
 .table-fixed td:nth-child(1),
-.table-fixed td:nth-child(5) {
+.table-fixed td:nth-child(4) {
   white-space: normal;
   word-wrap: break-word;
 }
@@ -483,8 +481,8 @@ body {
   .table-fixed td:nth-child(1) {
     width: 250px !important;
   }
-  .table-fixed th:nth-child(5),
-  .table-fixed td:nth-child(5) {
+  .table-fixed th:nth-child(4),
+  .table-fixed td:nth-child(4) {
     width: 150px !important;
   }
 }
@@ -499,4 +497,3 @@ body {
   }
 }
 </style>
-<% end %>
