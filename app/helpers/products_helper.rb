@@ -1,79 +1,81 @@
 module ProductsHelper
-  def location_name(location_key)
-    User.location_name(location_key)
+  def format_product_name(product)
+    return "Produto sem nome" unless product.shopify_product_name.present?
+    
+    # Extrair a variante do SKU (última parte após o último hífen)
+    variant = product.sku.split('-').last if product.sku.present?
+    
+    if variant.present? && variant.length <= 3 # Assumindo que variantes são curtas (G, M, P, etc.)
+      "#{product.shopify_product_name} - #{variant} (SKU: #{product.sku})"
+    else
+      "#{product.shopify_product_name} (SKU: #{product.sku})"
+    end
+  end
+
+  def format_product_name_for_correction(product)
+    return "Produto sem nome" unless product.shopify_product_name.present?
+    
+    # Extrair a variante do SKU (última parte após o último hífen)
+    variant = product.sku.split('-').last if product.sku.present?
+    
+    if variant.present? && variant.length <= 3 # Assumindo que variantes são curtas (G, M, P, etc.)
+      "#{product.shopify_product_name} - #{variant}"
+    else
+      product.shopify_product_name
+    end
   end
 
   def get_stock_for_location(product, location)
-    # Priorizar estoque real da Shopify se disponível
-    return product.real_stock if product.respond_to?(:real_stock)
-    
-    # Fallback para estoque do banco
     case location
     when 'lagoa_seca'
-      product.stock_lagoa_seca&.to_i || 0
+      product.stock_lagoa_seca
     when 'bh_shopping'
-      product.stock_bh_shopping&.to_i || 0
+      product.stock_bh_shopping
     when 'rj'
-      product.stock_rj&.to_i || 0
-    when 'log'
-      product.stock_log&.to_i || 0
+      product.stock_rj
     else
-      0
+      nil
     end
   end
 
   def stock_badge_class(stock)
-    stock_value = stock.to_i
-    return 'bg-danger' if stock.nil? || stock_value == 0
-    return 'bg-warning' if stock_value < 10
-    'bg-success'
-  end
-
-  def stock_status_text(stock)
-    stock_value = stock.to_i
-    return 'Sem estoque' if stock.nil? || stock_value == 0
-    return 'Estoque baixo' if stock_value < 10
-    'Estoque normal'
-  end
-
-  def format_product_name(product)
-    if product.shopify_product_name.present?
-      product.shopify_product_name
+    return 'bg-secondary' if stock.nil?
+    
+    case stock.to_i
+    when 0
+      'bg-danger'
+    when 1..5
+      'bg-warning'
+    when 6..20
+      'bg-info'
     else
-      "Produto #{product.sku}"
+      'bg-success'
     end
   end
 
   def stock_icon_class(stock)
-    stock_value = stock.to_i
-    return 'fas fa-times-circle text-danger' if stock.nil? || stock_value == 0
-    return 'fas fa-exclamation-triangle text-warning' if stock_value < 10
-    'fas fa-check-circle text-success'
+    return 'fas fa-question-circle text-secondary' if stock.nil?
+    
+    case stock.to_i
+    when 0
+      'fas fa-times-circle text-danger'
+    when 1..5
+      'fas fa-exclamation-triangle text-warning'
+    when 6..20
+      'fas fa-info-circle text-info'
+    else
+      'fas fa-check-circle text-success'
+    end
   end
 
   def stock_source_indicator(product)
-    if product.respond_to?(:stock_source)
-      case product.stock_source
-      when 'real_time'
-        content_tag :small, class: "text-success" do
-          content_tag(:i, "", class: "fas fa-sync me-1") + "Tempo Real"
-        end
-      when 'fallback'
-        content_tag :small, class: "text-warning" do
-          content_tag(:i, "", class: "fas fa-database me-1") + "Cache Local"
-        end
-      when 'no_shopify_id'
-        content_tag :small, class: "text-danger" do
-          content_tag(:i, "", class: "fas fa-exclamation-triangle me-1") + "Sem Shopify ID"
-        end
-      else
-        content_tag :small, class: "text-info" do
-          content_tag(:i, "", class: "fas fa-question me-1") + "Desconhecido"
-        end
+    if product.shopify_inventory_item_id.present?
+      content_tag :span, class: "badge bg-success text-dark px-2 py-1" do
+        content_tag(:i, "", class: "fab fa-shopify me-1") + "Shopify"
       end
     else
-      content_tag :small, class: "text-secondary" do
-        content_tag(:i, "", class: "fas fa-database me-1") + "Banco de Dados"
+      content_tag :span, class: "badge bg-secondary text-white px-2 py-1" do
+        content_tag(:i, "", class: "fas fa-database me-1") + "Local"
       end
     end
   end

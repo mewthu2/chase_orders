@@ -53,7 +53,7 @@
               </div>
               <div class="col-md-3">
                 <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-warning mb-2">Em Andamento</span>
+                  <span class="badge bg-warning text-dark mb-2">Em Andamento</span>
                   <h6 class="text-warning">Processando</h6>
                   <small class="text-white-50">Produtos sendo conferidos e corrigidos</small>
                 </div>
@@ -67,7 +67,7 @@
               </div>
               <div class="col-md-3">
                 <div class="text-center p-3 border border-secondary rounded">
-                  <span class="badge bg-success mb-2">Sincronizada</span>
+                  <span class="badge bg-success text-dark mb-2">Sincronizada</span>
                   <h6 class="text-success">Completa</h6>
                   <small class="text-white-50">Dados sincronizados com a Shopify</small>
                 </div>
@@ -106,25 +106,25 @@
           <div class="row">
             <div class="col-md-3">
               <div class="text-center p-3">
-                <h4 class="text-info mb-1"><%= @stock_corrections.count %></h4>
+                <h4 class="text-info mb-1"><%= @total_corrections %></h4>
                 <small class="text-white">Total de Conferências</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="text-center p-3">
-                <h4 class="text-warning mb-1"><%= @stock_corrections.where(status: 'pending').count %></h4>
+                <h4 class="text-warning mb-1"><%= @pending_corrections %></h4>
                 <small class="text-white">Em Andamento</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="text-center p-3">
-                <h4 class="text-success mb-1"><%= @stock_corrections.where(status: 'completed').count %></h4>
+                <h4 class="text-success mb-1"><%= @completed_corrections %></h4>
                 <small class="text-white">Concluídas</small>
               </div>
             </div>
             <div class="col-md-3">
               <div class="text-center p-3">
-                <h4 class="text-primary mb-1"><%= @stock_corrections.joins(:stock_correction_items).where(stock_correction_items: { executed: true }).distinct.count %></h4>
+                <h4 class="text-primary mb-1"><%= @synced_corrections %></h4>
                 <small class="text-white">Sincronizadas</small>
               </div>
             </div>
@@ -198,27 +198,23 @@
                       
                       <td class="px-3 py-3 text-center">
                         <% corrections_count = correction.items_to_correct.count %>
-                        <span class="badge <%= corrections_count > 0 ? 'bg-warning' : 'bg-success' %> text-white px-2 py-1">
+                        <span class="badge <%= corrections_count > 0 ? 'bg-warning text-dark' : 'bg-success text-dark' %> px-2 py-1">
                           <%= corrections_count %> correções
                         </span>
                       </td>
                       
                       <td class="px-3 py-3 text-center">
-                        <% if correction.items_to_correct.where(executed: true).count == correction.items_to_correct.count && correction.items_to_correct.any? %>
-                          <span class="badge bg-success text-white px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Concluída
+                        <% if correction.status == 'executed' %>
+                          <span class="badge bg-success text-dark px-2 py-1">
+                            <i class="fas fa-check me-1"></i>Finalizada
                           </span>
                         <% elsif correction.items_to_correct.where(executed: true).any? %>
                           <span class="badge bg-info text-dark px-2 py-1">
-                            <i class="fas fa-clock me-1"></i>Parcial
-                          </span>
-                        <% elsif correction.items_to_correct.any? %>
-                          <span class="badge bg-warning text-white px-2 py-1">
-                            <i class="fas fa-hourglass-half me-1"></i>Pendente
+                            <i class="fas fa-clock me-1"></i>Em Andamento
                           </span>
                         <% else %>
                           <span class="badge bg-secondary text-white px-2 py-1">
-                            <i class="fas fa-minus me-1"></i>Sem correções
+                            <i class="fas fa-hourglass-half me-1"></i>Pendente
                           </span>
                         <% end %>
                       </td>
@@ -231,16 +227,18 @@
                             <i class="fas fa-eye"></i>
                           <% end %>
                           
-                          <%= link_to edit_stock_correction_path(correction), 
-                                      class: "btn btn-sm btn-warning",
-                                      title: "Editar conferência" do %>
-                            <i class="fas fa-edit"></i>
+                          <% if correction.status != 'executed' || current_user.admin? %>
+                            <%= link_to edit_stock_correction_path(correction), 
+                                        class: "btn btn-sm btn-warning text-dark",
+                                        title: "Editar conferência" do %>
+                              <i class="fas fa-edit"></i>
+                            <% end %>
                           <% end %>
                           
                           <% if correction.items_to_correct.any? && correction.items_to_correct.where(executed: false).any? %>
                             <%= link_to execute_all_stock_correction_path(correction), 
                                         method: :post,
-                                        class: "btn btn-sm btn-success",
+                                        class: "btn btn-sm btn-success text-dark",
                                         title: "Executar todas as correções",
                                         confirm: "Deseja executar todas as correções pendentes?" do %>
                               <i class="fas fa-play"></i>

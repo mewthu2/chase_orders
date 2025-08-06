@@ -38,7 +38,7 @@ Rails.application.routes.draw do
       post :sync_item_with_shopify
       post :integrate_item_correction
       post :save_item_correction
-      post :finalize_correction
+      get :finalize_correction
       get :debug_locations
       get :check_shopify_inventory
     end

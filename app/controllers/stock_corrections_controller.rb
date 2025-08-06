@@ -1,6 +1,7 @@
 class StockCorrectionsController < ApplicationController
   before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :execute_all, :execute_item, :update_shopify_stock, :sync_item_with_shopify, :integrate_item_correction, :debug_locations, :check_shopify_inventory, :finalize_correction, :save_item_correction]
   before_action :check_location_permission, only: [:new, :create, :show, :edit]
+  before_action :check_edit_permission, only: [:edit, :update]
   
   def index
     # Filtrar correções por location se não for admin
@@ -14,6 +15,16 @@ class StockCorrectionsController < ApplicationController
     
     @stock_corrections = corrections_query.order(created_at: :desc)
                                          .page(params[:page])
+    
+    # Calcular estatísticas corretas
+    @total_corrections = @stock_corrections.count
+    @pending_corrections = @stock_corrections.where(status: ['pending', nil]).count
+    @completed_corrections = @stock_corrections.where(status: 'executed').count
+    @synced_corrections = @stock_corrections.joins(:stock_correction_items)
+                                           .where(stock_correction_items: { 
+                                             last_shopify_sync_at: Time.zone.now.beginning_of_day..Time.zone.now.end_of_day 
+                                           })
+                                           .distinct.count
   end
   
   def show
@@ -567,6 +578,14 @@ class StockCorrectionsController < ApplicationController
     end
   end
   
+  def check_edit_permission
+    # Se a conferência foi finalizada e o usuário não é admin, não pode editar
+    if @stock_correction.status == 'executed' && !current_user.admin?
+      flash[:alert] = "Esta conferência foi finalizada e não pode mais ser editada. Apenas administradores podem editar conferências finalizadas."
+      redirect_to @stock_correction and return
+    end
+  end
+  
   def stock_correction_params
     params.require(:stock_correction).permit(
       :correction_date, :reason, :location, :notes
@@ -646,7 +665,12 @@ class StockCorrectionsController < ApplicationController
     begin
       store_type = item.stock_correction.location
       
+      # Usar StockService ou criar um service específico para atualização
+      # Por enquanto, simular a atualização
       Rails.logger.info "Atualizando Shopify: #{item.product.sku} para #{item.corrected_stock} na #{store_type}"
+      
+      # Aqui você implementaria a chamada real para a API do Shopify
+      # usando seu ShopifyIntegrationService ou similar
       
       { success: true, message: 'Atualizado com sucesso' }
     rescue => e

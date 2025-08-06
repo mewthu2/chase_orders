@@ -1,89 +1,50 @@
-<div id="loadingOverlay" class="loading-overlay">
-  <div class="loading-content">
-    <div class="loading-spinner">
-      <div class="spinner-ring"></div>
-      <div class="spinner-ring"></div>
-      <div class="spinner-ring"></div>
-      <div class="spinner-ring"></div>
-    </div>
-    <div class="loading-text">
-      <h4 class="text-white mb-2">Processando...</h4>
-      <p class="text-white-50 mb-0" id="loadingMessage">Consultando estoque em tempo real via StockService...</p>
+<div class="container-fluid py-4">
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-content">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Carregando...</span>
+      </div>
+      <p class="mt-3 text-white">Carregando produtos...</p>
     </div>
   </div>
-</div>
 
-<div class="container-fluid py-4">
-  <% content_for :title, 'Controle de Estoque' %>
-  <%= render 'layouts/partials/messages' if defined?(render) %>
-
-  <!-- Tutorial/Ajuda -->
+  <!-- Header -->
   <div class="row mb-4">
     <div class="col-12">
-      <div class="card bg-black border border-primary shadow-lg">
-        <div class="card-header bg-primary">
-          <div class="d-flex justify-content-between align-items-center">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-question-circle me-2"></i>Como usar o Controle de Estoque
-            </h6>
-            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpCollapse">
-              <i class="fas fa-chevron-down"></i>
-            </button>
-          </div>
-        </div>
-        <div class="collapse" id="helpCollapse">
-          <div class="card-body bg-black">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="help-item">
-                  <div class="help-icon bg-primary">
-                    <i class="fas fa-search"></i>
-                  </div>
-                  <div class="help-content">
-                    <h6 class="text-white mb-1">Buscar Produtos</h6>
-                    <small class="text-primary">Digite ID, SKU, Inventory Item ID ou Custo para encontrar produtos específicos</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="help-item">
-                  <div class="help-icon bg-warning">
-                    <i class="fas fa-clipboard-check"></i>
-                  </div>
-                  <div class="help-content">
-                    <h6 class="text-white mb-1">Nova Conferência</h6>
-                    <small class="text-primary">Inicia uma conferência de estoque para verificar e corrigir divergências</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="help-item">
-                  <div class="help-icon bg-info">
-                    <i class="fas fa-history"></i>
-                  </div>
-                  <div class="help-content">
-                    <h6 class="text-white mb-1">Histórico</h6>
-                    <small class="text-primary">Visualiza todas as conferências realizadas e seus resultados</small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="help-item">
-                  <div class="help-icon bg-success">
-                    <i class="fas fa-sync"></i>
-                  </div>
-                  <div class="help-content">
-                    <h6 class="text-white mb-1">Atualizar</h6>
-                    <small class="text-primary">Recarrega a página com dados atualizados em tempo real da Shopify</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="mt-3 pt-3 border-top border-secondary">
-              <div class="d-flex align-items-center text-info">
-                <i class="fas fa-lightbulb me-2"></i>
-                <small><strong>Dica:</strong> O estoque é consultado em tempo real da Shopify para garantir precisão máxima!</small>
-              </div>
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap">
+          <h4 class="text-white mb-0">
+            <i class="fas fa-boxes me-2"></i>Inventário de Produtos
+          </h4>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="badge bg-info text-dark px-3 py-2">
+              <i class="fas fa-cube me-1"></i>
+              <span id="total-products">0</span> produtos
+            </span>
+            <div class="dropdown">
+              <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-plus me-1"></i>Nova Conferência
+              </button>
+              <ul class="dropdown-menu dropdown-menu-dark">
+                <% if current_user.admin? %>
+                  <li><%= link_to new_stock_correction_path(location: 'lagoa_seca'), class: "dropdown-item" do %>
+                    <i class="fas fa-map-marker-alt me-2"></i>Lagoa Seca
+                  <% end %></li>
+                  <li><%= link_to new_stock_correction_path(location: 'bh_shopping'), class: "dropdown-item" do %>
+                    <i class="fas fa-map-marker-alt me-2"></i>BH Shopping
+                  <% end %></li>
+                  <li><%= link_to new_stock_correction_path(location: 'rj'), class: "dropdown-item" do %>
+                    <i class="fas fa-map-marker-alt me-2"></i>Rio de Janeiro
+                  <% end %></li>
+                <% else %>
+                  <% current_user.available_locations_for_user.each do |location| %>
+                    <li><%= link_to new_stock_correction_path(location: location.code), class: "dropdown-item" do %>
+                      <i class="fas fa-map-marker-alt me-2"></i><%= location.name %>
+                    <% end %></li>
+                  <% end %>
+                <% end %>
+              </ul>
             </div>
           </div>
         </div>
@@ -91,246 +52,358 @@
     </div>
   </div>
 
-  <!-- Busca e Filtros -->
+  <!-- Filtros -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-search me-2"></i>Buscar Produtos
-            <small class="text-success ms-2">
-              <i class="fas fa-database me-1"></i>Busca por ID, SKU, Inventory Item ID ou Custo
-            </small>
-          </h5>
-          <div class="d-flex gap-2">
-            <%= link_to new_stock_correction_path(location: @selected_location), class: "btn btn-sm btn-warning",
-                        title: "Criar nova conferência de estoque para verificar divergências" do %>
-              <i class="fas fa-clipboard-check me-1"></i>Nova Conferência
-            <% end %>
-            <%= link_to stock_corrections_path, class: "btn btn-sm btn-info text-dark",
-                        title: "Ver histórico de todas as conferências realizadas" do %>
-              <i class="fas fa-history me-1"></i>Histórico
-            <% end %>
-            <%= link_to inventory_products_path(location: @selected_location, search_term: @search_term, page: @current_page), 
-                        class: "btn btn-sm btn-primary", id: "refreshBtn",
-                        title: "Atualizar dados em tempo real da Shopify" do %>
-              <i class="fas fa-sync me-1"></i>Atualizar
-            <% end %>
-          </div>
-        </div>
         <div class="card-body bg-black">
-          <%= form_with url: search_inventory_products_path, method: :post, local: true, class: "row g-3 align-items-end", id: "searchForm" do |f| %>
-            <div class="col-md-8">
+          <form id="search-form" class="row g-3 align-items-end">
+            <div class="col-md-4">
               <label class="form-label text-white fw-bold">Buscar Produto</label>
               <div class="input-group">
                 <span class="input-group-text bg-dark border-dark text-white">
                   <i class="fas fa-search"></i>
                 </span>
-                <%= f.text_field :search_term, 
-                                 placeholder: "Digite ID, SKU, Inventory Item ID ou Custo...", 
-                                 value: @search_term,
-                                 class: "form-control bg-dark text-white border-dark" %>
+                <input type="text" 
+                       id="search-input" 
+                       class="form-control bg-dark text-white border-dark" 
+                       placeholder="Digite SKU ou nome do produto...">
               </div>
-              <small class="text-white-50 mt-1">
-                <i class="fas fa-info-circle me-1"></i>
-                Busca por ID, SKU, Shopify Inventory Item ID ou Custo
-              </small>
             </div>
             
-            <div class="col-md-3">
+            <div class="col-md-2">
               <label class="form-label text-white fw-bold">Location</label>
-              <div class="input-group">
-                <span class="input-group-text bg-dark border-dark text-white">
-                  <i class="fas fa-map-marker-alt"></i>
-                </span>
-                <%= f.select :location, 
-                             options_for_select(current_user.available_locations_for_user, @selected_location),
-                             {},
-                             { class: "form-select bg-dark text-white border-dark" } %>
-              </div>
-              <% unless current_user.admin? %>
-                <small class="text-white-50 mt-1">
-                  <i class="fas fa-lock me-1"></i>
-                  Locations permitidas para seu usuário
-                </small>
-              <% end %>
+              <select id="location-filter" class="form-select bg-dark text-white border-dark">
+                <option value="">Todas</option>
+                <% if current_user.admin? %>
+                  <option value="lagoa_seca">Lagoa Seca</option>
+                  <option value="bh_shopping">BH Shopping</option>
+                  <option value="rj">Rio de Janeiro</option>
+                <% else %>
+                  <% current_user.available_locations_for_user.each do |location| %>
+                    <option value="<%= location.code %>"><%= location.name %></option>
+                  <% end %>
+                <% end %>
+              </select>
             </div>
             
-            <div class="col-md-1">
-              <%= f.submit "Buscar", class: "btn btn-primary w-100", id: "searchBtn" %>
+            <div class="col-md-2">
+              <label class="form-label text-white fw-bold">Estoque</label>
+              <select id="stock-filter" class="form-select bg-dark text-white border-dark">
+                <option value="">Todos</option>
+                <option value="zero">Zerado</option>
+                <option value="low">Baixo (1-5)</option>
+                <option value="normal">Normal (6+)</option>
+              </select>
             </div>
-          <% end %>
+            
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-search me-1"></i>Buscar
+              </button>
+            </div>
+            
+            <div class="col-md-2">
+              <button type="button" id="clear-filters" class="btn btn-outline-light w-100">
+                <i class="fas fa-times me-1"></i>Limpar
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Lista de Produtos -->
+  <!-- Resultados -->
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h5 class="text-white mb-0">
-            <i class="fas fa-boxes me-2"></i>Produtos - <%= User.location_name(@selected_location) %>
-            <small class="text-success ms-2">
-              <i class="fas fa-sync me-1"></i>Tempo Real
-            </small>
+            <i class="fas fa-list me-2"></i>Produtos Encontrados
           </h5>
-          <div class="d-flex align-items-center gap-3">
-            <% if @search_term.present? %>
-              <span class="badge bg-info text-dark px-3 py-2">
-                <i class="fas fa-filter me-1"></i>Filtrado: "<%= @search_term %>"
-              </span>
-            <% end %>
-            <span class="badge bg-primary text-white px-3 py-2">
-              Página <%= @current_page %> de <%= @total_pages %>
-            </span>
+          <div id="results-info" class="text-white-50">
+            <!-- Informações dos resultados serão inseridas aqui -->
           </div>
         </div>
+        
         <div class="card-body bg-black p-0">
-          <% if @products.any? %>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0">
-                <thead class="bg-dark">
-                  <tr>
-                    <th class="text-white fw-bold px-4 py-3">ID</th>
-                    <th class="text-white fw-bold px-4 py-3">SKU</th>
-                    <th class="text-white fw-bold px-4 py-3">Nome do Produto</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Estoque</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Fonte</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @products.each do |product| %>
-                    <% stock = get_stock_for_location(product, @selected_location) %>
-                    <tr class="border-secondary">
-                      <td class="px-4 py-3">
-                        <span class="text-white-50">#<%= product.id %></span>
-                      </td>
-                      <td class="px-4 py-3">
-                        <span class="font-monospace text-white fw-medium"><%= product.sku %></span>
-                      </td>
-                      <td class="px-4 py-3">
-                        <div>
-                          <span class="text-white fw-medium d-block"><%= format_product_name(product) %>
-                          </span>
-                          <% if product.shopify_inventory_item_id.present? %>
-                            <small class="text-white-50">
-                              <i class="fab fa-shopify me-1"></i>
-                              Item ID: <%= product.shopify_inventory_item_id %>
-                            </small>
-                          <% end %>
-                        </div>
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <span class="badge <%= stock_badge_class(stock) %> text-white px-3 py-2">
-                          <%= stock.present? ? "#{stock} unidades" : "N/A" %>
-                        </span>
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <i class="<%= stock_icon_class(stock) %> fa-lg"></i>
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <%= stock_source_indicator(product) %>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% else %>
+          <div id="products-container">
+            <!-- Produtos serão carregados aqui via JavaScript -->
             <div class="text-center py-5">
               <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
-              <h5 class="text-white-50">Nenhum produto encontrado</h5>
-              <% if @search_term.present? %>
-                <p class="text-white-50">
-                  Nenhum resultado para "<strong><%= @search_term %></strong>"
-                </p>
-                <%= link_to inventory_products_path(location: @selected_location), class: "btn btn-outline-light" do %>
-                  <i class="fas fa-times me-2"></i>Limpar Filtros
-                <% end %>
-              <% else %>
-                <p class="text-white-50">Não há produtos cadastrados no sistema</p>
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-
-        <!-- Paginação -->
-        <% if @total_pages > 1 %>
-          <div class="card-footer bg-dark border-top border-secondary">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-              <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_products].min %> de <%= @total_products %> produtos
-                <% if @search_term.present? %>
-                  <span class="text-info">(filtrados)</span>
-                <% end %>
-                <small class="text-success d-block">
-                  <i class="fas fa-sync me-1"></i>Estoque atualizado em tempo real da Shopify
-                </small>
-              </div>
-              <div class="d-flex gap-2 flex-wrap">
-                <!-- Botão Anterior -->
-                <% if @current_page > 1 %>
-                  <%= link_to inventory_products_path(location: @selected_location, search_term: @search_term, page: @current_page - 1),
-                              class: "btn btn-outline-light btn-sm pagination-btn" do %>
-                    <i class="fas fa-chevron-left"></i> Anterior
-                  <% end %>
-                <% else %>
-                  <button class="btn btn-outline-light btn-sm" disabled>
-                    <i class="fas fa-chevron-left"></i> Anterior
-                  </button>
-                <% end %>
-
-                <!-- Números das páginas -->
-                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
-                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
-
-                <% if page_start > 1 %>
-                  <%= link_to "1", inventory_products_path(location: @selected_location, search_term: @search_term, page: 1),
-                              class: "btn btn-outline-light btn-sm pagination-btn" %>
-                  <% if page_start > 2 %>
-                    <span class="btn btn-outline-light btn-sm disabled">...</span>
-                  <% end %>
-                <% end %>
-
-                <% (page_start..page_end).each do |page_num| %>
-                  <% if page_num == @current_page %>
-                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
-                  <% else %>
-                    <%= link_to page_num, inventory_products_path(location: @selected_location, search_term: @search_term, page: page_num),
-                                class: "btn btn-outline-light btn-sm pagination-btn" %>
-                  <% end %>
-                <% end %>
-
-                <% if page_end < @total_pages %>
-                  <% if page_end < @total_pages - 1 %>
-                    <span class="btn btn-outline-light btn-sm disabled">...</span>
-                  <% end %>
-                  <%= link_to @total_pages, inventory_products_path(location: @selected_location, search_term: @search_term, page: @total_pages),
-                              class: "btn btn-outline-light btn-sm pagination-btn" %>
-                <% end %>
-
-                <!-- Botão Próxima -->
-                <% if @current_page < @total_pages %>
-                  <%= link_to inventory_products_path(location: @selected_location, search_term: @search_term, page: @current_page + 1),
-                              class: "btn btn-outline-light btn-sm pagination-btn" do %>
-                    Próxima <i class="fas fa-chevron-right"></i>
-                  <% end %>
-                <% else %>
-                  <button class="btn btn-outline-light btn-sm" disabled>
-                    Próxima <i class="fas fa-chevron-right"></i>
-                  </button>
-                <% end %>
-              </div>
+              <h5 class="text-white-50">Use os filtros acima para buscar produtos</h5>
+              <p class="text-white-50">Digite um SKU ou nome do produto para começar</p>
             </div>
           </div>
-        <% end %>
+        </div>
+        
+        <!-- Paginação -->
+        <div id="pagination-container" class="card-footer bg-dark border-top border-secondary" style="display: none;">
+          <!-- Paginação será inserida aqui via JavaScript -->
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let currentFilters = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchForm = document.getElementById('search-form');
+  const searchInput = document.getElementById('search-input');
+  const locationFilter = document.getElementById('location-filter');
+  const stockFilter = document.getElementById('stock-filter');
+  const clearFiltersBtn = document.getElementById('clear-filters');
+  
+  // Event listeners
+  searchForm.addEventListener('submit', handleSearch);
+  clearFiltersBtn.addEventListener('click', clearFilters);
+  
+  // Auto-search on input change (com debounce)
+  let searchTimeout;
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      if (searchInput.value.length >= 2 || searchInput.value.length === 0) {
+        handleSearch();
+      }
+    }, 500);
+  });
+  
+  locationFilter.addEventListener('change', handleSearch);
+  stockFilter.addEventListener('change', handleSearch);
+});
+
+function handleSearch(event) {
+  if (event) event.preventDefault();
+  
+  currentPage = 1;
+  currentFilters = {
+    search: document.getElementById('search-input').value,
+    location: document.getElementById('location-filter').value,
+    stock: document.getElementById('stock-filter').value
+  };
+  
+  loadProducts();
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('location-filter').value = '';
+  document.getElementById('stock-filter').value = '';
+  
+  currentPage = 1;
+  currentFilters = {};
+  
+  // Mostrar mensagem inicial
+  document.getElementById('products-container').innerHTML = `
+    <div class="text-center py-5">
+      <i class="fas fa-search fa-3x text-white-50 mb-3"></i>
+      <h5 class="text-white-50">Use os filtros acima para buscar produtos</h5>
+      <p class="text-white-50">Digite um SKU ou nome do produto para começar</p>
+    </div>
+  `;
+  
+  document.getElementById('results-info').innerHTML = '';
+  document.getElementById('pagination-container').style.display = 'none';
+  document.getElementById('total-products').textContent = '0';
+}
+
+function loadProducts() {
+  showLoading();
+  
+  const params = new URLSearchParams({
+    page: currentPage,
+    ...currentFilters
+  });
+  
+  fetch(`/products/inventory?${params}`, {
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    hideLoading();
+    displayProducts(data.products);
+    updatePagination(data.pagination);
+    updateResultsInfo(data.pagination);
+    document.getElementById('total-products').textContent = data.pagination.total_count;
+  })
+  .catch(error => {
+    hideLoading();
+    console.error('Error:', error);
+    document.getElementById('products-container').innerHTML = `
+      <div class="text-center py-5">
+        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+        <h5 class="text-danger">Erro ao carregar produtos</h5>
+        <p class="text-white-50">Tente novamente em alguns instantes</p>
+      </div>
+    `;
+  });
+}
+
+function displayProducts(products) {
+  const container = document.getElementById('products-container');
+  
+  if (products.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-5">
+        <i class="fas fa-inbox fa-3x text-white-50 mb-3"></i>
+        <h5 class="text-white-50">Nenhum produto encontrado</h5>
+        <p class="text-white-50">Tente ajustar os filtros de busca</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const tableHTML = `
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <thead class="bg-dark">
+          <tr>
+            <th class="text-white fw-bold px-3 py-3">Produto</th>
+            <th class="text-white fw-bold px-3 py-3 text-center">Lagoa Seca</th>
+            <th class="text-white fw-bold px-3 py-3 text-center">BH Shopping</th>
+            <th class="text-white fw-bold px-3 py-3 text-center">Rio de Janeiro</th>
+            <th class="text-white fw-bold px-3 py-3 text-center">Shopify ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${products.map(product => `
+            <tr class="border-secondary">
+              <td class="px-3 py-3">
+                <div>
+                  <span class="text-white fw-medium d-block">
+                    ${product.shopify_product_name || `Produto ${product.sku}`}
+                  </span>
+                  <small class="text-white-50">SKU: ${product.sku}</small>
+                  ${product.shopify_variant_id ? `<br><small class="text-white-50"><i class="fab fa-shopify me-1"></i>ID: ${product.shopify_variant_id}</small>` : ''}
+                </div>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <span class="badge ${getStockBadgeClass(product.stock_lagoa_seca)} text-dark px-2 py-1">
+                  ${product.stock_lagoa_seca || 0} un.
+                </span>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <span class="badge ${getStockBadgeClass(product.stock_bh_shopping)} text-dark px-2 py-1">
+                  ${product.stock_bh_shopping || 0} un.
+                </span>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <span class="badge ${getStockBadgeClass(product.stock_rj)} text-dark px-2 py-1">
+                  ${product.stock_rj || 0} un.
+                </span>
+              </td>
+              <td class="px-3 py-3 text-center">
+                ${product.shopify_inventory_item_id ? 
+                  `<small class="text-success"><i class="fab fa-shopify me-1"></i>Conectado</small>` : 
+                  `<small class="text-warning"><i class="fas fa-unlink me-1"></i>Não conectado</small>`
+                }
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  container.innerHTML = tableHTML;
+}
+
+function getStockBadgeClass(stock) {
+  const stockValue = parseInt(stock) || 0;
+  if (stockValue === 0) return 'bg-danger';
+  if (stockValue <= 5) return 'bg-warning';
+  return 'bg-success';
+}
+
+function updatePagination(pagination) {
+  const container = document.getElementById('pagination-container');
+  totalPages = pagination.total_pages;
+  currentPage = pagination.current_page;
+  
+  if (totalPages <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'block';
+  
+  let paginationHTML = `
+    <div class="d-flex justify-content-between align-items-center flex-wrap">
+      <div class="text-white-50 mb-2 mb-md-0">
+        Mostrando ${pagination.offset + 1} a ${Math.min(pagination.offset + pagination.per_page, pagination.total_count)} de ${pagination.total_count} produtos
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+  `;
+  
+  // Botão Anterior
+  if (currentPage > 1) {
+    paginationHTML += `
+      <button class="btn btn-outline-light btn-sm" onclick="changePage(${currentPage - 1})">
+        <i class="fas fa-chevron-left"></i> Anterior
+      </button>
+    `;
+  }
+  
+  // Números das páginas
+  const startPage = Math.max(1, currentPage - 2);
+  const endPage = Math.min(totalPages, currentPage + 2);
+  
+  for (let i = startPage; i <= endPage; i++) {
+    if (i === currentPage) {
+      paginationHTML += `<button class="btn btn-primary btn-sm">${i}</button>`;
+    } else {
+      paginationHTML += `<button class="btn btn-outline-light btn-sm" onclick="changePage(${i})">${i}</button>`;
+    }
+  }
+  
+  // Botão Próxima
+  if (currentPage < totalPages) {
+    paginationHTML += `
+      <button class="btn btn-outline-light btn-sm" onclick="changePage(${currentPage + 1})">
+        Próxima <i class="fas fa-chevron-right"></i>
+      </button>
+    `;
+  }
+  
+  paginationHTML += `
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = paginationHTML;
+}
+
+function updateResultsInfo(pagination) {
+  const info = document.getElementById('results-info');
+  if (pagination.total_count > 0) {
+    info.innerHTML = `${pagination.total_count} produto(s) encontrado(s)`;
+  } else {
+    info.innerHTML = '';
+  }
+}
+
+function changePage(page) {
+  currentPage = page;
+  loadProducts();
+}
+
+function showLoading() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+</script>
 
 <% content_for :styles do %>
 <style>
@@ -343,30 +416,25 @@ body {
   background-color: #121212 !important;
 }
 
-.form-control::placeholder {
-  color: #adb5bd;
-  opacity: 1;
+.form-control, .form-select {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
 }
 
 .form-control:focus, .form-select:focus {
-  background-color: #343a40;
-  border-color: #495057;
+  background-color: #495057;
+  border-color: #6c757d;
   color: #fff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
+.table-dark {
+  --bs-table-bg: transparent;
 }
 
-.badge {
-  font-weight: 500;
-  color: #ffffff !important;
-}
-
-.form-label {
-  font-size: 0.9rem;
-  margin-bottom: 0.3rem;
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
 }
 
 .card {
@@ -382,28 +450,8 @@ body {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
 
-.input-group-text {
-  border-right: none;
-}
-
-.form-control, .form-select {
-  border-left: none;
-}
-
-.form-control:focus + .input-group-text {
-  border-color: #495057;
-}
-
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.075);
-}
-
-.font-monospace {
-  font-family: 'Courier New', monospace;
+.badge {
+  font-weight: 500;
 }
 
 .loading-overlay {
@@ -412,222 +460,28 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(5px);
-  display: none;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.loading-overlay.show {
-  display: flex;
 }
 
 .loading-content {
   text-align: center;
-  background: rgba(33, 37, 41, 0.95);
-  padding: 3rem 2rem;
-  border-radius: 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.4s ease-out;
-}
-
-.loading-spinner {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 2rem;
-}
-
-.spinner-ring {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border: 3px solid transparent;
-  border-top: 3px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1.2s linear infinite;
-}
-
-.spinner-ring:nth-child(1) {
-  animation-delay: 0s;
-  border-top-color: #007bff;
-}
-
-.spinner-ring:nth-child(2) {
-  animation-delay: -0.3s;
-  border-top-color: #28a745;
-  width: 90%;
-  height: 90%;
-  top: 5%;
-  left: 5%;
-}
-
-.spinner-ring:nth-child(3) {
-  animation-delay: -0.6s;
-  border-top-color: #ffc107;
-  width: 80%;
-  height: 80%;
-  top: 10%;
-  left: 10%;
-}
-
-.spinner-ring:nth-child(4) {
-  animation-delay: -0.9s;
-  border-top-color: #dc3545;
-  width: 70%;
-  height: 70%;
-  top: 15%;
-  left: 15%;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.loading-text h4 {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.loading-text p {
-  font-size: 0.9rem;
-  opacity: 0.8;
-}
-
-.pagination-btn {
-  transition: all 0.3s ease;
-}
-
-.pagination-btn:hover {
-  transform: translateY(-1px);
-}
-
-.help-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background: rgba(45, 55, 72, 0.3);
-  border: 1px solid #2d3748;
-  transition: all 0.3s ease;
-}
-
-.help-item:hover {
-  background: rgba(66, 153, 225, 0.1);
-  border-color: #4299e1;
-}
-
-.help-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: white;
-  font-size: 1.1rem;
-  flex-shrink: 0;
 }
 
-.help-content h6 {
-  margin: 0;
-  font-weight: 600;
-}
-
+/* Responsividade */
 @media (max-width: 768px) {
-  .card-footer .d-flex {
-    flex-direction: column;
-    gap: 1rem;
+  .table-responsive {
+    font-size: 0.875rem;
   }
   
-  .pagination-btn {
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-  }
-  
-  .help-item {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
   }
 }
 </style>
 <% end %>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  const loadingMessage = document.getElementById('loadingMessage');
-  
-  const loadingMessages = {
-    search: 'Buscando produtos e consultando StockService...',
-    refresh: 'Atualizando estoque via StockService...',
-    pagination: 'Carregando página e consultando estoque em tempo real...'
-  };
-
-  function showLoading(action = 'search') {
-    loadingMessage.textContent = loadingMessages[action] || 'Processando...';
-    loadingOverlay.classList.add('show');
-  }
-
-  function hideLoading() {
-    loadingOverlay.classList.remove('show');
-  }
-
-  // Form de busca
-  const searchForm = document.getElementById('searchForm');
-  if (searchForm) {
-    searchForm.addEventListener('submit', function(e) {
-      showLoading('search');
-    });
-  }
-
-  // Botão de refresh
-  const refreshBtn = document.getElementById('refreshBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', function(e) {
-      showLoading('refresh');
-    });
-  }
-
-  // Botões de paginação
-  const paginationBtns = document.querySelectorAll('.pagination-btn');
-  paginationBtns.forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      showLoading('pagination');
-    });
-  });
-
-  // Esconder loading quando a página carregar
-  window.addEventListener('load', function() {
-    setTimeout(hideLoading, 500);
-  });
-
-  // Esconder loading no pageshow (volta do cache)
-  window.addEventListener('pageshow', function() {
-    hideLoading();
-  });
-});
-</script>
