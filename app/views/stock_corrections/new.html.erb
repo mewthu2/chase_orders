@@ -1,118 +1,166 @@
 <div class="container-fluid py-4">
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h4 class="text-white mb-0">
-            <i class="fas fa-plus-circle me-2"></i>Nova Conferência de Estoque
-          </h4>
+  <% content_for :title, 'Nova Conferência de Estoque' %>
+
+  <!-- Tutorial/Ajuda -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-primary shadow-lg">
+        <div class="card-header bg-primary">
+          <div class="d-flex justify-content-between align-items-center">
+            <h6 class="text-dark mb-0">
+              <i class="fas fa-question-circle me-2"></i>Como criar uma Conferência de Estoque
+            </h6>
+            <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#helpCollapse">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
         </div>
-        
-        <div class="card-body bg-black">
-          <!-- Tutorial Integrado -->
-          <div class="alert alert-info bg-dark border-info text-white mb-4">
-            <div class="d-flex">
-              <div class="flex-shrink-0">
-                <i class="fas fa-info-circle fa-2x text-info me-3"></i>
+        <div class="collapse" id="helpCollapse">
+          <div class="card-body bg-black">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="help-item">
+                  <div class="help-icon bg-primary">
+                    <i class="fas fa-calendar-alt"></i>
+                  </div>
+                  <div class="help-content">
+                    <h6 class="text-white mb-1">Data da Conferência</h6>
+                    <small class="text-primary">Selecione a data em que a conferência será realizada</small>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h6 class="text-info mb-2">Como funciona a conferência de estoque:</h6>
-                <ol class="mb-0 text-white-50">
-                  <li>Selecione a <strong>location</strong> e preencha os dados básicos</li>
-                  <li>Após criar, use a <strong>busca por SKU</strong> para encontrar produtos</li>
-                  <li>Para cada produto: <strong>confira fisicamente</strong> e escolha uma ação</li>
-                  <li><strong>Conferido</strong>: estoque está correto</li>
-                  <li><strong>Corrigir</strong>: informe o estoque real e o motivo</li>
-                  <li>As correções são <strong>integradas automaticamente</strong> com a Shopify</li>
-                </ol>
+              <div class="col-md-6">
+                <div class="help-item">
+                  <div class="help-icon bg-warning">
+                    <i class="fas fa-map-marker-alt"></i>
+                  </div>
+                  <div class="help-content">
+                    <h6 class="text-white mb-1">Location</h6>
+                    <small class="text-primary">Escolha a location onde será feita a conferência de estoque</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="help-item">
+                  <div class="help-icon bg-info">
+                    <i class="fas fa-clipboard-list"></i>
+                  </div>
+                  <div class="help-content">
+                    <h6 class="text-white mb-1">Motivo</h6>
+                    <small class="text-primary">Descreva o motivo da conferência (ex: Inventário mensal, Auditoria, etc.)</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="help-item">
+                  <div class="help-icon bg-success">
+                    <i class="fas fa-sticky-note"></i>
+                  </div>
+                  <div class="help-content">
+                    <h6 class="text-white mb-1">Observações</h6>
+                    <small class="text-primary">Adicione observações importantes sobre a conferência</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-top border-secondary">
+              <div class="d-flex align-items-center text-info">
+                <i class="fas fa-lightbulb me-2"></i>
+                <small><strong>Dica:</strong> Após criar a conferência, você poderá buscar produtos individualmente e processar as correções!</small>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          <%= form_with model: @stock_correction, local: true, class: "needs-validation", novalidate: true do |f| %>
-            <% if @stock_correction.errors.any? %>
-              <div class="alert alert-danger bg-dark border-danger text-white mb-4">
-                <h6 class="text-danger mb-2">
-                  <i class="fas fa-exclamation-triangle me-2"></i>
-                  Corrija os seguintes erros:
-                </h6>
-                <ul class="mb-0">
-                  <% @stock_correction.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
+  <!-- Formulário Principal -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h4 class="text-white mb-0">
+            <i class="fas fa-plus-circle me-2"></i>Nova Conferência de Estoque
+          </h4>
+          <div class="d-flex gap-2">
+            <%= link_to stock_corrections_path, class: "btn btn-sm btn-outline-light" do %>
+              <i class="fas fa-arrow-left me-1"></i>Voltar
             <% end %>
-
+          </div>
+        </div>
+        
+        <div class="card-body bg-black">
+          <%= form_with model: @stock_correction, local: true, class: "needs-validation", novalidate: true do |f| %>
             <div class="row g-4">
-              <!-- Location -->
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">
-                  <i class="fas fa-map-marker-alt me-2"></i>Location *
-                </label>
-                <%= f.select :location, 
-                             options_from_collection_for_select(@available_locations, :code, :name, @location),
-                             { prompt: 'Selecione uma location...' },
-                             { class: "form-select bg-dark text-white border-dark", required: true } %>
-                <div class="invalid-feedback">
-                  Por favor, selecione uma location.
-                </div>
-                <small class="text-white-50">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Location onde será realizada a conferência física
-                </small>
-              </div>
-
               <!-- Data da Conferência -->
               <div class="col-md-6">
                 <label class="form-label text-white fw-bold">
-                  <i class="fas fa-calendar me-2"></i>Data da Conferência *
+                  <i class="fas fa-calendar-alt me-2"></i>Data da Conferência
                 </label>
                 <%= f.date_field :correction_date, 
                                  value: Date.current,
                                  class: "form-control bg-dark text-white border-dark",
                                  required: true %>
                 <div class="invalid-feedback">
-                  Por favor, informe a data da conferência.
+                  Por favor, selecione uma data válida.
                 </div>
-                <small class="text-white-50">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Data em que a conferência física será realizada
+                <small class="text-white-50 mt-1">
+                  <i class="fas fa-info-circle me-1"></i>Data em que a conferência será realizada
                 </small>
+              </div>
+
+              <!-- Location -->
+              <div class="col-md-6">
+                <label class="form-label text-white fw-bold">
+                  <i class="fas fa-map-marker-alt me-2"></i>Location
+                </label>
+                <%= f.select :location, 
+                             options_for_select(@available_locations, @location),
+                             { prompt: 'Selecione uma location...' },
+                             { class: "form-select bg-dark text-white border-dark", required: true } %>
+                <div class="invalid-feedback">
+                  Por favor, selecione uma location.
+                </div>
+                <% unless current_user.admin? %>
+                  <small class="text-white-50 mt-1">
+                    <i class="fas fa-lock me-1"></i>Locations permitidas para seu usuário
+                  </small>
+                <% else %>
+                  <small class="text-white-50 mt-1">
+                    <i class="fas fa-globe me-1"></i>Todas as locations disponíveis
+                  </small>
+                <% end %>
               </div>
 
               <!-- Motivo -->
               <div class="col-12">
                 <label class="form-label text-white fw-bold">
-                  <i class="fas fa-clipboard-list me-2"></i>Motivo da Conferência *
+                  <i class="fas fa-clipboard-list me-2"></i>Motivo da Conferência
                 </label>
-                <%= f.text_area :reason, 
-                                 placeholder: "Ex: Conferência mensal, auditoria, divergências identificadas...",
-                                 rows: 3,
+                <%= f.text_field :reason, 
+                                 placeholder: "Ex: Inventário mensal, Auditoria, Conferência de rotina...",
                                  class: "form-control bg-dark text-white border-dark",
                                  required: true %>
                 <div class="invalid-feedback">
                   Por favor, informe o motivo da conferência.
                 </div>
-                <small class="text-white-50">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Descreva o motivo ou contexto desta conferência de estoque
+                <small class="text-white-50 mt-1">
+                  <i class="fas fa-info-circle me-1"></i>Descreva brevemente o motivo desta conferência
                 </small>
               </div>
 
               <!-- Observações -->
               <div class="col-12">
                 <label class="form-label text-white fw-bold">
-                  <i class="fas fa-sticky-note me-2"></i>Observações
-                  <span class="text-white-50 fw-normal">(opcional)</span>
+                  <i class="fas fa-sticky-note me-2"></i>Observações (Opcional)
                 </label>
                 <%= f.text_area :notes, 
-                                 placeholder: "Observações adicionais, instruções especiais, etc...",
-                                 rows: 2,
-                                 class: "form-control bg-dark text-white border-dark" %>
-                <small class="text-white-50">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Informações adicionais sobre esta conferência (opcional)
+                                rows: 3,
+                                placeholder: "Adicione observações importantes sobre esta conferência...",
+                                class: "form-control bg-dark text-white border-dark" %>
+                <small class="text-white-50 mt-1">
+                  <i class="fas fa-info-circle me-1"></i>Informações adicionais sobre a conferência
                 </small>
               </div>
             </div>
@@ -120,22 +168,83 @@
             <!-- Botões de Ação -->
             <div class="row mt-4">
               <div class="col-12">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-end gap-3">
                   <%= link_to stock_corrections_path, class: "btn btn-outline-light" do %>
-                    <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    <i class="fas fa-times me-2"></i>Cancelar
                   <% end %>
                   
                   <%= f.submit "Criar Conferência", 
-                               class: "btn btn-success text-dark",
+                               class: "btn btn-success",
                                data: { 
-                                 confirm: "Deseja criar esta conferência? Isso criará itens para todos os produtos da location selecionada." 
+                                 confirm: "Deseja criar esta conferência? Isso criará itens para todos os produtos da location selecionada."
                                } do %>
-                    <i class="fas fa-plus me-2"></i>Criar Conferência
+                    <i class="fas fa-plus-circle me-2"></i>Criar Conferência
                   <% end %>
                 </div>
               </div>
             </div>
           <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informações Importantes -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-black border border-info shadow-lg">
+        <div class="card-header bg-info text-dark">
+          <h6 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Informações Importantes
+          </h6>
+        </div>
+        <div class="card-body bg-black">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="d-flex align-items-start">
+                <i class="fas fa-database text-info me-3 mt-1"></i>
+                <div>
+                  <h6 class="text-white mb-1">Produtos Incluídos</h6>
+                  <small class="text-white-50">
+                    Serão incluídos todos os produtos que possuem SKU e Shopify Inventory Item ID válidos
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-start">
+                <i class="fas fa-search text-info me-3 mt-1"></i>
+                <div>
+                  <h6 class="text-white mb-1">Busca Individual</h6>
+                  <small class="text-white-50">
+                    Após criar, você poderá buscar produtos individualmente por SKU ou nome
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-start">
+                <i class="fas fa-sync text-info me-3 mt-1"></i>
+                <div>
+                  <h6 class="text-white mb-1">Integração Automática</h6>
+                  <small class="text-white-50">
+                    As correções são automaticamente integradas com a Shopify ao salvar
+                  </small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex align-items-start">
+                <i class="fas fa-lock text-info me-3 mt-1"></i>
+                <div>
+                  <h6 class="text-white mb-1">Permissões</h6>
+                  <small class="text-white-50">
+                    Você só pode criar conferências nas locations que tem permissão de acesso
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -168,6 +277,7 @@ body {
 
 .form-control::placeholder {
   color: #adb5bd;
+  opacity: 1;
 }
 
 .card {
@@ -183,41 +293,46 @@ body {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
 
-.alert {
-  border-radius: 6px;
+.badge {
+  font-weight: 500;
 }
 
-.border-info {
-  border-color: #0dcaf0 !important;
+.form-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
 }
 
-.text-info {
-  color: #0dcaf0 !important;
+.help-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgba(45, 55, 72, 0.3);
+  border: 1px solid #2d3748;
+  transition: all 0.3s ease;
 }
 
-/* Validação Bootstrap */
-.was-validated .form-control:valid,
-.form-control.is-valid {
-  border-color: #198754;
-  background-image: none;
+.help-item:hover {
+  background: rgba(66, 153, 225, 0.1);
+  border-color: #4299e1;
 }
 
-.was-validated .form-control:invalid,
-.form-control.is-invalid {
-  border-color: #dc3545;
-  background-image: none;
+.help-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
-.was-validated .form-select:valid,
-.form-select.is-valid {
-  border-color: #198754;
-  background-image: none;
-}
-
-.was-validated .form-select:invalid,
-.form-select.is-invalid {
-  border-color: #dc3545;
-  background-image: none;
+.help-content h6 {
+  margin: 0;
+  font-weight: 600;
 }
 
 .invalid-feedback {
@@ -228,36 +343,75 @@ body {
   color: #dc3545;
 }
 
-/* Responsividade */
+.was-validated .form-control:invalid,
+.was-validated .form-select:invalid {
+  border-color: #dc3545;
+}
+
+.was-validated .form-control:valid,
+.was-validated .form-select:valid {
+  border-color: #198754;
+}
+
 @media (max-width: 768px) {
-  .container-fluid {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  .help-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .d-flex.justify-content-end {
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
   .btn {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
+    width: 100%;
   }
 }
 </style>
 <% end %>
 
 <script>
-// Validação do formulário
-(function() {
-  'use strict';
-  window.addEventListener('load', function() {
-    var forms = document.getElementsByClassName('needs-validation');
-    var validation = Array.prototype.filter.call(forms, function(form) {
-      form.addEventListener('submit', function(event) {
-        if (form.checkValidity() === false) {
-          event.preventDefault();
-          event.stopPropagation();
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Script carregado - Nova Conferência');
+
+  // Validação do formulário
+  const form = document.querySelector('.needs-validation');
+  
+  if (form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Focar no primeiro campo inválido
+        const firstInvalid = form.querySelector(':invalid');
+        if (firstInvalid) {
+          firstInvalid.focus();
         }
-        form.classList.add('was-validated');
-      }, false);
+      }
+      
+      form.classList.add('was-validated');
     });
-  }, false);
-})();
+
+    // Validação em tempo real
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('blur', function() {
+        if (form.classList.contains('was-validated')) {
+          input.checkValidity();
+        }
+      });
+      
+      input.addEventListener('input', function() {
+        if (form.classList.contains('was-validated')) {
+          input.checkValidity();
+        }
+      });
+    });
+  }
+
+  console.log('✅ Script inicializado - Nova Conferência pronta');
+});
 </script>
