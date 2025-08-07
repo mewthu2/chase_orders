@@ -9,12 +9,13 @@ class StockCorrectionItem < ApplicationRecord
   before_save :set_current_stock, if: :new_record?
   before_save :set_stock_before, if: :will_save_change_to_corrected_stock?
 
-  def execute_correction!
+  def execute_correction!(with_shopify_integration: false)
     Rails.logger.info "=== Starting execute_correction! for item #{id} ==="
     Rails.logger.info "needs_correction?: #{needs_correction?}"
     Rails.logger.info "executed?: #{executed?}"
     Rails.logger.info "corrected_stock: #{corrected_stock}"
     Rails.logger.info "correction_reason: #{correction_reason}"
+    Rails.logger.info "with_shopify_integration: #{with_shopify_integration}"
     
     unless needs_correction?
       Rails.logger.error "Item does not need correction"
@@ -89,38 +90,43 @@ class StockCorrectionItem < ApplicationRecord
       Rails.logger.info "Item executed status: #{executed?}"
       Rails.logger.info "Item executed_at: #{executed_at}"
     
-      # INTEGRAÇÃO AUTOMÁTICA COM SHOPIFY
-      Rails.logger.info "=== Starting Shopify Integration ==="
-      if product.shopify_inventory_item_id.present?
-        Rails.logger.info "Product has shopify_inventory_item_id: #{product.shopify_inventory_item_id}"
-      
-        # Marcar como sincronizando
-        update!(shopify_sync_status: 'syncing')
-      
-        # Usar o ShopifyInventoryService para atualizar
-        result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
-      
-        if result[:success]
-          update!(
-            last_shopify_sync_at: Time.current,
-            shopify_sync_status: 'synced',
-            shopify_sync_error: nil
-          )
-          Rails.logger.info "✅ Shopify integration successful for #{product.sku}: #{corrected_stock} units"
+      # INTEGRAÇÃO COM SHOPIFY (OPCIONAL)
+      if with_shopify_integration
+        Rails.logger.info "=== Starting Shopify Integration ==="
+        if product.shopify_inventory_item_id.present?
+          Rails.logger.info "Product has shopify_inventory_item_id: #{product.shopify_inventory_item_id}"
+        
+          # Marcar como sincronizando
+          update!(shopify_sync_status: 'syncing')
+        
+          # Usar o ShopifyInventoryService para atualizar
+          result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
+        
+          if result[:success]
+            update!(
+              last_shopify_sync_at: Time.current,
+              shopify_sync_status: 'synced',
+              shopify_sync_error: nil
+            )
+            Rails.logger.info "✅ Shopify integration successful for #{product.sku}: #{corrected_stock} units"
+          else
+            update!(
+              shopify_sync_status: 'error',
+              shopify_sync_error: result[:message]
+            )
+            Rails.logger.error "❌ Shopify integration failed for #{product.sku}: #{result[:message]}"
+            # Não falhar a execução por causa do erro da Shopify
+          end
         else
+          Rails.logger.warn "⚠️ Product #{product.sku} has no shopify_inventory_item_id - skipping Shopify sync"
           update!(
-            shopify_sync_status: 'error',
-            shopify_sync_error: result[:message]
+            shopify_sync_status: 'no_shopify_id',
+            shopify_sync_error: 'Produto sem shopify_inventory_item_id'
           )
-          Rails.logger.error "❌ Shopify integration failed for #{product.sku}: #{result[:message]}"
-          # Não falhar a execução por causa do erro da Shopify
         end
       else
-        Rails.logger.warn "⚠️ Product #{product.sku} has no shopify_inventory_item_id - skipping Shopify sync"
-        update!(
-          shopify_sync_status: 'no_shopify_id',
-          shopify_sync_error: 'Produto sem shopify_inventory_item_id'
-        )
+        Rails.logger.info "⏭️ Shopify integration skipped (with_shopify_integration: false)"
+        update!(shopify_sync_status: 'pending') if shopify_sync_status.blank?
       end
     
       Rails.logger.info "Correction executed successfully for #{product.sku}"

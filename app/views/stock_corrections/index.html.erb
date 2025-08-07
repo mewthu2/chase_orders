@@ -2,7 +2,7 @@
   <% content_for :title, 'Conferências de Estoque' %>
   <%= render 'layouts/partials/messages' if defined?(render) %>
 
-  <!-- Header com estatísticas -->
+   Header com estatísticas 
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -66,7 +66,7 @@
     </div>
   </div>
 
-  <!-- Lista de Conferências -->
+   Lista de Conferências 
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -112,8 +112,7 @@
                       </td>
                       <td class="px-4 py-3">
                         <span class="badge bg-secondary text-white px-2 py-1">
-                          <i class="fas fa-map-marker-alt me-1"></i>
-                          <%= User.location_name(correction.location) %>
+                          <i class="fas fa-map-marker-alt me-1"></i><%= User.location_name(correction.location) %>
                         </span>
                       </td>
                       <td class="px-4 py-3 text-center">
@@ -134,8 +133,9 @@
                         <% end %>
                       </td>
                       <td class="px-4 py-3 text-center">
+                        <% corrected_items = correction.stock_correction_items.where(needs_correction: true) %>
                         <span class="badge bg-info text-dark px-2 py-1">
-                          <%= correction.stock_correction_items.where(needs_correction: true).count %> corrigidos
+                          <%= corrected_items.count %> corrigidos
                         </span>
                       </td>
                       <td class="px-4 py-3 text-center">
@@ -143,16 +143,27 @@
                           <%= link_to correction, class: "btn btn-sm btn-outline-light", title: "Visualizar" do %>
                             <i class="fas fa-eye"></i>
                           <% end %>
+                          
                           <% if correction.status != 'executed' || current_user.admin? %>
                             <%= link_to edit_stock_correction_path(correction), class: "btn btn-sm btn-outline-primary", title: "Editar" do %>
                               <i class="fas fa-edit"></i>
                             <% end %>
                           <% end %>
+                          
                           <% if current_user.admin? %>
-                            <%= link_to correction, method: :delete, 
-                                class: "btn btn-sm btn-outline-danger", 
-                                title: "Excluir",
-                                confirm: "Tem certeza que deseja excluir esta conferência?" do %>
+                            <%= button_to sync_with_shopify_stock_correction_path(correction), 
+                                method: :patch,
+                                class: "btn btn-sm btn-outline-info",
+                                title: "Integrar os itens com a Shopify",
+                                form: { onsubmit: "return confirm('Tem certeza que deseja integrar os itens com a Shopify? Esta ação irá sincronizar os estoques.')" } do %>
+                              <i class="fab fa-shopify"></i>
+                            <% end %>
+                            
+                            <%= button_to correction, 
+                                method: :delete,
+                                class: "btn btn-sm btn-outline-danger",
+                                title: "Excluir conferência",
+                                form: { onsubmit: "return confirm('Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita.')" } do %>
                               <i class="fas fa-trash"></i>
                             <% end %>
                           <% end %>
@@ -175,7 +186,7 @@
           <% end %>
         </div>
 
-        <!-- Paginação -->
+         Paginação 
         <% if @total_pages > 1 %>
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -183,7 +194,7 @@
                 Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_corrections].min %> de <%= @total_corrections %> conferências
               </div>
               <div class="d-flex gap-2 flex-wrap">
-                <!-- Botão Anterior -->
+                 Botão Anterior 
                 <% if @current_page > 1 %>
                   <%= link_to stock_corrections_path(page: @current_page - 1),
                       class: "btn btn-outline-light btn-sm" do %>
@@ -195,7 +206,7 @@
                   </button>
                 <% end %>
 
-                <!-- Números das páginas -->
+                 Números das páginas 
                 <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
                 <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
 
@@ -224,7 +235,7 @@
                       class: "btn btn-outline-light btn-sm" %>
                 <% end %>
 
-                <!-- Botão Próxima -->
+                 Botão Próxima 
                 <% if @current_page < @total_pages %>
                   <%= link_to stock_corrections_path(page: @current_page + 1),
                       class: "btn btn-outline-light btn-sm" do %>

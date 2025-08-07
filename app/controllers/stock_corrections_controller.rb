@@ -1,7 +1,8 @@
 class StockCorrectionsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :finalize_correction, :execute_all, :save_item_correction, :reopen]
+  before_action :set_stock_correction, only: [:show, :edit, :update, :destroy, :finalize_correction, :execute_all, :save_item_correction, :reopen, :sync_with_shopify]
   before_action :check_edit_permission, only: [:edit, :update, :save_item_correction]
+  before_action :check_admin_permission, only: [:destroy, :sync_with_shopify]
 
   def index
     # Paginação manual
@@ -9,33 +10,36 @@ class StockCorrectionsController < ApplicationController
     @current_page = (params[:page] || 1).to_i
     offset = (@current_page - 1) * @per_page
 
-    # Buscar correções baseado no perfil do usuário
+    # Buscar correções baseado no perfil do usuário (apenas ativas - não deletadas)
     if current_user.admin?
-      @stock_corrections = StockCorrection.includes(:stock_correction_items)
-                                         .order(created_at: :desc)
-                                         .limit(@per_page)
-                                         .offset(offset)
-      
-      # Estatísticas para admin (todas as correções)
-      @total_corrections = StockCorrection.count
-      @pending_corrections = StockCorrection.where(status: [nil, 'pending']).count
-      @completed_corrections = StockCorrection.where(status: 'executed').count
-      @synced_corrections = StockCorrection.joins(:stock_correction_items)
-                                          .where(stock_correction_items: { 
-                                            last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
-                                          })
-                                          .distinct.count
-    else
-      # Para usuários não-admin, filtrar por locations permitidas
-      allowed_locations = current_user.allowed_location_keys
-      @stock_corrections = StockCorrection.where(location: allowed_locations)
+      @stock_corrections = StockCorrection.active
                                          .includes(:stock_correction_items)
                                          .order(created_at: :desc)
                                          .limit(@per_page)
                                          .offset(offset)
       
-      # Estatísticas para usuário (apenas suas locations)
-      base_corrections = StockCorrection.where(location: allowed_locations)
+      # Estatísticas para admin (todas as correções ativas)
+      @total_corrections = StockCorrection.active.count
+      @pending_corrections = StockCorrection.active.where(status: [nil, 'pending']).count
+      @completed_corrections = StockCorrection.active.where(status: 'executed').count
+      @synced_corrections = StockCorrection.active
+                                          .joins(:stock_correction_items)
+                                          .where(stock_correction_items: { 
+                                            last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
+                                          })
+                                          .distinct.count
+    else
+      # Para usuários não-admin, filtrar por locations permitidas (apenas ativas)
+      allowed_locations = current_user.allowed_location_keys
+      @stock_corrections = StockCorrection.active
+                                         .where(location: allowed_locations)
+                                         .includes(:stock_correction_items)
+                                         .order(created_at: :desc)
+                                         .limit(@per_page)
+                                         .offset(offset)
+      
+      # Estatísticas para usuário (apenas suas locations ativas)
+      base_corrections = StockCorrection.active.where(location: allowed_locations)
       @total_corrections = base_corrections.count
       @pending_corrections = base_corrections.where(status: [nil, 'pending']).count
       @completed_corrections = base_corrections.where(status: 'executed').count
@@ -220,19 +224,31 @@ class StockCorrectionsController < ApplicationController
   end
 
   def destroy
-    @stock_correction.destroy
-    redirect_to stock_corrections_path, notice: 'Conferência removida com sucesso!'
+    Rails.logger.info "=== SOFT DELETE ACTION CALLED ==="
+    Rails.logger.info "Stock Correction ID: #{@stock_correction.id}"
+    Rails.logger.info "Current User: #{current_user.name} (ID: #{current_user.id})"
+    Rails.logger.info "Is Admin: #{current_user.admin?}"
+    
+    begin
+      @stock_correction.soft_delete!
+      Rails.logger.info "Stock correction soft deleted successfully"
+      redirect_to stock_corrections_path, notice: 'Conferência removida com sucesso!'
+    rescue => e
+      Rails.logger.error "Error soft deleting stock correction: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      redirect_to stock_corrections_path, alert: "Erro ao remover conferência: #{e.message}"
+    end
   end
 
   def finalize_correction
     begin
       ActiveRecord::Base.transaction do
-        # Executar todas as correções pendentes primeiro
+        # Executar todas as correções pendentes SEM integração Shopify
         pending_items = @stock_correction.stock_correction_items.where(needs_correction: true, executed: false)
         executed_count = 0
         
         pending_items.each do |item|
-          if item.update(executed: true, executed_at: Time.current)
+          if item.execute_correction!(with_shopify_integration: false)
             executed_count += 1
           end
         end
@@ -242,13 +258,52 @@ class StockCorrectionsController < ApplicationController
         
         # Mensagem de sucesso
         redirect_to stock_corrections_path, 
-                    notice: "Conferência finalizada com sucesso! #{executed_count} correções executadas. A integração será feita em tempo real."
+                    notice: "Conferência finalizada com sucesso! #{executed_count} correções executadas. Use o botão 'Integrar Shopify' para sincronizar."
       end
     rescue => e
       Rails.logger.error "Erro ao finalizar conferência: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      redirect_to edit_stock_correction_path(@stock_correction), 
+      redirect_to stock_corrections_path, 
                   alert: "Erro ao finalizar conferência: #{e.message}"
+    end
+  end
+
+  def sync_with_shopify
+    begin
+      # Buscar TODOS os itens executados que têm correção (independente do status de sync)
+      items_to_sync = @stock_correction.stock_correction_items
+                                      .where(needs_correction: true, executed: true)
+      
+      if items_to_sync.empty?
+        redirect_to stock_corrections_path, 
+                    alert: 'Não há itens executados para sincronizar com a Shopify.'
+        return
+      end
+
+      synced_count = 0
+      error_count = 0
+      
+      items_to_sync.each do |item|
+        if item.sync_with_shopify!
+          synced_count += 1
+        else
+          error_count += 1
+        end
+      end
+      
+      if error_count == 0
+        redirect_to stock_corrections_path, 
+                    notice: "Integração concluída! #{synced_count} itens sincronizados com a Shopify."
+      else
+        redirect_to stock_corrections_path, 
+                    alert: "Integração parcial: #{synced_count} sincronizados, #{error_count} com erro. Verifique os logs."
+      end
+      
+    rescue => e
+      Rails.logger.error "Erro na integração com Shopify: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      redirect_to stock_corrections_path, 
+                  alert: "Erro na integração com Shopify: #{e.message}"
     end
   end
 
@@ -308,13 +363,13 @@ class StockCorrectionsController < ApplicationController
     )
 
     if item.save
-      # Executar a correção (que agora inclui integração automática)
-      Rails.logger.info "=== Executing correction with automatic Shopify integration ==="
+      # Executar a correção COM integração automática
+      Rails.logger.info "=== Executing correction WITH automatic Shopify integration ==="
       
-      if item.execute_correction!
+      if item.execute_correction!(with_shopify_integration: true)
         render json: { 
           success: true, 
-          message: 'Correção salva e integrada com sucesso!',
+          message: 'Correção salva e integrada com a Shopify com sucesso!',
           shopify_status: item.shopify_sync_status
         }
       else
@@ -336,11 +391,11 @@ class StockCorrectionsController < ApplicationController
 
   def set_stock_correction
     if current_user.admin?
-      @stock_correction = StockCorrection.find(params[:id])
+      @stock_correction = StockCorrection.active.find(params[:id])
     else
-      # Usuários não-admin só podem acessar correções de suas locations
+      # Usuários não-admin só podem acessar correções de suas locations (apenas ativas)
       allowed_locations = current_user.allowed_location_keys
-      @stock_correction = StockCorrection.where(location: allowed_locations).find(params[:id])
+      @stock_correction = StockCorrection.active.where(location: allowed_locations).find(params[:id])
     end
   rescue ActiveRecord::RecordNotFound
     redirect_to stock_corrections_path, alert: 'Conferência não encontrada ou sem permissão de acesso.'
@@ -350,6 +405,12 @@ class StockCorrectionsController < ApplicationController
     if @stock_correction.status == 'executed' && !current_user.admin?
       redirect_to @stock_correction, 
                   alert: 'Apenas administradores podem editar conferências finalizadas.'
+    end
+  end
+
+  def check_admin_permission
+    unless current_user.admin?
+      redirect_to stock_corrections_path, alert: 'Apenas administradores podem executar esta ação.'
     end
   end
 

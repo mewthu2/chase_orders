@@ -42,10 +42,11 @@ Rails.application.routes.draw do
       get :debug_locations
       get :reopen
       get :check_shopify_inventory
+      patch :sync_with_shopify
     end
   end
   
-  resources :stock_correction_items, only: [:update]
+  resources :stock_correction_items, only: [:update, :destroy]
   
   resources :available_locations
 

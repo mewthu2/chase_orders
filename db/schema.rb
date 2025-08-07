@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_06_230308) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_07_214514) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -294,7 +294,9 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_06_230308) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
     t.index ["correction_date"], name: "index_stock_corrections_on_correction_date"
+    t.index ["deleted_at"], name: "index_stock_corrections_on_deleted_at"
     t.index ["location", "status"], name: "index_stock_corrections_on_location_and_status"
     t.index ["user_id"], name: "index_stock_corrections_on_user_id"
   end
