@@ -132,51 +132,39 @@ class ShopifyInventoryService
         location_name: target_level.dig('location', 'name'),
         sku: inventory_item['sku']
       }
-      
-    rescue => e
+
+    rescue StandardError => e
       Rails.logger.error "Error checking inventory levels: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       { success: false, message: e.message }
     end
   end
-  
+
   def get_inventory_quantities(inventory_item_id, location_id)
-    begin
-      # Usar REST API para obter quantidades - mais confiável
-      inventory_level_url = "inventory_levels.json?inventory_item_ids=#{inventory_item_id}&location_ids=#{location_id}"
-      
-      Rails.logger.info "Fetching inventory quantities via REST API: #{inventory_level_url}"
-      
-      client = ShopifyAPI::Clients::Rest::Admin.new(session: @session)
-      response = client.get(path: inventory_level_url)
-      
-      Rails.logger.info "REST API response: #{response.body.to_json}"
-      
-      inventory_levels = response.body['inventory_levels'] || []
-      
-      if inventory_levels.any?
-        level = inventory_levels.first
-        Rails.logger.info "Found inventory level via REST:"
-        Rails.logger.info "  - Available: #{level['available']}"
-        
-        {
-          available: level['available'],
-          on_hand: level['available'], # REST API só tem 'available'
-          committed: 0, # Não disponível via REST
-          incoming: 0   # Não disponível via REST
-        }
-      else
-        Rails.logger.warn "No inventory levels found via REST API"
-        {
-          available: 0,
-          on_hand: 0,
-          committed: 0,
-          incoming: 0
-        }
-      end
-      
-    rescue => e
-      Rails.logger.error "Error getting inventory quantities: #{e.message}"
+    inventory_level_url = "inventory_levels.json?inventory_item_ids=#{inventory_item_id}&location_ids=#{location_id}"
+
+    Rails.logger.info "Fetching inventory quantities via REST API: #{inventory_level_url}"
+
+    client = ShopifyAPI::Clients::Rest::Admin.new(session: @session)
+    response = client.get(path: inventory_level_url)
+
+    Rails.logger.info "REST API response: #{response.body.to_json}"
+
+    inventory_levels = response.body['inventory_levels'] || []
+
+    if inventory_levels.any?
+      level = inventory_levels.first
+      Rails.logger.info 'Found inventory level via REST:'
+      Rails.logger.info "  - Available: #{level['available']}"
+
+      {
+        available: level['available'],
+        on_hand: level['available'],
+        committed: 0,
+        incoming: 0
+      }
+    else
+      Rails.logger.warn 'No inventory levels found via REST API'
       {
         available: 0,
         on_hand: 0,
@@ -184,54 +172,59 @@ class ShopifyInventoryService
         incoming: 0
       }
     end
+
+  rescue StandardError => e
+    Rails.logger.error "Error getting inventory quantities: #{e.message}"
+    {
+      available: 0,
+      on_hand: 0,
+      committed: 0,
+      incoming: 0
+    }
   end
-  
+
   def list_locations
-    begin
-      query = <<~GRAPHQL
-        query {
-          locations(first: 20) {
-            edges {
-              node {
-                id
-                name
-                address {
-                  city
-                  province
-                }
+    query = <<~GRAPHQL
+      query {
+        locations(first: 20) {
+          edges {
+            node {
+              id
+              name
+              address {
+                city
+                province
               }
             }
           }
         }
-      GRAPHQL
-      
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
-      response = client.query(query: query)
-      
-      Rails.logger.info "Locations response: #{response.body.to_json}"
-      
-      locations = response.body.dig('data', 'locations', 'edges') || []
-      
-      locations.each do |edge|
-        location = edge['node']
-        location_id = location['id'].gsub('gid://shopify/Location/', '')
-        Rails.logger.info "Location: #{location['name']} - ID: #{location_id} - City: #{location.dig('address', 'city')}"
-      end
-      
-      locations
-    rescue => e
-      Rails.logger.error "Error listing locations: #{e.message}"
-      []
+      }
+    GRAPHQL
+    
+    client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
+    response = client.query(query:)
+    
+    Rails.logger.info "Locations response: #{response.body.to_json}"
+
+    locations = response.body.dig('data', 'locations', 'edges') || []
+
+    locations.each do |edge|
+      location = edge['node']
+      location_id = location['id'].gsub('gid://shopify/Location/', '')
+      Rails.logger.info "Location: #{location['name']} - ID: #{location_id} - City: #{location.dig('address', 'city')}"
     end
+
+    locations
+  rescue => e
+    Rails.logger.error "Error listing locations: #{e.message}"
+    []
   end
-  
+
   def update_inventory(product, location, quantity, reason = 'correction')
     Rails.logger.info "ShopifyInventoryService: Updating #{product.sku} to #{quantity} in #{location}"
-    
-    unless product.shopify_inventory_item_id.present?
-      return { success: false, message: 'Produto sem shopify_inventory_item_id' }
-    end
-    
+
+    return { success: false, message: 'Produto sem shopify_inventory_item_id' } unless product.shopify_inventory_item_id.present?
+
     location_id = get_location_id(location)
     if location_id.blank?
       return { success: false, message: "Location ID não encontrado para #{location}" }

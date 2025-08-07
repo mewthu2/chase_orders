@@ -43,13 +43,13 @@ class StockCorrectionItem < ApplicationRecord
     
     begin
       Rails.logger.info "Executing correction for product #{product.sku}: #{current_stock} -> #{corrected_stock} in #{location}"
-      
+    
       # Verificar se o produto existe e tem os campos necessários
       unless product
         Rails.logger.error "Product not found"
         return false
       end
-      
+    
       # Atualizar estoque no banco local
       case location
       when 'lagoa_seca'
@@ -68,11 +68,11 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.error "Unknown location: #{location}"
         return false
       end
-      
+    
       # Recarregar o produto para verificar se foi atualizado
       product.reload
       Rails.logger.info "Product reloaded, checking updated values..."
-      
+    
       case location
       when 'lagoa_seca'
         Rails.logger.info "Current stock_lagoa_seca: #{product.stock_lagoa_seca}"
@@ -81,16 +81,50 @@ class StockCorrectionItem < ApplicationRecord
       when 'rj'
         Rails.logger.info "Current stock_rj: #{product.stock_rj}"
       end
-      
+    
       # Marcar como executado
       Rails.logger.info "Marking item as executed..."
       update_result = update!(executed: true, executed_at: Time.current)
       Rails.logger.info "Update result: #{update_result}"
       Rails.logger.info "Item executed status: #{executed?}"
       Rails.logger.info "Item executed_at: #{executed_at}"
+    
+      # INTEGRAÇÃO AUTOMÁTICA COM SHOPIFY
+      Rails.logger.info "=== Starting Shopify Integration ==="
+      if product.shopify_inventory_item_id.present?
+        Rails.logger.info "Product has shopify_inventory_item_id: #{product.shopify_inventory_item_id}"
       
+        # Marcar como sincronizando
+        update!(shopify_sync_status: 'syncing')
+      
+        # Usar o ShopifyInventoryService para atualizar
+        result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
+      
+        if result[:success]
+          update!(
+            last_shopify_sync_at: Time.current,
+            shopify_sync_status: 'synced',
+            shopify_sync_error: nil
+          )
+          Rails.logger.info "✅ Shopify integration successful for #{product.sku}: #{corrected_stock} units"
+        else
+          update!(
+            shopify_sync_status: 'error',
+            shopify_sync_error: result[:message]
+          )
+          Rails.logger.error "❌ Shopify integration failed for #{product.sku}: #{result[:message]}"
+          # Não falhar a execução por causa do erro da Shopify
+        end
+      else
+        Rails.logger.warn "⚠️ Product #{product.sku} has no shopify_inventory_item_id - skipping Shopify sync"
+        update!(
+          shopify_sync_status: 'no_shopify_id',
+          shopify_sync_error: 'Produto sem shopify_inventory_item_id'
+        )
+      end
+    
       Rails.logger.info "Correction executed successfully for #{product.sku}"
-      
+    
       true
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "ActiveRecord::RecordInvalid in execute_correction!: #{e.message}"

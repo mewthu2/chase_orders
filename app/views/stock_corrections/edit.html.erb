@@ -312,17 +312,18 @@
               <table class="table table-dark table-hover mb-0 table-fixed">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 250px;">Produto</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 140px;">Antes / Corrigido</th>
-                    <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 220px;">Produto</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Status</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Antes / Corrigido</th>
+                    <th class="text-white fw-bold px-3 py-3" style="width: 180px;">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Shopify</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% @processed_items.each do |item| %>
                     <tr class="border-secondary">
-                      <td class="px-3 py-3" style="width: 250px;">
+                      <td class="px-3 py-3" style="width: 220px;">
                         <div>
                           <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(item.product) %></span>
                           <small class="text-warning fw-bold font-monospace">
@@ -335,7 +336,7 @@
                           <% end %>
                         </div>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 100px;">
+                      <td class="px-3 py-3 text-center" style="width: 80px;">
                         <% if item.needs_correction? %>
                           <span class="badge bg-warning text-dark px-2 py-1">
                             <i class="fas fa-edit me-1"></i>Corrigido
@@ -346,7 +347,7 @@
                           </span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3 text-center" style="width: 140px;">
+                      <td class="px-3 py-3 text-center" style="width: 120px;">
                         <% if item.needs_correction? %>
                           <div>
                             <small class="text-white-50 d-block">Antes: <span class="text-warning"><%= item.stock_before || item.current_stock %></span></small>
@@ -356,27 +357,48 @@
                           <span class="text-white-50">-</span>
                         <% end %>
                       </td>
-                      <td class="px-3 py-3" style="width: 200px;">
+                      <td class="px-3 py-3" style="width: 180px;">
                         <% if item.needs_correction? %>
                           <small class="text-success">
-                            <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 25) %>
+                            <i class="fas fa-check me-1"></i><%= truncate(item.correction_reason, length: 20) %>
                           </small>
                         <% else %>
                           <span class="text-white-50">-</span>
                         <% end %>
                       </td>
                       <td class="px-3 py-3 text-center" style="width: 100px;">
+                        <% if item.product.shopify_inventory_item_id.present? %>
+                          <span class="badge <%= item.shopify_sync_status_badge_class %> text-white px-2 py-1" 
+                              title="<%= item.shopify_sync_error if item.shopify_sync_status == 'error' %>">
+                            <% case item.shopify_sync_status %>
+                            <% when 'synced' %>
+                              <i class="fab fa-shopify me-1"></i>Sync
+                            <% when 'error' %>
+                              <i class="fas fa-exclamation-triangle me-1"></i>Erro
+                            <% when 'syncing' %>
+                              <i class="fas fa-spinner fa-spin me-1"></i>Sync...
+                            <% else %>
+                              <i class="fas fa-clock me-1"></i>Pendente
+                            <% end %>
+                          </span>
+                        <% else %>
+                          <span class="badge bg-secondary text-white px-2 py-1" title="Produto sem ID da Shopify">
+                            <i class="fas fa-ban me-1"></i>N/A
+                          </span>
+                        <% end %>
+                      </td>
+                      <td class="px-3 py-3 text-center" style="width: 80px;">
                         <% if @stock_correction.status == 'executed' %>
                           <span class="text-white-50">
-                            <i class="fas fa-lock me-1"></i>Finalizado
+                            <i class="fas fa-lock me-1"></i>Final
                           </span>
                         <% elsif item.executed? %>
                           <span class="text-white-50">
-                            <i class="fas fa-check me-1"></i>Executado
+                            <i class="fas fa-check me-1"></i>OK
                           </span>
                         <% else %>
                           <span class="text-white-50">
-                            <i class="fas fa-clock me-1"></i>Pendente
+                            <i class="fas fa-clock me-1"></i>Pend
                           </span>
                         <% end %>
                       </td>
@@ -573,6 +595,12 @@ function saveCorrection(productId) {
     return;
   }
   
+  // Mostrar loading
+  const button = document.querySelector(`button[onclick="saveCorrection('${productId}')"]`);
+  const originalText = button.innerHTML;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+  button.disabled = true;
+  
   const formData = new FormData();
   formData.append('product_id', productId);
   formData.append('corrected_stock', correctedStock);
@@ -589,14 +617,36 @@ function saveCorrection(productId) {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
+      // Mostrar mensagem de sucesso com status da integração
+      let message = 'Correção salva com sucesso!';
+      if (data.shopify_status) {
+        switch(data.shopify_status) {
+          case 'synced':
+            message += '\n✅ Integrado com Shopify!';
+            break;
+          case 'error':
+            message += '\n⚠️ Erro na integração com Shopify (verifique os logs)';
+            break;
+          case 'no_shopify_id':
+            message += '\n⚠️ Produto sem ID da Shopify';
+            break;
+          default:
+            message += '\n🔄 Integração em processamento...';
+        }
+      }
+      alert(message);
       location.reload();
     } else {
       alert('Erro: ' + data.message);
+      button.innerHTML = originalText;
+      button.disabled = false;
     }
   })
   .catch(error => {
     console.error('Error:', error);
     alert('Erro ao salvar correção');
+    button.innerHTML = originalText;
+    button.disabled = false;
   });
 }
 </script>

@@ -304,17 +304,31 @@ class StockCorrectionsController < ApplicationController
       corrected_stock: corrected_stock,
       correction_reason: correction_reason,
       needs_correction: true,
-      executed: true,
-      executed_at: Time.current
+      executed: false  # Deixar como false para o execute_correction! processar
     )
 
     if item.save
-      render json: { success: true, message: 'Item processado com sucesso!' }
+      # Executar a correção (que agora inclui integração automática)
+      Rails.logger.info "=== Executing correction with automatic Shopify integration ==="
+      
+      if item.execute_correction!
+        render json: { 
+          success: true, 
+          message: 'Correção salva e integrada com sucesso!',
+          shopify_status: item.shopify_sync_status
+        }
+      else
+        render json: { 
+          success: false, 
+          message: 'Erro ao executar a correção. Verifique os logs.' 
+        }
+      end
     else
       render json: { success: false, message: item.errors.full_messages.join(', ') }
     end
   rescue => e
     Rails.logger.error "Erro ao salvar correção: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
     render json: { success: false, message: e.message }
   end
 
