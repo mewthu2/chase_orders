@@ -188,7 +188,7 @@
                           
                           <% if correction.status != 'executed' %>
                             <%= button_to finalize_correction_stock_correction_path(correction), 
-                                          method: :patch,
+                                          method: :get,
                                           class: "btn btn-sm btn-outline-light",
                                           title: "Finalizar conferência",
                                           form: { 
