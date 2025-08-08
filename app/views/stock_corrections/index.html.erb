@@ -2,7 +2,6 @@
   <% content_for :title, 'Conferências de Estoque' %>
   <%= render 'layouts/partials/messages' if defined?(render) %>
 
-   Header com estatísticas 
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -66,7 +65,6 @@
     </div>
   </div>
 
-   Lista de Conferências 
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -86,6 +84,7 @@
                     <th class="text-white fw-bold px-4 py-3">Motivo</th>
                     <th class="text-white fw-bold px-4 py-3">Location</th>
                     <th class="text-white fw-bold px-4 py-3 text-center">Status</th>
+                    <th class="text-white fw-bold px-4 py-3 text-center">Integração</th>
                     <th class="text-white fw-bold px-4 py-3 text-center">Itens</th>
                     <th class="text-white fw-bold px-4 py-3 text-center">Ações</th>
                   </tr>
@@ -133,37 +132,104 @@
                         <% end %>
                       </td>
                       <td class="px-4 py-3 text-center">
+                        <% case correction.integration_status %>
+                        <% when 'pending' %>
+                          <span class="badge bg-warning text-dark px-3 py-2">
+                            <i class="fas fa-spinner fa-spin me-1"></i>Processando
+                          </span>
+                          <% if correction.integration_started_at %>
+                            <small class="text-warning d-block">
+                              Iniciado: <%= correction.integration_started_at.strftime('%H:%M') %>
+                            </small>
+                          <% end %>
+                        <% when 'completed' %>
+                          <span class="badge bg-success text-white px-3 py-2">
+                            <i class="fas fa-check-circle me-1"></i>Concluída
+                          </span>
+                        <% when 'error' %>
+                          <span class="badge bg-danger text-white px-3 py-2" 
+                                title="<%= correction.integration_error %>">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Erro
+                          </span>
+                          <% if correction.integration_error.present? %>
+                            <small class="text-danger d-block" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                              <%= truncate(correction.integration_error, length: 30) %>
+                            </small>
+                          <% end %>
+                        <% else %>
+                          <span class="badge bg-secondary text-white px-3 py-2">
+                            <i class="fas fa-minus me-1"></i>N/A
+                          </span>
+                        <% end %>
+                      </td>
+                      <td class="px-4 py-3 text-center">
                         <% corrected_items = correction.stock_correction_items.where(needs_correction: true) %>
+                        <% executed_items = corrected_items.where(executed: true) %>
                         <span class="badge bg-info text-dark px-2 py-1">
                           <%= corrected_items.count %> corrigidos
                         </span>
+                        <% if corrected_items.any? %>
+                          <small class="text-white-50 d-block">
+                            <%= executed_items.count %> executados
+                          </small>
+                        <% end %>
                       </td>
                       <td class="px-4 py-3 text-center">
-                        <div class="btn-group" role="group">
+                        <div class="btn-group action-buttons" role="group">
                           <%= link_to correction, class: "btn btn-sm btn-outline-light", title: "Visualizar" do %>
                             <i class="fas fa-eye"></i>
                           <% end %>
                           
                           <% if correction.status != 'executed' || current_user.admin? %>
-                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-sm btn-outline-primary", title: "Editar" do %>
+                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-sm btn-outline-light", title: "Editar" do %>
                               <i class="fas fa-edit"></i>
                             <% end %>
                           <% end %>
                           
+                          <% if correction.status != 'executed' %>
+                            <%= button_to finalize_correction_stock_correction_path(correction), 
+                                          method: :patch,
+                                          class: "btn btn-sm btn-outline-light",
+                                          title: "Finalizar conferência",
+                                          form: { 
+                                            onsubmit: "return confirm('Tem certeza que deseja finalizar esta conferência?')" 
+                                          } do %>
+                              <i class="fas fa-flag-checkered"></i>
+                            <% end %>
+                          <% end %>
+                          
                           <% if current_user.admin? %>
-                            <%= button_to sync_with_shopify_stock_correction_path(correction), 
-                                method: :patch,
-                                class: "btn btn-sm btn-outline-info",
-                                title: "Integrar os itens com a Shopify",
-                                form: { onsubmit: "return confirm('Tem certeza que deseja integrar os itens com a Shopify? Esta ação irá sincronizar os estoques.')" } do %>
-                              <i class="fab fa-shopify"></i>
+                            <% if correction.stock_correction_items.where(needs_correction: true, executed: false).any? && !correction.integration_pending? %>
+                              <%= button_to execute_all_stock_correction_path(correction), 
+                                            method: :patch,
+                                            class: "btn btn-sm btn-outline-light",
+                                            title: "Processar correções em background",
+                                            form: { 
+                                              onsubmit: "return confirm('Processar todas as correções em background?')" 
+                                            } do %>
+                                <i class="fas fa-play"></i>
+                              <% end %>
+                            <% end %>
+                            
+                            <% unless correction.integration_pending? %>
+                              <%= button_to sync_with_shopify_stock_correction_path(correction), 
+                                            method: :patch,
+                                            class: "btn btn-sm btn-outline-light",
+                                            title: "Sincronizar com Shopify",
+                                            form: { 
+                                              onsubmit: "return confirm('Sincronizar com Shopify em background?')" 
+                                            } do %>
+                                <i class="fab fa-shopify"></i>
+                              <% end %>
                             <% end %>
                             
                             <%= button_to correction, 
-                                method: :delete,
-                                class: "btn btn-sm btn-outline-danger",
-                                title: "Excluir conferência",
-                                form: { onsubmit: "return confirm('Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita.')" } do %>
+                                          method: :delete,
+                                          class: "btn btn-sm btn-outline-danger",
+                                          title: "Excluir conferência",
+                                          form: { 
+                                            onsubmit: "return confirm('Tem certeza que deseja excluir esta conferência?')" 
+                                          } do %>
                               <i class="fas fa-trash"></i>
                             <% end %>
                           <% end %>
@@ -185,8 +251,7 @@
             </div>
           <% end %>
         </div>
-
-         Paginação 
+        
         <% if @total_pages > 1 %>
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -194,10 +259,9 @@
                 Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_corrections].min %> de <%= @total_corrections %> conferências
               </div>
               <div class="d-flex gap-2 flex-wrap">
-                 Botão Anterior 
                 <% if @current_page > 1 %>
                   <%= link_to stock_corrections_path(page: @current_page - 1),
-                      class: "btn btn-outline-light btn-sm" do %>
+                              class: "btn btn-outline-light btn-sm" do %>
                     <i class="fas fa-chevron-left"></i> Anterior
                   <% end %>
                 <% else %>
@@ -206,13 +270,12 @@
                   </button>
                 <% end %>
 
-                 Números das páginas 
                 <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
                 <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
-
+                
                 <% if page_start > 1 %>
                   <%= link_to "1", stock_corrections_path(page: 1),
-                      class: "btn btn-outline-light btn-sm" %>
+                              class: "btn btn-outline-light btn-sm" %>
                   <% if page_start > 2 %>
                     <span class="btn btn-outline-light btn-sm disabled">...</span>
                   <% end %>
@@ -223,7 +286,7 @@
                     <button class="btn btn-primary btn-sm"><%= page_num %></button>
                   <% else %>
                     <%= link_to page_num, stock_corrections_path(page: page_num),
-                        class: "btn btn-outline-light btn-sm" %>
+                                class: "btn btn-outline-light btn-sm" %>
                   <% end %>
                 <% end %>
 
@@ -232,13 +295,12 @@
                     <span class="btn btn-outline-light btn-sm disabled">...</span>
                   <% end %>
                   <%= link_to @total_pages, stock_corrections_path(page: @total_pages),
-                      class: "btn btn-outline-light btn-sm" %>
+                              class: "btn btn-outline-light btn-sm" %>
                 <% end %>
 
-                 Botão Próxima 
                 <% if @current_page < @total_pages %>
                   <%= link_to stock_corrections_path(page: @current_page + 1),
-                      class: "btn btn-outline-light btn-sm" do %>
+                              class: "btn btn-outline-light btn-sm" do %>
                     Próxima <i class="fas fa-chevron-right"></i>
                   <% end %>
                 <% else %>
@@ -332,6 +394,65 @@ body {
   font-weight: 500;
 }
 
+/* Botões de ação horizontais */
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons .btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.action-buttons .btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.action-buttons .btn:focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+/* Botão de excluir vermelho */
+.action-buttons .btn-outline-danger {
+  border-color: rgba(220, 53, 69, 0.5);
+  color: #dc3545;
+}
+
+.action-buttons .btn-outline-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+/* Animação do spinner */
+.fa-spin {
+  animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 768px) {
   .stat-card {
     flex-direction: column;
@@ -343,9 +464,9 @@ body {
     font-size: 1.5rem;
   }
   
-  .btn-group {
-    flex-direction: column;
-    gap: 0.25rem;
+  .action-buttons {
+    flex-wrap: wrap;
+    gap: 4px;
   }
   
   .card-footer .d-flex {

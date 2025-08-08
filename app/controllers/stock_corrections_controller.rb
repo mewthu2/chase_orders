@@ -240,31 +240,57 @@ class StockCorrectionsController < ApplicationController
     end
   end
 
+  # APENAS FINALIZAR - NÃO PROCESSAR
   def finalize_correction
     begin
-      ActiveRecord::Base.transaction do
-        # Executar todas as correções pendentes SEM integração Shopify
-        pending_items = @stock_correction.stock_correction_items.where(needs_correction: true, executed: false)
-        executed_count = 0
-        
-        pending_items.each do |item|
-          if item.execute_correction!(with_shopify_integration: false)
-            executed_count += 1
-          end
-        end
-        
-        # Atualizar status da conferência
-        @stock_correction.update!(status: 'executed', executed_at: Time.current)
-        
-        # Mensagem de sucesso
+      # Apenas marcar como finalizada, sem processar correções
+      if @stock_correction.update!(status: 'executed', executed_at: Time.current)
         redirect_to stock_corrections_path, 
-                    notice: "Conferência finalizada com sucesso! #{executed_count} correções executadas. Use o botão 'Integrar Shopify' para sincronizar."
+                    notice: "Conferência finalizada com sucesso!"
+      else
+        redirect_to stock_corrections_path, 
+                    alert: "Erro ao finalizar conferência."
       end
     rescue => e
       Rails.logger.error "Erro ao finalizar conferência: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       redirect_to stock_corrections_path, 
                   alert: "Erro ao finalizar conferência: #{e.message}"
+    end
+  end
+
+  # EXECUTAR TODAS AS CORREÇÕES EM BACKGROUND (perform_later)
+  def execute_all
+    begin
+      # Verificar se há correções pendentes
+      pending_items = @stock_correction.stock_correction_items.where(needs_correction: true, executed: false)
+      
+      if pending_items.empty?
+        redirect_to stock_corrections_path, 
+                    alert: 'Não há correções pendentes para processar.'
+        return
+      end
+
+      # Marcar início da integração
+      @stock_correction.start_integration!
+
+      # Executar correções diretamente em background usando SyncShopifyCorrectionsJob
+      SyncShopifyCorrectionsJob.perform_later(@stock_correction.id, current_user.id)
+      
+      Rails.logger.info "SyncShopifyCorrectionsJob enqueued for execute_all on stock_correction #{@stock_correction.id}"
+      
+      redirect_to stock_corrections_path, 
+                  notice: "Processamento iniciado em background! #{pending_items.count} correções serão processadas."
+      
+    rescue => e
+      Rails.logger.error "Erro ao enfileirar job de processamento: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      
+      # Marcar erro na integração
+      @stock_correction.fail_integration!(e.message)
+      
+      redirect_to stock_corrections_path, 
+                  alert: "Erro ao iniciar processamento: #{e.message}"
     end
   end
 
@@ -280,30 +306,26 @@ class StockCorrectionsController < ApplicationController
         return
       end
 
-      synced_count = 0
-      error_count = 0
+      # Marcar início da integração
+      @stock_correction.start_integration!
+
+      # Enfileirar o job para sincronizar com Shopify em background
+      SyncShopifyCorrectionsJob.perform_later(@stock_correction.id, current_user.id)
       
-      items_to_sync.each do |item|
-        if item.sync_with_shopify!
-          synced_count += 1
-        else
-          error_count += 1
-        end
-      end
+      Rails.logger.info "SyncShopifyCorrectionsJob enqueued for stock_correction #{@stock_correction.id}"
       
-      if error_count == 0
-        redirect_to stock_corrections_path, 
-                    notice: "Integração concluída! #{synced_count} itens sincronizados com a Shopify."
-      else
-        redirect_to stock_corrections_path, 
-                    alert: "Integração parcial: #{synced_count} sincronizados, #{error_count} com erro. Verifique os logs."
-      end
+      redirect_to stock_corrections_path, 
+                  notice: "Sincronização com Shopify iniciada em background! #{items_to_sync.count} itens serão sincronizados."
       
     rescue => e
-      Rails.logger.error "Erro na integração com Shopify: #{e.message}"
+      Rails.logger.error "Erro ao enfileirar job de sincronização: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
+      
+      # Marcar erro na integração
+      @stock_correction.fail_integration!(e.message)
+      
       redirect_to stock_corrections_path, 
-                  alert: "Erro na integração com Shopify: #{e.message}"
+                  alert: "Erro ao iniciar sincronização: #{e.message}"
     end
   end
 
@@ -321,19 +343,7 @@ class StockCorrectionsController < ApplicationController
     end
   end
 
-  def execute_all
-    executed_count = 0
-    
-    @stock_correction.stock_correction_items.where(executed: false).each do |item|
-      if item.update(executed: true, executed_at: Time.current)
-        executed_count += 1
-      end
-    end
-    
-    redirect_to edit_stock_correction_path(@stock_correction), 
-                notice: "#{executed_count} correções executadas com sucesso!"
-  end
-
+  # SALVAR ITEM - EXECUTAR IMEDIATAMENTE (perform_now)
   def save_item_correction
     product_id = params[:product_id]
     corrected_stock = params[:corrected_stock].to_i
@@ -363,8 +373,8 @@ class StockCorrectionsController < ApplicationController
     )
 
     if item.save
-      # Executar a correção COM integração automática
-      Rails.logger.info "=== Executing correction WITH automatic Shopify integration ==="
+      # Executar a correção COM integração automática IMEDIATAMENTE (perform_now)
+      Rails.logger.info "=== Executing correction WITH automatic Shopify integration (IMMEDIATE) ==="
       
       if item.execute_correction!(with_shopify_integration: true)
         render json: { 
