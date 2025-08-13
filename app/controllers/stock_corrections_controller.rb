@@ -166,9 +166,9 @@ class StockCorrectionsController < ApplicationController
             )
           end
           
-          # Buscar estoque real da Shopify
+          # Buscar estoque real da Shopify - CORRIGIDO
           real_stock = fetch_shopify_stock(product, @location)
-          @search_item.define_singleton_method(:real_stock) { real_stock || stock_for_location(product, @location) }
+          @search_item.define_singleton_method(:real_stock) { real_stock || current_stock }
           @search_item.define_singleton_method(:stock_source) do
             if real_stock
               'shopify_real_time'
@@ -465,6 +465,8 @@ class StockCorrectionsController < ApplicationController
 
   def fetch_real_time_stock_for_items(items)
     items.each do |item|
+      next unless item&.product
+      
       if item.product.shopify_variant_id.present?
         real_stock = fetch_shopify_stock(item.product, @stock_correction.location)
         
@@ -480,7 +482,8 @@ class StockCorrectionsController < ApplicationController
           end
         end
       else
-        item.define_singleton_method(:real_stock) { stock_for_location(item.product, @stock_correction.location) }
+        current_stock = stock_for_location(item.product, @stock_correction.location)
+        item.define_singleton_method(:real_stock) { current_stock }
         item.define_singleton_method(:stock_source) { 'no_shopify_id' }
       end
     end

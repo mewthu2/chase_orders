@@ -1,62 +1,41 @@
 <div class="container-fluid py-4">
-  <% content_for :title, 'Conferências de Estoque' %>
-  <%= render 'layouts/partials/messages' if defined?(render) %>
-
+  <!-- Header com Estatísticas -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h4 class="text-white mb-0">
-            <i class="fas fa-clipboard-list me-2"></i>Conferências de Estoque
+            <i class="fas fa-clipboard-list me-2"></i>
+            Conferências de Estoque
           </h4>
-          <%= link_to new_stock_correction_path, class: "btn btn-warning text-dark" do %>
+          <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
             <i class="fas fa-plus me-2"></i>Nova Conferência
           <% end %>
         </div>
         <div class="card-body bg-black">
-          <div class="row g-3">
+          <div class="row text-center">
             <div class="col-md-3">
-              <div class="stat-card bg-primary">
-                <div class="stat-icon">
-                  <i class="fas fa-clipboard-list"></i>
-                </div>
-                <div class="stat-content">
-                  <h3 class="text-dark mb-0"><%= @total_corrections %></h3>
-                  <p class="text-dark mb-0">Total de Conferências</p>
-                </div>
+              <div class="p-3">
+                <h4 class="text-info mb-1"><%= @total_corrections %></h4>
+                <small class="text-white-50">Total de Conferências</small>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card bg-warning">
-                <div class="stat-icon">
-                  <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-content">
-                  <h3 class="text-dark mb-0"><%= @pending_corrections %></h3>
-                  <p class="text-dark mb-0">Pendentes</p>
-                </div>
+              <div class="p-3">
+                <h4 class="text-warning mb-1"><%= @pending_corrections %></h4>
+                <small class="text-white-50">Pendentes</small>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card bg-success">
-                <div class="stat-icon">
-                  <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-content">
-                  <h3 class="text-white mb-0"><%= @completed_corrections %></h3>
-                  <p class="text-white mb-0">Finalizadas</p>
-                </div>
+              <div class="p-3">
+                <h4 class="text-success mb-1"><%= @completed_corrections %></h4>
+                <small class="text-white-50">Finalizadas</small>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="stat-card bg-info">
-                <div class="stat-icon">
-                  <i class="fas fa-sync"></i>
-                </div>
-                <div class="stat-content">
-                  <h3 class="text-dark mb-0"><%= @synced_corrections %></h3>
-                  <p class="text-dark mb-0">Sincronizadas Hoje</p>
-                </div>
+              <div class="p-3">
+                <h4 class="text-primary mb-1"><%= @synced_corrections %></h4>
+                <small class="text-white-50">Sincronizadas Hoje</small>
               </div>
             </div>
           </div>
@@ -65,171 +44,168 @@
     </div>
   </div>
 
+  <!-- Lista de Conferências -->
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-list me-2"></i>Histórico de Conferências
-          </h5>
-        </div>
         <div class="card-body bg-black p-0">
           <% if @stock_corrections.any? %>
             <div class="table-responsive">
               <table class="table table-dark table-hover mb-0">
                 <thead class="bg-dark">
                   <tr>
-                    <th class="text-white fw-bold px-4 py-3">ID</th>
-                    <th class="text-white fw-bold px-4 py-3">Data</th>
-                    <th class="text-white fw-bold px-4 py-3">Motivo</th>
-                    <th class="text-white fw-bold px-4 py-3">Location</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Integração</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Itens</th>
-                    <th class="text-white fw-bold px-4 py-3 text-center">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3">ID</th>
+                    <th class="text-white fw-bold px-3 py-3">Location</th>
+                    <th class="text-white fw-bold px-3 py-3">Data</th>
+                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Integração</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Itens</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% @stock_corrections.each do |correction| %>
                     <tr class="border-secondary">
-                      <td class="px-4 py-3">
-                        <span class="text-white-50">#<%= correction.id %></span>
+                      <td class="px-3 py-3">
+                        <span class="text-warning fw-bold">#<%= correction.id %></span>
                       </td>
-                      <td class="px-4 py-3">
-                        <span class="text-white"><%= correction.correction_date.strftime('%d/%m/%Y') %></span>
-                        <small class="text-white-50 d-block">
-                          Criada: <%= correction.created_at.strftime('%d/%m/%Y %H:%M') %>
-                        </small>
+                      <td class="px-3 py-3">
+                        <span class="text-white"><%= correction.location_display_name %></span>
                       </td>
-                      <td class="px-4 py-3">
-                        <span class="text-white"><%= correction.reason %></span>
-                        <% if correction.notes.present? %>
-                          <small class="text-white-50 d-block">
-                            <i class="fas fa-sticky-note me-1"></i><%= correction.notes %>
-                          </small>
-                        <% end %>
+                      <td class="px-3 py-3">
+                        <span class="text-white-50"><%= correction.correction_date.strftime('%d/%m/%Y') %></span>
                       </td>
-                      <td class="px-4 py-3">
-                        <span class="badge bg-secondary text-white px-2 py-1">
-                          <i class="fas fa-map-marker-alt me-1"></i><%= User.location_name(correction.location) %>
-                        </span>
+                      <td class="px-3 py-3">
+                        <span class="text-white-50"><%= truncate(correction.reason, length: 30) %></span>
                       </td>
-                      <td class="px-4 py-3 text-center">
-                        <% case correction.status %>
-                        <% when 'executed' %>
-                          <span class="badge bg-success text-white px-3 py-2">
-                            <i class="fas fa-check-circle me-1"></i>Finalizada
+                      <td class="px-3 py-3 text-center">
+                        <% if correction.status == 'executed' %>
+                          <span class="badge bg-success text-dark px-2 py-1">
+                            <i class="fas fa-check me-1"></i>Finalizada
                           </span>
-                          <% if correction.executed_at %>
-                            <small class="text-success d-block">
-                              <%= correction.executed_at.strftime('%d/%m/%Y %H:%M') %>
-                            </small>
-                          <% end %>
                         <% else %>
-                          <span class="badge bg-warning text-dark px-3 py-2">
+                          <span class="badge bg-warning text-dark px-2 py-1">
                             <i class="fas fa-clock me-1"></i>Pendente
                           </span>
                         <% end %>
                       </td>
-                      <td class="px-4 py-3 text-center">
+                      <td class="px-3 py-3 text-center">
                         <% case correction.integration_status %>
                         <% when 'pending' %>
-                          <span class="badge bg-warning text-dark px-3 py-2">
+                          <span class="badge bg-warning text-dark px-2 py-1">
                             <i class="fas fa-spinner fa-spin me-1"></i>Processando
                           </span>
-                          <% if correction.integration_started_at %>
-                            <small class="text-warning d-block">
-                              Iniciado: <%= correction.integration_started_at.strftime('%H:%M') %>
-                            </small>
-                          <% end %>
                         <% when 'completed' %>
-                          <span class="badge bg-success text-white px-3 py-2">
-                            <i class="fas fa-check-circle me-1"></i>Concluída
+                          <span class="badge bg-success text-dark px-2 py-1">
+                            <i class="fas fa-check me-1"></i>Concluída
                           </span>
                         <% when 'error' %>
-                          <span class="badge bg-danger text-white px-3 py-2" 
-                                title="<%= correction.integration_error %>">
+                          <span class="badge bg-danger text-white px-2 py-1" 
+                                title="<%= correction.integration_error %>" 
+                                data-bs-toggle="tooltip">
                             <i class="fas fa-exclamation-triangle me-1"></i>Erro
                           </span>
-                          <% if correction.integration_error.present? %>
-                            <small class="text-danger d-block" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
-                              <%= truncate(correction.integration_error, length: 30) %>
-                            </small>
-                          <% end %>
                         <% else %>
-                          <span class="badge bg-secondary text-white px-3 py-2">
+                          <span class="badge bg-secondary text-white px-2 py-1">
                             <i class="fas fa-minus me-1"></i>N/A
                           </span>
                         <% end %>
                       </td>
-                      <td class="px-4 py-3 text-center">
-                        <% corrected_items = correction.stock_correction_items.where(needs_correction: true) %>
-                        <% executed_items = corrected_items.where(executed: true) %>
-                        <span class="badge bg-info text-dark px-2 py-1">
-                          <%= corrected_items.count %> corrigidos
-                        </span>
-                        <% if corrected_items.any? %>
-                          <small class="text-white-50 d-block">
-                            <%= executed_items.count %> executados
-                          </small>
+                      <td class="px-3 py-3 text-center">
+                        <% corrections_count = correction.stock_correction_items.where(needs_correction: true).count %>
+                        <% if corrections_count > 0 %>
+                          <span class="badge bg-info text-dark px-2 py-1">
+                            <%= corrections_count %> correções
+                          </span>
+                        <% else %>
+                          <span class="text-white-50">-</span>
                         <% end %>
                       </td>
-                      <td class="px-4 py-3 text-center">
-                        <div class="btn-group action-buttons" role="group">
-                          <%= link_to correction, class: "btn btn-sm btn-outline-light", title: "Visualizar" do %>
+                      <td class="px-3 py-3 text-center">
+                        <div class="btn-group" role="group">
+                          <!-- Visualizar -->
+                          <%= link_to correction, 
+                                      class: "btn btn-sm btn-outline-light",
+                                      title: "Visualizar",
+                                      data: { bs_toggle: "tooltip" } do %>
                             <i class="fas fa-eye"></i>
                           <% end %>
                           
-                          <% if correction.status != 'executed' || current_user.admin? %>
-                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-sm btn-outline-light", title: "Editar" do %>
-                              <i class="fas fa-edit"></i>
-                            <% end %>
+                          <!-- Editar -->
+                          <%= link_to edit_stock_correction_path(correction), 
+                                      class: "btn btn-sm btn-outline-light",
+                                      title: "Editar",
+                                      data: { bs_toggle: "tooltip" } do %>
+                            <i class="fas fa-edit"></i>
                           <% end %>
                           
                           <% if correction.status != 'executed' %>
-                            <%= button_to finalize_correction_stock_correction_path(correction), 
-                                          method: :get,
-                                          class: "btn btn-sm btn-outline-light",
-                                          title: "Finalizar conferência",
-                                          form: { 
-                                            onsubmit: "return confirm('Tem certeza que deseja finalizar esta conferência?')" 
-                                          } do %>
-                              <i class="fas fa-flag-checkered"></i>
+                            <!-- Finalizar -->
+                            <%= link_to finalize_correction_stock_correction_path(correction), 
+                                        method: :patch,
+                                        class: "btn btn-sm btn-outline-light",
+                                        title: "Finalizar",
+                                        data: { 
+                                          bs_toggle: "tooltip",
+                                          confirm: "Tem certeza que deseja finalizar esta conferência?" 
+                                        } do %>
+                              <i class="fas fa-check"></i>
                             <% end %>
-                          <% end %>
-                          
-                          <% if current_user.admin? %>
+                            
+                            <!-- Executar Todas (apenas se não estiver processando) -->
                             <% if correction.stock_correction_items.where(needs_correction: true, executed: false).any? && !correction.integration_pending? %>
-                              <%= button_to execute_all_stock_correction_path(correction), 
-                                            method: :patch,
-                                            class: "btn btn-sm btn-outline-light",
-                                            title: "Processar correções em background",
-                                            form: { 
-                                              onsubmit: "return confirm('Processar todas as correções em background?')" 
-                                            } do %>
+                              <%= link_to execute_all_stock_correction_path(correction), 
+                                          method: :post,
+                                          class: "btn btn-sm btn-outline-light",
+                                          title: "Executar Todas as Correções",
+                                          data: { 
+                                            bs_toggle: "tooltip",
+                                            confirm: "Deseja executar todas as correções pendentes?" 
+                                          } do %>
                                 <i class="fas fa-play"></i>
                               <% end %>
                             <% end %>
-                            
-                            <% unless correction.integration_pending? %>
-                              <%= button_to sync_with_shopify_stock_correction_path(correction), 
-                                            method: :patch,
-                                            class: "btn btn-sm btn-outline-light",
-                                            title: "Sincronizar com Shopify",
-                                            form: { 
-                                              onsubmit: "return confirm('Sincronizar com Shopify em background?')" 
-                                            } do %>
-                                <i class="fab fa-shopify"></i>
+                          <% else %>
+                            <!-- Reabrir (apenas admin) -->
+                            <% if current_user.admin? %>
+                              <%= link_to reopen_stock_correction_path(correction), 
+                                          method: :patch,
+                                          class: "btn btn-sm btn-outline-light",
+                                          title: "Reabrir",
+                                          data: { 
+                                            bs_toggle: "tooltip",
+                                            confirm: "Tem certeza que deseja reabrir esta conferência?" 
+                                          } do %>
+                                <i class="fas fa-undo"></i>
                               <% end %>
                             <% end %>
-                            
-                            <%= button_to correction, 
-                                          method: :delete,
-                                          class: "btn btn-sm btn-outline-danger",
-                                          title: "Excluir conferência",
-                                          form: { 
-                                            onsubmit: "return confirm('Tem certeza que deseja excluir esta conferência?')" 
-                                          } do %>
+                          <% end %>
+                          
+                          <!-- Sincronizar Shopify (apenas admin e se não estiver processando) -->
+                          <% if current_user.admin? && correction.stock_correction_items.where(needs_correction: true, executed: true).any? && !correction.integration_pending? %>
+                            <%= link_to sync_with_shopify_stock_correction_path(correction), 
+                                        method: :post,
+                                        class: "btn btn-sm btn-outline-light",
+                                        title: "Sincronizar com Shopify",
+                                        data: { 
+                                          bs_toggle: "tooltip",
+                                          confirm: "Deseja sincronizar com a Shopify?" 
+                                        } do %>
+                              <i class="fab fa-shopify"></i>
+                            <% end %>
+                          <% end %>
+                          
+                          <!-- Excluir (apenas admin) -->
+                          <% if current_user.admin? %>
+                            <%= link_to correction, 
+                                        method: :delete,
+                                        class: "btn btn-sm btn-outline-danger",
+                                        title: "Excluir",
+                                        data: { 
+                                          bs_toggle: "tooltip",
+                                          confirm: "Tem certeza que deseja excluir esta conferência?" 
+                                        } do %>
                               <i class="fas fa-trash"></i>
                             <% end %>
                           <% end %>
@@ -245,13 +221,14 @@
               <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
               <h5 class="text-white-50">Nenhuma conferência encontrada</h5>
               <p class="text-white-50">Crie sua primeira conferência de estoque</p>
-              <%= link_to new_stock_correction_path, class: "btn btn-warning text-dark" do %>
+              <%= link_to new_stock_correction_path, class: "btn btn-success mt-3" do %>
                 <i class="fas fa-plus me-2"></i>Nova Conferência
               <% end %>
             </div>
           <% end %>
         </div>
         
+        <!-- Paginação -->
         <% if @total_pages > 1 %>
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -264,23 +241,9 @@
                               class: "btn btn-outline-light btn-sm" do %>
                     <i class="fas fa-chevron-left"></i> Anterior
                   <% end %>
-                <% else %>
-                  <button class="btn btn-outline-light btn-sm" disabled>
-                    <i class="fas fa-chevron-left"></i> Anterior
-                  </button>
                 <% end %>
-
                 <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
                 <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
-                
-                <% if page_start > 1 %>
-                  <%= link_to "1", stock_corrections_path(page: 1),
-                              class: "btn btn-outline-light btn-sm" %>
-                  <% if page_start > 2 %>
-                    <span class="btn btn-outline-light btn-sm disabled">...</span>
-                  <% end %>
-                <% end %>
-
                 <% (page_start..page_end).each do |page_num| %>
                   <% if page_num == @current_page %>
                     <button class="btn btn-primary btn-sm"><%= page_num %></button>
@@ -289,24 +252,11 @@
                                 class: "btn btn-outline-light btn-sm" %>
                   <% end %>
                 <% end %>
-
-                <% if page_end < @total_pages %>
-                  <% if page_end < @total_pages - 1 %>
-                    <span class="btn btn-outline-light btn-sm disabled">...</span>
-                  <% end %>
-                  <%= link_to @total_pages, stock_corrections_path(page: @total_pages),
-                              class: "btn btn-outline-light btn-sm" %>
-                <% end %>
-
                 <% if @current_page < @total_pages %>
                   <%= link_to stock_corrections_path(page: @current_page + 1),
                               class: "btn btn-outline-light btn-sm" do %>
                     Próxima <i class="fas fa-chevron-right"></i>
                   <% end %>
-                <% else %>
-                  <button class="btn btn-outline-light btn-sm" disabled>
-                    Próxima <i class="fas fa-chevron-right"></i>
-                  </button>
                 <% end %>
               </div>
             </div>
@@ -317,7 +267,6 @@
   </div>
 </div>
 
-<% content_for :styles do %>
 <style>
 body {
   background-color: #121212;
@@ -328,8 +277,25 @@ body {
   background-color: #121212 !important;
 }
 
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
+.form-control, .form-select {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: #495057;
+  border-color: #6c757d;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
 }
 
 .card {
@@ -345,134 +311,90 @@ body {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
 
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-hover tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.075);
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  gap: 1rem;
-  transition: transform 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  background: rgba(255, 255, 255, 0.2);
-  flex-shrink: 0;
-}
-
-.stat-content h3 {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.stat-content p {
-  font-size: 0.9rem;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
 .badge {
   font-weight: 500;
 }
 
-/* Botões de ação horizontais */
-.action-buttons {
-  display: flex;
-  flex-direction: row;
-  gap: 2px;
-  justify-content: center;
-  align-items: center;
-}
-
-.action-buttons .btn {
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
   width: 32px;
   height: 32px;
-  padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
 }
 
-.action-buttons .btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+/* Botões de ação padronizados */
+.btn-group .btn-outline-light {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.btn-group .btn-outline-light:hover {
+  background-color: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
   transform: scale(1.05);
 }
 
-.action-buttons .btn:focus {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
-}
-
 /* Botão de excluir vermelho */
-.action-buttons .btn-outline-danger {
+.btn-group .btn-outline-danger {
+  background-color: transparent;
   border-color: rgba(220, 53, 69, 0.5);
   color: #dc3545;
 }
 
-.action-buttons .btn-outline-danger:hover {
-  background: rgba(220, 53, 69, 0.1);
+.btn-group .btn-outline-danger:hover {
+  background-color: rgba(220, 53, 69, 0.1);
   border-color: #dc3545;
   color: #dc3545;
+  transform: scale(1.05);
 }
 
-/* Animação do spinner */
-.fa-spin {
-  animation: fa-spin 2s infinite linear;
+/* Layout horizontal dos botões */
+.btn-group {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+/* Spinner animado */
+.fa-spinner.fa-spin {
+  animation: fa-spin 1s infinite linear;
 }
 
 @keyframes fa-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
+/* Responsividade */
 @media (max-width: 768px) {
-  .stat-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
+  .table-responsive {
+    font-size: 0.875rem;
   }
-  
-  .stat-content h3 {
-    font-size: 1.5rem;
+  .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+    width: 28px;
+    height: 28px;
   }
-  
-  .action-buttons {
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  
-  .card-footer .d-flex {
-    flex-direction: column;
-    gap: 1rem;
+  .btn-group {
+    gap: 1px;
   }
 }
 </style>
-<% end %>
+
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>

@@ -58,11 +58,12 @@ module Shopify::Products
       'shopify_product_id' => method(:update_product_with_shopify_id),
       'price_and_title' => method(:update_product_with_price_and_title),
       'variant_id' => method(:update_product_with_variant_id),
-      'cost' => method(:update_product_variant_cost)
+      'cost' => method(:update_product_variant_cost),
+      'shopify_inventory_item_id' => method(:update_product_with_inventory_item_id)
     }
 
     if sync_methods.key?(function)
-      Product.where('updated_at < ?', 1.hours.ago).find_each(batch_size: 100) do |product|
+      Product.find_each(batch_size: 100) do |product|
         sync_methods[function].call(product)
       end
     else
@@ -231,6 +232,61 @@ module Shopify::Products
     rescue StandardError => e
       puts "Erro ao buscar o produto #{product.sku}: #{e.message}"
     end
+  end
+
+  def update_product_with_inventory_item_id(product)
+    query = <<-GRAPHQL
+      {
+        products(first: 1, query: "sku:#{product.sku}") {
+          edges {
+            node {
+              variants(first: 10) {
+                edges {
+                  node {
+                    sku
+                    inventoryItem {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    GRAPHQL
+
+    begin
+      response = client_shopify_graphql.query(query:)
+      if response.body['data'].present? && response.body['data']['products']['edges'].any?
+        inventory_item_id = extract_inventory_item_id(response.body)
+        if inventory_item_id
+          product.update(shopify_inventory_item_id: inventory_item_id)
+          puts "Atualizado produto #{product.sku} com Inventory Item ID: #{inventory_item_id}"
+        else
+          puts "Inventory Item ID não encontrado para o produto #{product.sku}"
+        end
+      else
+        puts "Nenhuma correspondência encontrada para o produto #{product.sku}"
+      end
+    rescue StandardError => e
+      puts "Erro ao buscar Inventory Item ID para o produto #{product.sku}: #{e.message}"
+    end
+  end
+
+  def extract_inventory_item_id(response_body)
+    product_edges = response_body.dig('data', 'products', 'edges')
+    return nil unless product_edges&.any?
+
+    product_edges.each do |edge|
+      variants = edge.dig('node', 'variants', 'edges') || []
+      variants.each do |variant_edge|
+        if variant_edge.dig('node', 'sku').present?
+          return variant_edge.dig('node', 'inventoryItem', 'id')
+        end
+      end
+    end
+    nil
   end
 
   def update_product_variant_cost(product)
