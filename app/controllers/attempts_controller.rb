@@ -19,8 +19,8 @@ class AttemptsController < ApplicationController
 
   def verify_attempts
     @attempts = Attempt.where(tiny_order_id: params[:tiny_order_id])
-                       .order(created_at: :desc)
                        .limit(20)
+                       .order(created_at: :desc)
                        .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 

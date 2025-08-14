@@ -11,34 +11,18 @@ class DashboardController < ApplicationController
                         .select('MAX(id) AS id')
                         .group(:order_correios_id)
 
-    push_tracking = Attempt.where(id: latest_ids.map(&:id))
+    Attempt.where(id: latest_ids.map(&:id))
   end
 
   def send_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2)
-                       .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml, status: 2).pluck(:order_correios_id))
+    processed_ids = Attempt.where(kinds: :send_xml, status: 2, created_at: 30.days.ago..Time.current)
+                           .pluck(:order_correios_id)
 
-    pending_order_ids = @send_xml.pluck(:tiny_order_id).map(&:to_s)
+    @send_xml = Attempt.where(kinds: :create_correios_order, status: 2, created_at: 30.days.ago..Time.current)
+                       .distinct(:order_correios_id)
+                       .where.not(order_correios_id: processed_ids)
 
     @last_errors = {}
-    pending_order_ids.each do |order_id|
-      last_error = Attempt.where(
-        kinds: :send_xml,
-        tiny_order_id: order_id,
-        status: [:fail, :error]
-      ).where.not(message: [nil, ''])
-       .order(updated_at: :desc)
-       .first
-
-      if last_error
-        @last_errors[order_id] = {
-          message: last_error.message,
-          status: last_error.status,
-          updated_at: last_error.updated_at
-        }
-      end
-    end
   end
 
   def invoice_emition
@@ -151,7 +135,7 @@ class DashboardController < ApplicationController
         SELECT so.tiny_order_id
         FROM successful_orders so
         WHERE NOT EXISTS (
-          SELECT 1 FROM attempts a 
+          SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id 
           AND a.kinds = 1 AND a.status = 2
         )
@@ -160,13 +144,13 @@ class DashboardController < ApplicationController
         SELECT so.tiny_order_id
         FROM successful_orders so
         WHERE EXISTS (
-          SELECT 1 FROM attempts a 
-          WHERE a.order_correios_id = so.order_correios_id 
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
           AND a.kinds = 1 AND a.status = 2
         )
         AND NOT EXISTS (
-          SELECT 1 FROM attempts a 
-          WHERE a.order_correios_id = so.order_correios_id 
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
           AND a.kinds = 2 AND a.status = 2
         )
       ),
@@ -174,7 +158,7 @@ class DashboardController < ApplicationController
         SELECT so.tiny_order_id
         FROM successful_orders so
         WHERE EXISTS (
-          SELECT 1 FROM attempts a 
+          SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id 
           AND a.kinds = 2 AND a.status = 2
         )

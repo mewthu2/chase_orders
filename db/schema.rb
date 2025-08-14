@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_08_001510) do
+ActiveRecord::Schema[7.2].define(version: 2025_08_14_093556) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -34,6 +34,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_08_001510) do
     t.string "tracking"
     t.integer "id_nota_tiny2"
     t.index ["kinds"], name: "index_attempts_on_kinds"
+    t.index ["tiny_order_id"], name: "index_attempts_on_tiny_order_id"
   end
 
   create_table "discounts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
