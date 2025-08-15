@@ -19,7 +19,6 @@ module Tiny::Products
         find_or_create_products(list_products['produtos'], kind) if list_products['produtos'].present?
       end
 
-      assert_stock(kind)
       assert_cost if kind == 'tiny_2'
 
       { status: :success, processed_products: total.sum { |r| r['produtos']&.size || 0 } }
@@ -60,8 +59,7 @@ module Tiny::Products
   def self.assert_cost
     token_tiny2 = ENV.fetch('TOKEN_TINY2_PRODUCTION')
 
-    products = Product.select(:id, :tiny_2_id, :cost, :updated_at)
-                      .where('updated_at < ?', 24.hours.ago)
+    products = Product.select(:id, :tiny_2_id, :cost)
                       .where.not(tiny_2_id: nil)
 
     update_cost_for_products(products, token_tiny2, 'tiny_2')
