@@ -34,6 +34,26 @@ class DashboardController < ApplicationController
                               .distinct(:order_correios_id)
   end
 
+  def stockend
+    response = Correios::Orders.get_stock(params[:item_code])
+    if response.code == 200
+      @stock = response
+    else
+      @stock = nil
+    end
+    json_response(@stock)
+  end
+
+  def tracking
+    response = Correios::Orders.get_tracking(params[:tracking_number])
+    if response.code == 200
+      @tracking = response['rastreio']
+    else
+      @tracking = nil
+    end
+    json_response(@tracking)
+  end
+
   def order_correios_create
     @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
@@ -398,26 +418,6 @@ class DashboardController < ApplicationController
         }
       end
     }
-  end
-
-  def tracking
-    response = Correios::Orders.get_tracking(params[:tracking_number])
-    if response.code == 200
-      @tracking = response['rastreio']
-    else
-      @tracking = nil
-    end
-    json_response(@tracking)
-  end
-
-  def stock
-    response = Correios::Orders.get_stock(params[:item_code])
-    if response.code == 200
-      @stock = response
-    else
-      @stock = nil
-    end
-    json_response(@stock)
   end
 
   def api_correios; end
