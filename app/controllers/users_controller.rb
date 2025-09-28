@@ -76,13 +76,15 @@ class UsersController < ApplicationController
   end
 
   def admin_required
-    return unless current_user_admin?
-    redirect_to root_path, alert: 'Acesso negado.'
+    unless current_user_admin?
+      redirect_to root_path, alert: 'Acesso negado.'
+    end
   end
 
   def check_user_permission
-    return unless current_user_admin? || @user == current_user
-    redirect_to root_path, alert: 'Acesso negado.'
+    unless current_user_admin? || @user == current_user
+      redirect_to root_path, alert: 'Acesso negado.'
+    end
   end
 
   def current_user_admin?
