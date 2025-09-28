@@ -73,19 +73,16 @@ class ShopifyIntegrationService
 
       Rails.logger.info "Pedido criado no Shopify: #{order['id']}"
 
-      # Reservar estoque na location específica e marcar como committed
       reservation_results = reserve_and_commit_inventory(
         client, @order_pdv.order_pdv_items, 
         config[:location_id],
         config[:location_name]
       )
 
-      # Atualizar apenas os campos que existem
       update_data = {
         reservation_status: reservation_results[:success] ? 'reserved' : 'reservation_error'
       }
 
-      # Verificar se as colunas existem antes de tentar atualizar
       if @order_pdv.respond_to?(:inventory_reservations=) && reservation_results[:success]
         update_data[:inventory_reservations] = reservation_results[:reservations].to_json
       end
@@ -119,26 +116,26 @@ class ShopifyIntegrationService
     end
   end
 
-  # Método estático para buscar produtos na tabela local
   def self.search_products(query, store_type)
     Rails.logger.info "ShopifyIntegrationService.search_products called with query: '#{query}', store: '#{store_type}'"
     
     begin
       query_downcase = query.downcase
       
-      # Buscar na tabela local Product
       products = Product.where(
         "LOWER(shopify_product_name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(option1) LIKE ? OR LOWER(option2) LIKE ? OR LOWER(option3) LIKE ?",
-        "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%", "%#{query_downcase}%"
+        "%#{query_downcase}%", 
+        "%#{query_downcase}%", 
+        "%#{query_downcase}%", 
+        "%#{query_downcase}%", 
+        "%#{query_downcase}%"
       ).limit(20)
       
       Rails.logger.info "Found #{products.count} products in local database"
       
-      # Converter para formato esperado pelo frontend
       formatted_products = products.map do |product|
         Rails.logger.info "Processing product: #{product.sku} - #{product.shopify_product_name}"
         
-        # Buscar imagem do produto via API do Shopify se necessário
         image_url = get_product_image_from_shopify(product, store_type)
         
         {
@@ -165,7 +162,6 @@ class ShopifyIntegrationService
     end
   end
 
-  # Método estático para buscar produto por ID
   def self.get_product_by_id(variant_id)
     Rails.logger.info "ShopifyIntegrationService.get_product_by_id called with variant_id: #{variant_id}"
     
@@ -177,7 +173,6 @@ class ShopifyIntegrationService
         return nil
       end
       
-      # Buscar imagem do produto
       image_url = get_product_image_from_shopify(product, 'lagoa_seca')
       
       {
@@ -200,13 +195,10 @@ class ShopifyIntegrationService
     end
   end
 
-  # Método estático para criar pedido
   def self.create_order(order_data)
     Rails.logger.info "ShopifyIntegrationService.create_order called"
     
     begin
-      # Implementar criação de pedido no Shopify se necessário
-      # Por enquanto, retornar sucesso simulado
       {
         'id' => "shopify_#{Time.current.to_i}",
         'order_number' => "PDV#{Time.current.to_i}",
@@ -218,8 +210,7 @@ class ShopifyIntegrationService
     end
   end
 
-  # Método estático para verificar estoque online
-  def self.get_inventory_level(inventory_item_id, store_type = 'online')
+  def self.get_inventory_level(inventory_item_id, store_type = 'lagoa_seca')
     Rails.logger.info "Getting inventory level for item: #{inventory_item_id}, store: #{store_type}"
 
     begin
@@ -227,7 +218,6 @@ class ShopifyIntegrationService
       session = create_shopify_session_static(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
 
-      # Buscar níveis de inventário
       response = client.get(path: "inventory_levels.json", query: { 
         inventory_item_ids: inventory_item_id,
         location_ids: config[:location_id]
@@ -250,8 +240,7 @@ class ShopifyIntegrationService
     end
   end
 
-  # Método estático para listar todas as locations (para debug)
-  def self.list_locations(store_type = 'online')
+  def self.list_locations(store_type = 'lagoa_seca')
     Rails.logger.info "Listing all locations for store: #{store_type}"
 
     begin
@@ -259,7 +248,6 @@ class ShopifyIntegrationService
       session = create_shopify_session_static(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
 
-      # Buscar todas as locations
       response = client.get(path: "locations.json")
       locations = response.body['locations']
       
@@ -276,7 +264,6 @@ class ShopifyIntegrationService
     end
   end
 
-  # Métodos estáticos para configuração
   def self.get_store_config_static(store_type)
     case store_type
     when 'bh_shopping'
@@ -297,11 +284,23 @@ class ShopifyIntegrationService
         location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
         location_name: 'Lagoa Seca'
       }
-    when 'online'
+    when 'eldorado_sp'
       {
-        access_token: ENV.fetch('CHASE_ORDERS_TOKEN'),
-        location_id: ENV.fetch('LOCATION_LOG'),
-        location_name: 'Online Store'
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_ELDORADO_SP'),
+        location_name: 'Eldorado SP'
+      }
+    when 'fortaleza_rio_mar'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_FORTALEZA_RIO_MAR'),
+        location_name: 'Fortaleza Rio Mar'
+      }
+    when 'porto_alegre_bourbon'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON'),
+        location_name: 'Porto Alegre Bourbon'
       }
     else
       {
@@ -321,7 +320,6 @@ class ShopifyIntegrationService
 
   private
 
-  # Método para buscar imagem do produto via API do Shopify
   def self.get_product_image_from_shopify(product, store_type)
     return nil unless product.shopify_product_id.present?
     
@@ -330,30 +328,24 @@ class ShopifyIntegrationService
       session = create_shopify_session_static(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
       
-      # Buscar o produto no Shopify para pegar as imagens
       product_response = client.get(path: "products/#{product.shopify_product_id}.json")
       shopify_product = product_response.body['product']
       
       if shopify_product && shopify_product['images'] && shopify_product['images'].any?
-        # Pegar a primeira imagem disponível
         first_image = shopify_product['images'].first
         return first_image['src'] if first_image['src']
       end
       
-      # Se não encontrou imagem via API, tentar URL padrão
       fallback_image_url(product)
       
     rescue => e
       Rails.logger.warn "Could not fetch image for product #{product.sku}: #{e.message}"
-      # Retornar URL de fallback
       fallback_image_url(product)
     end
   end
 
   def self.fallback_image_url(product)
-    # URLs de fallback baseadas no SKU
     if product.sku.present?
-      # Tentar diferentes formatos de URL
       sku_clean = product.sku.downcase.gsub(/[^a-z0-9]/, '-')
       "https://cdn.shopify.com/s/files/1/0795/1650/2917/products/#{sku_clean}.jpg?v=1"
     else
@@ -361,7 +353,6 @@ class ShopifyIntegrationService
     end
   end
 
-  # Novo método para reservar e marcar estoque como committed
   def reserve_and_commit_inventory(client, order_items, location_id, location_name)
     reservations = []
     begin
@@ -373,7 +364,6 @@ class ShopifyIntegrationService
 
         Rails.logger.info "Processando #{quantity} unidades do produto #{item.sku} (variant: #{variant_id})"
 
-        # Buscar informações do variant
         variant_response = client.get(path: "variants/#{variant_id}.json")
         variant = variant_response.body['variant']
 
@@ -384,7 +374,6 @@ class ShopifyIntegrationService
 
         inventory_item_id = variant['inventory_item_id']
 
-        # Buscar níveis de estoque para o inventory item na location específica
         inventory_response = client.get(path: "inventory_levels.json",
           query: { 
             inventory_item_ids: inventory_item_id,
@@ -419,9 +408,7 @@ class ShopifyIntegrationService
           next
         end
 
-        # Fazer a reserva e commit usando inventory adjustments
         begin
-          # Primeiro, fazer o adjustment para reservar
           adjustment_response = client.post(path: "inventory_levels/adjust.json",
             body: {
               location_id: location_id,
@@ -434,9 +421,7 @@ class ShopifyIntegrationService
           if adjustment_response.code == 200
             Rails.logger.info "Estoque ajustado (reservado) com sucesso para #{item.sku}: #{quantity} unidades"
             
-            # Agora marcar como committed usando a API de inventory
             begin
-              # Buscar o inventory level atualizado
               updated_inventory_response = client.get(path: "inventory_levels.json",
                 query: { 
                   inventory_item_ids: inventory_item_id,
@@ -449,12 +434,11 @@ class ShopifyIntegrationService
               if updated_inventory_levels.any?
                 updated_inventory_level = updated_inventory_levels.first
                 
-                # Fazer um segundo adjustment para marcar como committed
                 commit_response = client.post(path: "inventory_levels/adjust.json",
                   body: {
                     location_id: location_id,
                     inventory_item_id: inventory_item_id,
-                    available_adjustment: 0, # Não alterar disponível
+                    available_adjustment: 0,
                     reason: "Pedido PDV ##{@order_pdv.id} - Committed"
                   }
                 )
@@ -573,11 +557,23 @@ class ShopifyIntegrationService
         location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
         location_name: 'Lagoa Seca'
       }
-    when 'online'
+    when 'eldorado_sp'
       {
-        access_token: ENV.fetch('CHASE_ORDERS_TOKEN'),
-        location_id: ENV.fetch('LOCATION_LOG'),
-        location_name: 'Online Store'
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_ELDORADO_SP'),
+        location_name: 'Eldorado SP'
+      }
+    when 'fortaleza_rio_mar'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_FORTALEZA_RIO_MAR'),
+        location_name: 'Fortaleza Rio Mar'
+      }
+    when 'porto_alegre_bourbon'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON'),
+        location_name: 'Porto Alegre Bourbon'
       }
     else
       {
@@ -635,12 +631,10 @@ class ShopifyIntegrationService
   def build_tags(location_name)
     tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", location_name]
 
-    # Adicionar informações sobre parcelas se existirem
     if @order_pdv.has_parcels?
       tags << "PARCELADO"
       tags << "#{@order_pdv.order_parcels.count}_PARCELAS"
 
-      # Adicionar métodos de pagamento das parcelas
       payment_methods = @order_pdv.order_parcels.pluck(:payment_method).uniq
       payment_methods.each do |method|
         tags << method.upcase

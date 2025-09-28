@@ -5,51 +5,75 @@ class StockCorrectionsController < ApplicationController
   before_action :check_admin_permission, only: [:destroy, :sync_with_shopify]
 
   def index
-    @per_page = 10
+    @per_page = (params[:per_page] || 10).to_i
     @current_page = (params[:page] || 1).to_i
     offset = (@current_page - 1) * @per_page
 
-    if current_user.admin?
-      @stock_corrections = StockCorrection.active
-                                          .includes(:stock_correction_items)
-                                          .order(created_at: :desc)
-                                          .limit(@per_page)
-                                          .offset(offset)
+    base_query = if current_user.admin?
+                   StockCorrection.active.includes(:stock_correction_items)
+                 else
+                   allowed_locations = current_user.allowed_location_keys
+                   StockCorrection.active.where(location: allowed_locations).includes(:stock_correction_items)
+                 end
 
-      @total_corrections = StockCorrection.active.count
-      @pending_corrections = StockCorrection.active.where(status: [nil, 'pending']).count
-      @completed_corrections = StockCorrection.active.where(status: 'executed').count
-      @synced_corrections = StockCorrection.active
-                                           .joins(:stock_correction_items)
-                                           .where(stock_correction_items: { 
-                                             last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
-                                           })
-                                           .distinct.count
-    else
-      allowed_locations = current_user.allowed_location_keys
-      @stock_corrections = StockCorrection.active
-                                          .where(location: allowed_locations)
-                                          .includes(:stock_correction_items)
-                                          .order(created_at: :desc)
-                                          .limit(@per_page)
-                                          .offset(offset)
+    base_query = base_query.where(location: params[:location]) if params[:location].present?
 
-      base_corrections = StockCorrection.active.where(location: allowed_locations)
-      @total_corrections = base_corrections.count
-      @pending_corrections = base_corrections.where(status: [nil, 'pending']).count
-      @completed_corrections = base_corrections.where(status: 'executed').count
-      @synced_corrections = base_corrections.joins(:stock_correction_items)
-                                            .where(stock_correction_items: { 
-                                              last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day 
-                                            })
-                                            .distinct.count
+    if params[:status].present?
+      case params[:status]
+      when 'pending'
+        base_query = base_query.where(status: [nil, 'pending'])
+      when 'executed'
+        base_query = base_query.where(status: 'executed')
+      end
     end
+
+    if params[:date_filter].present?
+      filter_date = Date.parse(params[:date_filter])
+      base_query = base_query.where(correction_date: filter_date.beginning_of_day..filter_date.end_of_day)
+    end
+
+    @stock_corrections = base_query.order(created_at: :desc)
+                                   .limit(@per_page)
+                                   .offset(offset)
+
+    stats_query = if current_user.admin?
+                    StockCorrection.active
+                  else
+                    allowed_locations = current_user.allowed_location_keys
+                    StockCorrection.active.where(location: allowed_locations)
+                  end
+
+    stats_query = stats_query.where(location: params[:location]) if params[:location].present?
+
+    if params[:status].present?
+      case params[:status]
+      when 'pending'
+        stats_query = stats_query.where(status: [nil, 'pending'])
+      when 'executed'
+        stats_query = stats_query.where(status: 'executed')
+      end
+    end
+
+    if params[:date_filter].present?
+      filter_date = Date.parse(params[:date_filter])
+      stats_query = stats_query.where(correction_date: filter_date.beginning_of_day..filter_date.end_of_day)
+    end
+
+    @total_corrections = stats_query.count
+    @pending_corrections = stats_query.where(status: [nil, 'pending']).count
+    @completed_corrections = stats_query.where(status: 'executed').count
+    @synced_corrections = stats_query.joins(:stock_correction_items)
+                                     .where(stock_correction_items: {
+                                       last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day
+                                     })
+                                     .distinct
+                                     .count
 
     @total_pages = (@total_corrections.to_f / @per_page).ceil
   end
 
   def show
-    @per_page = 20
+    @per_page = (params[:per_page] || 20).to_i
     @current_page = (params[:page] || 1).to_i
 
     if params[:search_term].present?
@@ -86,7 +110,6 @@ class StockCorrectionsController < ApplicationController
     @available_locations = current_user.available_locations_for_user
 
     @location = params[:location] || current_user.default_location
-
     @location = current_user.default_location unless current_user.can_access_location?(@location)
   end
 
@@ -111,7 +134,7 @@ class StockCorrectionsController < ApplicationController
   def edit
     @location = @stock_correction.location
 
-    @per_page = 20
+    @per_page = (params[:per_page] || 20).to_i
     @current_page = (params[:page] || 1).to_i
 
     if params[:search_term].present?
@@ -136,7 +159,7 @@ class StockCorrectionsController < ApplicationController
             @search_item = @stock_correction.stock_correction_items.build(
               product:,
               current_stock:,
-              corrected_stock:,
+              corrected_stock: nil,
               needs_correction: false,
               executed: false
             )
@@ -145,10 +168,9 @@ class StockCorrectionsController < ApplicationController
           real_stock = fetch_shopify_stock(product, @location)
           @search_item.define_singleton_method(:real_stock) { real_stock || current_stock }
           @search_item.define_singleton_method(:stock_source) do
-            case
-            when real_stock
+            if real_stock
               'shopify_real_time'
-            when product.shopify_variant_id.present?
+            elsif product.shopify_variant_id.present?
               'database_fallback'
             else
               'no_shopify_id'
@@ -203,7 +225,7 @@ class StockCorrectionsController < ApplicationController
 
     begin
       @stock_correction.soft_delete!
-      Rails.logger.info "Stock correction soft deleted successfully"
+      Rails.logger.info 'Stock correction soft deleted successfully'
       redirect_to stock_corrections_path, notice: 'Conferência removida com sucesso!'
     rescue StandardError => e
       Rails.logger.error "Error soft deleting stock correction: #{e.message}"
@@ -297,7 +319,7 @@ class StockCorrectionsController < ApplicationController
 
   def save_item_correction
     product_id = params[:product_id]
-    corrected_stock = params[:corrected_stock].to_i
+    corrected_stock = params[:corrected_stock].present? ? params[:corrected_stock].to_i : nil
     correction_reason = params[:correction_reason]
 
     item = @stock_correction.stock_correction_items.find_or_initialize_by(product_id:)
@@ -306,9 +328,8 @@ class StockCorrectionsController < ApplicationController
       product = Product.find(product_id)
       current_stock = stock_for_location(product, @stock_correction.location)
       item.current_stock = current_stock
+      item.stock_before = current_stock
     end
-
-    item.stock_before = item.current_stock || 0 if item.stock_before.blank?
 
     item.assign_attributes(
       corrected_stock:,
@@ -356,12 +377,13 @@ class StockCorrectionsController < ApplicationController
 
   def check_edit_permission
     return unless @stock_correction.status == 'executed' && !current_user.admin?
-    redirect_to @stock_correction, alert: 'Apenas administradores podem editar conferências finalizadas.'
+    redirect_to stock_correction_path(@stock_correction), alert: 'Apenas administradores podem editar conferências finalizadas.'
   end
 
   def check_admin_permission
-    return unless current_user.admin?
-    redirect_to stock_corrections_path, alert: 'Apenas administradores podem executar esta ação.' 
+    return if current_user.admin?
+
+    redirect_to stock_corrections_path, alert: 'Apenas administradores podem executar esta ação.'
   end
 
   def stock_correction_params
@@ -371,11 +393,21 @@ class StockCorrectionsController < ApplicationController
   def stock_for_location(product, location)
     case location
     when 'lagoa_seca'
-      product.stock_lagoa_seca || 0
+      product.stock_lagoa_seca.to_i
     when 'bh_shopping'
-      product.stock_bh_shopping || 0
+      product.stock_bh_shopping.to_i
     when 'rj'
-      product.stock_rj || 0
+      product.stock_rj.to_i
+    when 'fortaleza_rio_mar'
+      product.stock_fortaleza_rio_mar.to_i
+    when 'porto_alegre_bourbon'
+      product.stock_porto_alegre_bourbon.to_i
+    when 'eldorado_sp'
+      product.stock_eldorado_sp.to_i
+    when 'log'
+      product.stock_log.to_i
+    when 'sp'
+      product.stock_sp.to_i
     else
       0
     end
@@ -476,11 +508,21 @@ class StockCorrectionsController < ApplicationController
       items_data = products_batch.map do |product|
         current_stock = case stock_correction.location
                         when 'lagoa_seca'
-                          product.stock_lagoa_seca.to_i || 0
+                          product.stock_lagoa_seca.to_i
                         when 'bh_shopping'
-                          product.stock_bh_shopping.to_i || 0
+                          product.stock_bh_shopping.to_i
                         when 'rj'
-                          product.stock_rj.to_i || 0
+                          product.stock_rj.to_i
+                        when 'fortaleza_rio_mar'
+                          product.stock_fortaleza_rio_mar.to_i
+                        when 'porto_alegre_bourbon'
+                          product.stock_porto_alegre_bourbon.to_i
+                        when 'eldorado_sp'
+                          product.stock_eldorado_sp.to_i
+                        when 'log'
+                          product.stock_log.to_i
+                        when 'sp'
+                          product.stock_sp.to_i
                         else
                           0
                         end
@@ -500,7 +542,7 @@ class StockCorrectionsController < ApplicationController
         }
       end
 
-      StockCorrectionItem.insert_all(items_data)
+      StockCorrectionItem.insert_all(items_data) if items_data.any?
     end
 
     Rails.logger.info "Created #{products_count} correction items"

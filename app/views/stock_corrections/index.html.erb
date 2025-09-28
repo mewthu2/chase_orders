@@ -1,41 +1,63 @@
 <div class="container-fluid py-4">
-  <!-- Header com Estatísticas -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h4 class="text-white mb-0">
-            <i class="fas fa-clipboard-list me-2"></i>
-            Conferências de Estoque
-          </h4>
-          <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
-            <i class="fas fa-plus me-2"></i>Nova Conferência
-          <% end %>
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap">
+          <div>
+            <h4 class="text-white mb-1">
+              <i class="fas fa-clipboard-check me-2"></i>Conferências de Estoque
+            </h4>
+            <small class="text-white-50">
+              <i class="fas fa-clock me-1"></i>
+              Última atualização: <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
+            </small>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
+              <i class="fas fa-plus me-1"></i>Nova Conferência
+            <% end %>
+            <%= link_to inventory_products_path, class: "btn btn-info" do %>
+              <i class="fas fa-boxes me-1"></i>Inventário
+            <% end %>
+          </div>
         </div>
+        
         <div class="card-body bg-black">
-          <div class="row text-center">
+          <div class="row g-3">
             <div class="col-md-3">
-              <div class="p-3">
-                <h4 class="text-info mb-1"><%= @total_corrections %></h4>
-                <small class="text-white-50">Total de Conferências</small>
+              <div class="card bg-dark border-secondary h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-clipboard-list fa-2x text-primary mb-2"></i>
+                  <h5 class="text-white mb-1"><%= @total_corrections %></h5>
+                  <small class="text-white-50">Total de Conferências</small>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="p-3">
-                <h4 class="text-warning mb-1"><%= @pending_corrections %></h4>
-                <small class="text-white-50">Pendentes</small>
+              <div class="card bg-dark border-secondary h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
+                  <h5 class="text-white mb-1"><%= @pending_corrections %></h5>
+                  <small class="text-white-50">Pendentes</small>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="p-3">
-                <h4 class="text-success mb-1"><%= @completed_corrections %></h4>
-                <small class="text-white-50">Finalizadas</small>
+              <div class="card bg-dark border-secondary h-100">
+                <div class="card-body text-center">
+                  <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                  <h5 class="text-white mb-1"><%= @completed_corrections %></h5>
+                  <small class="text-white-50">Executadas</small>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="p-3">
-                <h4 class="text-primary mb-1"><%= @synced_corrections %></h4>
-                <small class="text-white-50">Sincronizadas Hoje</small>
+              <div class="card bg-dark border-secondary h-100">
+                <div class="card-body text-center">
+                  <i class="fab fa-shopify fa-2x text-info mb-2"></i>
+                  <h5 class="text-white mb-1"><%= @synced_corrections %></h5>
+                  <small class="text-white-50">Sincronizadas Hoje</small>
+                </div>
               </div>
             </div>
           </div>
@@ -44,10 +66,63 @@
     </div>
   </div>
 
-  <!-- Lista de Conferências -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body bg-black">
+          <%= form_with url: stock_corrections_path, method: :get, local: true, 
+                        class: "row g-3 align-items-end" do |f| %>
+            <div class="col-md-3">
+              <label class="form-label text-white fw-bold">Location</label>
+              <%= f.select :location, 
+                          options_for_select(current_user.available_locations_for_user, params[:location]),
+                          { include_blank: "Todas as locations" },
+                          { class: "form-select bg-dark text-white border-dark" } %>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label text-white fw-bold">Status</label>
+              <%= f.select :status, 
+                          options_for_select([
+                            ['Todos', ''],
+                            ['Pendente', 'pending'],
+                            ['Executada', 'executed']
+                          ], params[:status]),
+                          {},
+                          { class: "form-select bg-dark text-white border-dark" } %>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label text-white fw-bold">Data</label>
+              <%= f.date_field :date_filter, 
+                               value: params[:date_filter],
+                               class: "form-control bg-dark text-white border-dark" %>
+            </div>
+            <div class="col-md-1">
+              <%= f.submit "Filtrar", class: "btn btn-primary w-100" %>
+            </div>
+            <div class="col-md-2">
+              <%= link_to stock_corrections_path, class: "btn btn-outline-light w-100" do %>
+                <i class="fas fa-times me-1"></i>Limpar
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-list me-2"></i>Lista de Conferências
+          </h5>
+          <span class="badge bg-info text-dark px-3 py-2">
+            <i class="fas fa-clipboard-check me-1"></i>
+            <%= @total_corrections %> conferência(s)
+          </span>
+        </div>
+        
         <div class="card-body bg-black p-0">
           <% if @stock_corrections.any? %>
             <div class="table-responsive">
@@ -56,11 +131,11 @@
                   <tr>
                     <th class="text-white fw-bold px-3 py-3">ID</th>
                     <th class="text-white fw-bold px-3 py-3">Location</th>
-                    <th class="text-white fw-bold px-3 py-3">Data</th>
-                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Integração</th>
+                    <th class="text-white fw-bold px-3 py-3">Data da Conferência</th>
+                    <th class="text-white fw-bold px-3 py-3">Status</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">Itens</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Correções</th>
+                    <th class="text-white fw-bold px-3 py-3">Criada em</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
@@ -68,145 +143,87 @@
                   <% @stock_corrections.each do |correction| %>
                     <tr class="border-secondary">
                       <td class="px-3 py-3">
-                        <span class="text-warning fw-bold">#<%= correction.id %></span>
+                        <span class="text-white font-monospace">
+                          #<%= correction.id %>
+                        </span>
                       </td>
                       <td class="px-3 py-3">
-                        <span class="text-white"><%= correction.location_display_name %></span>
+                        <span class="badge bg-secondary text-white px-2 py-1">
+                          <%= User.location_name(correction.location) %>
+                        </span>
                       </td>
                       <td class="px-3 py-3">
-                        <span class="text-white-50"><%= correction.correction_date.strftime('%d/%m/%Y') %></span>
+                        <span class="text-white">
+                          <%= correction.correction_date&.strftime('%d/%m/%Y') || 'N/A' %>
+                        </span>
                       </td>
                       <td class="px-3 py-3">
-                        <span class="text-white-50"><%= truncate(correction.reason, length: 30) %></span>
-                      </td>
-                      <td class="px-3 py-3 text-center">
-                        <% if correction.status == 'executed' %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Finalizada
+                        <% case correction.status %>
+                        <% when 'executed' %>
+                          <span class="badge bg-success px-2 py-1">
+                            <i class="fas fa-check me-1"></i>Executada
                           </span>
-                        <% else %>
+                        <% when 'pending', nil %>
                           <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-clock me-1"></i>Pendente
+                            <i class="fas fa-hourglass-half me-1"></i>Pendente
+                          </span>
+                        <% else %>
+                          <span class="badge bg-secondary px-2 py-1">
+                            <%= correction.status&.humanize || 'N/A' %>
                           </span>
                         <% end %>
                       </td>
                       <td class="px-3 py-3 text-center">
-                        <% case correction.integration_status %>
-                        <% when 'pending' %>
-                          <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-spinner fa-spin me-1"></i>Processando
-                          </span>
-                        <% when 'completed' %>
-                          <span class="badge bg-success text-dark px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Concluída
-                          </span>
-                        <% when 'error' %>
-                          <span class="badge bg-danger text-white px-2 py-1" 
-                                title="<%= correction.integration_error %>" 
-                                data-bs-toggle="tooltip">
-                            <i class="fas fa-exclamation-triangle me-1"></i>Erro
-                          </span>
-                        <% else %>
-                          <span class="badge bg-secondary text-white px-2 py-1">
-                            <i class="fas fa-minus me-1"></i>N/A
-                          </span>
-                        <% end %>
+                        <span class="text-white">
+                          <%= correction.stock_correction_items.count %>
+                        </span>
                       </td>
                       <td class="px-3 py-3 text-center">
-                        <% corrections_count = correction.stock_correction_items.where(needs_correction: true).count %>
-                        <% if corrections_count > 0 %>
-                          <span class="badge bg-info text-dark px-2 py-1">
-                            <%= corrections_count %> correções
-                          </span>
-                        <% else %>
-                          <span class="text-white-50">-</span>
-                        <% end %>
+                        <span class="badge bg-info text-dark px-2 py-1">
+                          <%= correction.stock_correction_items.where(needs_correction: true).count %>
+                        </span>
+                      </td>
+                      <td class="px-3 py-3">
+                        <span class="text-white-50">
+                          <%= correction.created_at.strftime('%d/%m/%Y %H:%M') %>
+                        </span>
                       </td>
                       <td class="px-3 py-3 text-center">
                         <div class="btn-group" role="group">
-                          <!-- Visualizar -->
-                          <%= link_to correction, 
-                                      class: "btn btn-sm btn-outline-light",
-                                      title: "Visualizar",
-                                      data: { bs_toggle: "tooltip" } do %>
+                          <%= link_to correction, class: "btn btn-outline-info btn-sm", title: "Visualizar" do %>
                             <i class="fas fa-eye"></i>
                           <% end %>
                           
-                          <!-- Editar -->
-                          <%= link_to edit_stock_correction_path(correction), 
-                                      class: "btn btn-sm btn-outline-light",
-                                      title: "Editar",
-                                      data: { bs_toggle: "tooltip" } do %>
-                            <i class="fas fa-edit"></i>
-                          <% end %>
-                          
-                          <% if correction.status != 'executed' %>
-                            <!-- Finalizar -->
-                            <%= link_to finalize_correction_stock_correction_path(correction), 
-                                        method: :patch,
-                                        class: "btn btn-sm btn-outline-light",
-                                        title: "Finalizar",
-                                        data: { 
-                                          bs_toggle: "tooltip",
-                                          confirm: "Tem certeza que deseja finalizar esta conferência?" 
-                                        } do %>
-                              <i class="fas fa-check"></i>
-                            <% end %>
-                            
-                            <!-- Executar Todas (apenas se não estiver processando) -->
-                            <% if correction.stock_correction_items.where(needs_correction: true, executed: false).any? && !correction.integration_pending? %>
-                              <%= link_to execute_all_stock_correction_path(correction), 
-                                          method: :post,
-                                          class: "btn btn-sm btn-outline-light",
-                                          title: "Executar Todas as Correções",
-                                          data: { 
-                                            bs_toggle: "tooltip",
-                                            confirm: "Deseja executar todas as correções pendentes?" 
-                                          } do %>
-                                <i class="fas fa-play"></i>
-                              <% end %>
-                            <% end %>
-                          <% else %>
-                            <!-- Reabrir (apenas admin) -->
-                            <% if current_user.admin? %>
-                              <%= link_to reopen_stock_correction_path(correction), 
-                                          method: :patch,
-                                          class: "btn btn-sm btn-outline-light",
-                                          title: "Reabrir",
-                                          data: { 
-                                            bs_toggle: "tooltip",
-                                            confirm: "Tem certeza que deseja reabrir esta conferência?" 
-                                          } do %>
-                                <i class="fas fa-undo"></i>
-                              <% end %>
+                          <% if correction.status != 'executed' || current_user.admin? %>
+                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-outline-warning btn-sm", title: "Editar" do %>
+                              <i class="fas fa-edit"></i>
                             <% end %>
                           <% end %>
                           
-                          <!-- Sincronizar Shopify (apenas admin e se não estiver processando) -->
-                          <% if current_user.admin? && correction.stock_correction_items.where(needs_correction: true, executed: true).any? && !correction.integration_pending? %>
-                            <%= link_to sync_with_shopify_stock_correction_path(correction), 
-                                        method: :post,
-                                        class: "btn btn-sm btn-outline-light",
-                                        title: "Sincronizar com Shopify",
-                                        data: { 
-                                          bs_toggle: "tooltip",
-                                          confirm: "Deseja sincronizar com a Shopify?" 
-                                        } do %>
-                              <i class="fab fa-shopify"></i>
-                            <% end %>
-                          <% end %>
-                          
-                          <!-- Excluir (apenas admin) -->
                           <% if current_user.admin? %>
-                            <%= link_to correction, 
-                                        method: :delete,
-                                        class: "btn btn-sm btn-outline-danger",
-                                        title: "Excluir",
-                                        data: { 
-                                          bs_toggle: "tooltip",
-                                          confirm: "Tem certeza que deseja excluir esta conferência?" 
-                                        } do %>
+                            <%= button_to stock_correction_path(correction), 
+                                          method: :delete,
+                                          data: { 
+                                            confirm: "Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita.",
+                                            turbo_confirm: "Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita."
+                                          },
+                                          class: "btn btn-outline-danger btn-sm", 
+                                          title: "Excluir",
+                                          form: { style: "display: inline;" } do %>
                               <i class="fas fa-trash"></i>
+                            <% end %>
+                          <% end %>
+                          
+                          <% if correction.status == 'executed' && current_user.admin? %>
+                            <%= link_to reopen_stock_correction_path(correction), 
+                                        method: :patch,
+                                        data: { 
+                                          confirm: "Tem certeza que deseja reabrir esta conferência?",
+                                          turbo_method: :patch
+                                        },
+                                        class: "btn btn-outline-secondary btn-sm", 
+                                        title: "Reabrir" do %>
+                              <i class="fas fa-undo"></i>
                             <% end %>
                           <% end %>
                         </div>
@@ -218,42 +235,61 @@
             </div>
           <% else %>
             <div class="text-center py-5">
-              <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
+              <i class="fas fa-clipboard-check fa-3x text-white-50 mb-3"></i>
               <h5 class="text-white-50">Nenhuma conferência encontrada</h5>
               <p class="text-white-50">Crie sua primeira conferência de estoque</p>
               <%= link_to new_stock_correction_path, class: "btn btn-success mt-3" do %>
-                <i class="fas fa-plus me-2"></i>Nova Conferência
+                <i class="fas fa-plus me-1"></i>Nova Conferência
               <% end %>
             </div>
           <% end %>
         </div>
-        
-        <!-- Paginação -->
+
         <% if @total_pages > 1 %>
           <div class="card-footer bg-dark border-top border-secondary">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
               <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a <%= [@current_page * @per_page, @total_corrections].min %> de <%= @total_corrections %> conferências
+                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
+                <%= [@current_page * @per_page, @total_corrections].min %> de 
+                <%= @total_corrections %> conferências
               </div>
               <div class="d-flex gap-2 flex-wrap">
                 <% if @current_page > 1 %>
-                  <%= link_to stock_corrections_path(page: @current_page - 1),
+                  <%= link_to stock_corrections_path(page: @current_page - 1, **request.query_parameters.except('page')),
                               class: "btn btn-outline-light btn-sm" do %>
                     <i class="fas fa-chevron-left"></i> Anterior
                   <% end %>
                 <% end %>
-                <% page_start = [[@current_page - 2, 1].max, [@total_pages - 4, 1].max].max %>
-                <% page_end = [[page_start + 4, @total_pages].min, [@current_page + 2, @total_pages].min].max %>
+
+                <!-- Simplified pagination logic to show correct page numbers -->
+                <% 
+                  # Show up to 5 pages around current page
+                  window_size = 2
+                  page_start = [@current_page - window_size, 1].max
+                  page_end = [@current_page + window_size, @total_pages].min
+                  
+                  # Adjust if we're near the beginning or end
+                  if page_end - page_start < 4 && @total_pages > 4
+                    if page_start == 1
+                      page_end = [5, @total_pages].min
+                    elsif page_end == @total_pages
+                      page_start = [@total_pages - 4, 1].max
+                    end
+                  end
+                %>
+                
                 <% (page_start..page_end).each do |page_num| %>
                   <% if page_num == @current_page %>
                     <button class="btn btn-primary btn-sm"><%= page_num %></button>
                   <% else %>
-                    <%= link_to page_num, stock_corrections_path(page: page_num),
+                    <%= link_to page_num, 
+                                stock_corrections_path(page: page_num, **request.query_parameters.except('page')),
                                 class: "btn btn-outline-light btn-sm" %>
                   <% end %>
                 <% end %>
+
                 <% if @current_page < @total_pages %>
-                  <%= link_to stock_corrections_path(page: @current_page + 1),
+                  <%= link_to stock_corrections_path(page: @current_page + 1, **request.query_parameters.except('page')),
                               class: "btn btn-outline-light btn-sm" do %>
                     Próxima <i class="fas fa-chevron-right"></i>
                   <% end %>
@@ -267,6 +303,7 @@
   </div>
 </div>
 
+<% content_for :styles do %>
 <style>
 body {
   background-color: #121212;
@@ -298,6 +335,10 @@ body {
   background-color: rgba(255, 255, 255, 0.075);
 }
 
+.font-monospace {
+  font-family: 'Courier New', monospace;
+}
+
 .card {
   border-radius: 8px;
 }
@@ -318,83 +359,40 @@ body {
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* Botões de ação padronizados */
-.btn-group .btn-outline-light {
-  background-color: transparent;
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #fff;
+.btn-group .btn {
+  border-radius: 0;
 }
 
-.btn-group .btn-outline-light:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #fff;
-  transform: scale(1.05);
+.btn-group .btn:first-child {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
 }
 
-/* Botão de excluir vermelho */
-.btn-group .btn-outline-danger {
-  background-color: transparent;
-  border-color: rgba(220, 53, 69, 0.5);
-  color: #dc3545;
+.btn-group .btn:last-child {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
 
-.btn-group .btn-outline-danger:hover {
-  background-color: rgba(220, 53, 69, 0.1);
-  border-color: #dc3545;
-  color: #dc3545;
-  transform: scale(1.05);
-}
-
-/* Layout horizontal dos botões */
-.btn-group {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  gap: 2px;
-  flex-wrap: wrap;
-}
-
-/* Spinner animado */
-.fa-spinner.fa-spin {
-  animation: fa-spin 1s infinite linear;
-}
-
-@keyframes fa-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsividade */
 @media (max-width: 768px) {
   .table-responsive {
     font-size: 0.875rem;
   }
+
   .btn-sm {
     padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
-    width: 28px;
-    height: 28px;
   }
+
   .btn-group {
-    gap: 1px;
+    flex-direction: column;
+  }
+
+  .btn-group .btn {
+    border-radius: 6px !important;
+    margin-bottom: 2px;
   }
 }
 </style>
-
-<script>
-// Inicializar tooltips
-document.addEventListener('DOMContentLoaded', function() {
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-});
-</script>
+<% end %>

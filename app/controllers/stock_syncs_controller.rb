@@ -13,7 +13,7 @@ class StockSyncsController < ApplicationController
   def update_config
     params[:stock_sync_config][:days_of_week] ||= []
     params[:stock_sync_config][:hours] ||= []
-    
+
     config_params_processed = config_params.dup
     config_params_processed[:days_of_week] = config_params_processed[:days_of_week].map(&:to_i).to_json
     config_params_processed[:hours] = config_params_processed[:hours].map(&:to_i).to_json
@@ -48,38 +48,19 @@ class StockSyncsController < ApplicationController
   end
 
   def toggle_status
-    begin
-      @config.update!(enabled: !@config.enabled?)
-      status = @config.enabled? ? 'ativada' : 'desativada'
-      
-      respond_to do |format|
-        format.html { 
-          redirect_to stock_syncs_path, 
-          notice: "Sincronização automática #{status}!" 
-        }
-        format.json { 
-          render json: { 
-            success: true, 
-            enabled: @config.enabled?,
-            message: "Sincronização automática #{status}!"
-          }
-        }
-      end
-    rescue => e
-      Rails.logger.error "Erro ao alterar status: #{e.message}"
-      
-      respond_to do |format|
-        format.html { 
-          redirect_to stock_syncs_path, 
-          alert: 'Erro ao alterar status da sincronização. Tente novamente.' 
-        }
-        format.json { 
-          render json: { 
-            success: false, 
-            message: 'Erro ao alterar status da sincronização.' 
-          }, status: :unprocessable_entity
-        }
-      end
+    @config.update!(enabled: !@config.enabled?)
+    status = @config.enabled? ? 'ativada' : 'desativada'
+
+    respond_to do |format|
+      format.html { redirect_to stock_syncs_path, notice: "Sincronização automática #{status}!" }
+      format.json { render json: { success: true, enabled: @config.enabled?, message: "Sincronização automática #{status}!" } }
+    end
+  rescue StandardError => e
+    Rails.logger.error "Erro ao alterar status: #{e.message}"
+
+    respond_to do |format|
+      format.html { redirect_to stock_syncs_path, alert: 'Erro ao alterar status da sincronização. Tente novamente.' }
+      format.json { render json: { success: false, message: 'Erro ao alterar status da sincronização.' }, status: :unprocessable_entity }
     end
   end
 

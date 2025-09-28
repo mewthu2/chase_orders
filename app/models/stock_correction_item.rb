@@ -65,6 +65,18 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.info "Updating stock_rj from #{product.stock_rj} to #{corrected_stock}"
         product.update!(stock_rj: corrected_stock)
         Rails.logger.info "Updated stock_rj to #{corrected_stock}"
+      when 'fortaleza_rio_mar'
+        Rails.logger.info "Updating stock_fortaleza_rio_mar from #{product.stock_fortaleza_rio_mar} to #{corrected_stock}"
+        product.update!(stock_fortaleza_rio_mar: corrected_stock)
+        Rails.logger.info "Updated stock_fortaleza_rio_mar to #{corrected_stock}"
+      when 'porto_alegre_bourbon'
+        Rails.logger.info "Updating stock_porto_alegre_bourbon from #{product.stock_porto_alegre_bourbon} to #{corrected_stock}"
+        product.update!(stock_porto_alegre_bourbon: corrected_stock)
+        Rails.logger.info "Updated stock_porto_alegre_bourbon to #{corrected_stock}"
+      when 'eldorado_sp'
+        Rails.logger.info "Updating stock_eldorado_sp from #{product.stock_eldorado_sp} to #{corrected_stock}"
+        product.update!(stock_eldorado_sp: corrected_stock)
+        Rails.logger.info "Updated stock_eldorado_sp to #{corrected_stock}"
       else
         Rails.logger.error "Unknown location: #{location}"
         return false
@@ -81,27 +93,29 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.info "Current stock_bh_shopping: #{product.stock_bh_shopping}"
       when 'rj'
         Rails.logger.info "Current stock_rj: #{product.stock_rj}"
+      when 'fortaleza_rio_mar'
+        Rails.logger.info "Current stock_fortaleza_rio_mar: #{product.stock_fortaleza_rio_mar}"
+      when 'porto_alegre_bourbon'
+        Rails.logger.info "Current stock_porto_alegre_bourbon: #{product.stock_porto_alegre_bourbon}"
+      when 'eldorado_sp'
+        Rails.logger.info "Current stock_eldorado_sp: #{product.stock_eldorado_sp}"
       end
-    
-      # Marcar como executado
-      Rails.logger.info "Marking item as executed..."
+
+      Rails.logger.info 'Marking item as executed...'
       update_result = update!(executed: true, executed_at: Time.current)
       Rails.logger.info "Update result: #{update_result}"
       Rails.logger.info "Item executed status: #{executed?}"
       Rails.logger.info "Item executed_at: #{executed_at}"
-    
-      # INTEGRAÇÃO COM SHOPIFY (OPCIONAL)
+
       if with_shopify_integration
-        Rails.logger.info "=== Starting Shopify Integration ==="
+        Rails.logger.info '=== Starting Shopify Integration ==='
         if product.shopify_inventory_item_id.present?
           Rails.logger.info "Product has shopify_inventory_item_id: #{product.shopify_inventory_item_id}"
-        
-          # Marcar como sincronizando
+
           update!(shopify_sync_status: 'syncing')
-        
-          # Usar o ShopifyInventoryService para atualizar
+
           result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
-        
+
           if result[:success]
             update!(
               last_shopify_sync_at: Time.current,
@@ -115,7 +129,6 @@ class StockCorrectionItem < ApplicationRecord
               shopify_sync_error: result[:message]
             )
             Rails.logger.error "❌ Shopify integration failed for #{product.sku}: #{result[:message]}"
-            # Não falhar a execução por causa do erro da Shopify
           end
         else
           Rails.logger.warn "⚠️ Product #{product.sku} has no shopify_inventory_item_id - skipping Shopify sync"
@@ -128,9 +141,9 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.info "⏭️ Shopify integration skipped (with_shopify_integration: false)"
         update!(shopify_sync_status: 'pending') if shopify_sync_status.blank?
       end
-    
+
       Rails.logger.info "Correction executed successfully for #{product.sku}"
-    
+
       true
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.error "ActiveRecord::RecordInvalid in execute_correction!: #{e.message}"
@@ -147,19 +160,17 @@ class StockCorrectionItem < ApplicationRecord
   def sync_with_shopify!
     return false unless needs_correction? && executed?
     return false unless product.shopify_inventory_item_id.present?
-    
+
     begin
       location = stock_correction.location
-      
+
       Rails.logger.info "Starting Shopify sync for #{product.sku} (inventory_item_id: #{product.shopify_inventory_item_id})"
       Rails.logger.info "Location: #{location}, Shopify Location ID: #{get_shopify_location_id(location)}"
-      
-      # Marcar como sincronizando
+
       update!(shopify_sync_status: 'syncing')
-      
-      # Usar o método correto do ShopifyInventoryService
+
       result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
-      
+
       if result[:success]
         update!(
           last_shopify_sync_at: Time.current,
@@ -176,7 +187,7 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.error "Shopify sync failed for #{product.sku}: #{result[:message]}"
         false
       end
-    rescue => e
+    rescue StandardError => e
       update!(
         shopify_sync_status: 'error',
         shopify_sync_error: e.message
@@ -218,7 +229,7 @@ class StockCorrectionItem < ApplicationRecord
     elsif needs_correction? && corrected_stock.present?
       "Corrigido: #{corrected_stock}"
     else
-      "-"
+      '-'
     end
   end
 
@@ -227,25 +238,28 @@ class StockCorrectionItem < ApplicationRecord
   def set_current_stock
     location = stock_correction.location
     self.current_stock = case location
-                        when 'lagoa_seca'
-                          product.stock_lagoa_seca&.to_i || 0
-                        when 'bh_shopping'
-                          product.stock_bh_shopping&.to_i || 0
-                        when 'rj'
-                          product.stock_rj&.to_i || 0
-                        else
-                          0
-                        end
+                         when 'lagoa_seca'
+                           product.stock_lagoa_seca&.to_i || 0
+                         when 'bh_shopping'
+                           product.stock_bh_shopping&.to_i || 0
+                         when 'rj'
+                           product.stock_rj&.to_i || 0
+                         when 'fortaleza_rio_mar'
+                           product.stock_fortaleza_rio_mar&.to_i || 0
+                         when 'porto_alegre_bourbon'
+                           product.stock_porto_alegre_bourbon&.to_i || 0
+                         when 'eldorado_sp'
+                           product.stock_eldorado_sp&.to_i || 0
+                         else
+                           0
+                         end
   end
 
   def set_stock_before
-    if needs_correction? && corrected_stock.present? && stock_before.blank?
-      self.stock_before = current_stock || 0
-    end
+    self.stock_before = current_stock || 0 if needs_correction? && corrected_stock.present? && stock_before.blank?
   end
 
   def get_shopify_location_id(location)
-    # Mapear suas locations para os IDs corretos da Shopify
     case location
     when 'lagoa_seca'
       ENV.fetch('LOCATION_LAGOA_SECA', nil) # 72286994506
@@ -253,8 +267,14 @@ class StockCorrectionItem < ApplicationRecord
       ENV.fetch('LOCATION_BH_SHOPPING', nil) # 72286699594
     when 'rj'
       ENV.fetch('LOCATION_BARRA_SHOPPING', nil) # 72287027274
+    when 'fortaleza_rio_mar'
+      ENV.fetch('LOCATION_FORTALEZA_RIO_MAR', nil) # 74208280650
+    when 'porto_alegre_bourbon'
+      ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', nil) # 74340008010
+    when 'eldorado_sp'
+      ENV.fetch('LOCATION_ELDORADO_SP', nil) # 74339975242
     else
-      ENV.fetch('LOCATION_LAGOA_SECA', nil) # Default para Lagoa Seca
+      ENV.fetch('LOCATION_LAGOA_SECA', nil)
     end
   end
 end

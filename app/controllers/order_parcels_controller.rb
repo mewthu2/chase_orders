@@ -5,7 +5,7 @@ class OrderParcelsController < ApplicationController
 
   def index
     @order_parcels = @order_pdv.order_parcels.order(:created_at)
-    
+
     respond_to do |format|
       format.html
       format.json { render json: @order_parcels }
@@ -21,17 +21,9 @@ class OrderParcelsController < ApplicationController
 
   def update
     if @order_parcel.update(order_parcel_params)
-      render json: { 
-        success: true, 
-        message: 'Parcela atualizada com sucesso!',
-        parcel: @order_parcel
-      }
+      render json: { success: true, message: 'Parcela atualizada com sucesso!', parcel: @order_parcel }
     else
-      render json: { 
-        success: false, 
-        message: 'Erro ao atualizar parcela',
-        errors: @order_parcel.errors.full_messages
-      }
+      render json: { success: false, message: 'Erro ao atualizar parcela', errors: @order_parcel.errors.full_messages }
     end
   end
 

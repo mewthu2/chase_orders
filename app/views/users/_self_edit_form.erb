@@ -45,7 +45,8 @@
               <div class="col-md-4">
                 <label class="form-label text-white fw-bold">Nova Senha</label>
                 <%= form.password_field :password, class: 'form-control bg-dark text-white border-secondary', autocomplete: 'new-password' %>
-                <small class="text-muted">Deixe em branco para manter a senha atual (mínimo 6 caracteres)</small>
+                <!-- Changed text-muted to text-white for better visibility -->
+                <small class="text-white">Deixe em branco para manter a senha atual (mínimo 6 caracteres)</small>
               </div>
               <div class="col-md-4">
                 <label class="form-label text-white fw-bold">Confirmar Nova Senha</label>
@@ -189,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Validação de senha
   const passwordField = document.querySelector('input[name="user[password]"]');
   const confirmPasswordField = document.querySelector('input[name="user[password_confirmation]"]');
 

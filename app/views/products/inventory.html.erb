@@ -117,6 +117,8 @@
                     <th class="text-white fw-bold px-3 py-3 text-center">Lagoa Seca</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">BH Shopping</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">Rio de Janeiro</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">Logística</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center">São Paulo</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">Fonte</th>
                   </tr>
                 </thead>
@@ -158,6 +160,16 @@
                       <td class="px-3 py-3 text-center">
                         <span class="badge <%= stock_badge_class(product.stock_rj) %> px-2 py-1">
                           <%= extract_stock_value(product.stock_rj) %> un.
+                        </span>
+                      </td>
+                      <td class="px-3 py-3 text-center">
+                        <span class="badge <%= stock_badge_class(product.stock_log) %> px-2 py-1">
+                          <%= extract_stock_value(product.stock_log) %> un.
+                        </span>
+                      </td>
+                      <td class="px-3 py-3 text-center">
+                        <span class="badge <%= stock_badge_class(product.stock_sp) %> px-2 py-1">
+                          <%= extract_stock_value(product.stock_sp) %> un.
                         </span>
                       </td>
                       <td class="px-3 py-3 text-center">

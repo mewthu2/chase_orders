@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_08_14_093556) do
+ActiveRecord::Schema[7.2].define(version: 2025_09_28_173939) do
   create_table "attempts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "kinds"
     t.bigint "status"
@@ -255,9 +255,15 @@ ActiveRecord::Schema[7.2].define(version: 2025_08_14_093556) do
     t.string "stock_lagoa_seca"
     t.string "stock_bh_shopping"
     t.integer "stock_rj"
+    t.integer "stock_fortaleza_rio_mar", default: 0
+    t.integer "stock_porto_alegre_bourbon", default: 0
+    t.integer "stock_eldorado_sp", default: 0
     t.string "stock_tiny_2"
     t.string "tags"
     t.text "image_url"
+    t.index ["stock_eldorado_sp"], name: "index_products_on_stock_eldorado_sp"
+    t.index ["stock_fortaleza_rio_mar"], name: "index_products_on_stock_fortaleza_rio_mar"
+    t.index ["stock_porto_alegre_bourbon"], name: "index_products_on_stock_porto_alegre_bourbon"
   end
 
   create_table "stock_correction_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

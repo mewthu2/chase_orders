@@ -18,9 +18,17 @@ class User < ApplicationRecord
       name: 'RJ - Barra Shopping',
       shopify_id: ENV.fetch('LOCATION_BARRA_SHOPPING', '72287027274')
     },
-    'log' => {
-      name: 'LOG',
-      shopify_id: ENV.fetch('LOCATION_LOG', '15132196938')
+    'eldorado_sp' => {
+      name: 'Eldorado SP',
+      shopify_id: ENV.fetch('LOCATION_ELDORADO_SP', '74339975242')
+    },
+    'fortaleza_rio_mar' => {
+      name: 'Fortaleza Rio Mar',
+      shopify_id: ENV.fetch('LOCATION_FORTALEZA_RIO_MAR', '74208280650')
+    },
+    'porto_alegre_bourbon' => {
+      name: 'Porto Alegre Bourbon',
+      shopify_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', '74340008010')
     }
   }.freeze
 

@@ -25,7 +25,6 @@ class ShopifyInventoryService
     return { success: false, message: "Location ID não encontrado para #{location}" } if location_id.blank?
     
     begin
-      # Query mais simples e direta
       query = <<~GRAPHQL
         query getInventoryLevels($inventoryItemId: ID!) {
           inventoryItem(id: $inventoryItemId) {
@@ -77,7 +76,6 @@ class ShopifyInventoryService
         }
       end
       
-      # Procurar o nível de inventário para a location específica
       inventory_levels = inventory_item.dig('inventoryLevels', 'edges') || []
       target_level = nil
       all_locations = []
@@ -118,7 +116,6 @@ class ShopifyInventoryService
         }
       end
       
-      # Agora fazer uma query específica para obter as quantidades desta location
       quantities_result = get_inventory_quantities(product.shopify_inventory_item_id, location_id)
       
       {
@@ -232,7 +229,6 @@ class ShopifyInventoryService
     
     Rails.logger.info "Using location_id: #{location_id} for location: #{location}"
     
-    # PRIMEIRO: Verificar o estoque atual na Shopify
     Rails.logger.info "=== CHECKING CURRENT SHOPIFY INVENTORY ==="
     current_inventory = check_inventory_level(product, location)
     Rails.logger.info "Current inventory result: #{current_inventory}"
@@ -245,7 +241,6 @@ class ShopifyInventoryService
       Rails.logger.info "  - Tracked: #{current_inventory[:tracked]}"
       Rails.logger.info "  - Location: #{current_inventory[:location_name]}"
       
-      # Verificar se o produto está sendo rastreado
       unless current_inventory[:tracked]
         return { 
           success: false, 
@@ -253,7 +248,6 @@ class ShopifyInventoryService
         }
       end
       
-      # Verificar se a quantidade já está correta
       if current_inventory[:on_hand] == quantity
         Rails.logger.warn "✅ Quantity is already correct in Shopify (#{current_inventory[:on_hand]} == #{quantity})"
         return { 
@@ -267,7 +261,6 @@ class ShopifyInventoryService
     else
       Rails.logger.error "Failed to check current inventory: #{current_inventory[:message]}"
       
-      # Se não conseguiu verificar, mas tem informações sobre outras locations
       if current_inventory[:all_locations]
         Rails.logger.info "Available locations for this product:"
         current_inventory[:all_locations].each do |loc|
@@ -275,17 +268,14 @@ class ShopifyInventoryService
         end
       end
       
-      # Continuar com a atualização mesmo sem conseguir verificar
       Rails.logger.warn "Continuing with update despite verification failure..."
     end
     
     begin
-      # Usar exatamente a mesma lógica do job que funciona
       update_inventory_quantity(product, quantity, location_id)
       
       Rails.logger.info "Shopify inventory updated successfully for #{product.sku}: #{quantity} units"
       
-      # Verificar se realmente foi atualizado
       Rails.logger.info "=== VERIFYING UPDATE ==="
       updated_inventory = check_inventory_level(product, location)
       if updated_inventory[:success]
@@ -299,7 +289,6 @@ class ShopifyInventoryService
         Rails.logger.warn "Could not verify update: #{updated_inventory[:message]}"
       end
       
-      # Atualizar registro local
       update_local_stock_record(product, location, quantity)
       
       { success: true, message: 'Estoque atualizado com sucesso na Shopify' }
@@ -317,11 +306,17 @@ class ShopifyInventoryService
   def get_location_id(location)
     location_id = case location
                   when 'lagoa_seca'
-                    ENV.fetch('LOCATION_LAGOA_SECA', nil) # 72286994506
+                    ENV.fetch('LOCATION_LAGOA_SECA', nil)
                   when 'bh_shopping'
-                    ENV.fetch('LOCATION_BH_SHOPPING', nil) # 72286699594
+                    ENV.fetch('LOCATION_BH_SHOPPING', nil)
                   when 'rj'
-                    ENV.fetch('LOCATION_BARRA_SHOPPING', nil) # 72287027274
+                    ENV.fetch('LOCATION_BARRA_SHOPPING', nil)
+                  when 'eldorado_sp'
+                    ENV.fetch('LOCATION_ELDORADO_SP', nil)
+                  when 'fortaleza_rio_mar'
+                    ENV.fetch('LOCATION_FORTALEZA_RIO_MAR', nil)
+                  when 'porto_alegre_bourbon'
+                    ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', nil)
                   else
                     ENV.fetch('LOCATION_LAGOA_SECA', nil)
                   end
@@ -330,7 +325,6 @@ class ShopifyInventoryService
     location_id
   end
   
-  # Método idêntico ao do job que funciona
   def update_inventory_quantity(product, quantity, location_id)
     mutation = <<~GRAPHQL
       mutation inventorySetOnHandQuantities($input: InventorySetOnHandQuantitiesInput!) {
@@ -382,7 +376,6 @@ class ShopifyInventoryService
       raise StandardError, "Erro GraphQL: #{error_msg}"
     end
     
-    # Verificar se houve adjustment group (como no job original)
     adjustment_group = response.body.dig('data', 'inventorySetOnHandQuantities', 'inventoryAdjustmentGroup')
     
     if adjustment_group
@@ -397,12 +390,10 @@ class ShopifyInventoryService
       Rails.logger.warn "3. The inventory_item_id is wrong"
       Rails.logger.warn "4. The product is not tracked at this location"
       
-      # Não falhar aqui - pode ser que a quantidade já esteja correta
       Rails.logger.warn "Continuing anyway - will verify in post-update check"
     end
   end
   
-  # Método idêntico ao do job que funciona
   def update_local_stock_record(product, location, quantity)
     case location
     when 'lagoa_seca'
@@ -414,6 +405,15 @@ class ShopifyInventoryService
     when 'rj'
       product.update(stock_rj: quantity) if product.respond_to?(:stock_rj)
       Rails.logger.info "Updated local stock_rj for #{product.sku}: #{quantity}"
+    when 'eldorado_sp'
+      product.update(stock_eldorado_sp: quantity) if product.respond_to?(:stock_eldorado_sp)
+      Rails.logger.info "Updated local stock_eldorado_sp for #{product.sku}: #{quantity}"
+    when 'fortaleza_rio_mar'
+      product.update(stock_fortaleza_rio_mar: quantity) if product.respond_to?(:stock_fortaleza_rio_mar)
+      Rails.logger.info "Updated local stock_fortaleza_rio_mar for #{product.sku}: #{quantity}"
+    when 'porto_alegre_bourbon'
+      product.update(stock_porto_alegre_bourbon: quantity) if product.respond_to?(:stock_porto_alegre_bourbon)
+      Rails.logger.info "Updated local stock_porto_alegre_bourbon for #{product.sku}: #{quantity}"
     end
   end
 end

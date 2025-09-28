@@ -55,7 +55,7 @@
                   Por favor, informe a senha.
                 </div>
                 <% unless @user.new_record? %>
-                  <small class="text-muted">Deixe em branco para manter a senha atual</small>
+                  <small class="text-white">Deixe em branco para manter a senha atual</small>
                 <% end %>
               </div>
               <div class="col-md-4">
@@ -95,7 +95,7 @@
                   <label class="form-check-label text-white fw-bold">
                     Usuário Ativo
                   </label>
-                  <small class="d-block text-muted">Controle se o usuário pode fazer login no sistema</small>
+                  <small class="d-block text-white">Controle se o usuário pode fazer login no sistema</small>
                 </div>
               </div>
             </div>
@@ -155,7 +155,7 @@
                                   </div>
                                   <div class="location-info">
                                     <h6 class="location-name text-white mb-1"><%= data[:name] %></h6>
-                                    <small class="location-key text-muted">
+                                    <small class="location-key text-white">
                                       <i class="fas fa-key me-1"></i><%= key %>
                                     </small>
                                     <br>
@@ -175,7 +175,7 @@
                     </div>
 
                     <div class="mt-4 pt-3 border-top border-secondary">
-                      <small class="text-muted d-flex align-items-center">
+                      <small class="text-white d-flex align-items-center">
                         <i class="fas fa-lightbulb me-2 text-warning"></i>
                         O usuário só poderá acessar as locations selecionadas no controle de estoque.
                       </small>

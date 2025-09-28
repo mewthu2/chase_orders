@@ -178,7 +178,7 @@
               </div>
               
               <div class="row g-3 mt-2">
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="form-label text-white">Estoque RJ</label>
                   <div class="input-group">
                     <span class="input-group-text bg-dark border-secondary text-white">
@@ -193,7 +193,7 @@
                   </div>
                 </div>
                 
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="form-label text-white">Estoque BH</label>
                   <div class="input-group">
                     <span class="input-group-text bg-dark border-secondary text-white">
@@ -208,7 +208,7 @@
                   </div>
                 </div>
                 
-                <div class="col-md-3">
+                <div class="col-md-2">
                   <label class="form-label text-white">Estoque Lagoa Seca</label>
                   <div class="input-group">
                     <span class="input-group-text bg-dark border-secondary text-white">
@@ -222,7 +222,55 @@
                     ], params[:stock_ls]), class: 'form-select bg-dark text-white border-secondary' %>
                   </div>
                 </div>
-                
+
+                <!-- Adding filters for new locations -->
+                <div class="col-md-2">
+                  <label class="form-label text-white">Estoque Fortaleza</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-warehouse"></i>
+                    </span>
+                    <%= select_tag :stock_fortaleza_rio_mar, options_for_select([
+                      ['Qualquer', ''],
+                      ['Em estoque', 'in_stock'],
+                      ['Sem estoque', 'out_of_stock'],
+                      ['Baixo estoque (≤ 3)', 'low_stock']
+                    ], params[:stock_fortaleza_rio_mar]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label text-white">Estoque Porto Alegre</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-warehouse"></i>
+                    </span>
+                    <%= select_tag :stock_porto_alegre_bourbon, options_for_select([
+                      ['Qualquer', ''],
+                      ['Em estoque', 'in_stock'],
+                      ['Sem estoque', 'out_of_stock'],
+                      ['Baixo estoque (≤ 3)', 'low_stock']
+                    ], params[:stock_porto_alegre_bourbon]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+
+                <div class="col-md-2">
+                  <label class="form-label text-white">Estoque Eldorado SP</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-white">
+                      <i class="fas fa-warehouse"></i>
+                    </span>
+                    <%= select_tag :stock_eldorado_sp, options_for_select([
+                      ['Qualquer', ''],
+                      ['Em estoque', 'in_stock'],
+                      ['Sem estoque', 'out_of_stock'],
+                      ['Baixo estoque (≤ 3)', 'low_stock']
+                    ], params[:stock_eldorado_sp]), class: 'form-select bg-dark text-white border-secondary' %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-2">
                 <div class="col-md-3">
                   <label class="form-label text-white">Plataforma</label>
                   <div class="input-group">

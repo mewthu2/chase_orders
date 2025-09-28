@@ -1,5 +1,6 @@
 <div class="container-fluid py-4">
   <% title 'Acompanhamento de Pedidos no Correios' %>
+  <%= render 'layouts/partials/messages' %>
 
   <div class="row mb-4">
     <div class="col-12">
@@ -11,7 +12,48 @@
           <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
             <i class="fas fa-filter me-1"></i> Filtros
           </button>
+          <button class="btn btn-warning ms-2" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
+            <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
+          </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="updateInvoiceModal" tabindex="-1" aria-labelledby="updateInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white" id="updateInvoiceModalLabel">
+            <i class="fas fa-edit me-2"></i>Atualizar ID da Nota Fiscal
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="<%= update_invoice_id_dashboard_index_path %>" method="post">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="tiny_order_id" class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="tiny_order_id" name="tiny_order_id" required placeholder="Ex: 911317520">
+              <div class="form-text text-muted">Digite o ID do pedido no sistema Tiny</div>
+            </div>
+            <div class="mb-3">
+              <label for="id_nota_fiscal" class="form-label text-white">ID da Nota Fiscal</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="id_nota_fiscal" name="id_nota_fiscal" required placeholder="Ex: 123456">
+              <div class="form-text text-muted">Digite o novo ID da nota fiscal</div>
+            </div>
+            <div class="alert alert-info border-0">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Atenção:</strong> Esta ação irá atualizar o ID da nota fiscal em todos os attempts com status "success" para o pedido informado.
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-save me-1"></i> Atualizar Nota Fiscal
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -29,37 +71,76 @@
             <div class="col-md-4">
               <label for="status" class="form-label text-white">Status</label>
               <select name="status" id="status" class="form-select bg-dark text-white border-secondary">
-                <option value="">Todos</option>
-                <option value="invoice_emition">Aguardando Emissão de Nota</option>
-                <option value="send_xml">Aguardando Envio XML</option>
-                <option value="push_tracking">Aguardando Rastreamento</option>
-                <option value="completed">Processamento Completo</option>
+                <option value="" <%= 'selected' if @filter_params[:status].blank? %>>Todos</option>
+                <option value="invoice_emition" <%= 'selected' if @filter_params[:status] == 'invoice_emition' %>>Aguardando Emissão de Nota</option>
+                <option value="send_xml" <%= 'selected' if @filter_params[:status] == 'send_xml' %>>Aguardando Envio XML</option>
+                <option value="push_tracking" <%= 'selected' if @filter_params[:status] == 'push_tracking' %>>Aguardando Rastreamento</option>
+                <option value="completed" <%= 'selected' if @filter_params[:status] == 'completed' %>>Processamento Completo</option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="period" class="form-label text-white">Período</label>
               <select name="period" id="period" class="form-select bg-dark text-white border-secondary">
-                <option value="">Todo o período</option>
-                <option value="today">Hoje</option>
-                <option value="7">Últimos 7 dias</option>
-                <option value="30">Últimos 30 dias</option>
-                <option value="90">Últimos 90 dias</option>
+                <option value="" <%= 'selected' if @filter_params[:period].blank? %>>Todo o período</option>
+                <option value="today" <%= 'selected' if @filter_params[:period] == 'today' %>>Hoje</option>
+                <option value="7" <%= 'selected' if @filter_params[:period] == '7' %>>Últimos 7 dias</option>
+                <option value="30" <%= 'selected' if @filter_params[:period] == '30' %>>Últimos 30 dias</option>
+                <option value="90" <%= 'selected' if @filter_params[:period] == '90' %>>Últimos 90 dias</option>
               </select>
             </div>
             <div class="col-md-4">
               <label for="order_id" class="form-label text-white">ID do Pedido</label>
-              <input type="text" name="order_id" id="order_id" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 123456">
+              <input type="text" name="order_id" id="order_id" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 123456" value="<%= @filter_params[:order_id] %>">
             </div>
           </div>
           <div class="mt-3 text-end">
             <button type="submit" class="btn btn-primary">
               <i class="fas fa-search me-1"></i> Aplicar Filtros
             </button>
+            <a href="<%= order_correios_tracking_dashboard_index_path %>" class="btn btn-secondary ms-2">
+              <i class="fas fa-times me-1"></i> Limpar Filtros
+            </a>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <% if @filter_params.values.any?(&:present?) %>
+    <div class="alert alert-primary border-0 mb-4">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-filter fa-2x me-3 text-primary"></i>
+        <div>
+          <h6 class="mb-1">Filtros Aplicados:</h6>
+          <div class="d-flex flex-wrap gap-2">
+            <% if @filter_params[:status].present? %>
+              <span class="badge bg-info">
+                Status: <%= case @filter_params[:status]
+                           when 'invoice_emition' then 'Aguardando Emissão de Nota'
+                           when 'send_xml' then 'Aguardando Envio XML'
+                           when 'push_tracking' then 'Aguardando Rastreamento'
+                           when 'completed' then 'Processamento Completo'
+                           end %>
+              </span>
+            <% end %>
+            <% if @filter_params[:period].present? %>
+              <span class="badge bg-info">
+                Período: <%= case @filter_params[:period]
+                            when 'today' then 'Hoje'
+                            when '7' then 'Últimos 7 dias'
+                            when '30' then 'Últimos 30 dias'
+                            when '90' then 'Últimos 90 dias'
+                            end %>
+              </span>
+            <% end %>
+            <% if @filter_params[:order_id].present? %>
+              <span class="badge bg-info">ID: <%= @filter_params[:order_id] %></span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
 
   <div class="alert alert-info border-0 mb-4">
     <div class="d-flex align-items-center">
@@ -82,7 +163,10 @@
             <i class="fas fa-route"></i> Fluxo de Processamento
           </span>
           <span class="badge bg-primary">
-            Acompanhamento de Pedidos
+            <%= @tracking_summary.count %> Pedidos
+            <% if @filter_params.values.any?(&:present?) %>
+              (Filtrados)
+            <% end %>
           </span>
         </div>
       </div>
@@ -192,9 +276,22 @@
         </div>
       <% else %>
         <div class="text-center py-5">
-          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-          <h5 class="text-white">Nenhum pedido em acompanhamento</h5>
-          <p class="text-muted">Todos os pedidos foram processados completamente.</p>
+          <i class="fas fa-search fa-3x text-muted mb-3"></i>
+          <h5 class="text-white">
+            <!-- Updated empty state message for filters -->
+            <% if @filter_params.values.any?(&:present?) %>
+              Nenhum pedido encontrado com os filtros aplicados
+            <% else %>
+              Nenhum pedido em acompanhamento
+            <% end %>
+          </h5>
+          <p class="text-muted">
+            <% if @filter_params.values.any?(&:present?) %>
+              Tente ajustar os filtros ou limpar para ver todos os pedidos.
+            <% else %>
+              Todos os pedidos foram processados completamente.
+            <% end %>
+          </p>
         </div>
       <% end %>
     </div>
@@ -269,6 +366,12 @@
       border: 1px solid rgba(13, 202, 240, 0.3);
       color: #0dcaf0;
     }
+
+    .alert-primary {
+      background-color: rgba(13, 110, 253, 0.1);
+      border: 1px solid rgba(13, 110, 253, 0.3);
+      color: #0d6efd;
+    }
   </style>
 <% end %>
 
@@ -308,6 +411,25 @@
           location.reload();
         }
       }, 60000);
+
+      const updateForm = document.querySelector('#updateInvoiceModal form');
+      if (updateForm) {
+        updateForm.addEventListener('submit', function(e) {
+          const tinyOrderId = document.getElementById('tiny_order_id').value;
+          const idNotaFiscal = document.getElementById('id_nota_fiscal').value;
+          
+          if (!tinyOrderId || !idNotaFiscal) {
+            e.preventDefault();
+            alert('Por favor, preencha todos os campos obrigatórios.');
+            return false;
+          }
+          
+          if (!confirm(`Tem certeza que deseja atualizar a nota fiscal do pedido ${tinyOrderId} para ${idNotaFiscal}?`)) {
+            e.preventDefault();
+            return false;
+          }
+        });
+      }
     });
   </script>
 <% end %>

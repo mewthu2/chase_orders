@@ -137,72 +137,151 @@ class DashboardController < ApplicationController
     }
   end
 
-
   def order_correios_tracking
-    prepare_tracking_data_optimized
+    @filter_params = {
+      status: params[:status],
+      period: params[:period],
+      order_id: params[:order_id]
+    }
+
+    prepare_tracking_data_optimized(@filter_params)
+  end
+
+  def update_invoice_id
+    tiny_order_id = params[:tiny_order_id]
+    id_nota_fiscal = params[:id_nota_fiscal]
+
+    if tiny_order_id.blank? || id_nota_fiscal.blank?
+      redirect_to order_correios_tracking_dashboard_index_path, alert: 'Parâmetros obrigatórios não informados.'
+      return
+    end
+
+    begin
+      # Find all successful attempts for the given tiny_order_id
+      attempts = Attempt.where(tiny_order_id: tiny_order_id, status: :success)
+      
+      if attempts.empty?
+        redirect_to order_correios_tracking_dashboard_index_path, alert: "Nenhum attempt com status 'success' encontrado para o pedido #{tiny_order_id}."
+        return
+      end
+
+      # Update the id_nota_fiscal for all found attempts
+      updated_count = attempts.update_all(id_nota_fiscal: id_nota_fiscal)
+      
+      redirect_to order_correios_tracking_dashboard_index_path, 
+                  notice: "ID da nota fiscal atualizado com sucesso! #{updated_count} attempt(s) foram atualizados para o pedido #{tiny_order_id}."
+    rescue => e
+      Rails.logger.error "Erro ao atualizar ID da nota fiscal: #{e.message}"
+      redirect_to order_correios_tracking_dashboard_index_path, 
+                  alert: "Erro ao atualizar ID da nota fiscal: #{e.message}"
+    end
   end
 
   private
 
-  def prepare_tracking_data_optimized
+  def prepare_tracking_data_optimized(filters = {})
+    base_conditions = []
+    sql_params = {}
+
+    if filters[:period].present?
+      case filters[:period]
+      when 'today'
+        base_conditions << 'so.created_at >= :today_start'
+        sql_params[:today_start] = Date.current.beginning_of_day
+      when '7'
+        base_conditions << 'so.created_at >= :week_start'
+        sql_params[:week_start] = 7.days.ago
+      when '30'
+        base_conditions << 'so.created_at >= :month_start'
+        sql_params[:month_start] = 30.days.ago
+      when '90'
+        base_conditions << 'so.created_at >= :quarter_start'
+        sql_params[:quarter_start] = 90.days.ago
+      end
+    end
+
+    if filters[:order_id].present?
+      base_conditions << 'so.tiny_order_id = :order_id'
+      sql_params[:order_id] = filters[:order_id]
+    end
+
+    # Não inclui "WHERE" aqui — usamos "WHERE 1=1" dentro das CTEs e da query principal
+    conditions_sql = base_conditions.any? ? "AND #{base_conditions.join(' AND ')}" : ''
+
     sql = <<-SQL
       WITH successful_orders AS (
-        SELECT DISTINCT tiny_order_id, order_correios_id
+        SELECT tiny_order_id, order_correios_id, MAX(created_at) AS created_at
         FROM attempts
         WHERE kinds = 0 AND status = 2
+        GROUP BY tiny_order_id, order_correios_id
       ),
       invoice_pending AS (
         SELECT so.tiny_order_id
         FROM successful_orders so
-        WHERE NOT EXISTS (
+        WHERE 1=1
+        #{conditions_sql}
+        AND NOT EXISTS (
           SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id 
-          AND a.kinds = 1 AND a.status = 2
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 1 AND a.status = 2
         )
       ),
       xml_pending AS (
         SELECT so.tiny_order_id
         FROM successful_orders so
-        WHERE EXISTS (
+        WHERE 1=1
+        #{conditions_sql}
+        AND EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-          AND a.kinds = 1 AND a.status = 2
+            AND a.kinds = 1 AND a.status = 2
         )
         AND NOT EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-          AND a.kinds = 2 AND a.status = 2
+            AND a.kinds = 2 AND a.status = 2
         )
       ),
       tracking_pending AS (
         SELECT so.tiny_order_id
         FROM successful_orders so
-        WHERE EXISTS (
+        WHERE 1=1
+        #{conditions_sql}
+        AND EXISTS (
           SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id 
-          AND a.kinds = 2 AND a.status = 2
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 2 AND a.status = 2
         )
         AND NOT EXISTS (
-          SELECT 1 FROM attempts a 
-          WHERE a.order_correios_id = so.order_correios_id 
-          AND a.kinds = 3 AND a.status = 2
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 3 AND a.status = 2
         )
       )
-      SELECT 
+      SELECT
         so.tiny_order_id,
-        CASE 
+        CASE
           WHEN ip.tiny_order_id IS NOT NULL THEN 'invoice_emition'
           WHEN xp.tiny_order_id IS NOT NULL THEN 'send_xml'
           WHEN tp.tiny_order_id IS NOT NULL THEN 'push_tracking'
           ELSE 'completed'
-        END as current_status
+        END AS current_status
       FROM successful_orders so
       LEFT JOIN invoice_pending ip ON so.tiny_order_id = ip.tiny_order_id
       LEFT JOIN xml_pending xp ON so.tiny_order_id = xp.tiny_order_id
       LEFT JOIN tracking_pending tp ON so.tiny_order_id = tp.tiny_order_id
+      WHERE 1=1
+      #{conditions_sql}
+      ORDER BY so.created_at DESC;
     SQL
 
-    results = ActiveRecord::Base.connection.exec_query(sql)
+    results = if sql_params.any?
+      ActiveRecord::Base.connection.exec_query(
+        ActiveRecord::Base.sanitize_sql_array([sql, sql_params])
+      )
+    else
+      ActiveRecord::Base.connection.exec_query(sql)
+    end
 
     @tracking_summary = {}
     invoice_count = 0
@@ -212,6 +291,8 @@ class DashboardController < ApplicationController
     results.rows.each do |row|
       order_id = row[0].to_s
       status = row[1]
+
+      next if filters[:status].present? && filters[:status] != status
 
       @tracking_summary[order_id] = {
         invoice_emition: status == 'invoice_emition',

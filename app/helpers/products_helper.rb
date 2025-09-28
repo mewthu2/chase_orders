@@ -25,6 +25,12 @@ module ProductsHelper
       product.stock_bh_shopping&.to_i || 0
     when 'rj'
       product.stock_rj&.to_i || 0
+    when 'fortaleza_rio_mar'
+      product.stock_fortaleza_rio_mar&.to_i || 0
+    when 'porto_alegre_bourbon'
+      product.stock_porto_alegre_bourbon&.to_i || 0
+    when 'eldorado_sp'
+      product.stock_eldorado_sp&.to_i || 0
     else
       0
     end
@@ -95,6 +101,12 @@ module ProductsHelper
       product.stock_bh_shopping || 0
     when 'rj'
       product.stock_rj || 0
+    when 'fortaleza_rio_mar'
+      product.stock_fortaleza_rio_mar || 0
+    when 'porto_alegre_bourbon'
+      product.stock_porto_alegre_bourbon || 0
+    when 'eldorado_sp'
+      product.stock_eldorado_sp || 0
     else
       0
     end
@@ -108,6 +120,12 @@ module ProductsHelper
       'BH Shopping'
     when 'rj'
       'Rio de Janeiro'
+    when 'fortaleza_rio_mar'
+      'Fortaleza Rio Mar'
+    when 'porto_alegre_bourbon'
+      'Porto Alegre Bourbon'
+    when 'eldorado_sp'
+      'Eldorado SP'
     else
       location.humanize
     end

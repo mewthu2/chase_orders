@@ -3,7 +3,6 @@ class StockService
     Rails.logger.info "StockService.check_stock called with product_id: #{product_id}, quantity: #{quantity}, store: #{store_type}"
     
     begin
-      # Buscar produto na tabela local
       product = Product.find_by(shopify_variant_id: product_id)
       
       unless product
@@ -19,7 +18,6 @@ class StockService
       
       Rails.logger.info "Found product in local database: #{product.sku}"
       
-      # SEMPRE buscar estoque em tempo real via API do Shopify
       return check_shopify_stock(product, quantity, store_type)
       
     rescue => e
@@ -42,19 +40,15 @@ class StockService
     Rails.logger.info "Checking Shopify stock for product #{product.sku} in store #{store_type}"
     
     begin
-      # Obter configuração da loja
       config = ShopifyIntegrationService.get_store_config_static(store_type)
       Rails.logger.info "Using location: #{config[:location_name]} (ID: #{config[:location_id]})"
       
-      # Criar sessão do Shopify
       session = ShopifyIntegrationService.create_shopify_session_static(config[:access_token])
       client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
       
-      # Verificar se temos o inventory_item_id
       unless product.shopify_inventory_item_id.present?
         Rails.logger.warn "Product #{product.sku} missing shopify_inventory_item_id, fetching from variant"
         
-        # Buscar o variant para obter o inventory_item_id
         variant_response = client.get(path: "variants/#{product.shopify_variant_id}.json")
         variant = variant_response.body['variant']
         
@@ -62,7 +56,6 @@ class StockService
           inventory_item_id = variant['inventory_item_id']
           Rails.logger.info "Found inventory_item_id: #{inventory_item_id} for variant #{product.shopify_variant_id}"
           
-          # Atualizar o produto com o inventory_item_id se não tiver
           if product.shopify_inventory_item_id.blank?
             product.update(shopify_inventory_item_id: inventory_item_id)
           end
@@ -82,7 +75,6 @@ class StockService
       
       Rails.logger.info "Checking inventory for item_id: #{inventory_item_id} at location: #{config[:location_id]}"
       
-      # Buscar níveis de inventário para a location específica
       inventory_response = client.get(path: "inventory_levels.json", query: { 
         inventory_item_ids: inventory_item_id,
         location_ids: config[:location_id]
@@ -109,7 +101,6 @@ class StockService
       else
         Rails.logger.warn "No inventory levels found for #{product.sku} at location #{config[:location_id]}"
         
-        # Tentar buscar em todas as locations para debug
         all_locations_response = client.get(path: "inventory_levels.json", query: { 
           inventory_item_ids: inventory_item_id
         })
@@ -148,6 +139,12 @@ class StockService
       'BH Shopping'
     when 'rj'
       'Barra Shopping (RJ)'
+    when 'eldorado_sp'
+      'Eldorado SP'
+    when 'fortaleza_rio_mar'
+      'Fortaleza Rio Mar'
+    when 'porto_alegre_bourbon'
+      'Porto Alegre Bourbon'
     when 'online'
       'Online Store'
     else
