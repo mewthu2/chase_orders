@@ -131,6 +131,7 @@
                   <tr>
                     <th class="text-white fw-bold px-3 py-3">ID</th>
                     <th class="text-white fw-bold px-3 py-3">Location</th>
+                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
                     <th class="text-white fw-bold px-3 py-3">Data da Conferência</th>
                     <th class="text-white fw-bold px-3 py-3">Status</th>
                     <th class="text-white fw-bold px-3 py-3 text-center">Itens</th>
@@ -151,6 +152,9 @@
                         <span class="badge bg-secondary text-white px-2 py-1">
                           <%= User.location_name(correction.location) %>
                         </span>
+                      </td>
+                      <td class="px-3 py-3">
+                        <%= correction.reason %>
                       </td>
                       <td class="px-3 py-3">
                         <span class="text-white">
