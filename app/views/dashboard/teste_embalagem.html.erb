@@ -1,0 +1,430 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap">
+          <div>
+            <h4 class="text-white mb-1">
+              <i class="fas fa-box me-2"></i>Simulador de Embalagem
+            </h4>
+            <small class="text-white-50">
+              <i class="fas fa-info-circle me-1"></i>
+              Calcule quantas caixas P (500) e G (1000) você precisa
+            </small>
+          </div>
+          <button onclick="resetAll()" class="btn btn-outline-danger">
+            <i class="fas fa-redo me-1"></i>Limpar Tudo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card bg-dark border-secondary h-100 stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-box fa-2x text-primary mb-2"></i>
+          <h5 class="text-white mb-1" id="totalBoxesP">0</h5>
+          <small class="text-white-50">Caixas P (500)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-dark border-secondary h-100 stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-boxes fa-2x text-success mb-2"></i>
+          <h5 class="text-white mb-1" id="totalBoxesG">0</h5>
+          <small class="text-white-50">Caixas G (1000)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-dark border-secondary h-100 stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-cubes fa-2x text-warning mb-2"></i>
+          <h5 class="text-white mb-1" id="totalItems">0</h5>
+          <small class="text-white-50">Total de Itens</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-dark border-secondary h-100 stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+          <h5 class="text-white mb-1" id="totalVolume">0</h5>
+          <small class="text-white-50">Volume Total</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Products List -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-tshirt me-2"></i>Produtos Disponíveis
+          </h5>
+        </div>
+        
+        <div class="card-body bg-black">
+          <!-- Category: Volume 100 -->
+          <div class="category-header">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-tag me-2"></i>Volume 100 - Cabem 5 na P / 10 na G
+            </h6>
+          </div>
+          <div class="row g-2 mb-4" id="products100"></div>
+
+          <!-- Category: Volume 200 (Cabe na P) -->
+          <div class="category-header">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-tag me-2"></i>Volume 200 - Cabem 2 na P / 5 na G
+            </h6>
+          </div>
+          <div class="row g-2 mb-4" id="products200P"></div>
+
+          <!-- Category: Volume 200 (Só G) -->
+          <div class="category-header">
+            <h6 class="text-white mb-0">
+              <i class="fas fa-tag me-2"></i>Volume 200 - Apenas Caixa G (5 unidades)
+            </h6>
+          </div>
+          <div class="row g-2" id="products200G"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Results -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-calculator me-2"></i>Detalhamento das Caixas
+          </h5>
+        </div>
+        <div class="card-body bg-black">
+          <div id="boxDetails" class="text-white-50 text-center py-4">
+            <i class="fas fa-box-open fa-3x mb-3"></i>
+            <p>Adicione produtos para ver o detalhamento das caixas</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bg-black {
+    background-color: #121212 !important;
+  }
+
+  .card {
+    border-radius: 8px;
+  }
+
+  .shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+  }
+
+  .form-control {
+    background-color: #343a40;
+    border-color: #495057;
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .form-control:focus {
+    background-color: #495057;
+    border-color: #6c757d;
+    color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  }
+
+  .product-item {
+    transition: all 0.2s ease;
+  }
+
+  .product-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .btn-quantity {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 6px;
+  }
+
+  .quantity-input {
+    width: 70px;
+    height: 36px;
+    padding: 0.25rem;
+    border-radius: 6px;
+  }
+
+  .category-header {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-card {
+    transition: transform 0.2s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .badge {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+  }
+
+  @media (max-width: 768px) {
+    .quantity-input {
+      width: 60px;
+    }
+    
+    .btn-quantity {
+      width: 32px;
+      height: 32px;
+    }
+  }
+</style>
+
+<script>
+  const products = {
+    volume100: [
+      'Tailor Tank', 'Tailor Top All Day', 'Regata See', 'Regata Essential', 
+      'Tank Stripe All', 'Tailor Ballet', 'Tailor T', 'Soho T-shirt', 
+      'Low Key Polo', 'T-Shirt Básica', 'Wide Reverse Shirt', 'Polo Court', 
+      'Cropped Essential', 'Baby Look', 'Skirt Court', 'Skirt Pliesse', 
+      'Low Key Shorts', 'Chaser Shorts'
+    ],
+    volume200P: [
+      'Camisa New Linho', 'Kimono Light Tricot', 'SweatShirt Boyfriend', 
+      'Kimono Linho', 'Low Key Cardigan', 'Wide Pants', 'Wide Leg Light', 
+      'Wide Leg Linho', 'High Waist'
+    ],
+    volume200G: [
+      'Calça moletom', 'Blusa Moletom Gentle', 'Calça moletom Straight', 
+      'Calça moletom jogger', 'Wide Leg Boucle', 'Long Sleeve Cropped Boucle', 
+      'Pullover Mock Neck', 'Blusa moletom the hood', 'Cropped Over Moletom', 
+      'Calça Moletom Straight Flare'
+    ]
+  };
+
+  const quantities = {};
+
+  function initProducts() {
+    renderProducts('products100', products.volume100, 100);
+    renderProducts('products200P', products.volume200P, 200);
+    renderProducts('products200G', products.volume200G, 200);
+  }
+
+  function renderProducts(containerId, productList, volume) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = productList.map(product => {
+      const id = product.replace(/\s+/g, '_');
+      quantities[id] = { name: product, volume, quantity: 0, onlyG: containerId === 'products200G' };
+      
+      return `
+        <div class="col-md-6 col-lg-4">
+          <div class="card bg-dark border-secondary product-item">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="flex-grow-1 me-2">
+                  <h6 class="text-white mb-1">${product}</h6>
+                  <small class="text-white-50">
+                    <i class="fas fa-cube me-1"></i>Vol: ${volume}
+                    ${containerId === 'products200G' ? '<span class="badge bg-warning text-dark ms-1">Só G</span>' : ''}
+                  </small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-outline-danger btn-quantity" onclick="changeQuantity('${id}', -1)">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <input type="number" 
+                          class="form-control quantity-input" 
+                          id="qty_${id}" 
+                          value="0" 
+                          min="0"
+                          onchange="setQuantity('${id}', this.value)">
+                  <button class="btn btn-outline-success btn-quantity" onclick="changeQuantity('${id}', 1)">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function changeQuantity(id, delta) {
+    const input = document.getElementById(`qty_${id}`);
+    const newValue = Math.max(0, parseInt(input.value || 0) + delta);
+    input.value = newValue;
+    quantities[id].quantity = newValue;
+    calculate();
+  }
+
+  function setQuantity(id, value) {
+    const newValue = Math.max(0, parseInt(value || 0));
+    document.getElementById(`qty_${id}`).value = newValue;
+    quantities[id].quantity = newValue;
+    calculate();
+  }
+
+  function calculate() {
+    let boxesP = 0;
+    let boxesG = 0;
+    let totalItems = 0;
+    let totalVolume = 0;
+    
+    const boxDetails = [];
+    
+    // Separate products by type
+    const productsP = [];
+    const productsG = [];
+    
+    Object.values(quantities).forEach(item => {
+      if (item.quantity > 0) {
+        totalItems += item.quantity;
+        totalVolume += item.quantity * item.volume;
+        
+        if (item.onlyG) {
+          productsG.push(item);
+        } else {
+          productsP.push(item);
+        }
+      }
+    });
+    
+    // Calculate boxes P (for products that can fit in P)
+    let remainingVolumeP = 0;
+    productsP.forEach(item => {
+      const itemTotalVolume = item.quantity * item.volume;
+      const itemsPerBoxP = Math.floor(500 / item.volume);
+      const fullBoxes = Math.floor(item.quantity / itemsPerBoxP);
+      const remaining = item.quantity % itemsPerBoxP;
+      
+      boxesP += fullBoxes;
+      if (fullBoxes > 0) {
+        boxDetails.push({
+          type: 'P',
+          count: fullBoxes,
+          content: `${fullBoxes}x Caixa P com ${itemsPerBoxP} ${item.name}`
+        });
+      }
+      
+      if (remaining > 0) {
+        remainingVolumeP += remaining * item.volume;
+      }
+    });
+    
+    // If there's remaining volume from P products, add one more P box
+    if (remainingVolumeP > 0) {
+      boxesP += 1;
+      boxDetails.push({
+        type: 'P',
+        count: 1,
+        content: `1x Caixa P com itens variados (${remainingVolumeP} de volume usado)`
+      });
+    }
+    
+    // Calculate boxes G (for products that only fit in G)
+    let remainingVolumeG = 0;
+    productsG.forEach(item => {
+      const itemsPerBoxG = Math.floor(1000 / item.volume);
+      const fullBoxes = Math.floor(item.quantity / itemsPerBoxG);
+      const remaining = item.quantity % itemsPerBoxG;
+      
+      boxesG += fullBoxes;
+      if (fullBoxes > 0) {
+        boxDetails.push({
+          type: 'G',
+          count: fullBoxes,
+          content: `${fullBoxes}x Caixa G com ${itemsPerBoxG} ${item.name}`
+        });
+      }
+      
+      if (remaining > 0) {
+        remainingVolumeG += remaining * item.volume;
+      }
+    });
+    
+    // If there's remaining volume from G products, add one more G box
+    if (remainingVolumeG > 0) {
+      boxesG += 1;
+      boxDetails.push({
+        type: 'G',
+        count: 1,
+        content: `1x Caixa G com itens variados (${remainingVolumeG} de volume usado)`
+      });
+    }
+    
+    // Update stats
+    document.getElementById('totalBoxesP').textContent = boxesP;
+    document.getElementById('totalBoxesG').textContent = boxesG;
+    document.getElementById('totalItems').textContent = totalItems;
+    document.getElementById('totalVolume').textContent = totalVolume;
+    
+    // Update box details
+    const detailsContainer = document.getElementById('boxDetails');
+    if (boxDetails.length > 0) {
+      detailsContainer.innerHTML = `
+        <div class="row g-3">
+          ${boxDetails.map(detail => `
+            <div class="col-md-6">
+              <div class="card bg-dark border-${detail.type === 'P' ? 'primary' : 'success'}">
+                <div class="card-body">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-box fa-2x text-${detail.type === 'P' ? 'primary' : 'success'} me-3"></i>
+                    <div>
+                      <h6 class="text-white mb-0">${detail.content}</h6>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else {
+      detailsContainer.innerHTML = `
+        <div class="text-center py-4">
+          <i class="fas fa-box-open fa-3x mb-3 text-white-50"></i>
+          <p class="text-white-50">Adicione produtos para ver o detalhamento das caixas</p>
+        </div>
+      `;
+    }
+  }
+
+  function resetAll() {
+    Object.keys(quantities).forEach(id => {
+      quantities[id].quantity = 0;
+      document.getElementById(`qty_${id}`).value = 0;
+    });
+    calculate();
+  }
+
+  // Initialize on load
+  initProducts();
+  calculate();
+</script>

@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       get :tracking
       get :stockend
       post :update_invoice_id
+      get :teste_embalagem
     end
   end
 

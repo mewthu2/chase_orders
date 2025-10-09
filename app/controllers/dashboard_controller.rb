@@ -3,6 +3,8 @@ class DashboardController < ApplicationController
   before_action :admin_only!
   protect_from_forgery except: :modal_test
 
+  def teste_embalagem; end
+
   def push_tracking
     tracked_ids = Attempt.where(kinds: :get_tracking, status: :success).pluck(:order_correios_id)
 
