@@ -316,94 +316,69 @@
       }
     });
     
-    const totalItemsForP = productsP.reduce((sum, item) => sum + item.quantity, 0);
-    
-    if (totalItemsForP > 5) {
-      // Use G boxes for all P-eligible products
-      productsP.forEach(item => {
-        const itemsPerBoxG = Math.floor(1000 / item.volume);
-        const fullBoxes = Math.floor(item.quantity / itemsPerBoxG);
-        const remaining = item.quantity % itemsPerBoxG;
-        
-        boxesG += fullBoxes;
-        if (fullBoxes > 0) {
-          boxDetails.push({
-            type: 'G',
-            count: fullBoxes,
-            content: `${fullBoxes}x Caixa G com ${itemsPerBoxG} ${item.name}`
-          });
-        }
-        
-        if (remaining > 0) {
-          boxesG += 1;
-          boxDetails.push({
-            type: 'G',
-            count: 1,
-            content: `1x Caixa G com ${remaining} ${item.name} (${remaining * item.volume} de volume usado)`
-          });
-        }
-      });
-    } else {
-      // Original logic: use P boxes when 5 or fewer items
-      let remainingVolumeP = 0;
-      productsP.forEach(item => {
-        const itemsPerBoxP = Math.floor(500 / item.volume);
-        const fullBoxes = Math.floor(item.quantity / itemsPerBoxP);
-        const remaining = item.quantity % itemsPerBoxP;
-        
-        boxesP += fullBoxes;
-        if (fullBoxes > 0) {
-          boxDetails.push({
-            type: 'P',
-            count: fullBoxes,
-            content: `${fullBoxes}x Caixa P com ${itemsPerBoxP} ${item.name}`
-          });
-        }
-        
-        if (remaining > 0) {
-          remainingVolumeP += remaining * item.volume;
-        }
-      });
+    productsP.forEach(item => {
+      const itemsPerBoxP = Math.floor(500 / item.volume); // 5 para vol 100, 2 para vol 200
+      const itemsPerBoxG = Math.floor(1000 / item.volume); // 10 para vol 100, 5 para vol 200
+      let remainingQty = item.quantity;
       
-      if (remainingVolumeP > 0) {
+      // Se quantidade <= 5, usa caixas P normalmente
+      if (remainingQty <= itemsPerBoxP) {
         boxesP += 1;
         boxDetails.push({
           type: 'P',
-          count: 1,
-          content: `1x Caixa P com itens variados (${remainingVolumeP} de volume usado)`
+          content: `${remainingQty} ${item.name}`
         });
+      } else {
+        // Se quantidade > 5, usa caixas G primeiro
+        // Preenche caixas G completas
+        while (remainingQty > itemsPerBoxG) {
+          boxesG += 1;
+          boxDetails.push({
+            type: 'G',
+            content: `${itemsPerBoxG} ${item.name}`
+          });
+          remainingQty -= itemsPerBoxG;
+        }
+        
+        // Para o resto: se <= 5, usa P; se > 5, usa G
+        if (remainingQty <= itemsPerBoxP) {
+          boxesP += 1;
+          boxDetails.push({
+            type: 'P',
+            content: `${remainingQty} ${item.name}`
+          });
+        } else {
+          boxesG += 1;
+          boxDetails.push({
+            type: 'G',
+            content: `${remainingQty} ${item.name}`
+          });
+        }
       }
-    }
+    });
     
-    // Calculate boxes G (for products that only fit in G)
-    let remainingVolumeG = 0;
+    // Process products that only fit in G boxes
     productsG.forEach(item => {
       const itemsPerBoxG = Math.floor(1000 / item.volume);
       const fullBoxes = Math.floor(item.quantity / itemsPerBoxG);
       const remaining = item.quantity % itemsPerBoxG;
       
-      boxesG += fullBoxes;
-      if (fullBoxes > 0) {
+      for (let i = 0; i < fullBoxes; i++) {
+        boxesG += 1;
         boxDetails.push({
           type: 'G',
-          count: fullBoxes,
-          content: `${fullBoxes}x Caixa G com ${itemsPerBoxG} ${item.name}`
+          content: `${itemsPerBoxG} ${item.name}`
         });
       }
       
       if (remaining > 0) {
-        remainingVolumeG += remaining * item.volume;
+        boxesG += 1;
+        boxDetails.push({
+          type: 'G',
+          content: `${remaining} ${item.name}`
+        });
       }
     });
-    
-    if (remainingVolumeG > 0) {
-      boxesG += 1;
-      boxDetails.push({
-        type: 'G',
-        count: 1,
-        content: `1x Caixa G com itens variados (${remainingVolumeG} de volume usado)`
-      });
-    }
     
     // Update stats
     document.getElementById('totalBoxesP').textContent = boxesP;
@@ -423,7 +398,7 @@
                   <div class="d-flex align-items-center">
                     <i class="fas fa-box fa-2x text-${detail.type === 'P' ? 'primary' : 'success'} me-3"></i>
                     <div>
-                      <h6 class="text-white mb-0">${detail.content}</h6>
+                      <h6 class="text-white mb-0">1x Caixa ${detail.type} com ${detail.content}</h6>
                     </div>
                   </div>
                 </div>
