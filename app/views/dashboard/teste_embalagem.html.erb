@@ -316,36 +316,63 @@
       }
     });
     
-    // Calculate boxes P (for products that can fit in P)
-    let remainingVolumeP = 0;
-    productsP.forEach(item => {
-      const itemTotalVolume = item.quantity * item.volume;
-      const itemsPerBoxP = Math.floor(500 / item.volume);
-      const fullBoxes = Math.floor(item.quantity / itemsPerBoxP);
-      const remaining = item.quantity % itemsPerBoxP;
+    const totalItemsForP = productsP.reduce((sum, item) => sum + item.quantity, 0);
+    
+    if (totalItemsForP > 5) {
+      // Use G boxes for all P-eligible products
+      productsP.forEach(item => {
+        const itemsPerBoxG = Math.floor(1000 / item.volume);
+        const fullBoxes = Math.floor(item.quantity / itemsPerBoxG);
+        const remaining = item.quantity % itemsPerBoxG;
+        
+        boxesG += fullBoxes;
+        if (fullBoxes > 0) {
+          boxDetails.push({
+            type: 'G',
+            count: fullBoxes,
+            content: `${fullBoxes}x Caixa G com ${itemsPerBoxG} ${item.name}`
+          });
+        }
+        
+        if (remaining > 0) {
+          boxesG += 1;
+          boxDetails.push({
+            type: 'G',
+            count: 1,
+            content: `1x Caixa G com ${remaining} ${item.name} (${remaining * item.volume} de volume usado)`
+          });
+        }
+      });
+    } else {
+      // Original logic: use P boxes when 5 or fewer items
+      let remainingVolumeP = 0;
+      productsP.forEach(item => {
+        const itemsPerBoxP = Math.floor(500 / item.volume);
+        const fullBoxes = Math.floor(item.quantity / itemsPerBoxP);
+        const remaining = item.quantity % itemsPerBoxP;
+        
+        boxesP += fullBoxes;
+        if (fullBoxes > 0) {
+          boxDetails.push({
+            type: 'P',
+            count: fullBoxes,
+            content: `${fullBoxes}x Caixa P com ${itemsPerBoxP} ${item.name}`
+          });
+        }
+        
+        if (remaining > 0) {
+          remainingVolumeP += remaining * item.volume;
+        }
+      });
       
-      boxesP += fullBoxes;
-      if (fullBoxes > 0) {
+      if (remainingVolumeP > 0) {
+        boxesP += 1;
         boxDetails.push({
           type: 'P',
-          count: fullBoxes,
-          content: `${fullBoxes}x Caixa P com ${itemsPerBoxP} ${item.name}`
+          count: 1,
+          content: `1x Caixa P com itens variados (${remainingVolumeP} de volume usado)`
         });
       }
-      
-      if (remaining > 0) {
-        remainingVolumeP += remaining * item.volume;
-      }
-    });
-    
-    // If there's remaining volume from P products, add one more P box
-    if (remainingVolumeP > 0) {
-      boxesP += 1;
-      boxDetails.push({
-        type: 'P',
-        count: 1,
-        content: `1x Caixa P com itens variados (${remainingVolumeP} de volume usado)`
-      });
     }
     
     // Calculate boxes G (for products that only fit in G)
@@ -369,7 +396,6 @@
       }
     });
     
-    // If there's remaining volume from G products, add one more G box
     if (remainingVolumeG > 0) {
       boxesG += 1;
       boxDetails.push({
