@@ -23,7 +23,7 @@ class StockService
     rescue => e
       Rails.logger.error "Error in StockService.check_stock: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-      
+
       {
         success: false,
         has_sufficient_stock: false,
@@ -35,10 +35,10 @@ class StockService
   end
   
   private
-  
+
   def self.check_shopify_stock(product, quantity, store_type)
     Rails.logger.info "Checking Shopify stock for product #{product.sku} in store #{store_type}"
-    
+
     begin
       config = ShopifyIntegrationService.get_store_config_static(store_type)
       Rails.logger.info "Using location: #{config[:location_name]} (ID: #{config[:location_id]})"
@@ -130,7 +130,7 @@ class StockService
       }
     end
   end
-  
+
   def self.get_location_name(store_type)
     case store_type
     when 'lagoa_seca'

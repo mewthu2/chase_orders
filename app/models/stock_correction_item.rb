@@ -16,42 +16,40 @@ class StockCorrectionItem < ApplicationRecord
     Rails.logger.info "corrected_stock: #{corrected_stock}"
     Rails.logger.info "correction_reason: #{correction_reason}"
     Rails.logger.info "with_shopify_integration: #{with_shopify_integration}"
-    
+
     unless needs_correction?
-      Rails.logger.error "Item does not need correction"
+      Rails.logger.error 'Item does not need correction'
       return false
     end
-    
+
     if executed?
-      Rails.logger.error "Item already executed"
+      Rails.logger.error 'Item already executed'
       return false
     end
-    
+
     if corrected_stock.blank?
-      Rails.logger.error "Corrected stock is blank"
+      Rails.logger.error 'Corrected stock is blank'
       return false
     end
-    
+
     if correction_reason.blank?
-      Rails.logger.error "Correction reason is blank"
+      Rails.logger.error 'Correction reason is blank'
       return false
     end
-    
+
     location = stock_correction.location
     Rails.logger.info "Location: #{location}"
     Rails.logger.info "Product ID: #{product.id}"
     Rails.logger.info "Product SKU: #{product.sku}"
-    
+
     begin
       Rails.logger.info "Executing correction for product #{product.sku}: #{current_stock} -> #{corrected_stock} in #{location}"
-    
-      # Verificar se o produto existe e tem os campos necessários
+
       unless product
-        Rails.logger.error "Product not found"
+        Rails.logger.error 'Product not found'
         return false
       end
-    
-      # Atualizar estoque no banco local
+
       case location
       when 'lagoa_seca'
         Rails.logger.info "Updating stock_lagoa_seca from #{product.stock_lagoa_seca} to #{corrected_stock}"
@@ -81,11 +79,10 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.error "Unknown location: #{location}"
         return false
       end
-    
-      # Recarregar o produto para verificar se foi atualizado
+
       product.reload
-      Rails.logger.info "Product reloaded, checking updated values..."
-    
+      Rails.logger.info 'Product reloaded, checking updated values...'
+
       case location
       when 'lagoa_seca'
         Rails.logger.info "Current stock_lagoa_seca: #{product.stock_lagoa_seca}"
@@ -138,7 +135,7 @@ class StockCorrectionItem < ApplicationRecord
           )
         end
       else
-        Rails.logger.info "⏭️ Shopify integration skipped (with_shopify_integration: false)"
+        Rails.logger.info '⏭️ Shopify integration skipped (with_shopify_integration: false)'
         update!(shopify_sync_status: 'pending') if shopify_sync_status.blank?
       end
 
@@ -149,7 +146,7 @@ class StockCorrectionItem < ApplicationRecord
       Rails.logger.error "ActiveRecord::RecordInvalid in execute_correction!: #{e.message}"
       Rails.logger.error "Record errors: #{e.record.errors.full_messages.join(', ')}"
       false
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Error executing correction for #{product.sku}: #{e.message}"
       Rails.logger.error "Error class: #{e.class}"
       Rails.logger.error e.backtrace.join("\n")
@@ -239,17 +236,17 @@ class StockCorrectionItem < ApplicationRecord
     location = stock_correction.location
     self.current_stock = case location
                          when 'lagoa_seca'
-                           product.stock_lagoa_seca&.to_i || 0
+                           product.stock_lagoa_seca&.to_i
                          when 'bh_shopping'
-                           product.stock_bh_shopping&.to_i || 0
+                           product.stock_bh_shopping&.to_i
                          when 'rj'
-                           product.stock_rj&.to_i || 0
+                           product.stock_rj&.to_i
                          when 'fortaleza_rio_mar'
-                           product.stock_fortaleza_rio_mar&.to_i || 0
+                           product.stock_fortaleza_rio_mar&.to_i
                          when 'porto_alegre_bourbon'
-                           product.stock_porto_alegre_bourbon&.to_i || 0
+                           product.stock_porto_alegre_bourbon&.to_i
                          when 'eldorado_sp'
-                           product.stock_eldorado_sp&.to_i || 0
+                           product.stock_eldorado_sp&.to_i
                          else
                            0
                          end
@@ -273,8 +270,6 @@ class StockCorrectionItem < ApplicationRecord
       ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', nil) # 74340008010
     when 'eldorado_sp'
       ENV.fetch('LOCATION_ELDORADO_SP', nil) # 74339975242
-    else
-      ENV.fetch('LOCATION_LAGOA_SECA', nil)
     end
   end
 end

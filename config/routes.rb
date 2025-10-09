@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       get :reopen
       get :check_shopify_inventory
       patch :sync_with_shopify
+      post :retry_shopify_sync
     end
   end
   

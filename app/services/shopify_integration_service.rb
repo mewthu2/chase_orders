@@ -4,140 +4,133 @@ class ShopifyIntegrationService
   end
 
   def integrate
-    begin
-      config = get_store_config(@order_pdv.store_type)
-      shopify_session = create_shopify_session(config[:access_token])
-      client = ShopifyAPI::Clients::Rest::Admin.new(session: shopify_session)
-      graphql_client = ShopifyAPI::Clients::Graphql::Admin.new(session: shopify_session)
+    config = get_store_config(@order_pdv.store_type)
+    shopify_session = create_shopify_session(config[:access_token])
+    client = ShopifyAPI::Clients::Rest::Admin.new(session: shopify_session)
 
-      existing_customer = find_existing_customer(client, @order_pdv.customer_email, @order_pdv.customer_phone)
+    existing_customer = find_existing_customer(client, @order_pdv.customer_email, @order_pdv.customer_phone)
 
-      line_items = @order_pdv.order_pdv_items.map do |item|
-        {
-          variant_id: item.product.shopify_variant_id,
-          quantity: item.quantity,
-          price: item.price.to_f
-        }
-      end
-
-      customer_data = if existing_customer
-        { id: existing_customer['id'] }
-      else
-        {
-          first_name: @order_pdv.customer_name&.split(' ')&.first || 'Cliente',
-          last_name: @order_pdv.customer_name&.split(' ', 2)&.last || 'PDV',
-          email: @order_pdv.customer_email,
-          phone: format_phone_for_shopify(@order_pdv.customer_phone)
-        }
-      end
-
-      shipping_lines = [
-        {
-          title: 'SEDEX',
-          price: '0.00',
-          code: 'SEDEX',
-          source: 'shopify'
-        }
-      ]
-
-      order_data = {
-        order: {
-          line_items: line_items,
-          customer: customer_data,
-          billing_address: build_address_data,
-          shipping_address: build_address_data,
-          shipping_lines: shipping_lines,
-          financial_status: 'pending',
-          fulfillment_status: 'unfulfilled',
-          tags: build_tags(config[:location_name]),
-          note: @order_pdv.order_note,
-          total_price: @order_pdv.total_price,
-          subtotal_price: @order_pdv.subtotal,
-          total_discounts: @order_pdv.discount_amount,
-          source_name: @order_pdv.store_type,
-          send_receipt: false,
-          send_fulfillment_receipt: false
-        }
-      }
-
-      Rails.logger.info "Criando pedido no Shopify para order_pdv #{@order_pdv.id}"
-      order_response = client.post(path: 'orders.json', body: order_data)
-      order = order_response.body['order']
-
-      unless order && order['id']
-        return {
-          success: false,
-          error: "Resposta inválida do Shopify ao criar pedido"
-        }
-      end
-
-      Rails.logger.info "Pedido criado no Shopify: #{order['id']}"
-
-      reservation_results = reserve_and_commit_inventory(
-        client, @order_pdv.order_pdv_items, 
-        config[:location_id],
-        config[:location_name]
-      )
-
-      update_data = {
-        reservation_status: reservation_results[:success] ? 'reserved' : 'reservation_error'
-      }
-
-      if @order_pdv.respond_to?(:inventory_reservations=) && reservation_results[:success]
-        update_data[:inventory_reservations] = reservation_results[:reservations].to_json
-      end
-
-      if @order_pdv.respond_to?(:reservation_error=) && !reservation_results[:success]
-        update_data[:reservation_error] = reservation_results[:error]
-      end
-
-      @order_pdv.update!(update_data)
-
+    line_items = @order_pdv.order_pdv_items.map do |item|
       {
-        success: true,
-        order_id: order['id'],
-        order_number: order['order_number'] || order['name'],
-        location: config[:location_name],
-        reservations: reservation_results[:reservations] || []
-      }
-    rescue ShopifyAPI::Errors::HttpResponseError => e
-      Rails.logger.error "Erro HTTP do Shopify: #{e.message}"
-      {
-        success: false,
-        error: e.message
-      }
-    rescue => e
-      Rails.logger.error "Erro na integração: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      {
-        success: false,
-        error: e.message
+        variant_id: item.product.shopify_variant_id,
+        quantity: item.quantity,
+        price: item.price.to_f
       }
     end
+
+    customer_data = if existing_customer
+                      { id: existing_customer['id'] }
+                    else
+                      {
+                        first_name: @order_pdv.customer_name&.split&.first || 'Cliente',
+                        last_name: @order_pdv.customer_name&.split(2)&.last || 'PDV',
+                        email: @order_pdv.customer_email,
+                        phone: format_phone_for_shopify(@order_pdv.customer_phone)
+                      }
+                    end
+
+    shipping_lines = [
+      {
+        title: 'SEDEX',
+        price: '0.00',
+        code: 'SEDEX',
+        source: 'shopify'
+      }
+    ]
+
+    order_data = {
+      order: {
+        line_items:,
+        customer: customer_data,
+        billing_address: build_address_data,
+        shipping_address: build_address_data,
+        shipping_lines:,
+        financial_status: 'pending',
+        fulfillment_status: 'unfulfilled',
+        tags: build_tags(config[:location_name]),
+        note: @order_pdv.order_note,
+        total_price: @order_pdv.total_price,
+        subtotal_price: @order_pdv.subtotal,
+        total_discounts: @order_pdv.discount_amount,
+        source_name: @order_pdv.store_type,
+        send_receipt: false,
+        send_fulfillment_receipt: false
+      }
+    }
+
+    Rails.logger.info "Criando pedido no Shopify para order_pdv #{@order_pdv.id}"
+    order_response = client.post(path: 'orders.json', body: order_data)
+    order = order_response.body['order']
+
+    unless order && order['id']
+      return {
+        success: false,
+        error: 'Resposta inválida do Shopify ao criar pedido'
+      }
+    end
+
+    Rails.logger.info "Pedido criado no Shopify: #{order['id']}"
+
+    reservation_results = reserve_and_commit_inventory(
+      client, @order_pdv.order_pdv_items,
+      config[:location_id],
+      config[:location_name]
+    )
+
+    update_data = {
+      reservation_status: reservation_results[:success] ? 'reserved' : 'reservation_error'
+    }
+
+    update_data[:inventory_reservations] = reservation_results[:reservations].to_json if @order_pdv.respond_to?(:inventory_reservations=) && reservation_results[:success]
+
+    update_data[:reservation_error] = reservation_results[:error] if @order_pdv.respond_to?(:reservation_error=) && !reservation_results[:success]
+
+    @order_pdv.update!(update_data)
+
+    {
+      success: true,
+      order_id: order['id'],
+      order_number: order['order_number'] || order['name'],
+      location: config[:location_name],
+      reservations: reservation_results[:reservations] || []
+    }
+  rescue ShopifyAPI::Errors::HttpResponseError => e
+    Rails.logger.error "Erro HTTP do Shopify: #{e.message}"
+    {
+      success: false,
+      error: e.message
+    }
+  rescue StandardError => e
+    Rails.logger.error "Erro na integração: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    {
+      success: false,
+      error: e.message
+    }
   end
 
   def self.search_products(query, store_type)
     Rails.logger.info "ShopifyIntegrationService.search_products called with query: '#{query}', store: '#{store_type}'"
-    
+
     begin
       query_downcase = query.downcase
-      
+
       products = Product.where(
-        "LOWER(shopify_product_name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(option1) LIKE ? OR LOWER(option2) LIKE ? OR LOWER(option3) LIKE ?",
-        "%#{query_downcase}%", 
-        "%#{query_downcase}%", 
-        "%#{query_downcase}%", 
-        "%#{query_downcase}%", 
+        'LOWER(shopify_product_name) LIKE ? OR LOWER(sku) LIKE ? OR LOWER(option1) LIKE ? OR LOWER(option2) LIKE ? OR LOWER(option3) LIKE ?',
+        "%#{query_downcase}%",
+        "%#{query_downcase}%",
+        "%#{query_downcase}%",
+        "%#{query_downcase}%",
         "%#{query_downcase}%"
       ).limit(20)
-      
+
       Rails.logger.info "Found #{products.count} products in local database"
-      
+
       formatted_products = products.map do |product|
         Rails.logger.info "Processing product: #{product.sku} - #{product.shopify_product_name}"
-        
+
         image_url = get_product_image_from_shopify(product, store_type)
-        
+
         {
           id: product.shopify_variant_id,
           shopify_variant_id: product.shopify_variant_id,
@@ -147,15 +140,14 @@ class ShopifyIntegrationService
           option1: product.option1,
           option2: product.option2,
           option3: product.option3,
-          image_url: image_url,
+          image_url:,
           vendor: product.vendor
         }
       end
-      
+
       Rails.logger.info "Returning #{formatted_products.count} formatted products"
       formatted_products
-      
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Error in search_products: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       []
@@ -164,17 +156,17 @@ class ShopifyIntegrationService
 
   def self.get_product_by_id(variant_id)
     Rails.logger.info "ShopifyIntegrationService.get_product_by_id called with variant_id: #{variant_id}"
-    
+
     begin
       product = Product.find_by(shopify_variant_id: variant_id)
-      
+
       if product.nil?
         Rails.logger.warn "Product with variant_id #{variant_id} not found"
         return nil
       end
-      
+
       image_url = get_product_image_from_shopify(product, 'lagoa_seca')
-      
+
       {
         id: product.shopify_variant_id,
         shopify_variant_id: product.shopify_variant_id,
@@ -184,27 +176,26 @@ class ShopifyIntegrationService
         option1: product.option1,
         option2: product.option2,
         option3: product.option3,
-        image_url: image_url,
+        image_url:,
         vendor: product.vendor
       }
-      
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Error in get_product_by_id: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
       nil
     end
   end
 
-  def self.create_order(order_data)
-    Rails.logger.info "ShopifyIntegrationService.create_order called"
-    
+  def self.create_order(_)
+    Rails.logger.info 'ShopifyIntegrationService.create_order called'
+
     begin
       {
         'id' => "shopify_#{Time.current.to_i}",
         'order_number' => "PDV#{Time.current.to_i}",
         'name' => "#PDV#{Time.current.to_i}"
       }
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Error creating Shopify order: #{e.message}"
       nil
     end
@@ -216,27 +207,28 @@ class ShopifyIntegrationService
     begin
       config = get_store_config_static(store_type)
       session = create_shopify_session_static(config[:access_token])
-      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+      client = ShopifyAPI::Clients::Rest::Admin.new(session:)
 
-      response = client.get(path: "inventory_levels.json", query: { 
+      query = {
         inventory_item_ids: inventory_item_id,
         location_ids: config[:location_id]
-      })
+      }
+
+      response = client.get(path: 'inventory_levels.json', query:)
 
       inventory_levels = response.body['inventory_levels']
-      
-      if inventory_levels && inventory_levels.any?
+
+      if inventory_levels&.any?
         inventory_level = inventory_levels.first
         Rails.logger.info "Inventory level found: #{inventory_level['available']}"
-        return inventory_level
+        inventory_level
       else
         Rails.logger.warn "No inventory levels found for item #{inventory_item_id}"
-        return nil
+        nil
       end
-
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Error getting inventory level: #{e.message}"
-      return nil
+      nil
     end
   end
 
@@ -246,21 +238,21 @@ class ShopifyIntegrationService
     begin
       config = get_store_config_static(store_type)
       session = create_shopify_session_static(config[:access_token])
-      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
+      client = ShopifyAPI::Clients::Rest::Admin.new(session:)
 
-      response = client.get(path: "locations.json")
+      response = client.get(path: 'locations.json')
       locations = response.body['locations']
-      
-      Rails.logger.info "Available locations:"
+
+      Rails.logger.info 'Available locations:'
       locations.each do |location|
         Rails.logger.info "  - #{location['name']} (ID: #{location['id']}) - Active: #{location['active']}"
       end
-      
-      return locations
-      
-    rescue => e
+
+      locations
+
+    rescue StandardError => e
       Rails.logger.error "Error listing locations: #{e.message}"
-      return []
+      []
     end
   end
 
@@ -302,59 +294,50 @@ class ShopifyIntegrationService
         location_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON'),
         location_name: 'Porto Alegre Bourbon'
       }
-    else
-      {
-        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
-        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
-        location_name: 'Lagoa Seca'
-      }
     end
   end
 
   def self.create_shopify_session_static(access_token)
     ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: access_token
+      access_token:
     )
   end
 
   private
 
-  def self.get_product_image_from_shopify(product, store_type)
+  def get_product_image_from_shopify(product, store_type)
     return nil unless product.shopify_product_id.present?
-    
+
     begin
       config = get_store_config_static(store_type)
       session = create_shopify_session_static(config[:access_token])
-      client = ShopifyAPI::Clients::Rest::Admin.new(session: session)
-      
+      client = ShopifyAPI::Clients::Rest::Admin.new(session:)
+
       product_response = client.get(path: "products/#{product.shopify_product_id}.json")
       shopify_product = product_response.body['product']
-      
+
       if shopify_product && shopify_product['images'] && shopify_product['images'].any?
         first_image = shopify_product['images'].first
         return first_image['src'] if first_image['src']
       end
-      
+
       fallback_image_url(product)
-      
-    rescue => e
+    rescue StandardError => e
       Rails.logger.warn "Could not fetch image for product #{product.sku}: #{e.message}"
       fallback_image_url(product)
     end
   end
 
-  def self.fallback_image_url(product)
-    if product.sku.present?
-      sku_clean = product.sku.downcase.gsub(/[^a-z0-9]/, '-')
-      "https://cdn.shopify.com/s/files/1/0795/1650/2917/products/#{sku_clean}.jpg?v=1"
-    else
-      nil
-    end
+  def fallback_image_url(product)
+    return unless product.sku.present?
+    sku_clean = product.sku.downcase.gsub(/[^a-z0-9]/, '-')
+    "https://cdn.shopify.com/s/files/1/0795/1650/2917/products/#{sku_clean}.jpg?v=1"
   end
 
   def reserve_and_commit_inventory(client, order_items, location_id, location_name)
     reservations = []
+
     begin
       Rails.logger.info "Iniciando reserva e commit de estoque na location #{location_name} (#{location_id})"
 
@@ -374,12 +357,9 @@ class ShopifyIntegrationService
 
         inventory_item_id = variant['inventory_item_id']
 
-        inventory_response = client.get(path: "inventory_levels.json",
-          query: { 
-            inventory_item_ids: inventory_item_id,
-            location_ids: location_id
-          }
-        )
+        query = { inventory_item_ids: inventory_item_id, location_ids: location_id }
+
+        inventory_response = client.get(path: 'inventory_levels.json', query:)
 
         inventory_levels = inventory_response.body['inventory_levels']
 
@@ -396,12 +376,12 @@ class ShopifyIntegrationService
         if available_quantity < quantity
           Rails.logger.warn "Estoque insuficiente para #{item.sku} na #{location_name}. Disponível: #{available_quantity}, Solicitado: #{quantity}"
           reservations << {
-            variant_id: variant_id,
+            variant_id:,
             sku: item.sku,
-            quantity: quantity,
-            location_id: location_id,
-            location_name: location_name,
-            available_quantity: available_quantity,
+            quantity:,
+            location_id:,
+            location_name:,
+            available_quantity:,
             status: 'insufficient_stock',
             error: "Estoque insuficiente: #{available_quantity} disponível, #{quantity} solicitado"
           }
@@ -409,78 +389,71 @@ class ShopifyIntegrationService
         end
 
         begin
-          adjustment_response = client.post(path: "inventory_levels/adjust.json",
-            body: {
-              location_id: location_id,
-              inventory_item_id: inventory_item_id,
-              available_adjustment: -quantity,
-              reason: "Pedido PDV ##{@order_pdv.id} - Reservado e Committed"
-            }
+          body = {
+            location_id:,
+            inventory_item_id:,
+            available_adjustment: -quantity,
+            reason: "Pedido PDV ##{@order_pdv.id} - Reservado e Committed"
+          }
+
+          adjustment_response = client.post(
+            path: 'inventory_levels/adjust.json',
+            body:
           )
 
           if adjustment_response.code == 200
             Rails.logger.info "Estoque ajustado (reservado) com sucesso para #{item.sku}: #{quantity} unidades"
-            
+
             begin
-              updated_inventory_response = client.get(path: "inventory_levels.json",
-                query: { 
-                  inventory_item_ids: inventory_item_id,
-                  location_ids: location_id
-                }
-              )
-              
+              query = { inventory_item_ids: inventory_item_id, location_ids: location_id }
+
+              updated_inventory_response = client.get(path: 'inventory_levels.json', query:)
+
               updated_inventory_levels = updated_inventory_response.body['inventory_levels']
-              
+
               if updated_inventory_levels.any?
-                updated_inventory_level = updated_inventory_levels.first
-                
-                commit_response = client.post(path: "inventory_levels/adjust.json",
-                  body: {
-                    location_id: location_id,
-                    inventory_item_id: inventory_item_id,
-                    available_adjustment: 0,
-                    reason: "Pedido PDV ##{@order_pdv.id} - Committed"
-                  }
-                )
-                
+                body = { location_id:, inventory_item_id:, available_adjustment: 0, reason: "Pedido PDV ##{@order_pdv.id} - Committed" }
+
+                commit_response = client.post(path: 'inventory_levels/adjust.json', body: )
+
                 Rails.logger.info "Estoque marcado como committed para #{item.sku}: #{quantity} unidades"
-                
+
                 reservations << {
-                  variant_id: variant_id,
+                  variant_id:,
                   sku: item.sku,
-                  quantity: quantity,
-                  location_id: location_id,
-                  location_name: location_name,
-                  available_quantity: available_quantity,
+                  quantity:,
+                  location_id:,
+                  location_name:,
+                  available_quantity:,
                   reserved_quantity: quantity,
                   status: 'committed',
                   adjustment_id: adjustment_response.body.dig('inventory_level', 'id'),
                   commit_id: commit_response.body.dig('inventory_level', 'id')
                 }
               else
-                Rails.logger.warn "Não foi possível encontrar inventory level atualizado para commit"
+                Rails.logger.warn 'Não foi possível encontrar inventory level atualizado para commit'
                 reservations << {
-                  variant_id: variant_id,
+                  variant_id:,
                   sku: item.sku,
-                  quantity: quantity,
-                  location_id: location_id,
-                  location_name: location_name,
-                  available_quantity: available_quantity,
+                  quantity:,
+                  location_id:,
+                  location_name:,
+                  available_quantity:,
                   reserved_quantity: quantity,
                   status: 'reserved_only',
                   adjustment_id: adjustment_response.body.dig('inventory_level', 'id')
                 }
               end
-            rescue => commit_error
-              Rails.logger.error "Erro ao fazer commit do estoque para #{item.sku}: #{commit_error.message}"
+            rescue StandardError => e
+              Rails.logger.error "Erro ao fazer commit do estoque para #{item.sku}: #{e.message}"
               reservations << {
-                variant_id: variant_id,
+                variant_id:,
                 sku: item.sku,
-                quantity: quantity,
-                location_id: location_id,
-                location_name: location_name,
-                available_quantity: available_quantity,
-                reserved_quantity: quantity,
+                quantity:,
+                location_id:,
+                location_name:,
+                available_quantity:,
+                reserved_quantity:,
                 status: 'reserved_only',
                 adjustment_id: adjustment_response.body.dig('inventory_level', 'id'),
                 error: "Erro no commit: #{commit_error.message}"
@@ -489,25 +462,25 @@ class ShopifyIntegrationService
           else
             Rails.logger.error "Falha ao reservar estoque para #{item.sku}: #{adjustment_response.body}"
             reservations << {
-              variant_id: variant_id,
+              variant_id:,
               sku: item.sku,
-              quantity: quantity,
-              location_id: location_id,
-              location_name: location_name,
-              available_quantity: available_quantity,
+              quantity:,
+              location_id:,
+              location_name:,
+              available_quantity:,
               status: 'reservation_failed',
               error: "Falha na reserva: #{adjustment_response.body}"
             }
           end
-        rescue => adjustment_error
-          Rails.logger.error "Erro ao fazer adjustment de estoque para #{item.sku}: #{adjustment_error.message}"
+        rescue StandardError => e
+          Rails.logger.error "Erro ao fazer adjustment de estoque para #{item.sku}: #{e.message}"
           reservations << {
-            variant_id: variant_id,
+            variant_id:,
             sku: item.sku,
-            quantity: quantity,
-            location_id: location_id,
-            location_name: location_name,
-            available_quantity: available_quantity,
+            quantity:,
+            location_id:,
+            location_name:,
+            available_quantity:,
             status: 'verified_only',
             error: "Erro na reserva: #{adjustment_error.message}"
           }
@@ -517,8 +490,8 @@ class ShopifyIntegrationService
       success = reservations.any? { |r| ['committed', 'reserved_only'].include?(r[:status]) }
 
       {
-        success: success,
-        reservations: reservations,
+        success:,
+        reservations:,
         summary: {
           total_items: reservations.count,
           committed: reservations.count { |r| r[:status] == 'committed' },
@@ -527,7 +500,7 @@ class ShopifyIntegrationService
           failed: reservations.count { |r| r[:status] == 'reservation_failed' }
         }
       }
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Erro durante reserva e commit de estoque: #{e.message}"
       {
         success: false,
@@ -575,19 +548,13 @@ class ShopifyIntegrationService
         location_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON'),
         location_name: 'Porto Alegre Bourbon'
       }
-    else
-      {
-        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
-        location_id: ENV.fetch('LOCATION_LAGOA_SECA'),
-        location_name: 'Lagoa Seca'
-      }
     end
   end
 
   def create_shopify_session(access_token)
     ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
-      access_token: access_token
+      access_token:
     )
   end
 
@@ -596,20 +563,20 @@ class ShopifyIntegrationService
 
     begin
       if email.present?
-        response = client.get(path: "customers/search.json", query: { query: "email:#{email}" })
+        response = client.get(path: 'customers/search.json', query: { query: "email:#{email}" })
         customers = response.body['customers']
         return customers.first if customers.any?
       end
 
       if phone.present?
         formatted_phone = format_phone_for_shopify(phone)
-        response = client.get(path: "customers/search.json", query: { query: "phone:#{formatted_phone}" })
+        response = client.get(path: 'customers/search.json', query: { query: "phone:#{formatted_phone}" })
         customers = response.body['customers']
         return customers.first if customers.any?
       end
 
       nil
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Erro ao buscar cliente: #{e.message}"
       nil
     end
@@ -617,7 +584,7 @@ class ShopifyIntegrationService
 
   def build_address_data
     {
-      first_name: @order_pdv.customer_name&.split(' ')&.first || 'Cliente',
+      first_name: @order_pdv.customer_name&.split&.first || 'Cliente',
       last_name: @order_pdv.customer_name&.split(' ', 2)&.last || 'PDV',
       address1: @order_pdv.address1,
       address2: @order_pdv.address2,
@@ -629,10 +596,10 @@ class ShopifyIntegrationService
   end
 
   def build_tags(location_name)
-    tags = ["PDV", @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", location_name]
+    tags = ['PDV', @order_pdv.store_type, @order_pdv.payment_method, @order_pdv.user.name, "SEDEX", "NAO_PAGO", "NAO_PROCESSADO", location_name]
 
     if @order_pdv.has_parcels?
-      tags << "PARCELADO"
+      tags << 'PARCELADO'
       tags << "#{@order_pdv.order_parcels.count}_PARCELAS"
 
       payment_methods = @order_pdv.order_parcels.pluck(:payment_method).uniq
