@@ -8,6 +8,11 @@ Rails.application.routes.draw do
     mount Sidekiq::Web => '/sidekiq'
   end
 
+  namespace :api do
+    post '/login', to: 'auth#login'
+    post '/add_packaging', to: 'shopify_flow#add_packaging'
+  end
+
   resources :dashboard, only: [:index] do
     collection do
       get :ranking_sellers
@@ -23,6 +28,11 @@ Rails.application.routes.draw do
       get :teste_embalagem
     end
   end
+  ApiUser.create!(
+    email: 'shopifyflow@honey.com',
+    password: '2539329261463',
+    password_confirmation: '2539329261463'
+  )
 
   resources :products, only: [:index] do
     collection do

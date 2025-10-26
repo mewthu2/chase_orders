@@ -9,6 +9,8 @@ gem 'rubyXL'
 # Use mysql as the database for Active Record
 gem 'mysql2'
 
+gem 'jwt'
+
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
 gem "shopify_api"
 

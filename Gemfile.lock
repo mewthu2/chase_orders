@@ -395,6 +395,7 @@ DEPENDENCIES
   importmap-rails
   jbuilder
   jsbundling-rails
+  jwt
   memory_profiler
   mysql2
   nokogiri
