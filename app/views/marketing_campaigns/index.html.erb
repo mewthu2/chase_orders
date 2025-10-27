@@ -1,0 +1,224 @@
+<div class="container-fluid py-4">
+  <% title 'Campanhas de Marketing' %>
+  <%= render 'layouts/partials/messages' %>
+
+  <!-- Header com Estatísticas Globais -->
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1 small">Total de Campanhas</p>
+              <h3 class="text-white mb-0"><%= @stats[:total_campaigns] %></h3>
+            </div>
+            <div class="text-primary">
+              <i class="fas fa-bullhorn fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1 small">Campanhas Ativas</p>
+              <h3 class="text-success mb-0"><%= @stats[:active_campaigns] %></h3>
+            </div>
+            <div class="text-success">
+              <i class="fas fa-check-circle fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1 small">Total de Tarefas</p>
+              <h3 class="text-white mb-0"><%= @stats[:total_tasks] %></h3>
+            </div>
+            <div class="text-info">
+              <i class="fas fa-tasks fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1 small">Taxa de Conversão</p>
+              <h3 class="text-warning mb-0"><%= @stats[:conversion_rate] %>%</h3>
+            </div>
+            <div class="text-warning">
+              <i class="fas fa-chart-line fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header com Botão Criar -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-bullhorn me-2"></i>Gerenciar Campanhas
+          </h5>
+          <div>
+            <%= link_to new_marketing_campaign_path, class: "btn btn-primary" do %>
+              <i class="fas fa-plus me-2"></i>Nova Campanha
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de Campanhas -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h6 class="text-white mb-0">
+            <i class="fas fa-list me-2"></i>Todas as Campanhas
+          </h6>
+        </div>
+        <div class="card-body bg-black p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Nome</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Objetivo</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Período</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Status</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Agentes</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Total</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Pendentes</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Convertidas</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Taxa</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @campaigns.each do |campaign| %>
+                  <tr class="border-secondary">
+                    <td class="px-4 py-3 text-white">
+                      <%= link_to campaign.name, edit_marketing_campaign_path(campaign), class: "text-white text-decoration-none" %>
+                    </td>
+                    <td class="px-4 py-3 text-white-50"><%= campaign.objective %></td>
+                    <td class="px-4 py-3 text-white-50">
+                      <%= campaign.start_date.strftime('%d/%m/%Y') %> - 
+                      <%= campaign.end_date.strftime('%d/%m/%Y') %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="badge px-3 py-2 <%= campaign.status_active? ? 'bg-success' : 'bg-secondary' %>">
+                        <i class="fas <%= campaign.status_active? ? 'fa-check-circle' : 'fa-pause-circle' %> me-1"></i>
+                        <%= campaign.status_active? ? 'Ativa' : 'Inativa' %>
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                      <i class="fas fa-users me-1"></i><%= campaign.campaign_users.count %>
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                      <span class="badge bg-secondary"><%= campaign.marketing_tasks.count %></span>
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                      <span class="badge bg-warning"><%= campaign.marketing_tasks.pending.count %></span>
+                    </td>
+                    <td class="px-4 py-3 text-white">
+                      <span class="badge bg-success"><%= campaign.marketing_tasks.converted.count %></span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="badge bg-info px-2 py-1">
+                        <%= campaign.conversion_rate %>%
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="btn-group" role="group">
+                        <!-- Added statistics button -->
+                        <%= link_to statistics_marketing_campaign_path(campaign), class: "btn btn-sm btn-outline-info", title: "Estatísticas" do %>
+                          <i class="fas fa-chart-bar"></i>
+                        <% end %>
+                        <%= link_to edit_marketing_campaign_path(campaign), class: "btn btn-sm btn-outline-warning" do %>
+                          <i class="fas fa-edit"></i>
+                        <% end %>
+                        <%= button_to toggle_status_marketing_campaign_path(campaign), 
+                            method: :patch,
+                            class: "btn btn-sm btn-outline-#{campaign.status_active? ? 'danger' : 'success'}",
+                            form_class: "d-inline-block" do %>
+                          <i class="fas fa-power-off"></i>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+            <% if @campaigns.empty? %>
+              <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-white-50 mb-3"></i>
+                <p class="text-white-50 mb-0">Nenhuma campanha encontrada</p>
+                <%= link_to new_marketing_campaign_path, class: "btn btn-primary mt-3" do %>
+                  <i class="fas fa-plus me-2"></i>Criar Primeira Campanha
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-dark td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.badge {
+  font-weight: 500;
+}
+</style>
+<% end %>

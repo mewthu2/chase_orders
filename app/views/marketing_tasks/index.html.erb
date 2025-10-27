@@ -1,0 +1,141 @@
+<div class="container-fluid py-4">
+  <% title 'Minhas Tasks' %>
+  <%= render 'layouts/partials/messages' %>
+
+
+  <!-- Lista de Tasks -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-tasks me-2"></i>Minhas Tasks (<%= @tasks.count %>)
+          </h5>
+        </div>
+        <div class="card-body bg-black p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead class="bg-dark">
+                <tr>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">ID</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Cliente</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Campanha</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Status</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Convertida</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Criada</th>
+                  <th class="px-4 py-3 text-white-50 small fw-bold">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @tasks.each do |task| %>
+                  <tr class="border-secondary">
+                    <td class="px-4 py-3 text-white font-monospace">#<%= task.id %></td>
+                    <td class="px-4 py-3 text-white">
+                      <i class="fas fa-user me-2"></i><%= task.lead_name %>
+                      <!-- Get email and phone from lead_data JSON -->
+                      <% if task.lead_data.present? %>
+                        <% email = task.lead_data.dig('customer_data', 'email') || task.lead_data['email'] %>
+                        <% phone = task.lead_data.dig('billing_address', 'phone') || task.lead_data.dig('shipping_address', 'phone') || task.lead_data['phone'] %>
+                        <% if email.present? %>
+                          <br><small class="text-white-50"><i class="fas fa-envelope me-1"></i><%= email %></small>
+                        <% end %>
+                        <% if phone.present? %>
+                          <br><small class="text-white-50"><i class="fas fa-phone me-1"></i><%= phone %></small>
+                        <% end %>
+                      <% end %>
+                    </td>
+                    <td class="px-4 py-3 text-white-50"><%= task.marketing_campaign.name %></td>
+                    <td class="px-4 py-3">
+                      <span class="badge <%= case task.status
+                        when 'pending' then 'bg-warning text-dark'
+                        when 'in_progress' then 'bg-info'
+                        when 'completed' then 'bg-success'
+                        end %>">
+                        <i class="fas <%= case task.status
+                          when 'pending' then 'fa-clock'
+                          when 'in_progress' then 'fa-spinner'
+                          when 'completed' then 'fa-check'
+                          end %> me-1"></i>
+                        <%= task.status.humanize %>
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <% if task.converted? %>
+                        <span class="badge bg-success">
+                          <i class="fas fa-check-circle me-1"></i>Sim
+                        </span>
+                        <% if task.order_number %>
+                          <br><small class="text-white-50">Pedido: <%= task.order_number %></small>
+                        <% end %>
+                      <% else %>
+                        <span class="badge bg-secondary">Não</span>
+                      <% end %>
+                    </td>
+                    <td class="px-4 py-3 text-white-50">
+                      <%= task.created_at.strftime('%d/%m/%Y') %>
+                    </td>
+                    <td class="px-4 py-3">
+                      <%# Removed marketing namespace from path %>
+                      <%= link_to marketing_task_path(task), class: "btn btn-sm btn-outline-primary" do %>
+                        <i class="fas fa-eye"></i>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<style>
+body {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+.bg-black {
+  background-color: #121212 !important;
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.card {
+  border-radius: 8px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-dark td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.form-select:focus {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+</style>
+<% end %>

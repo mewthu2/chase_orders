@@ -31,7 +31,7 @@
   </head>
 
   <body>
-    <div class="wrapper" style="height: 100%; background-image: url(<%= asset_path 'admin/subtle-prism.png'%>)">
+    <div class="wrapper" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>)">
       <% if current_user.present? %>
         <%= render 'layouts/partials/sidebar' %>
         <button class="mobile-sidebar-toggle d-lg-none" id="mobileToggle">

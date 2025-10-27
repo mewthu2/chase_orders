@@ -4,6 +4,11 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
+  has_many :marketing_tasks, foreign_key: :user_id, dependent: :nullify
+  has_many :campaign_users, dependent: :destroy
+  has_many :marketing_campaigns, through: :campaign_users
+  has_many :created_campaigns, class_name: 'MarketingCampaign', foreign_key: :created_by_id, dependent: :nullify
+
   # Constante com as locations disponíveis
   AVAILABLE_LOCATIONS = {
     'lagoa_seca' => {
@@ -34,7 +39,7 @@ class User < ApplicationRecord
 
   # Validações
   validates :name, presence: true
-  validates :profile_id, presence: true, inclusion: { in: [1, 2, 3] }
+  validates :profile_id, presence: true, inclusion: { in: [1, 2, 3, 5, 6] }
   validate :validate_allowed_locations_exist
 
   # Scopes
@@ -42,6 +47,9 @@ class User < ApplicationRecord
   scope :admins, -> { where(profile_id: 1) }
   scope :managers, -> { where(profile_id: 2) }
   scope :users, -> { where(profile_id: 3) }
+  scope :admin_marketing, -> { where(profile_id: 5) }
+  scope :agent_marketing, -> { where(profile_id: 6) }
+  scope :marketing_users, -> { where(profile_id: [5, 6]) }
 
   # Callbacks
   before_validation :set_default_profile, on: :create
@@ -61,6 +69,18 @@ class User < ApplicationRecord
     profile_id == 3
   end
 
+  def admin_marketing?
+    profile_id == 5
+  end
+
+  def agent_marketing?
+    profile_id == 6
+  end
+
+  def marketing_user?
+    [5, 6].include?(profile_id)
+  end
+
   def profile_name
     case profile_id
     when 1
@@ -69,6 +89,10 @@ class User < ApplicationRecord
       'Gerente'
     when 3
       'Usuário'
+    when 5
+      'Admin Marketing'
+    when 6
+      'Agente Marketing'
     else
       'Indefinido'
     end
@@ -153,6 +177,12 @@ class User < ApplicationRecord
       has_location_access?
     when :reports
       admin? || manager?
+    when :marketing_campaigns_admin
+      admin? || admin_marketing?
+    when :marketing_tasks
+      admin? || marketing_user?
+    when :marketing_dashboard
+      admin? || marketing_user?
     else
       false
     end

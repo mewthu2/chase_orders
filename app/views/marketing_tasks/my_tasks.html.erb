@@ -1,0 +1,326 @@
+<div class="container-fluid py-4">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="text-white mb-1">Minhas Tarefas</h2>
+      <p class="text-white-50 mb-0">Gerencie suas tarefas de marketing</p>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1">Total de Tarefas</p>
+              <h3 class="text-white mb-0"><%= @stats[:total_tasks] %></h3>
+            </div>
+            <i class="fas fa-tasks fa-2x text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1">Pendentes</p>
+              <h3 class="text-white mb-0"><%= @stats[:pending] %></h3>
+            </div>
+            <i class="fas fa-clock fa-2x text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1">Em Progresso</p>
+              <h3 class="text-white mb-0"><%= @stats[:in_progress] %></h3>
+            </div>
+            <i class="fas fa-spinner fa-2x text-info"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card bg-dark border-secondary">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-white-50 mb-1">Convertidas</p>
+              <h3 class="text-white mb-0"><%= @stats[:converted] %></h3>
+            </div>
+            <i class="fas fa-check-circle fa-2x text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card bg-dark border-secondary mb-4">
+    <div class="card-body">
+      <%= form_with url: my_tasks_marketing_tasks_path, method: :get, local: true, class: "row g-3" do |f| %>
+        <div class="col-md-3">
+          <label class="form-label text-white">Status</label>
+          <%= select_tag :status, 
+              options_for_select([
+                ['Todos', ''],
+                ['Pendente', 'pending'],
+                ['Em Progresso', 'in_progress'],
+                ['Concluída', 'completed'],
+                ['Convertida', 'converted']
+              ], params[:status]), 
+              class: 'form-select bg-dark text-white border-secondary' %>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label text-white">Campanha</label>
+          <%= select_tag :campaign_id,
+              options_for_select([['Todas', '']] + @campaigns.map { |c| [c.name, c.id] }, params[:campaign_id]),
+              class: 'form-select bg-dark text-white border-secondary' %>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+          <%= submit_tag 'Filtrar', class: 'btn btn-primary me-2' %>
+          <%= link_to 'Limpar', my_tasks_marketing_tasks_path, class: 'btn btn-secondary' %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Tasks List -->
+  <div class="card bg-dark border-secondary">
+    <div class="card-header bg-dark border-secondary">
+      <h5 class="text-white mb-0">Suas Tarefas (<%= @tasks.count %>)</h5>
+    </div>
+    <div class="card-body p-0">
+      <!-- Desktop table view - removed email and phone columns, added action buttons next to name -->
+      <div class="d-none d-lg-block">
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th class="text-white-50">ID</th>
+                <th class="text-white-50">Campanha</th>
+                <th class="text-white-50">Cliente</th>
+                <th class="text-white-50">Status</th>
+                <th class="text-white-50">Criada em</th>
+                <th class="text-white-50">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @tasks.any? %>
+                <% @tasks.each do |task| %>
+                  <% 
+                    email = task.lead_data.dig('customer_data', 'email') || task.lead_data['email'] || 'N/A'
+                    phone = task.lead_data.dig('billing_address', 'phone') || 
+                            task.lead_data.dig('shipping_address', 'phone') || 
+                            task.lead_data['phone'] || 'N/A'
+                    customer_name = task.lead_data.dig('billing_address', 'name') ||
+                                    task.lead_data.dig('customer_data', 'name') ||
+                                    task.lead_data['customer_name'] || 'N/A'
+                    
+                    whatsapp_number = phone.gsub(/\D/, '') if phone != 'N/A'
+                  %>
+                  <tr>
+                    <td class="text-white">#<%= task.id %></td>
+                    <td class="text-white"><%= task.marketing_campaign.name %></td>
+                    <td class="text-white">
+                      <%= customer_name %>
+                      <% if email != 'N/A' %>
+                        <a href="mailto:<%= email %>" class="btn btn-sm btn-outline-primary ms-2" title="Enviar Email">
+                          <i class="fas fa-envelope"></i>
+                        </a>
+                      <% end %>
+                      <% if phone != 'N/A' && whatsapp_number.present? %>
+                        <a href="https://wa.me/<%= whatsapp_number %>" target="_blank" class="btn btn-sm btn-outline-success ms-2" title="Abrir WhatsApp">
+                          <i class="fab fa-whatsapp"></i>
+                        </a>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% case task.status %>
+                      <% when 'pending' %>
+                        <span class="badge bg-warning">Pendente</span>
+                      <% when 'in_progress' %>
+                        <span class="badge bg-info">Em Progresso</span>
+                      <% when 'completed' %>
+                        <span class="badge bg-secondary">Concluída</span>
+                      <% when 'converted' %>
+                        <span class="badge bg-success">Convertida</span>
+                      <% end %>
+                    </td>
+                    <td class="text-white-50">
+                      <%= task.created_at.strftime('%d/%m/%Y %H:%M') %>
+                    </td>
+                    <td>
+                      <%= link_to marketing_task_path(task), class: 'btn btn-sm btn-outline-primary' do %>
+                        <i class="fas fa-eye"></i> Ver
+                      <% end %>
+                      
+                      <% if task.pending? %>
+                        <%= button_to start_work_marketing_task_path(task), method: :post, class: 'btn btn-sm btn-outline-info ms-1', form: { style: 'display: inline-block;' } do %>
+                          <i class="fas fa-play"></i> Iniciar
+                        <% end %>
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              <% else %>
+                <tr>
+                  <td colspan="6" class="text-center text-white-50 py-4">
+                    <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                    Nenhuma tarefa encontrada
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mobile card view - optimized for touch and small screens -->
+      <div class="d-lg-none">
+        <% if @tasks.any? %>
+          <% @tasks.each do |task| %>
+            <% 
+              email = task.lead_data.dig('customer_data', 'email') || task.lead_data['email'] || 'N/A'
+              phone = task.lead_data.dig('billing_address', 'phone') || 
+                      task.lead_data.dig('shipping_address', 'phone') || 
+                      task.lead_data['phone'] || 'N/A'
+              customer_name = task.lead_data.dig('billing_address', 'name') ||
+                              task.lead_data.dig('customer_data', 'name') ||
+                              task.lead_data['customer_name'] || 'N/A'
+              
+              whatsapp_number = phone.gsub(/\D/, '') if phone != 'N/A'
+            %>
+            <div class="border-bottom border-secondary p-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="flex-grow-1">
+                  <div class="d-flex align-items-center mb-2">
+                    <span class="text-white-50 me-2">#<%= task.id %></span>
+                    <% case task.status %>
+                    <% when 'pending' %>
+                      <span class="badge bg-warning">Pendente</span>
+                    <% when 'in_progress' %>
+                      <span class="badge bg-info">Em Progresso</span>
+                    <% when 'completed' %>
+                      <span class="badge bg-secondary">Concluída</span>
+                    <% when 'converted' %>
+                      <span class="badge bg-success">Convertida</span>
+                    <% end %>
+                  </div>
+                  
+                  <h6 class="text-white mb-1"><%= customer_name %></h6>
+                  <p class="text-white-50 small mb-2"><%= task.marketing_campaign.name %></p>
+                  
+                  <div class="d-flex gap-2 mb-2">
+                    <% if email != 'N/A' %>
+                      <a href="mailto:<%= email %>" class="btn btn-sm btn-outline-primary" title="Enviar Email">
+                        <i class="fas fa-envelope"></i>
+                      </a>
+                    <% end %>
+                    <% if phone != 'N/A' && whatsapp_number.present? %>
+                      <a href="https://wa.me/<%= whatsapp_number %>" target="_blank" class="btn btn-sm btn-outline-success" title="Abrir WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                      </a>
+                    <% end %>
+                  </div>
+                  
+                  <p class="text-white-50 small mb-0">
+                    <i class="far fa-clock"></i> <%= task.created_at.strftime('%d/%m/%Y %H:%M') %>
+                  </p>
+                </div>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <%= link_to marketing_task_path(task), class: 'btn btn-sm btn-outline-primary flex-grow-1' do %>
+                  <i class="fas fa-eye"></i> Ver Detalhes
+                <% end %>
+                
+                <% if task.pending? %>
+                  <%= button_to start_work_marketing_task_path(task), method: :post, class: 'btn btn-sm btn-outline-info flex-grow-1' do %>
+                    <i class="fas fa-play"></i> Iniciar
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center text-white-50 py-5">
+            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+            <p>Nenhuma tarefa encontrada</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card {
+    background-color: #121212 !important;
+    border: 1px solid #333 !important;
+  }
+  
+  .card-header {
+    background-color: #1a1a1a !important;
+    border-bottom: 1px solid #333 !important;
+  }
+  
+  .table-dark {
+    background-color: #121212 !important;
+  }
+  
+  .table-dark th,
+  .table-dark td {
+    border-color: #333 !important;
+  }
+  
+  .table-dark tbody tr:hover {
+    background-color: #1a1a1a !important;
+  }
+  
+  .form-select,
+  .form-control {
+    background-color: #1a1a1a !important;
+    border-color: #333 !important;
+    color: #fff !important;
+  }
+  
+  .form-select:focus,
+  .form-control:focus {
+    background-color: #1a1a1a !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .btn-outline-primary:hover,
+  .btn-outline-info:hover,
+  .btn-outline-success:hover {
+    color: #fff !important;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 991px) {
+    .btn-sm {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    
+    .gap-2 {
+      gap: 0.5rem !important;
+    }
+  }
+</style>

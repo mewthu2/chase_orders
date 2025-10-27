@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_16_034718) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -42,6 +42,19 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_034718) do
     t.integer "id_nota_tiny2"
     t.index ["kinds"], name: "index_attempts_on_kinds"
     t.index ["tiny_order_id"], name: "index_attempts_on_tiny_order_id"
+  end
+
+  create_table "campaign_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "marketing_campaign_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "tasks_assigned", default: 0
+    t.integer "tasks_completed", default: 0
+    t.integer "tasks_converted", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["marketing_campaign_id", "user_id"], name: "index_campaign_users_on_campaign_and_user", unique: true
+    t.index ["marketing_campaign_id"], name: "index_campaign_users_on_marketing_campaign_id"
+    t.index ["user_id"], name: "index_campaign_users_on_user_id"
   end
 
   create_table "discounts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -108,6 +121,56 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_034718) do
     t.index ["success"], name: "index_logs_on_success"
     t.index ["user_id", "resource_type"], name: "index_logs_on_user_id_and_resource_type"
     t.index ["user_id"], name: "index_logs_on_user_id"
+  end
+
+  create_table "marketing_campaigns", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "objective"
+    t.date "start_date", null: false
+    t.date "end_date", null: false
+    t.integer "users_per_week", default: 0
+    t.integer "status", default: 0, null: false
+    t.integer "campaign_type", default: 0, null: false
+    t.integer "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_type"], name: "index_marketing_campaigns_on_campaign_type"
+    t.index ["created_by_id"], name: "index_marketing_campaigns_on_created_by_id"
+    t.index ["start_date", "end_date"], name: "index_marketing_campaigns_on_start_date_and_end_date"
+    t.index ["status"], name: "index_marketing_campaigns_on_status"
+  end
+
+  create_table "marketing_tasks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "marketing_campaign_id", null: false
+    t.bigint "user_id", null: false
+    t.string "lead_email"
+    t.string "lead_name"
+    t.string "lead_phone"
+    t.json "lead_data"
+    t.integer "status", default: 0, null: false
+    t.boolean "converted", default: false
+    t.string "order_number"
+    t.decimal "order_value", precision: 10, scale: 2
+    t.datetime "started_at"
+    t.datetime "completed_at"
+    t.datetime "converted_at"
+    t.text "notes"
+    t.string "shopify_checkout_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "task_type", default: 0, null: false
+    t.date "due_date"
+    t.index ["converted"], name: "index_marketing_tasks_on_converted"
+    t.index ["due_date"], name: "index_marketing_tasks_on_due_date"
+    t.index ["lead_email"], name: "index_marketing_tasks_on_lead_email"
+    t.index ["marketing_campaign_id", "status"], name: "index_marketing_tasks_on_marketing_campaign_id_and_status"
+    t.index ["marketing_campaign_id"], name: "index_marketing_tasks_on_marketing_campaign_id"
+    t.index ["shopify_checkout_id"], name: "index_marketing_tasks_on_shopify_checkout_id"
+    t.index ["status"], name: "index_marketing_tasks_on_status"
+    t.index ["task_type"], name: "index_marketing_tasks_on_task_type"
+    t.index ["user_id", "status"], name: "index_marketing_tasks_on_user_id_and_status"
+    t.index ["user_id", "task_type"], name: "index_marketing_tasks_on_user_id_and_task_type"
+    t.index ["user_id"], name: "index_marketing_tasks_on_user_id"
   end
 
   create_table "motors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -358,7 +421,11 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_16_034718) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
+  add_foreign_key "campaign_users", "marketing_campaigns"
+  add_foreign_key "campaign_users", "users"
   add_foreign_key "logs", "users"
+  add_foreign_key "marketing_tasks", "marketing_campaigns"
+  add_foreign_key "marketing_tasks", "users"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "order_parcels", "order_pdvs"

@@ -28,11 +28,6 @@ Rails.application.routes.draw do
       get :teste_embalagem
     end
   end
-  ApiUser.create!(
-    email: 'shopifyflow@honey.com',
-    password: '2539329261463',
-    password_confirmation: '2539329261463'
-  )
 
   resources :products, only: [:index] do
     collection do
@@ -72,58 +67,34 @@ Rails.application.routes.draw do
     end
   end
 
-  # resources :order_pdvs, only: [:index, :show, :edit, :update] do
-  #   member do
-  #     post :integrate
-  #     post :add_product
-  #     delete :remove_product
-  #   end
-  #   collection do
-  #     post :search_product
-  #   end
-    
-  #   resources :order_parcels, only: [:index, :show, :update] do
-  #     member do
-  #       post :check_payment_status
-  #       post :mark_as_paid
-  #       post :mark_as_failed
-  #     end
-  #   end
-  # end
-
-  # resources :pos, only: [:index] do
-  #   collection do
-  #     get :get_cart_data
-  #     post :restore_cart_from_backup
-  #     post :search_product
-  #     post :search_coupon
-  #     post :apply_coupon
-  #     delete :remove_coupon
-  #     post :get_product_details
-  #     post :add_to_cart
-  #     patch :update_cart_quantity
-  #     delete :remove_from_cart
-  #     delete :clear_cart
-  #     post :create_order
-  #     post :create_order_without_integration
-  #     post :check_stock
-  #   end
-  # end
-
-  # resources :discounts, only: [:index] do
-  #   collection do
-  #     post :search
-  #     patch :toggle_status
-  #     post :sync
-  #     get :logs
-  #   end
-  # end
-
   resources :stock_syncs, only: [:index] do
     collection do
       post :execute_now
       patch :toggle_status
       patch :update_config
+    end
+  end
+
+  resources :marketing_campaigns do
+    member do
+      patch :toggle_status
+      post :add_user
+      delete :remove_user
+      get :statistics # Added statistics route for individual campaign
+    end
+  end
+  
+  resources :marketing_tasks, only: [:index, :show, :update] do
+    collection do
+      get :export
+      get :dashboard
+      get :my_tasks
+    end
+    member do
+      post :start_work
+      post :mark_converted
+      post :mark_not_converted
+      post :add_note
     end
   end
 

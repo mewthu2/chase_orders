@@ -38,6 +38,44 @@
           </div>
         </div>
 
+        <!-- Marketing Collapsible Section for admin, admin_marketing, and agent_marketing -->
+        <% if current_user&.profile_id.in?([1, 5, 6]) %>
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleMarketing()">
+              <div class="nav-group-title">
+                <i class="fas fa-bullhorn"></i>
+                <span class="nav-text">Marketing</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="marketingIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="marketingDropdown">
+              <div class="dropdown-content">
+                <% if current_user&.profile_id.in?([1, 5]) %>
+                  <!-- Admin and Admin Marketing Links -->
+                  <%= link_to marketing_campaigns_path, class: "dropdown-link #{'active' if controller_name == 'marketing_campaigns' && action_name == 'index'}" do %>
+                    <i class="fas fa-list"></i>
+                    <span>Campanhas</span>
+                  <% end %>
+                  <%= link_to new_marketing_campaign_path, class: "dropdown-link #{'active' if controller_name == 'marketing_campaigns' && action_name == 'new'}" do %>
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Nova Campanha</span>
+                  <% end %>
+                  <%= link_to marketing_tasks_path, class: "dropdown-link #{'active' if controller_name == 'marketing_tasks' && action_name == 'index'}" do %>
+                    <i class="fas fa-tasks"></i>
+                    <span>Todas as Tarefas</span>
+                  <% end %>
+                <% elsif current_user&.profile_id == 6 %>
+                  <!-- Agent Marketing only sees My Tasks, no dashboard link -->
+                  <%= link_to my_tasks_marketing_tasks_path, class: "dropdown-link #{'active' if action_name == 'my_tasks'}" do %>
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Minhas Tarefas</span>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
         <!-- Correios Collapsible Section - Only for Admin -->
         <% if current_user&.profile_id == 1 %>
           <div class="nav-item nav-group-collapsible">
@@ -82,23 +120,27 @@
             </div>
           </div>
         <% end %>
-        <div class="nav-item nav-group-collapsible">
-          <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
-            <div class="nav-group-title">
-              <i class="fas fa-box"></i>
-              <span class="nav-text">Produtos</span>
+        
+        <!-- Produtos section now hidden for Admin Marketing (5) and Agent Marketing (6) profiles -->
+        <% unless current_user&.profile_id.in?([5, 6]) %>
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
+              <div class="nav-group-title">
+                <i class="fas fa-box"></i>
+                <span class="nav-text">Produtos</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="produtosIcon"></i>
             </div>
-            <i class="fas fa-chevron-right collapse-icon" id="produtosIcon"></i>
-          </div>
-          <div class="nav-group-dropdown" id="produtosDropdown">
-            <div class="dropdown-content">
-              <%= link_to stock_corrections_path, class: "dropdown-link #{'active' if current_page?(inventory_products_path)}" do %>
-                <i class="fas fa-warehouse"></i>
-                <span>Controle de Estoque</span>
-              <% end %>
+            <div class="nav-group-dropdown" id="produtosDropdown">
+              <div class="dropdown-content">
+                <%= link_to stock_corrections_path, class: "dropdown-link #{'active' if current_page?(inventory_products_path)}" do %>
+                  <i class="fas fa-warehouse"></i>
+                  <span>Controle de Estoque</span>
+                <% end %>
+              </div>
             </div>
           </div>
-        </div>
+        <% end %>
       </div>
     </div>
 
@@ -112,6 +154,10 @@
             Admin
           <% when 2 %>
             Gerente
+          <% when 5 %>
+            Admin Marketing
+          <% when 6 %>
+            Agente Marketing
           <% else %>
             Usuário
           <% end %>
@@ -547,6 +593,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const usuariosHeader = document.querySelector('[onclick="toggleUsuarios()"]')
     const produtosDropdown = document.getElementById("produtosDropdown")
     const produtosHeader = document.querySelector('[onclick="toggleProdutos()"]')
+    const marketingDropdown = document.getElementById("marketingDropdown")
+    const marketingHeader = document.querySelector('[onclick="toggleMarketing()"]')
 
     // Close Correios dropdown
     if (correiosDropdown && correiosHeader && !correiosHeader.contains(e.target) && !correiosDropdown.contains(e.target)) {
@@ -565,6 +613,12 @@ document.addEventListener("DOMContentLoaded", () => {
       produtosDropdown.classList.remove("show")
       document.getElementById("produtosIcon").classList.remove("rotated")
     }
+
+    // Close Marketing dropdown
+    if (marketingDropdown && marketingHeader && !marketingHeader.contains(e.target) && !marketingDropdown.contains(e.target)) {
+      marketingDropdown.classList.remove("show")
+      document.getElementById("marketingIcon").classList.remove("rotated")
+    }
   })
 })
 
@@ -576,6 +630,8 @@ function toggleCorreios() {
   const usuariosIcon = document.getElementById("usuariosIcon")
   const produtosDropdown = document.getElementById("produtosDropdown")
   const produtosIcon = document.getElementById("produtosIcon")
+  const marketingDropdown = document.getElementById("marketingDropdown")
+  const marketingIcon = document.getElementById("marketingIcon")
   const button = document.querySelector('[onclick="toggleCorreios()"]')
 
   // Close other dropdowns if open
@@ -586,6 +642,10 @@ function toggleCorreios() {
   if (produtosDropdown && produtosDropdown.classList.contains("show")) {
     produtosDropdown.classList.remove("show")
     produtosIcon.classList.remove("rotated")
+  }
+  if (marketingDropdown && marketingDropdown.classList.contains("show")) {
+    marketingDropdown.classList.remove("show")
+    marketingIcon.classList.remove("rotated")
   }
 
   // Position dropdown relative to button
@@ -606,6 +666,8 @@ function toggleUsuarios() {
   const correiosIcon = document.getElementById("correiosIcon")
   const produtosDropdown = document.getElementById("produtosDropdown")
   const produtosIcon = document.getElementById("produtosIcon")
+  const marketingDropdown = document.getElementById("marketingDropdown")
+  const marketingIcon = document.getElementById("marketingIcon")
   const button = document.querySelector('[onclick="toggleUsuarios()"]')
 
   // Close other dropdowns if open
@@ -616,6 +678,10 @@ function toggleUsuarios() {
   if (produtosDropdown && produtosDropdown.classList.contains("show")) {
     produtosDropdown.classList.remove("show")
     produtosIcon.classList.remove("rotated")
+  }
+  if (marketingDropdown && marketingDropdown.classList.contains("show")) {
+    marketingDropdown.classList.remove("show")
+    marketingIcon.classList.remove("rotated")
   }
 
   // Position dropdown relative to button
@@ -636,6 +702,8 @@ function toggleProdutos() {
   const correiosIcon = document.getElementById("correiosIcon")
   const usuariosDropdown = document.getElementById("usuariosDropdown")
   const usuariosIcon = document.getElementById("usuariosIcon")
+  const marketingDropdown = document.getElementById("marketingDropdown")
+  const marketingIcon = document.getElementById("marketingIcon")
   const button = document.querySelector('[onclick="toggleProdutos()"]')
 
   // Close other dropdowns if open
@@ -646,6 +714,46 @@ function toggleProdutos() {
   if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
     usuariosDropdown.classList.remove("show")
     usuariosIcon.classList.remove("rotated")
+  }
+  if (marketingDropdown && marketingDropdown.classList.contains("show")) {
+    marketingDropdown.classList.remove("show")
+    marketingIcon.classList.remove("rotated")
+  }
+
+  // Position dropdown relative to button
+  if (button && dropdown) {
+    const rect = button.getBoundingClientRect()
+    dropdown.style.left = rect.left + 'px'
+  }
+
+  dropdown.classList.toggle("show")
+  icon.classList.toggle("rotated")
+}
+
+// Toggle Marketing dropdown
+function toggleMarketing() {
+  const dropdown = document.getElementById("marketingDropdown")
+  const icon = document.getElementById("marketingIcon")
+  const correiosDropdown = document.getElementById("correiosDropdown")
+  const correiosIcon = document.getElementById("correiosIcon")
+  const usuariosDropdown = document.getElementById("usuariosDropdown")
+  const usuariosIcon = document.getElementById("usuariosIcon")
+  const produtosDropdown = document.getElementById("produtosDropdown")
+  const produtosIcon = document.getElementById("produtosIcon")
+  const button = document.querySelector('[onclick="toggleMarketing()"]')
+
+  // Close other dropdowns if open
+  if (correiosDropdown && correiosDropdown.classList.contains("show")) {
+    correiosDropdown.classList.remove("show")
+    correiosIcon.classList.remove("rotated")
+  }
+  if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
+    usuariosDropdown.classList.remove("show")
+    usuariosIcon.classList.remove("rotated")
+  }
+  if (produtosDropdown && produtosDropdown.classList.contains("show")) {
+    produtosDropdown.classList.remove("show")
+    produtosIcon.classList.remove("rotated")
   }
 
   // Position dropdown relative to button

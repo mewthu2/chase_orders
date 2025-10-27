@@ -33,7 +33,7 @@ class ShopifyPackagingService
 
     apply_discount(order, boxes)
 
-    { success: true, message: 'Cálculo, atualização e desconto aplicados com sucesso', boxes: boxes }
+    { success: true, message: 'Cálculo, atualização e desconto aplicados com sucesso', boxes: }
   rescue StandardError => e
     Rails.logger.error "❌ Erro em ShopifyPackagingService: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
