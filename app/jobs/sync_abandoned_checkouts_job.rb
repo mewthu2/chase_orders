@@ -28,8 +28,11 @@ class SyncAbandonedCheckoutsJob < ApplicationJob
       distributor = MarketingTaskDistributorService.new(campaign)
       distributor.redistribute_pending_tasks
 
+      sync_date = campaign.sync_from_date || campaign.start_date
+      Rails.logger.info("Fetching checkouts from #{sync_date} for campaign #{campaign.id}")
+
       service = ShopifyAbandonedCheckoutService.new
-      checkouts = service.fetch_abandoned_checkouts(since: 1.hour.ago)
+      checkouts = service.fetch_abandoned_checkouts(since: sync_date.to_time)
 
       Rails.logger.info("Found #{checkouts.count} abandoned checkouts for campaign #{campaign.id}")
 

@@ -21,16 +21,19 @@
               <label class="form-label text-white fw-bold">Telefone</label>
               <p class="text-white"><%= @user.phone.present? ? @user.phone : '-' %></p>
             </div>
+            <!-- Updated to show multiple profiles -->
             <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Perfil</label>
+              <label class="form-label text-white fw-bold">Perfis</label>
               <p class="text-white">
-                <span class="badge <%= case @user.profile_id
-                  when 1 then 'bg-warning text-dark'
-                  when 2 then 'bg-info text-white'
-                  else 'bg-success text-white'
-                  end %> px-3 py-2">
-                  <%= @user.profile_name %>
-                </span>
+                <% if @user.profiles.any? %>
+                  <% @user.profiles.each do |profile| %>
+                    <span class="badge bg-primary text-white px-3 py-2 me-2">
+                      <%= profile.name %>
+                    </span>
+                  <% end %>
+                <% else %>
+                  <span class="text-muted">Sem perfil atribuído</span>
+                <% end %>
               </p>
             </div>
             <div class="col-md-6">
@@ -67,7 +70,8 @@
                 <i class="fas fa-arrow-left me-2"></i> Voltar para Lista
               <% end %>
               
-              <% if current_user.profile_id == 1 || @user == current_user %>
+              <!-- Updated to use admin? method -->
+              <% if current_user.admin? || @user == current_user %>
                 <%= link_to edit_user_path(@user), class: 'btn btn-warning btn-lg' do %>
                   <i class="fas fa-edit me-2"></i> Editar
                 <% end %>

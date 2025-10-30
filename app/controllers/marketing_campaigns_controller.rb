@@ -1,5 +1,5 @@
 class MarketingCampaignsController < ApplicationController
-  before_action :set_campaign, only: [:edit, :update, :destroy, :toggle_status, :add_user, :remove_user, :statistics]
+  before_action :set_campaign, only: [:edit, :update, :destroy, :toggle_status, :add_user, :remove_user, :statistics, :delete_all_tasks] # Added delete_all_tasks to before_action
   before_action :check_admin_marketing_access
 
   def index
@@ -29,7 +29,7 @@ class MarketingCampaignsController < ApplicationController
                       .order(created_at: :desc)
                       .limit(50)
     @stats = calculate_campaign_stats
-    @available_users = User.where(profile_id: [5, 6])
+    @available_users = User.marketing_users
                            .where.not(id: @campaign.campaign_users.pluck(:user_id))
   end
 
@@ -67,7 +67,7 @@ class MarketingCampaignsController < ApplicationController
   def add_user
     user = User.find(params[:user_id])
     
-    unless [5, 6].include?(user.profile_id)
+    unless user.marketing_user?
       redirect_to edit_marketing_campaign_path(@campaign), alert: 'Usuário não possui perfil de marketing!'
       return
     end
@@ -91,6 +91,16 @@ class MarketingCampaignsController < ApplicationController
     end
   end
 
+  def delete_all_tasks
+    tasks_count = @campaign.marketing_tasks.count
+    
+    if @campaign.marketing_tasks.destroy_all
+      redirect_to edit_marketing_campaign_path(@campaign), notice: "#{tasks_count} tarefa(s) excluída(s) com sucesso!"
+    else
+      redirect_to edit_marketing_campaign_path(@campaign), alert: 'Erro ao excluir tarefas.'
+    end
+  end
+
   def statistics
     @stats = calculate_detailed_campaign_stats
     @tasks_by_status = @campaign.marketing_tasks.group(:status).count
@@ -110,6 +120,8 @@ class MarketingCampaignsController < ApplicationController
       :name,
       :start_date,
       :end_date,
+      :sync_from_date,
+      :min_days_abandoned,
       :objective,
       :campaign_type,
       :users_per_week,

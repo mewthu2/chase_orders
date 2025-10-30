@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
+ActiveRecord::Schema[7.2].define(version: 2025_10_30_043847) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -134,15 +134,18 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
     t.integer "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "sync_from_date"
+    t.integer "min_days_abandoned", default: 0
     t.index ["campaign_type"], name: "index_marketing_campaigns_on_campaign_type"
     t.index ["created_by_id"], name: "index_marketing_campaigns_on_created_by_id"
     t.index ["start_date", "end_date"], name: "index_marketing_campaigns_on_start_date_and_end_date"
     t.index ["status"], name: "index_marketing_campaigns_on_status"
+    t.index ["sync_from_date"], name: "index_marketing_campaigns_on_sync_from_date"
   end
 
   create_table "marketing_tasks", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "marketing_campaign_id", null: false
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
     t.string "lead_email"
     t.string "lead_name"
     t.string "lead_phone"
@@ -336,6 +339,15 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
     t.index ["stock_porto_alegre_bourbon"], name: "index_products_on_stock_porto_alegre_bourbon"
   end
 
+  create_table "profiles", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "description"
+    t.boolean "active", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_profiles_on_name", unique: true
+  end
+
   create_table "stock_correction_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "stock_correction_id", null: false
     t.bigint "product_id", null: false
@@ -391,6 +403,16 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "user_profiles", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "profile_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["profile_id"], name: "index_user_profiles_on_profile_id"
+    t.index ["user_id", "profile_id"], name: "index_user_profiles_on_user_id_and_profile_id", unique: true
+    t.index ["user_id"], name: "index_user_profiles_on_user_id"
+  end
+
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name"
     t.string "phone"
@@ -411,12 +433,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
     t.string "unconfirmed_email"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "profile_id", default: 2
     t.boolean "active", default: true, null: false
     t.json "allowed_locations"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
-    t.index ["profile_id"], name: "index_users_on_profile_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
@@ -437,4 +457,6 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_26_235158) do
   add_foreign_key "stock_correction_items", "products"
   add_foreign_key "stock_correction_items", "stock_corrections"
   add_foreign_key "stock_corrections", "users"
+  add_foreign_key "user_profiles", "profiles"
+  add_foreign_key "user_profiles", "users"
 end

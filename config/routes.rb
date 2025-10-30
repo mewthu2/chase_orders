@@ -80,7 +80,8 @@ Rails.application.routes.draw do
       patch :toggle_status
       post :add_user
       delete :remove_user
-      get :statistics # Added statistics route for individual campaign
+      get :statistics
+      delete :delete_all_tasks # Added route to delete all tasks from campaign
     end
   end
   

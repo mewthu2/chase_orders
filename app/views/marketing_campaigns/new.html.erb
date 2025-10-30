@@ -33,6 +33,25 @@
                 <%= f.date_field :end_date, class: "form-control bg-black text-white border-secondary" %>
               </div>
 
+              <div class="col-12">
+                <label class="form-label text-white">Buscar Carrinhos Abandonados A Partir De</label>
+                <%= f.date_field :sync_from_date, class: "form-control bg-black text-white border-secondary" %>
+                <small class="text-white-50">
+                  Data a partir da qual o sistema buscará carrinhos abandonados na Shopify. 
+                  Se não informado, usará a data de início da campanha.
+                </small>
+              </div>
+
+              <%# Added min_days_abandoned field %>
+              <div class="col-md-6">
+                <label class="form-label text-white">Dias Mínimos de Abandono</label>
+                <%= f.number_field :min_days_abandoned, class: "form-control bg-black text-white border-secondary", placeholder: "Ex: 3", min: 0, value: 0 %>
+                <small class="text-white-50">
+                  Apenas distribuir tarefas para carrinhos abandonados há X dias ou mais. 
+                  Use 0 para distribuir imediatamente.
+                </small>
+              </div>
+
               <div class="col-md-6">
                 <label class="form-label text-white">Leads por Semana (por usuário)</label>
                 <%= f.number_field :users_per_week, class: "form-control bg-black text-white border-secondary", placeholder: "Ex: 100" %>
@@ -41,7 +60,6 @@
 
               <div class="col-md-6">
                 <label class="form-label text-white">Tipo de Campanha</label>
-                <%# Fixed campaign_type value from 'cart_abandonment' to 'abandoned_cart' to match enum %>
                 <%= f.select :campaign_type, 
                     [['Abandono de Carrinho', 'abandoned_cart']], 
                     { prompt: 'Selecione...' },

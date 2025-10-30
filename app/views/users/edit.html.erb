@@ -1,4 +1,4 @@
-<% if current_user.profile_id == 1 %>
+<% if current_user.admin? %>
   <%= render 'form' %>
 <% else %>
   <%= render 'self_edit_form' %>

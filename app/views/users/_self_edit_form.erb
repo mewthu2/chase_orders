@@ -20,82 +20,50 @@
               </div>
             <% end %>
 
+            <!-- Informações Básicas -->
             <div class="row g-4">
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Nome *</label>
                 <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
                 <div class="invalid-feedback">
                   Por favor, informe o nome.
                 </div>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Email *</label>
                 <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
                 <div class="invalid-feedback">
                   Por favor, informe um email válido.
                 </div>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Telefone</label>
                 <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
               </div>
             </div>
 
+            <!-- Alterar Senha -->
             <div class="row g-4 mt-3">
-              <div class="col-md-4">
+              <div class="col-12">
+                <h6 class="text-white mb-3">
+                  <i class="fas fa-lock me-2"></i>Alterar Senha
+                </h6>
+                <small class="text-white d-block mb-3">Deixe em branco se não deseja alterar a senha</small>
+              </div>
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Nova Senha</label>
-                <%= form.password_field :password, class: 'form-control bg-dark text-white border-secondary', autocomplete: 'new-password' %>
-                <!-- Changed text-muted to text-white for better visibility -->
-                <small class="text-white">Deixe em branco para manter a senha atual (mínimo 6 caracteres)</small>
+                <%= form.password_field :password, 
+                                        class: 'form-control bg-dark text-white border-secondary', 
+                                        autocomplete: 'new-password' %>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Confirmar Nova Senha</label>
-                <%= form.password_field :password_confirmation, class: 'form-control bg-dark text-white border-secondary', autocomplete: 'new-password' %>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label text-white fw-bold">Perfil</label>
-                <div class="input-group">
-                  <input type="text" class="form-control bg-dark text-white border-secondary" value="<%= case @user.profile_id
-                    when 1 then 'Administrador'
-                    when 2 then 'Gerente'
-                    else 'Usuário'
-                    end %>" readonly>
-                  <span class="input-group-text bg-dark border-secondary">
-                    <i class="fas fa-lock text-warning" title="Somente administradores podem alterar perfis"></i>
-                  </span>
+                <%= form.password_field :password_confirmation, 
+                                        class: 'form-control bg-dark text-white border-secondary', 
+                                        autocomplete: 'new-password' %>
+                <div class="invalid-feedback">
+                  As senhas não coincidem.
                 </div>
-                <small class="text-warning">
-                  <i class="fas fa-info-circle me-1"></i>Somente administradores podem alterar perfis
-                </small>
-              </div>
-            </div>
-
-            <div class="row g-4 mt-3">
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Status da Conta</label>
-                <div class="input-group">
-                  <input type="text" class="form-control bg-dark text-white border-secondary" value="<%= @user.active? ? 'Ativa' : 'Inativa' %>" readonly>
-                  <span class="input-group-text bg-dark border-secondary">
-                    <i class="fas fa-lock text-warning" title="Somente administradores podem alterar status"></i>
-                  </span>
-                </div>
-                <small class="text-warning">
-                  <i class="fas fa-info-circle me-1"></i>Somente administradores podem ativar/desativar contas
-                </small>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Locations Permitidas</label>
-                <div class="input-group">
-                  <input type="text" class="form-control bg-dark text-white border-secondary" 
-                         value="<%= @user.profile_id == 1 ? 'Todas (Admin)' : (@user.allowed_location_keys.any? ? @user.allowed_location_keys.map { |key| User::AVAILABLE_LOCATIONS[key]&.dig(:name) }.compact.join(', ') : 'Nenhuma') %>" 
-                         readonly>
-                  <span class="input-group-text bg-dark border-secondary">
-                    <i class="fas fa-lock text-warning" title="Somente administradores podem alterar locations"></i>
-                  </span>
-                </div>
-                <small class="text-warning">
-                  <i class="fas fa-info-circle me-1"></i>Somente administradores podem alterar permissões de location
-                </small>
               </div>
             </div>
 
@@ -104,6 +72,7 @@
                 <%= link_to root_path, class: 'btn btn-secondary btn-lg' do %>
                   <i class="fas fa-arrow-left me-2"></i> Voltar
                 <% end %>
+                
                 <button type="submit" class="btn btn-success btn-lg">
                   <i class="fas fa-save me-2"></i>
                   Salvar Alterações
@@ -148,14 +117,6 @@ body {
   margin-bottom: 0.5rem;
 }
 
-.input-group-text {
-  color: #f8f9fa;
-}
-
-.text-warning {
-  color: #ffc107 !important;
-}
-
 .invalid-feedback {
   display: block;
 }
@@ -165,6 +126,7 @@ body {
 <% content_for :scripts do %>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Bootstrap form validation
   const forms = document.querySelectorAll('.needs-validation');
   Array.from(forms).forEach(form => {
     form.addEventListener('submit', event => {
@@ -176,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, false);
   });
 
+  // Formatação do telefone
   const phoneInput = document.querySelector('input[name="user[phone]"]');
   if (phoneInput) {
     phoneInput.addEventListener('input', function(e) {
@@ -190,6 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // Password validation
   const passwordField = document.querySelector('input[name="user[password]"]');
   const confirmPasswordField = document.querySelector('input[name="user[password_confirmation]"]');
 

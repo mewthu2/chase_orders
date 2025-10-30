@@ -45,7 +45,7 @@
 
             <!-- Segurança e Acesso -->
             <div class="row g-4 mt-3">
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Senha <%= @user.new_record? ? '*' : '' %></label>
                 <%= form.password_field :password, 
                                         class: 'form-control bg-dark text-white border-secondary', 
@@ -58,7 +58,7 @@
                   <small class="text-white">Deixe em branco para manter a senha atual</small>
                 <% end %>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label text-white fw-bold">Confirmar Senha</label>
                 <%= form.password_field :password_confirmation, 
                                         class: 'form-control bg-dark text-white border-secondary', 
@@ -67,19 +67,35 @@
                   As senhas não coincidem.
                 </div>
               </div>
-              <div class="col-md-4">
-                <label class="form-label text-white fw-bold">Perfil do Usuário *</label>
-                <%= form.select :profile_id, 
-                                options_for_select([
-                                  ['Selecione um perfil', ''],
-                                  ['Administrador', 1],
-                                  ['Gerente', 2],
-                                  ['Usuário', 3]
-                                ], @user.profile_id), 
-                                {}, 
-                                { class: 'form-select bg-dark text-white border-secondary', required: true } %>
-                <div class="invalid-feedback">
-                  Por favor, selecione um perfil.
+            </div>
+
+            <!-- Updated to use checkboxes for multiple profiles -->
+            <div class="row g-4 mt-3">
+              <div class="col-12">
+                <label class="form-label text-white fw-bold">Perfis do Usuário *</label>
+                <div class="card bg-dark border border-secondary p-3">
+                  <div class="row g-3">
+                    <% Profile.all.each do |profile| %>
+                      <div class="col-md-4">
+                        <div class="form-check">
+                          <%= check_box_tag 'user[profile_ids][]', 
+                                            profile.id, 
+                                            @user.profile_ids.include?(profile.id),
+                                            { 
+                                              class: 'form-check-input profile-checkbox',
+                                              id: "profile_#{profile.id}"
+                                            } %>
+                          <label class="form-check-label text-white" for="profile_<%= profile.id %>">
+                            <%= profile.name %>
+                          </label>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                  <small class="text-white mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Selecione um ou mais perfis para o usuário
+                  </small>
                 </div>
               </div>
             </div>
@@ -206,220 +222,32 @@
 
 <% content_for :styles do %>
 <style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
 
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.form-control:focus,
-.form-select:focus {
-  border-color: #4299e1;
-  box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
-}
-
-.form-check-input:checked {
-  background-color: #4299e1;
-  border-color: #4299e1;
-}
-
-.form-check-input:focus {
-  border-color: #4299e1;
-  box-shadow: 0 0 0 0.25rem rgba(66, 153, 225, 0.25);
-}
-
-.btn-lg {
-  padding: 0.75rem 2rem;
-  font-size: 1.1rem;
-}
-
-.card {
-  border-radius: 0.5rem;
-}
-
-.form-label {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.invalid-feedback {
-  display: block;
-}
-
-.location-card {
-  padding: 1.25rem;
-  border-radius: 0.75rem;
-  border: 2px solid #495057;
-  background: linear-gradient(135deg, rgba(73, 80, 87, 0.2) 0%, rgba(52, 58, 64, 0.2) 100%);
-  transition: all 0.3s ease;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-}
-
-.location-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4299e1, #3182ce);
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-}
-
-.location-card:hover {
-  border-color: #4299e1;
-  background: linear-gradient(135deg, rgba(66, 153, 225, 0.15) 0%, rgba(49, 130, 206, 0.1) 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(66, 153, 225, 0.15);
-}
-
-.location-card:hover::before {
-  transform: scaleX(1);
-}
-
-.location-checkbox {
-  display: none;
-}
-
-.location-checkbox:checked + label .location-card {
-  border-color: #4299e1;
-  background: linear-gradient(135deg, rgba(66, 153, 225, 0.2) 0%, rgba(49, 130, 206, 0.15) 100%);
-}
-
-.location-checkbox:checked + label .location-card::before {
-  transform: scaleX(1);
-}
-
-.location-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-}
-
-.location-icon {
-  width: 45px;
-  height: 45px;
-  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.location-info {
-  flex: 1;
-}
-
-.location-name {
-  font-weight: 600;
-  margin: 0;
-}
-
-.location-key {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-}
-
-.shopify-id {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-}
-
-.check-indicator {
-  width: 28px;
-  height: 28px;
-  border: 2px solid #6c757d;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.location-checkbox:checked + label .check-indicator {
-  background-color: #4299e1;
-  border-color: #4299e1;
-  color: white;
-}
-
-.form-switch .form-check-input {
-  width: 2.5rem;
+/* Added styles for profile checkboxes */
+.profile-checkbox {
+  width: 1.25rem;
   height: 1.25rem;
 }
+
+.profile-checkbox:checked {
+  background-color: #4299e1;
+  border-color: #4299e1;
+}
+
 </style>
 <% end %>
 
 <% content_for :scripts do %>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Bootstrap form validation
-  const forms = document.querySelectorAll('.needs-validation');
-  Array.from(forms).forEach(form => {
-    form.addEventListener('submit', event => {
-      if (!form.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      form.classList.add('was-validated');
-    }, false);
-  });
 
-  // Formatação do telefone
-  const phoneInput = document.querySelector('input[name="user[phone]"]');
-  if (phoneInput) {
-    phoneInput.addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\D/g, '');
-      if (value.length <= 11) {
-        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-        if (value.length < 14) {
-          value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-        }
-      }
-      e.target.value = value;
-    });
-  }
-
-  // Location checkboxes
-  const locationCheckboxes = document.querySelectorAll('.location-checkbox');
-  const selectAllBtn = document.getElementById('selectAllLocations');
-  const deselectAllBtn = document.getElementById('deselectAllLocations');
-  const selectedCounter = document.getElementById('selectedCount');
-  const profileSelect = document.querySelector('select[name="user[profile_id]"]');
-  const locationsSection = document.getElementById('locationsSection');
-  const locationControls = document.getElementById('locationControls');
-  const locationHelpText = document.getElementById('locationHelpText');
-
-  function updateSelectedCount() {
-    const checkedCount = document.querySelectorAll('.location-checkbox:checked').length;
-    const totalCount = locationCheckboxes.length;
-    
-    if (selectedCounter) {
-      selectedCounter.textContent = `${checkedCount} de ${totalCount} selecionadas`;
-      
-      if (checkedCount === 0) {
-        selectedCounter.className = 'badge bg-secondary text-white';
-      } else if (checkedCount === totalCount) {
-        selectedCounter.className = 'badge bg-success text-white';
-      } else {
-        selectedCounter.className = 'badge bg-info text-white';
-      }
-    }
-  }
-
+  const profileCheckboxes = document.querySelectorAll('.profile-checkbox');
+  const adminProfileCheckbox = document.getElementById('profile_1');
+  
   function toggleLocationsSection() {
-    if (!profileSelect || !locationsSection) return;
+    if (!locationsSection) return;
     
-    const isAdmin = profileSelect.value === '1';
+    const isAdmin = adminProfileCheckbox && adminProfileCheckbox.checked;
     
     if (isAdmin) {
       locationControls.style.display = 'none';
@@ -449,58 +277,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Initialize location checkboxes
-  locationCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', updateSelectedCount);
-  });
-
-  updateSelectedCount();
-
-  // Select/Deselect all buttons
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', function() {
-      locationCheckboxes.forEach(checkbox => {
-        checkbox.checked = true;
-      });
-      updateSelectedCount();
-    });
-  }
-
-  if (deselectAllBtn) {
-    deselectAllBtn.addEventListener('click', function() {
-      locationCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
-      });
-      updateSelectedCount();
-    });
-  }
-
   // Profile change handler
-  if (profileSelect) {
-    profileSelect.addEventListener('change', toggleLocationsSection);
+  if (profileCheckboxes) {
+    profileCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', toggleLocationsSection);
+    });
     toggleLocationsSection(); // Initial call
   }
 
-  // Password validation
-  const passwordField = document.querySelector('input[name="user[password]"]');
-  const confirmPasswordField = document.querySelector('input[name="user[password_confirmation]"]');
-
-  if (passwordField && confirmPasswordField) {
-    function validatePasswords() {
-      if (passwordField.value && confirmPasswordField.value) {
-        if (passwordField.value !== confirmPasswordField.value) {
-          confirmPasswordField.setCustomValidity('As senhas não coincidem');
-        } else {
-          confirmPasswordField.setCustomValidity('');
-        }
-      } else {
-        confirmPasswordField.setCustomValidity('');
-      }
-    }
-
-    passwordField.addEventListener('input', validatePasswords);
-    confirmPasswordField.addEventListener('input', validatePasswords);
-  }
 });
 </script>
 <% end %>

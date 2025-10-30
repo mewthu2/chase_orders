@@ -4,6 +4,9 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable
 
+  has_many :user_profiles, dependent: :destroy
+  has_many :profiles, through: :user_profiles
+  
   has_many :marketing_tasks, foreign_key: :user_id, dependent: :nullify
   has_many :campaign_users, dependent: :destroy
   has_many :marketing_campaigns, through: :campaign_users
@@ -39,17 +42,16 @@ class User < ApplicationRecord
 
   # Validações
   validates :name, presence: true
-  validates :profile_id, presence: true, inclusion: { in: [1, 2, 3, 5, 6] }
+  validate :must_have_at_least_one_profile
   validate :validate_allowed_locations_exist
 
-  # Scopes
   scope :active, -> { where(active: true) }
-  scope :admins, -> { where(profile_id: 1) }
-  scope :managers, -> { where(profile_id: 2) }
-  scope :users, -> { where(profile_id: 3) }
-  scope :admin_marketing, -> { where(profile_id: 5) }
-  scope :agent_marketing, -> { where(profile_id: 6) }
-  scope :marketing_users, -> { where(profile_id: [5, 6]) }
+  scope :admins, -> { joins(:profiles).where(profiles: { id: Profile::ADMIN }) }
+  scope :managers, -> { joins(:profiles).where(profiles: { id: Profile::MANAGER }) }
+  scope :users, -> { joins(:profiles).where(profiles: { id: Profile::USER }) }
+  scope :admin_marketing, -> { joins(:profiles).where(profiles: { id: Profile::ADMIN_MARKETING }) }
+  scope :agent_marketing, -> { joins(:profiles).where(profiles: { id: Profile::AGENT_MARKETING }) }
+  scope :marketing_users, -> { joins(:profiles).where(profiles: { id: [Profile::ADMIN_MARKETING, Profile::AGENT_MARKETING] }).distinct }
 
   # Callbacks
   before_validation :set_default_profile, on: :create
@@ -58,44 +60,72 @@ class User < ApplicationRecord
   after_update :log_location_changes, if: :saved_change_to_allowed_locations?
 
   def admin?
-    profile_id == 1
+    profile_ids.include?(Profile::ADMIN)
   end
 
   def manager?
-    profile_id == 2
+    profile_ids.include?(Profile::MANAGER)
   end
 
   def regular_user?
-    profile_id == 3
+    profile_ids.include?(Profile::USER)
   end
 
   def admin_marketing?
-    profile_id == 5
+    profile_ids.include?(Profile::ADMIN_MARKETING)
   end
 
   def agent_marketing?
-    profile_id == 6
+    profile_ids.include?(Profile::AGENT_MARKETING)
   end
 
   def marketing_user?
-    [5, 6].include?(profile_id)
+    (profile_ids & [Profile::ADMIN_MARKETING, Profile::AGENT_MARKETING]).any?
+  end
+
+  def profile_names
+    profiles.pluck(:name).join(', ')
   end
 
   def profile_name
-    case profile_id
-    when 1
+    return 'Sem Perfil' if profiles.empty?
+    
+    # Prioridade: Admin > Admin Marketing > Manager > Agent Marketing > User
+    priority_order = [Profile::ADMIN, Profile::ADMIN_MARKETING, Profile::MANAGER, Profile::AGENT_MARKETING, Profile::USER]
+    
+    priority_profile_id = (profile_ids & priority_order).min_by { |id| priority_order.index(id) }
+    
+    case priority_profile_id
+    when Profile::ADMIN
       'Administrador'
-    when 2
+    when Profile::MANAGER
       'Gerente'
-    when 3
+    when Profile::USER
       'Usuário'
-    when 5
+    when Profile::ADMIN_MARKETING
       'Admin Marketing'
-    when 6
+    when Profile::AGENT_MARKETING
       'Agente Marketing'
     else
       'Indefinido'
     end
+  end
+
+  def profile_ids
+    profiles.pluck(:id)
+  end
+
+  def has_profile?(profile_id)
+    profile_ids.include?(profile_id)
+  end
+
+  def add_profile(profile_id)
+    return if has_profile?(profile_id)
+    profiles << Profile.find(profile_id)
+  end
+
+  def remove_profile(profile_id)
+    profiles.delete(Profile.find(profile_id))
   end
 
   def allowed_location_keys
@@ -213,7 +243,6 @@ class User < ApplicationRecord
     location_info(key)&.dig(:shopify_id)
   end
 
-  # Método de classe para obter todas as locations disponíveis
   def self.all_locations_for_select
     AVAILABLE_LOCATIONS.map { |key, data| [data[:name], key] }
   end
@@ -221,7 +250,11 @@ class User < ApplicationRecord
   private
 
   def set_default_profile
-    self.profile_id ||= 3
+    profiles << Profile.find(Profile::USER) if profiles.empty?
+  end
+
+  def must_have_at_least_one_profile
+    errors.add(:profiles, "deve ter pelo menos um perfil") if profiles.empty? && !new_record?
   end
 
   def set_default_allowed_locations

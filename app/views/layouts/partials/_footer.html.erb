@@ -27,7 +27,8 @@
               <span>Meu Perfil</span>
             <% end %>
           </li>
-          <% if current_user&.profile_id == 1 %>
+          <%# Updated from profile_id == 1 to admin? method %>
+          <% if current_user&.admin? %>
             <li>
               <%= link_to dashboard_index_path, class: "footer-link" do %>
                 <i class="fas fa-tachometer-alt"></i>
@@ -67,12 +68,10 @@
             <i class="fas fa-user-circle"></i>
             <div class="session-details">
               <span class="session-name"><%= current_user.name %></span>
+              <%# Updated to show all user profiles instead of single profile_id %>
               <span class="session-role">
-                <% case current_user.profile_id
-                   when 1 %>
-                  Administrador
-                <% when 2 %>
-                  Gerente
+                <% if current_user.profiles.any? %>
+                  <%= current_user.profiles.map(&:name).join(', ') %>
                 <% else %>
                   Usuário
                 <% end %>
