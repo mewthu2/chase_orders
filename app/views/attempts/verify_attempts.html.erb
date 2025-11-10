@@ -228,11 +228,20 @@
                   </td>
                   <td class="text-center">
                     <% if attempt.xml_nota.present? %>
-                      <button class="btn btn-sm btn-outline-success" 
-                              onclick="copiarConteudo(<%= attempt.id %>)"
-                              title="Copiar XML">
-                        <i class="fas fa-copy me-1"></i>Copiar XML
-                      </button>
+                      <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-sm btn-outline-success" 
+                                onclick="copiarConteudo(<%= attempt.id %>)"
+                                title="Copiar XML">
+                          <i class="fas fa-copy me-1"></i>Copiar XML
+                        </button>
+
+                        <a href="<%= download_xml_attempts_path(id: attempt.id) %>" 
+                          class="btn btn-sm btn-outline-info" 
+                          title="Baixar XML">
+                          <i class="fas fa-download me-1"></i>Baixar XML
+                        </a>
+                      </div>
+
                       <span class="content<%= attempt.id %>" style="display:none">
                         <%= attempt.xml_nota %>
                       </span>

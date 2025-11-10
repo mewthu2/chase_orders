@@ -24,6 +24,19 @@ class AttemptsController < ApplicationController
                        .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 
+  def download_xml
+    attempt = Attempt.find(params[:id])
+
+    if attempt.xml_nota.present?
+      send_data attempt.xml_nota,
+                filename: "attempt_#{attempt.id}.xml",
+                type: 'application/xml',
+                disposition: 'attachment'
+    else
+      redirect_to attempts_path, alert: "Este registro não possui XML disponível."
+    end
+  end
+
   def reprocess
     attempt = Attempt.find(params[:attempt_id])
     begin

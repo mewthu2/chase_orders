@@ -64,6 +64,7 @@ Rails.application.routes.draw do
     collection do
       get :reprocess
       get :verify_attempts
+      get :download_xml
     end
   end
 
