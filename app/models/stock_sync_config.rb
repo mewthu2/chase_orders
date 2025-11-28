@@ -27,21 +27,16 @@ class StockSyncConfig < ApplicationRecord
 
   def should_execute_now?
     return false unless enabled?
-    
+
     now = Time.current
-    current_day = now.wday # 0=domingo, 1=segunda, etc
+    current_day = now.wday
     current_hour = now.hour
 
-    # Verifica se hoje é um dia configurado
     return false unless days_of_week_array.include?(current_day)
-    
-    # Verifica se esta hora está configurada
+
     return false unless hours_array.include?(current_hour)
 
-    # Verifica se já executou nesta hora hoje
-    return false if last_execution && 
-                   last_execution.to_date == now.to_date && 
-                   last_execution.hour == current_hour
+    return false if last_execution && last_execution.to_date == now.to_date && last_execution.hour == current_hour
 
     true
   end

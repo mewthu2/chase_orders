@@ -259,17 +259,21 @@ class StockCorrectionItem < ApplicationRecord
   def get_shopify_location_id(location)
     case location
     when 'lagoa_seca'
-      ENV.fetch('LOCATION_LAGOA_SECA', nil) # 72286994506
+      ENV.fetch('LOCATION_LAGOA_SECA')
     when 'bh_shopping'
-      ENV.fetch('LOCATION_BH_SHOPPING', nil) # 72286699594
+      ENV.fetch('LOCATION_BH_SHOPPING')
     when 'rj'
-      ENV.fetch('LOCATION_BARRA_SHOPPING', nil) # 72287027274
+      ENV.fetch('LOCATION_BARRA_SHOPPING')
     when 'fortaleza_rio_mar'
-      ENV.fetch('LOCATION_FORTALEZA_RIO_MAR', nil) # 74208280650
+      ENV.fetch('LOCATION_FORTALEZA_RIO_MAR')
     when 'porto_alegre_bourbon'
-      ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', nil) # 74340008010
+      ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON')
     when 'eldorado_sp'
-      ENV.fetch('LOCATION_ELDORADO_SP', nil) # 74339975242
+      ENV.fetch('LOCATION_ELDORADO_SP')
+    when 'shopping_analia_franco'
+      ENV.fetch('LOCATION_SHOPPING_ANALIA_FRANCO')
+    when 'iguatemi_campinas'
+      ENV.fetch('LOCATION_IGUATEMI_CAMPINAS')
     end
   end
 end

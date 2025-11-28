@@ -46,7 +46,7 @@ class OrderParcel < ApplicationRecord
       '❓ Outros'
     end
   end
-  
+
   def payment_method_icon
     case payment_method
     when 'dinheiro'
@@ -63,7 +63,7 @@ class OrderParcel < ApplicationRecord
       '❓'
     end
   end
-  
+
   def summary
     "#{payment_method_name}: #{formatted_amount}"
   end

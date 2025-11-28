@@ -8,28 +8,26 @@ class CampaignUser < ApplicationRecord
   validates :user_id, presence: true
   validates :user_id, uniqueness: { scope: :marketing_campaign_id, message: 'já está participando desta campanha' }
 
-  # The count can be calculated dynamically via marketing_campaign.users.count
-
   # Scopes
   scope :active, -> { joins(:marketing_campaign).merge(MarketingCampaign.active_campaigns) }
   scope :for_campaign, ->(campaign_id) { where(marketing_campaign_id: campaign_id) }
-  scope :for_user, ->(user_id) { where(user_id: user_id) }
+  scope :for_user, ->(user_id) { where(user_id:) }
 
   # Instance Methods
   def tasks_count
-    user.marketing_tasks.where(marketing_campaign_id: marketing_campaign_id).count
+    user.marketing_tasks.where(marketing_campaign_id:).count
   end
 
   def pending_tasks_count
-    user.marketing_tasks.where(marketing_campaign_id: marketing_campaign_id, status: :pending).count
+    user.marketing_tasks.where(marketing_campaign_id:, status: :pending).count
   end
 
   def completed_tasks_count
-    user.marketing_tasks.where(marketing_campaign_id: marketing_campaign_id, status: [:completed, :converted]).count
+    user.marketing_tasks.where(marketing_campaign_id:, status: [:completed, :converted]).count
   end
 
   def converted_tasks_count
-    user.marketing_tasks.where(marketing_campaign_id: marketing_campaign_id, status: :converted).count
+    user.marketing_tasks.where(marketing_campaign_id:, status: :converted).count
   end
 
   def conversion_rate

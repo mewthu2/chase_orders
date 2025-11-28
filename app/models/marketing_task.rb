@@ -47,7 +47,7 @@ class MarketingTask < ApplicationRecord
   def can_be_started_by?(user)
     return false unless pending?
     return true if user.admin? || user.admin_marketing?
-    return true if self.user_id == user.id
+    return true if user_id == user.id
     false
   end
 
@@ -66,7 +66,7 @@ class MarketingTask < ApplicationRecord
     update(
       status: :converted,
       converted: true,
-      order_number: order_number,
+      order_number:,
       completed_at: Time.current,
       converted_at: Time.current
     )
@@ -78,10 +78,6 @@ class MarketingTask < ApplicationRecord
       completed_at: Time.current,
       notes: [notes, "Falha: #{reason}"].compact.join("\n")
     )
-  end
-
-  def is_overdue?
-    due_date.present? && due_date < Date.current && !completed? && !converted?
   end
 
   def days_until_due

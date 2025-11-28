@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_10_30_043847) do
+ActiveRecord::Schema[7.2].define(version: 2025_11_28_181844) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -334,6 +334,8 @@ ActiveRecord::Schema[7.2].define(version: 2025_10_30_043847) do
     t.string "stock_tiny_2"
     t.string "tags"
     t.text "image_url"
+    t.integer "stock_shopping_analia_franco"
+    t.integer "stock_iguatemi_campinas"
     t.index ["stock_eldorado_sp"], name: "index_products_on_stock_eldorado_sp"
     t.index ["stock_fortaleza_rio_mar"], name: "index_products_on_stock_fortaleza_rio_mar"
     t.index ["stock_porto_alegre_bourbon"], name: "index_products_on_stock_porto_alegre_bourbon"

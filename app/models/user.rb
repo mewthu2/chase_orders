@@ -6,37 +6,44 @@ class User < ApplicationRecord
 
   has_many :user_profiles, dependent: :destroy
   has_many :profiles, through: :user_profiles
-  
+
   has_many :marketing_tasks, foreign_key: :user_id, dependent: :nullify
   has_many :campaign_users, dependent: :destroy
   has_many :marketing_campaigns, through: :campaign_users
   has_many :created_campaigns, class_name: 'MarketingCampaign', foreign_key: :created_by_id, dependent: :nullify
 
-  # Constante com as locations disponíveis
   AVAILABLE_LOCATIONS = {
     'lagoa_seca' => {
       name: 'Lagoa Seca',
-      shopify_id: ENV.fetch('LOCATION_LAGOA_SECA', '72286994506')
+      shopify_id: ENV.fetch('LOCATION_LAGOA_SECA')
     },
     'bh_shopping' => {
       name: 'BH Shopping', 
-      shopify_id: ENV.fetch('LOCATION_BH_SHOPPING', '72286699594')
+      shopify_id: ENV.fetch('LOCATION_BH_SHOPPING')
     },
     'rj' => {
       name: 'RJ - Barra Shopping',
-      shopify_id: ENV.fetch('LOCATION_BARRA_SHOPPING', '72287027274')
+      shopify_id: ENV.fetch('LOCATION_BARRA_SHOPPING')
     },
     'eldorado_sp' => {
       name: 'Eldorado SP',
-      shopify_id: ENV.fetch('LOCATION_ELDORADO_SP', '74339975242')
+      shopify_id: ENV.fetch('LOCATION_ELDORADO_SP')
     },
     'fortaleza_rio_mar' => {
       name: 'Fortaleza Rio Mar',
-      shopify_id: ENV.fetch('LOCATION_FORTALEZA_RIO_MAR', '74208280650')
+      shopify_id: ENV.fetch('LOCATION_FORTALEZA_RIO_MAR')
     },
     'porto_alegre_bourbon' => {
       name: 'Porto Alegre Bourbon',
-      shopify_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON', '74340008010')
+      shopify_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON')
+    },
+    'shopping_analia_franco' => {
+      name: 'Shopping Anália Franco',
+      shopify_id: ENV.fetch('LOCATION_SHOPPING_ANALIA_FRANCO')
+    },
+    'iguatemi_campinas' => {
+      name: 'Iguatemi Campinas',
+      shopify_id: ENV.fetch('LOCATION_IGUATEMI_CAMPINAS')
     }
   }.freeze
 
@@ -89,12 +96,11 @@ class User < ApplicationRecord
 
   def profile_name
     return 'Sem Perfil' if profiles.empty?
-    
-    # Prioridade: Admin > Admin Marketing > Manager > Agent Marketing > User
+
     priority_order = [Profile::ADMIN, Profile::ADMIN_MARKETING, Profile::MANAGER, Profile::AGENT_MARKETING, Profile::USER]
-    
+
     priority_profile_id = (profile_ids & priority_order).min_by { |id| priority_order.index(id) }
-    
+
     case priority_profile_id
     when Profile::ADMIN
       'Administrador'
@@ -115,12 +121,12 @@ class User < ApplicationRecord
     profiles.pluck(:id)
   end
 
-  def has_profile?(profile_id)
+  def profile?(profile_id)
     profile_ids.include?(profile_id)
   end
 
   def add_profile(profile_id)
-    return if has_profile?(profile_id)
+    return if profile?(profile_id)
     profiles << Profile.find(profile_id)
   end
 
@@ -129,12 +135,11 @@ class User < ApplicationRecord
   end
 
   def allowed_location_keys
-    return AVAILABLE_LOCATIONS.keys if admin? # Admin tem acesso a todas
-    
+    return AVAILABLE_LOCATIONS.keys if admin?
+
     locations = allowed_locations
     return [] if locations.nil?
-    
-    # Garantir que seja um array de strings
+
     case locations
     when Array
       locations.map(&:to_s)
@@ -150,8 +155,8 @@ class User < ApplicationRecord
   end
 
   def can_access_location?(location_key)
-    return true if admin? # Admin tem acesso a todas
-    
+    return true if admin?
+
     allowed_location_keys.include?(location_key.to_s)
   end
 
@@ -174,51 +179,41 @@ class User < ApplicationRecord
   def allowed_locations_names
     return ['Todas (Admin)'] if admin?
     return ['Nenhuma'] if allowed_location_keys.empty?
-    
+
     allowed_location_keys.map do |key|
       AVAILABLE_LOCATIONS[key]&.dig(:name)
     end.compact
   end
 
-  def has_location_access?
+  def location_access?
     admin? || allowed_location_keys.any?
   end
 
   def can_access_inventory?
-    has_location_access?
+    location_access?
   end
 
   def default_location
     return AVAILABLE_LOCATIONS.keys.first if admin?
-    
+
     allowed_location_keys.first
   end
 
-  # Método para verificar se o usuário pode acessar uma funcionalidade específica
   def can_access_feature?(feature)
-    case feature
-    when :user_management
-      admin?
-    when :location_management
-      admin?
-    when :stock_corrections
-      has_location_access?
-    when :inventory_control
-      has_location_access?
-    when :reports
-      admin? || manager?
-    when :marketing_campaigns_admin
-      admin? || admin_marketing?
-    when :marketing_tasks
-      admin? || marketing_user?
-    when :marketing_dashboard
-      admin? || marketing_user?
-    else
-      false
-    end
+    permissions = {
+      user_management: -> { admin? },
+      location_management: -> { admin? },
+      stock_corrections: -> { location_access? },
+      inventory_control: -> { location_access? },
+      reports: -> { admin? || manager? },
+      marketing_campaigns_admin: -> { admin? || admin_marketing? },
+      marketing_tasks: -> { admin? || marketing_user? },
+      marketing_dashboard: -> { admin? || marketing_user? }
+    }
+
+    permissions[feature]&.call || false
   end
 
-  # Método para obter estatísticas do usuário
   def access_stats
     {
       total_locations: admin? ? AVAILABLE_LOCATIONS.count : allowed_location_keys.count,
@@ -230,7 +225,6 @@ class User < ApplicationRecord
     }
   end
 
-  # Método de classe para obter informações de uma location
   def self.location_info(key)
     AVAILABLE_LOCATIONS[key.to_s]
   end
@@ -254,7 +248,7 @@ class User < ApplicationRecord
   end
 
   def must_have_at_least_one_profile
-    errors.add(:profiles, "deve ter pelo menos um perfil") if profiles.empty? && !new_record?
+    errors.add(:profiles, 'deve ter pelo menos um perfil') if profiles.empty? && !new_record?
   end
 
   def set_default_allowed_locations
@@ -283,20 +277,18 @@ class User < ApplicationRecord
 
   def validate_allowed_locations_exist
     return if admin?
-    
+
     current_locations = allowed_location_keys
     return if current_locations.empty?
-    
+
     invalid_locations = current_locations - AVAILABLE_LOCATIONS.keys
-    
-    if invalid_locations.any?
-      errors.add(:allowed_locations, "contém locations inválidas: #{invalid_locations.join(', ')}")
-    end
+
+    errors.add(:allowed_locations, "contém locations inválidas: #{invalid_locations.join(', ')}") if invalid_locations.any?
   end
 
   def log_location_changes
     Rails.logger.info "User #{id} (#{name}) location permissions changed:"
-    Rails.logger.info "  Previous: #{allowed_locations_before_last_save}"
-    Rails.logger.info "  Current: #{allowed_locations}"
+    Rails.logger.info "Previous: #{allowed_locations_before_last_save}"
+    Rails.logger.info "Current: #{allowed_locations}"
   end
 end
