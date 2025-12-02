@@ -1,6 +1,22 @@
 module Correios::Orders
   module_function
 
+  MAX_LOG_SIZE = 100
+
+  def truncate_value(value)
+    v = value.to_s
+    v.length > MAX_LOG_SIZE ? v[0...MAX_LOG_SIZE] : v
+  end
+
+  def safe_update(attempt, data)
+    data.each do |k, v|
+      data[k] = truncate_value(v)
+    end
+    attempt.update(data)
+  rescue ActiveRecord::ValueTooLong
+    attempt.update(error: "Oversized Value for #{data.keys.join(', ')}", status: :error)
+  end
+
   def create_orders(params, attempt)
     authentication = {
       'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
@@ -42,7 +58,7 @@ module Correios::Orders
       itensPedido: params[:itens]
     }
 
-    attempt.update(requisition: body)
+    safe_update(attempt, requisition: body)
 
     begin
       request = HTTParty.post(
@@ -52,12 +68,13 @@ module Correios::Orders
         format: :plain
       )
     rescue StandardError => e
-      attempt.update(error: e.message, status: :error)
+      safe_update(attempt, error: e.message, status: :error)
       return
     end
 
     if request.code == 400
-      attempt.update(
+      safe_update(
+        attempt,
         error: 'Erro 400 - Bad Request',
         status_code: request.code,
         message: request.body,
@@ -76,12 +93,20 @@ module Correios::Orders
       end
     end
 
-    attempt.update(message: @request, status: :success, order_correios_id: @request['mensagem'][/ID: (\d+)/, 1]) if @request['mensagem'].to_s.include?('/efulfillment/v1/pedidos/')
+    if @request['mensagem'].to_s.include?('/efulfillment/v1/pedidos/')
+      safe_update(
+        attempt,
+        message: @request,
+        status: :success,
+        order_correios_id: @request['mensagem'][/ID: (\d+)/, 1]
+      )
+    end
 
     return if attempt.status == 'success'
 
     if @request.present?
-      attempt.update(
+      safe_update(
+        attempt,
         status_code: @request['statusCode'],
         message: @request,
         exception: @request['excecao'],
@@ -93,17 +118,18 @@ module Correios::Orders
 
       if @request['statusCode'] == '200'
         order_id = @request['mensagem'][/pedidos\/(\d+)/, 1]
-        attempt.update(status: :success, status_code: 200, order_correios_id: order_id)
+        safe_update(attempt, status: :success, status_code: 200, order_correios_id: order_id)
       elsif @request['mensagem'].to_s.include?('Pedido já Cadastrado')
-        attempt.update(
+        safe_update(
+          attempt,
           status: :success,
           order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]
         )
       else
-        attempt.update(status: :fail)
+        safe_update(attempt, status: :fail)
       end
     else
-      attempt.update(status: :error, error: 'Requisição vazia') unless attempt.order_correios_id.present?
+      safe_update(attempt, status: :error, error: 'Requisição vazia') unless attempt.order_correios_id.present?
     end
   end
 
@@ -117,7 +143,7 @@ module Correios::Orders
     begin
       HTTParty.get(ENV.fetch('CORREIOS_OBTER_PEDIDO') + order_correios_id.to_s, headers: authentication)
     rescue StandardError => e
-      attempt.update(error: e.message, status: :error)
+      safe_update(attempt, error: e.message, status: :error)
     end
   end
 
