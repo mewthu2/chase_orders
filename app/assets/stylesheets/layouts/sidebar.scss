@@ -180,12 +180,6 @@
   background-color: #e53e3e;
 }
 
-.wrapper {
-  margin-left: 15% !important;
-  width: 85% !important;
-  min-height: 100vh;
-}
-
 .mobile-sidebar-toggle {
   position: fixed;
   top: 1rem;
@@ -224,6 +218,10 @@
 .sidebar-overlay.show {
   opacity: 1;
   visibility: visible;
+}
+
+.brand-logo {
+  width:60%; height: 100%;
 }
 
 @media (max-width: 991.98px) {
