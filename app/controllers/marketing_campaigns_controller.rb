@@ -193,9 +193,6 @@ class MarketingCampaignsController < ApplicationController
   def calculate_avg_completion_time_for_campaign(completed_tasks)
     tasks_with_time = completed_tasks.where.not(started_at: nil, completed_at: nil)
     return 0 if tasks_with_time.empty?
-
-    total_time = tasks_with_time.sum { |t| (t.completed_at - t.started_at).to_i }
-    (total_time / tasks_with_time.count / 3600.0).round(2) # em horas
   end
 
   def calculate_top_performers
