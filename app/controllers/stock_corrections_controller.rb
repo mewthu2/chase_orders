@@ -429,9 +429,9 @@ class StockCorrectionsController < ApplicationController
     item = @stock_correction.stock_correction_items.find(item_id)
 
     unless item.needs_correction? && item.executed?
-      render json: { 
-        success: false, 
-        message: 'Item não está elegível para retry (precisa estar executado e com correção)' 
+      render json: {
+        success: false,
+        message: 'Item não está elegível para retry (precisa estar executado e com correção)'
       }
       return
     end

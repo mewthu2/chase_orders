@@ -1,29 +1,31 @@
+# frozen_string_literal: true
+
 class ShopifyInventoryService
   def self.update_inventory(product, location, quantity, reason = 'correction')
     new.update_inventory(product, location, quantity, reason)
   end
-  
+
   def self.list_locations
     new.list_locations
   end
-  
+
   def self.check_inventory_level(product, location)
     new.check_inventory_level(product, location)
   end
-  
+
   def initialize
     @session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
       access_token: ENV.fetch('CHASE_ORDERS_TOKEN')
     )
   end
-  
+
   def check_inventory_level(product, location)
     return { success: false, message: 'Produto sem shopify_inventory_item_id' } unless product.shopify_inventory_item_id.present?
-    
+
     location_id = get_location_id(location)
     return { success: false, message: "Location ID não encontrado para #{location}" } if location_id.blank?
-    
+
     begin
       query = <<~GRAPHQL
         query getInventoryLevels($inventoryItemId: ID!) {
@@ -46,78 +48,78 @@ class ShopifyInventoryService
           }
         }
       GRAPHQL
-      
+
       variables = {
-        inventoryItemId: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}"
+        inventoryItemId: inventory_item_gid(product.shopify_inventory_item_id)
       }
-      
+
       Rails.logger.info "Checking inventory levels for #{product.sku}"
       Rails.logger.info "Query: #{query}"
       Rails.logger.info "Variables: #{variables.to_json}"
-      
+
       client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
       response = client.query(query: query, variables: variables)
-      
+
       Rails.logger.info "Inventory levels response: #{response.body.to_json}"
-      
+
       if response.body['errors']
         Rails.logger.error "GraphQL errors: #{response.body['errors']}"
         return { success: false, message: "Erro GraphQL: #{response.body['errors']}" }
       end
-      
+
       inventory_item = response.body.dig('data', 'inventoryItem')
-      
+
       if inventory_item.nil?
-        Rails.logger.warn "Inventory item not found"
-        return { 
-          success: false, 
+        Rails.logger.warn 'Inventory item not found'
+        return {
+          success: false,
           message: 'Inventory item não encontrado',
           tracked: false
         }
       end
-      
+
       inventory_levels = inventory_item.dig('inventoryLevels', 'edges') || []
       target_level = nil
       all_locations = []
-      
+
       inventory_levels.each do |edge|
         level = edge['node']
         level_location_id = level.dig('location', 'id')&.gsub('gid://shopify/Location/', '')
         location_name = level.dig('location', 'name')
-        
+
         Rails.logger.info "Found inventory level for location #{location_name} (ID: #{level_location_id})"
-        
+
         location_info = {
           location_name: location_name,
           location_id: level_location_id,
           inventory_level_id: level['id']
         }
-        
+
         all_locations << location_info
-        
+
         if level_location_id == location_id
           target_level = level
           Rails.logger.info "✅ Found target location: #{location_name}"
         end
       end
-      
+
       if target_level.nil?
         Rails.logger.warn "No inventory level found for target location #{location_id}"
-        Rails.logger.info "Available locations for this product:"
+        Rails.logger.info 'Available locations for this product:'
         all_locations.each do |loc|
           Rails.logger.info "  - #{loc[:location_name]} (ID: #{loc[:location_id]})"
         end
-        
-        return { 
-          success: false, 
+
+        return {
+          success: false,
           message: "Produto não encontrado na location #{location} (ID: #{location_id}). Locations disponíveis: #{all_locations.map { |l| l[:location_name] }.join(', ')}",
           tracked: inventory_item['tracked'],
           all_locations: all_locations
         }
       end
-      
-      quantities_result = get_inventory_quantities(product.shopify_inventory_item_id, location_id)
-      
+
+      quantities_result = get_inventory_quantities(inventory_item_numeric_id(product.shopify_inventory_item_id), location_id)
+
       {
         success: true,
         available: quantities_result[:available],
@@ -129,7 +131,6 @@ class ShopifyInventoryService
         location_name: target_level.dig('location', 'name'),
         sku: inventory_item['sku']
       }
-
     rescue StandardError => e
       Rails.logger.error "Error checking inventory levels: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
@@ -169,7 +170,6 @@ class ShopifyInventoryService
         incoming: 0
       }
     end
-
   rescue StandardError => e
     Rails.logger.error "Error getting inventory quantities: #{e.message}"
     {
@@ -197,10 +197,10 @@ class ShopifyInventoryService
         }
       }
     GRAPHQL
-    
+
     client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
     response = client.query(query:)
-    
+
     Rails.logger.info "Locations response: #{response.body.to_json}"
 
     locations = response.body.dig('data', 'locations', 'edges') || []
@@ -212,7 +212,7 @@ class ShopifyInventoryService
     end
 
     locations
-  rescue => e
+  rescue StandardError => e
     Rails.logger.error "Error listing locations: #{e.message}"
     []
   end
@@ -226,73 +226,72 @@ class ShopifyInventoryService
     if location_id.blank?
       return { success: false, message: "Location ID não encontrado para #{location}" }
     end
-    
+
     Rails.logger.info "Using location_id: #{location_id} for location: #{location}"
-    
-    Rails.logger.info "=== CHECKING CURRENT SHOPIFY INVENTORY ==="
+
+    Rails.logger.info '=== CHECKING CURRENT SHOPIFY INVENTORY ==='
     current_inventory = check_inventory_level(product, location)
     Rails.logger.info "Current inventory result: #{current_inventory}"
-    
+
     if current_inventory[:success]
-      Rails.logger.info "Current Shopify inventory:"
+      Rails.logger.info 'Current Shopify inventory:'
       Rails.logger.info "  - Available: #{current_inventory[:available]}"
       Rails.logger.info "  - On Hand: #{current_inventory[:on_hand]}"
       Rails.logger.info "  - Committed: #{current_inventory[:committed]}"
       Rails.logger.info "  - Tracked: #{current_inventory[:tracked]}"
       Rails.logger.info "  - Location: #{current_inventory[:location_name]}"
-      
+
       unless current_inventory[:tracked]
-        return { 
-          success: false, 
-          message: "Produto #{product.sku} não está sendo rastreado na Shopify. Ative o rastreamento primeiro." 
+        return {
+          success: false,
+          message: "Produto #{product.sku} não está sendo rastreado na Shopify. Ative o rastreamento primeiro."
         }
       end
-      
+
       if current_inventory[:on_hand] == quantity
         Rails.logger.warn "✅ Quantity is already correct in Shopify (#{current_inventory[:on_hand]} == #{quantity})"
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: "Estoque já está correto na Shopify (#{quantity} unidades)",
           already_correct: true
         }
       end
-      
+
       Rails.logger.info "🔄 Need to update: #{current_inventory[:on_hand]} -> #{quantity}"
     else
       Rails.logger.error "Failed to check current inventory: #{current_inventory[:message]}"
-      
+
       if current_inventory[:all_locations]
-        Rails.logger.info "Available locations for this product:"
+        Rails.logger.info 'Available locations for this product:'
         current_inventory[:all_locations].each do |loc|
           Rails.logger.info "  - #{loc[:location_name]} (ID: #{loc[:location_id]})"
         end
       end
-      
-      Rails.logger.warn "Continuing with update despite verification failure..."
+
+      Rails.logger.warn 'Continuing with update despite verification failure...'
     end
-    
+
     begin
       update_inventory_quantity(product, quantity, location_id)
-      
+
       Rails.logger.info "Shopify inventory updated successfully for #{product.sku}: #{quantity} units"
-      
-      Rails.logger.info "=== VERIFYING UPDATE ==="
+
+      Rails.logger.info '=== VERIFYING UPDATE ==='
       updated_inventory = check_inventory_level(product, location)
       if updated_inventory[:success]
         Rails.logger.info "After update - On Hand: #{updated_inventory[:on_hand]}"
         if updated_inventory[:on_hand] == quantity
-          Rails.logger.info "✅ Update confirmed in Shopify!"
+          Rails.logger.info '✅ Update confirmed in Shopify!'
         else
           Rails.logger.warn "⚠️ Update may not have worked. Expected: #{quantity}, Got: #{updated_inventory[:on_hand]}"
         end
       else
         Rails.logger.warn "Could not verify update: #{updated_inventory[:message]}"
       end
-      
+
       update_local_stock_record(product, location, quantity)
-      
+
       { success: true, message: 'Estoque atualizado com sucesso na Shopify' }
-      
     rescue StandardError => e
       Rails.logger.error "Error updating Shopify inventory for #{product.sku}: #{e.message}"
       Rails.logger.error "Error class: #{e.class}"
@@ -300,9 +299,27 @@ class ShopifyInventoryService
       { success: false, message: "Erro ao atualizar Shopify: #{e.message}" }
     end
   end
-  
+
   private
-  
+
+  def inventory_item_gid(value)
+    str = value.to_s
+    return str if str.start_with?('gid://shopify/InventoryItem/')
+    return "gid://shopify/InventoryItem/#{str}" if str.match?(/\A\d+\z/)
+
+    if str.start_with?('gid://')
+      return str
+    end
+
+    "gid://shopify/InventoryItem/#{str}"
+  end
+
+  def inventory_item_numeric_id(value)
+    str = value.to_s
+    return str.split('/').last if str.start_with?('gid://')
+    str
+  end
+
   def get_location_id(location)
     location_id = case location
                   when 'lagoa_seca'
@@ -320,11 +337,11 @@ class ShopifyInventoryService
                   else
                     ENV.fetch('LOCATION_LAGOA_SECA', nil)
                   end
-    
+
     Rails.logger.info "Location mapping: #{location} -> #{location_id}"
     location_id
   end
-  
+
   def update_inventory_quantity(product, quantity, location_id)
     mutation = <<~GRAPHQL
       mutation inventorySetOnHandQuantities($input: InventorySetOnHandQuantitiesInput!) {
@@ -341,59 +358,58 @@ class ShopifyInventoryService
         }
       }
     GRAPHQL
-    
+
     input = {
       reason: 'correction',
       setQuantities: [
         {
-          inventoryItemId: "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}",
+          inventoryItemId: inventory_item_gid(product.shopify_inventory_item_id),
           locationId: "gid://shopify/Location/#{location_id}",
           quantity: quantity
         }
       ]
     }
-    
+
     Rails.logger.info "GraphQL mutation: #{mutation}"
     Rails.logger.info "GraphQL input: #{input.to_json}"
-    Rails.logger.info "=== CRITICAL DEBUG INFO ==="
+    Rails.logger.info '=== CRITICAL DEBUG INFO ==='
     Rails.logger.info "Product SKU: #{product.sku}"
     Rails.logger.info "Inventory Item ID: #{product.shopify_inventory_item_id}"
     Rails.logger.info "Target Location ID: #{location_id}"
     Rails.logger.info "Target Quantity: #{quantity}"
     Rails.logger.info "Full Location GID: gid://shopify/Location/#{location_id}"
-    Rails.logger.info "=========================="
-    
+    Rails.logger.info '=========================='
+
     client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
     response = client.query(query: mutation, variables: { input: input })
-    
+
     Rails.logger.info "GraphQL response: #{response.body.to_json}"
-    
+
     user_errors = response.body.dig('data', 'inventorySetOnHandQuantities', 'userErrors') || []
-    
+
     if response.body['errors'] || user_errors.any?
       error_msg = response.body['errors'] || user_errors
       Rails.logger.error "GraphQL error: #{error_msg}"
       raise StandardError, "Erro GraphQL: #{error_msg}"
     end
-    
+
     adjustment_group = response.body.dig('data', 'inventorySetOnHandQuantities', 'inventoryAdjustmentGroup')
-    
+
     if adjustment_group
       Rails.logger.info "✅ Adjustment Group created: #{adjustment_group['id']}"
       Rails.logger.info "Created At: #{adjustment_group['createdAt']}"
       Rails.logger.info "Reason: #{adjustment_group['reason']}"
     else
-      Rails.logger.warn "⚠️  NO ADJUSTMENT GROUP RETURNED!"
-      Rails.logger.warn "This usually means:"
-      Rails.logger.warn "1. The quantity is already correct"
-      Rails.logger.warn "2. The location_id is wrong"
-      Rails.logger.warn "3. The inventory_item_id is wrong"
-      Rails.logger.warn "4. The product is not tracked at this location"
-      
-      Rails.logger.warn "Continuing anyway - will verify in post-update check"
+      Rails.logger.warn '⚠️  NO ADJUSTMENT GROUP RETURNED!'
+      Rails.logger.warn 'This usually means:'
+      Rails.logger.warn '1. The quantity is already correct'
+      Rails.logger.warn '2. The location_id is wrong'
+      Rails.logger.warn '3. The inventory_item_id is wrong'
+      Rails.logger.warn '4. The product is not tracked at this location'
+      Rails.logger.warn 'Continuing anyway - will verify in post-update check'
     end
   end
-  
+
   def update_local_stock_record(product, location, quantity)
     case location
     when 'lagoa_seca'
