@@ -7,6 +7,8 @@ class StockCorrectionsController < ApplicationController
   def index
     @per_page = (params[:per_page] || 10).to_i
     @current_page = (params[:page] || 1).to_i
+    @locations_kpi = Location.order(:name)
+
     offset = (@current_page - 1) * @per_page
 
     base_query = if current_user.admin?
@@ -58,16 +60,6 @@ class StockCorrectionsController < ApplicationController
       filter_date = Date.parse(params[:date_filter])
       stats_query = stats_query.where(correction_date: filter_date.beginning_of_day..filter_date.end_of_day)
     end
-
-    @total_corrections = stats_query.count
-    @pending_corrections = stats_query.where(status: [nil, 'pending']).count
-    @completed_corrections = stats_query.where(status: 'executed').count
-    @synced_corrections = stats_query.joins(:stock_correction_items)
-                                     .where(stock_correction_items: {
-                                       last_shopify_sync_at: Date.current.beginning_of_day..Date.current.end_of_day
-                                     })
-                                     .distinct
-                                     .count
 
     @total_pages = (@total_corrections.to_f / @per_page).ceil
   end

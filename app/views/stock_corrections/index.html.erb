@@ -22,44 +22,52 @@
           </div>
         </div>
         
+      </div>
+    </div>
+  </div>
+   <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-dark shadow-lg">
+        <div class="card-header bg-dark">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-chart-line me-2"></i>Acurácia de Estoque por Localidade
+          </h5>
+        </div>
+
         <div class="card-body bg-black">
           <div class="row g-3">
-            <div class="col-md-3">
-              <div class="card bg-dark border-secondary h-100">
-                <div class="card-body text-center">
-                  <i class="fas fa-clipboard-list fa-2x text-primary mb-2"></i>
-                  <h5 class="text-white mb-1"><%= @total_corrections %></h5>
-                  <small class="text-white-50">Total de Conferências</small>
+            <% @locations_kpi.each do |location| %>
+              <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                <div class="card bg-dark border-secondary h-100 text-center">
+                  <div class="card-body py-3 px-2">
+
+                    <i class="fas fa-store text-info mb-2"></i>
+
+                    <div class="text-white fw-semibold small mb-1">
+                      <%= location.name %>
+                    </div>
+
+                    <% if location.kpi_ratio.present? %>
+                      <div class="fw-bold fs-5
+                        <%= location.kpi_ratio >= 95 ? 'text-success' :
+                            location.kpi_ratio >= 85 ? 'text-warning' :
+                            'text-danger' %>">
+                        <%= number_to_percentage(location.kpi_ratio, precision: 0) %>
+                      </div>
+
+                      <small class="text-white-50">
+                        <%= location.kpi_updated_at&.strftime('%d/%m %H:%M') %>
+                      </small>
+                    <% else %>
+                      <span class="badge bg-secondary mt-2">
+                        KPI não calculado
+                      </span>
+                    <% end %>
+
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card bg-dark border-secondary h-100">
-                <div class="card-body text-center">
-                  <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
-                  <h5 class="text-white mb-1"><%= @pending_corrections %></h5>
-                  <small class="text-white-50">Pendentes</small>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card bg-dark border-secondary h-100">
-                <div class="card-body text-center">
-                  <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                  <h5 class="text-white mb-1"><%= @completed_corrections %></h5>
-                  <small class="text-white-50">Executadas</small>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card bg-dark border-secondary h-100">
-                <div class="card-body text-center">
-                  <i class="fab fa-shopify fa-2x text-info mb-2"></i>
-                  <h5 class="text-white mb-1"><%= @synced_corrections %></h5>
-                  <small class="text-white-50">Sincronizadas Hoje</small>
-                </div>
-              </div>
-            </div>
+            <% end %>
           </div>
         </div>
       </div>

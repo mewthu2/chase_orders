@@ -1,5 +1,10 @@
 class StockCorrection < ApplicationRecord
   belongs_to :user, optional: true
+  belongs_to :store_location,
+             class_name: 'Location',
+             foreign_key: :location_id,
+             inverse_of: :stock_corrections
+
   has_many :stock_correction_items, dependent: :destroy
 
   validates :location, presence: true

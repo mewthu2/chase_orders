@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_11_28_181844) do
+ActiveRecord::Schema[7.2].define(version: 2025_12_30_110126) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -96,6 +96,17 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_28_181844) do
     t.index ["needs_sync"], name: "index_discounts_on_needs_sync"
     t.index ["shopify_node_id"], name: "index_discounts_on_shopify_node_id", unique: true
     t.index ["starts_at"], name: "index_discounts_on_starts_at"
+  end
+
+  create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "slug", null: false
+    t.string "name", null: false
+    t.decimal "kpi_ratio", precision: 5, scale: 2
+    t.datetime "kpi_updated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kpi_ratio"], name: "index_locations_on_kpi_ratio"
+    t.index ["slug"], name: "index_locations_on_slug", unique: true
   end
 
   create_table "logs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -389,10 +400,12 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_28_181844) do
     t.datetime "integration_started_at"
     t.string "integration_status"
     t.text "integration_error"
+    t.bigint "location_id"
     t.index ["correction_date"], name: "index_stock_corrections_on_correction_date"
     t.index ["deleted_at"], name: "index_stock_corrections_on_deleted_at"
     t.index ["integration_status"], name: "index_stock_corrections_on_integration_status"
     t.index ["location", "status"], name: "index_stock_corrections_on_location_and_status"
+    t.index ["location_id"], name: "index_stock_corrections_on_location_id"
     t.index ["user_id"], name: "index_stock_corrections_on_user_id"
   end
 
@@ -458,6 +471,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_11_28_181844) do
   add_foreign_key "product_updates", "users"
   add_foreign_key "stock_correction_items", "products"
   add_foreign_key "stock_correction_items", "stock_corrections"
+  add_foreign_key "stock_corrections", "locations"
   add_foreign_key "stock_corrections", "users"
   add_foreign_key "user_profiles", "profiles"
   add_foreign_key "user_profiles", "users"
