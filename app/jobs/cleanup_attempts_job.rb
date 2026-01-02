@@ -5,17 +5,14 @@ class CleanupAttemptsJob < ApplicationJob
   def perform
     cutoff_date = 1.week.ago
 
-    [
-      { kinds: :create_correios_order, status: :fail },
-      { kinds: :send_xml,             status: :error },
-      { kinds: :emission_invoice,     status: :error },
-      { kinds: :get_tracking,         status: :error }
-    ].each do |conditions|
-      deleted_count = Attempt.where(conditions)
-                             .where('created_at <= ?', cutoff_date)
-                             .delete_all
+    deleted_count =
+      Attempt.where.not(status: :success)
+             .where('created_at <= ?', cutoff_date)
+             .delete_all
 
-      Rails.logger.info "CleanupAttemptsJob: Excluídos #{deleted_count} registros para #{conditions}"
-    end
+    Rails.logger.info(
+      "CleanupAttemptsJob: Excluídos #{deleted_count} registros com status diferente de success "\
+      "criados até #{cutoff_date}"
+    )
   end
 end
