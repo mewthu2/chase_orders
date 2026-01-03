@@ -55,6 +55,7 @@ class GetTrackingJob < ActiveJob::Base
         attempt.update(error: e, status: :error, message: 'Erro no envio de rastreio ao Tiny')
       end
 
+      Attempt.where(tiny_order_id: att.tiny_order_id).update_all(xml_nota: nil)
     else
       attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
     end
