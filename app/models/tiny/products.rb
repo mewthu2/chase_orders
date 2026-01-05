@@ -67,8 +67,13 @@ module Tiny::Products
 
   def self.update_cost_for_products(products, token, kind)
     products.find_each(batch_size: 100) do |product|
+      puts "Obtendo custo do produto #{product.id} | Tipo: #{kind}"
+
       product_data = find_product(product.tiny_2_id, token)
-      cost_data = product_data.dig('produtos', 0, 'produto') if product_data
+
+      cost_data = product_data['produto'] if product_data
+
+      puts "Dados de custo: #{cost_data}"
 
       next unless cost_data&.key?('preco_custo_medio')
 
