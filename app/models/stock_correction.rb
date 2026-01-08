@@ -1,9 +1,5 @@
 class StockCorrection < ApplicationRecord
   belongs_to :user, optional: true
-  belongs_to :store_location,
-             class_name: 'Location',
-             foreign_key: :location_id,
-             inverse_of: :stock_corrections
 
   has_many :stock_correction_items, dependent: :destroy
 
@@ -26,7 +22,11 @@ class StockCorrection < ApplicationRecord
   end
 
   def start_integration!
-    update!(integration_started_at: Time.current, integration_status: 'pending', integration_error: nil)
+    update!(
+      integration_started_at: Time.current,
+      integration_status: 'pending',
+      integration_error: nil
+    )
   end
 
   def complete_integration!
@@ -43,14 +43,16 @@ class StockCorrection < ApplicationRecord
 
   def location_display_name
     case location
-    when 'lagoa_seca'
-      'Lagoa Seca'
-    when 'bh_shopping'
-      'BH Shopping'
-    when 'rj'
-      'Rio de Janeiro'
+    when 'lagoa_seca' then 'Lagoa Seca'
+    when 'bh_shopping' then 'BH Shopping'
+    when 'rj' then 'Rio de Janeiro'
+    when 'fortaleza_rio_mar' then 'Fortaleza RioMar'
+    when 'porto_alegre_bourbon' then 'Porto Alegre Bourbon'
+    when 'eldorado_sp' then 'Shopping Eldorado'
+    when 'log' then 'Logística'
+    when 'sp' then 'São Paulo'
     else
-      location.humanize
+      location.to_s.humanize
     end
   end
 end

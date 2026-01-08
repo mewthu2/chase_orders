@@ -107,17 +107,21 @@ class StockCorrectionsController < ApplicationController
 
   def create
     @stock_correction = StockCorrection.new(stock_correction_params)
-    @stock_correction.status = 'pending'
+    @stock_correction.status ||= 'pending'
 
     unless current_user.can_access_location?(@stock_correction.location)
-      flash[:alert] = "Você não tem permissão para criar conferências na location '#{User.location_name(@stock_correction.location)}'"
-      redirect_to stock_corrections_path and return
+      flash.now[:alert] = "Você não tem permissão para criar conferências na location '#{User.location_name(@stock_correction.location)}'"
+      @available_locations = current_user.available_locations_for_user
+      return render :new, status: :unprocessable_entity
     end
 
     if @stock_correction.save
       create_correction_items(@stock_correction)
       redirect_to edit_stock_correction_path(@stock_correction), notice: 'Conferência criada com sucesso!'
     else
+      Rails.logger.error "❌ Erro ao criar StockCorrection:"
+      Rails.logger.error @stock_correction.errors.full_messages.join(' | ')
+
       @available_locations = current_user.available_locations_for_user
       render :new, status: :unprocessable_entity
     end

@@ -38,44 +38,6 @@
           </div>
         </div>
 
-        <!-- Marketing Collapsible Section for admin, admin_marketing, and agent_marketing -->
-        <% if current_user&.admin? || current_user&.marketing_user? %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleMarketing()">
-              <div class="nav-group-title">
-                <i class="fas fa-bullhorn"></i>
-                <span class="nav-text">Marketing</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="marketingIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="marketingDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.admin? || current_user&.admin_marketing? %>
-                  <!-- Admin and Admin Marketing Links -->
-                  <%= link_to marketing_campaigns_path, class: "dropdown-link #{'active' if controller_name == 'marketing_campaigns' && action_name == 'index'}" do %>
-                    <i class="fas fa-list"></i>
-                    <span>Campanhas</span>
-                  <% end %>
-                  <%= link_to new_marketing_campaign_path, class: "dropdown-link #{'active' if controller_name == 'marketing_campaigns' && action_name == 'new'}" do %>
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Nova Campanha</span>
-                  <% end %>
-                  <%= link_to marketing_tasks_path, class: "dropdown-link #{'active' if controller_name == 'marketing_tasks' && action_name == 'index'}" do %>
-                    <i class="fas fa-tasks"></i>
-                    <span>Todas as Tarefas</span>
-                  <% end %>
-                <% elsif current_user&.agent_marketing? %>
-                  <!-- Agent Marketing only sees My Tasks, no dashboard link -->
-                  <%= link_to my_tasks_marketing_tasks_path, class: "dropdown-link #{'active' if action_name == 'my_tasks'}" do %>
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Minhas Tarefas</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
         <!-- Correios Collapsible Section - Only for Admin -->
         <% if current_user&.admin? %>
           <div class="nav-item nav-group-collapsible">
