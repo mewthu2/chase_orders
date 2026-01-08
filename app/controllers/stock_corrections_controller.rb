@@ -61,6 +61,7 @@ class StockCorrectionsController < ApplicationController
       stats_query = stats_query.where(correction_date: filter_date.beginning_of_day..filter_date.end_of_day)
     end
 
+    @total_corrections = stats_query.count
     @total_pages = (@total_corrections.to_f / @per_page).ceil
   end
 
@@ -308,7 +309,8 @@ class StockCorrectionsController < ApplicationController
   end
 
   def execute_all
-    pending_items = @stock_correction.stock_correction_items.where(needs_correction: true, executed: false)
+    pending_items = @stock_correction.stock_correction_items
+                                     .where(executed: false)
 
     if pending_items.empty?
       redirect_to stock_corrections_path, alert: 'Não há correções pendentes para processar.'
@@ -421,82 +423,123 @@ class StockCorrectionsController < ApplicationController
   end
 
   def retry_shopify_sync
-    item_id = params[:item_id]
-    item = @stock_correction.stock_correction_items.find(item_id)
+    item = @stock_correction.stock_correction_items.find(params[:item_id])
 
-    unless item.needs_correction? && item.executed?
+    # Valida se o item foi executado
+    unless item.executed?
       render json: {
         success: false,
-        message: 'Item não está elegível para retry (precisa estar executado e com correção)'
+        message: 'Item não foi executado ainda. Execute a correção primeiro.',
+        shopify_status: item.shopify_sync_status
       }
       return
     end
 
-    Rails.logger.info "=== Retrying Shopify sync for item #{item.id} (Product: #{item.product.sku}) ==="
-
-    begin
-      item.update!(
-        shopify_sync_status: 'syncing',
-        shopify_sync_error: nil
-      )
-
-      result = ShopifyInventoryService.update_inventory(
-        item.product,
-        @stock_correction.location,
-        item.corrected_stock || item.current_stock,
-        'correction'
-      )
-
-      if result[:success]
-        item.update!(
-          shopify_sync_status: 'synced',
-          shopify_sync_error: nil,
-          last_shopify_sync_at: Time.current
-        )
-
-        Rails.logger.info "Successfully synced #{item.product.sku} with Shopify on retry"
-
-        render json: {
-          success: true,
-          message: 'Integração com Shopify realizada com sucesso!',
-          shopify_status: 'synced'
-        }
-      else
-        item.update!(
-          shopify_sync_status: 'error',
-          shopify_sync_error: result[:message],
-          last_shopify_sync_at: Time.current
-        )
-
-        Rails.logger.error "Failed to sync #{item.product.sku} with Shopify on retry: #{result[:message]}"
-
-        render json: {
-          success: false,
-          message: "Erro na integração: #{result[:message]}",
-          shopify_status: 'error',
-          error_details: result[:message]
-        }
-      end
-    rescue StandardError => e
-      item.update!(
-        shopify_sync_status: 'error',
-        shopify_sync_error: e.message,
-        last_shopify_sync_at: Time.current
-      )
-
-      Rails.logger.error "Exception during retry sync for #{item.product.sku}: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-
+    # Valida se o item precisa de correção
+    unless item.needs_correction?
       render json: {
         success: false,
-        message: "Erro ao tentar integração: #{e.message}",
-        shopify_status: 'error',
-        error_details: e.message
+        message: 'Item não necessita de correção',
+        shopify_status: item.shopify_sync_status
+      }
+      return
+    end
+
+    # Valida se o produto tem shopify_inventory_item_id
+    unless item.product.shopify_inventory_item_id.present?
+      item.update!(
+        shopify_sync_status: 'no_shopify_id',
+        shopify_sync_error: 'Produto sem shopify_inventory_item_id'
+      )
+      render json: {
+        success: false,
+        message: 'Produto não possui ID de inventário do Shopify',
+        shopify_status: 'no_shopify_id'
+      }
+      return
+    end
+
+    # Tenta sincronizar com a Shopify
+    if sync_item_with_shopify!(item)
+      render json: {
+        success: true,
+        message: 'Integração com Shopify realizada com sucesso!',
+        shopify_status: 'synced'
+      }
+    else
+      render json: {
+        success: false,
+        message: item.shopify_sync_error || 'Erro ao sincronizar com Shopify',
+        shopify_status: 'error'
       }
     end
+
+  rescue StandardError => e
+    Rails.logger.error "Error in retry_shopify_sync: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+
+    render json: {
+      success: false,
+      message: e.message,
+      shopify_status: 'error'
+    }
   end
 
   private
+
+  def sync_item_with_shopify!(item)
+    # Valida se a conferência não está finalizada
+    if @stock_correction.status == 'completed'
+      item.update!(
+        shopify_sync_status: 'error',
+        shopify_sync_error: 'Conferência está finalizada e não pode ser modificada'
+      )
+      return false
+    end
+
+    Rails.logger.info "=== Starting Shopify sync retry for item #{item.id} (Product: #{item.product.sku}) ==="
+
+    # Marca como sincronizando
+    item.update!(
+      shopify_sync_status: 'syncing',
+      shopify_sync_error: nil
+    )
+
+    # Chama o serviço de integração
+    result = ShopifyInventoryService.update_inventory(
+      item.product,
+      item.stock_correction.location,
+      item.corrected_stock || item.current_stock,
+      'correction'
+    )
+
+    if result[:success]
+      item.update!(
+        shopify_sync_status: 'synced',
+        shopify_sync_error: nil,
+        last_shopify_sync_at: Time.current
+      )
+      Rails.logger.info "✅ Shopify sync retry successful for #{item.product.sku}"
+      true
+    else
+      item.update!(
+        shopify_sync_status: 'error',
+        shopify_sync_error: result[:message],
+        last_shopify_sync_at: Time.current
+      )
+      Rails.logger.error "❌ Shopify sync retry failed for #{item.product.sku}: #{result[:message]}"
+      false
+    end
+  rescue StandardError => e
+    item.update!(
+      shopify_sync_status: 'error',
+      shopify_sync_error: e.message,
+      last_shopify_sync_at: Time.current
+    )
+    Rails.logger.error "Exception during sync retry for #{item.product.sku}: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    false
+  end
 
   def set_stock_correction
     if current_user.admin?

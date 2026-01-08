@@ -17,23 +17,8 @@ class StockCorrectionItem < ApplicationRecord
     Rails.logger.info "correction_reason: #{correction_reason}"
     Rails.logger.info "with_shopify_integration: #{with_shopify_integration}"
 
-    unless needs_correction?
-      Rails.logger.error 'Item does not need correction'
-      return false
-    end
-
     if executed?
       Rails.logger.error 'Item already executed'
-      return false
-    end
-
-    if corrected_stock.blank?
-      Rails.logger.error 'Corrected stock is blank'
-      return false
-    end
-
-    if correction_reason.blank?
-      Rails.logger.error 'Correction reason is blank'
       return false
     end
 
@@ -52,29 +37,21 @@ class StockCorrectionItem < ApplicationRecord
 
       case location
       when 'lagoa_seca'
-        Rails.logger.info "Updating stock_lagoa_seca from #{product.stock_lagoa_seca} to #{corrected_stock}"
         product.update!(stock_lagoa_seca: corrected_stock)
-        Rails.logger.info "Updated stock_lagoa_seca to #{corrected_stock}"
       when 'bh_shopping'
-        Rails.logger.info "Updating stock_bh_shopping from #{product.stock_bh_shopping} to #{corrected_stock}"
         product.update!(stock_bh_shopping: corrected_stock)
-        Rails.logger.info "Updated stock_bh_shopping to #{corrected_stock}"
       when 'rj'
-        Rails.logger.info "Updating stock_rj from #{product.stock_rj} to #{corrected_stock}"
         product.update!(stock_rj: corrected_stock)
-        Rails.logger.info "Updated stock_rj to #{corrected_stock}"
       when 'fortaleza_rio_mar'
-        Rails.logger.info "Updating stock_fortaleza_rio_mar from #{product.stock_fortaleza_rio_mar} to #{corrected_stock}"
         product.update!(stock_fortaleza_rio_mar: corrected_stock)
-        Rails.logger.info "Updated stock_fortaleza_rio_mar to #{corrected_stock}"
       when 'porto_alegre_bourbon'
-        Rails.logger.info "Updating stock_porto_alegre_bourbon from #{product.stock_porto_alegre_bourbon} to #{corrected_stock}"
         product.update!(stock_porto_alegre_bourbon: corrected_stock)
-        Rails.logger.info "Updated stock_porto_alegre_bourbon to #{corrected_stock}"
       when 'eldorado_sp'
-        Rails.logger.info "Updating stock_eldorado_sp from #{product.stock_eldorado_sp} to #{corrected_stock}"
         product.update!(stock_eldorado_sp: corrected_stock)
-        Rails.logger.info "Updated stock_eldorado_sp to #{corrected_stock}"
+      when 'iguatemi_campinas'
+        product.update!(stock_iguatemi_campinas: corrected_stock)
+      when 'shopping_analia_franco'
+        product.update!(stock_shopping_analia_franco: corrected_stock)
       else
         Rails.logger.error "Unknown location: #{location}"
         return false
@@ -96,6 +73,10 @@ class StockCorrectionItem < ApplicationRecord
         Rails.logger.info "Current stock_porto_alegre_bourbon: #{product.stock_porto_alegre_bourbon}"
       when 'eldorado_sp'
         Rails.logger.info "Current stock_eldorado_sp: #{product.stock_eldorado_sp}"
+      when 'iguatemi_campinas'
+        Rails.logger.info "Current stock_iguatemi_campinas: #{product.stock_iguatemi_campinas}"
+      when 'shopping_analia_franco'
+        Rails.logger.info "Current stock_shopping_analia_franco: #{product.stock_shopping}"
       end
 
       Rails.logger.info 'Marking item as executed...'
@@ -155,14 +136,32 @@ class StockCorrectionItem < ApplicationRecord
   end
 
   def sync_with_shopify!
-    return false unless needs_correction? && executed?
-    return false unless product.shopify_inventory_item_id.present?
+    Rails.logger.info "=== Starting sync_with_shopify! for item #{id} ==="
+    
+    unless needs_correction?
+      Rails.logger.warn "Item #{id} does not need correction"
+      return false
+    end
+
+    unless executed?
+      Rails.logger.warn "Item #{id} has not been executed yet"
+      return false
+    end
+
+    unless product.shopify_inventory_item_id.present?
+      Rails.logger.warn "Product #{product.sku} has no shopify_inventory_item_id"
+      update!(
+        shopify_sync_status: 'no_shopify_id',
+        shopify_sync_error: 'Produto sem shopify_inventory_item_id'
+      )
+      return false
+    end
 
     begin
       location = stock_correction.location
 
-      Rails.logger.info "Starting Shopify sync for #{product.sku} (inventory_item_id: #{product.shopify_inventory_item_id})"
-      Rails.logger.info "Location: #{location}, Shopify Location ID: #{get_shopify_location_id(location)}"
+      Rails.logger.info "Syncing #{product.sku} (inventory_item_id: #{product.shopify_inventory_item_id})"
+      Rails.logger.info "Location: #{location}, Stock: #{corrected_stock}"
 
       update!(shopify_sync_status: 'syncing')
 
@@ -174,14 +173,14 @@ class StockCorrectionItem < ApplicationRecord
           shopify_sync_status: 'synced',
           shopify_sync_error: nil
         )
-        Rails.logger.info "Shopify sync successful for #{product.sku}: #{corrected_stock} units"
+        Rails.logger.info "✅ Shopify sync successful for #{product.sku}: #{corrected_stock} units"
         true
       else
         update!(
           shopify_sync_status: 'error',
           shopify_sync_error: result[:message]
         )
-        Rails.logger.error "Shopify sync failed for #{product.sku}: #{result[:message]}"
+        Rails.logger.error "❌ Shopify sync failed for #{product.sku}: #{result[:message]}"
         false
       end
     rescue StandardError => e
@@ -189,7 +188,8 @@ class StockCorrectionItem < ApplicationRecord
         shopify_sync_status: 'error',
         shopify_sync_error: e.message
       )
-      Rails.logger.error "Shopify sync exception for #{product.sku}: #{e.message}"
+      Rails.logger.error "Exception during Shopify sync for #{product.sku}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
       false
     end
   end
