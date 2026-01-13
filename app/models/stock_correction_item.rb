@@ -76,7 +76,7 @@ class StockCorrectionItem < ApplicationRecord
       when 'iguatemi_campinas'
         Rails.logger.info "Current stock_iguatemi_campinas: #{product.stock_iguatemi_campinas}"
       when 'shopping_analia_franco'
-        Rails.logger.info "Current stock_shopping_analia_franco: #{product.stock_shopping}"
+        Rails.logger.info "Current stock_shopping_analia_franco: #{product.stock_shopping_analia_franco}"
       end
 
       Rails.logger.info 'Marking item as executed...'
