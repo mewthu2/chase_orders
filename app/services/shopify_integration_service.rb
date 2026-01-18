@@ -294,6 +294,12 @@ class ShopifyIntegrationService
         location_id: ENV.fetch('LOCATION_PORTO_ALEGRE_BOURBON'),
         location_name: 'Porto Alegre Bourbon'
       }
+    when 'shopping_analia_franco'
+      {
+        access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'),
+        location_id: ENV.fetch('LOCATION_SHOPPING_ANALIA_FRANCO'),
+        location_name: 'Shopping Anália Franco'
+      }
     end
   end
 

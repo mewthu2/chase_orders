@@ -169,14 +169,33 @@
                 <tbody>
                   <tr class="border-secondary">
                     <td class="px-3 py-3" style="width: 250px;">
+                      <% if @product_images.present? %>
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                          <% @product_images.each do |img| %>
+                            <a href="<%= img %>" target="_blank" title="Abrir imagem">
+                              <img src="<%= img %>"
+                                  class="rounded border border-secondary"
+                                  style="width: 55px; height: 55px; object-fit: cover;"
+                                  loading="lazy">
+                            </a>
+                          <% end %>
+                        </div>
+                      <% end %>
+
                       <div>
-                        <span class="text-white fw-medium d-block"><%= format_product_name_for_correction(@search_item.product) %></span>
+                        <span class="text-white fw-medium d-block">
+                          <%= format_product_name_for_correction(@search_item.product) %>
+                        </span>
+
                         <small class="text-warning fw-bold font-monospace">
                           SKU: <%= @search_item.product.sku %>
                         </small>
+
                         <% if @search_item.product.shopify_variant_id.present? %>
-                          <br><small class="text-white-50">
-                            <i class="fab fa-shopify me-1"></i>ID: <%= @search_item.product.shopify_variant_id %>
+                          <br>
+                          <small class="text-white-50">
+                            <i class="fab fa-shopify me-1"></i>
+                            ID: <%= @search_item.product.shopify_variant_id %>
                           </small>
                         <% end %>
                       </div>

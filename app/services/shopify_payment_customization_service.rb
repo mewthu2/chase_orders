@@ -29,21 +29,21 @@ class ShopifyPaymentCustomizationService
     client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
     response = client.query(query: query)
 
-    if response.body["errors"]
-      Rails.logger.error "GraphQL errors: #{response.body["errors"]}"
+    if response.body['errors']
+      Rails.logger.error "GraphQL errors: #{response.body['errors']}"
       return []
     end
 
-    customizations = response.body.dig("data", "paymentCustomizations", "edges") || []
+    customizations = response.body.dig('data', 'paymentCustomizations', 'edges') || []
 
-    Rails.logger.info "=== Payment Customizations ==="
+    Rails.logger.info '=== Payment Customizations ==='
     customizations.each do |edge|
-      c = edge["node"]
-      Rails.logger.info "Title: #{c["title"]}"
-      Rails.logger.info "  ID: #{c["id"]}"
-      Rails.logger.info "  Function ID (handle): #{c["functionId"]}"
-      Rails.logger.info "  Enabled: #{c["enabled"]}"
-      Rails.logger.info "----------------------------"
+      c = edge['node']
+      Rails.logger.info "Title: #{c['title']}"
+      Rails.logger.info "  ID: #{c['id']}"
+      Rails.logger.info "  Function ID (handle): #{c['functionId']}"
+      Rails.logger.info "  Enabled: #{c['enabled']}"
+      Rails.logger.info '----------------------------'
     end
 
     customizations

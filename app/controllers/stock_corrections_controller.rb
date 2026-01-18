@@ -134,6 +134,8 @@ class StockCorrectionsController < ApplicationController
     @per_page = (params[:per_page] || 20).to_i
     @current_page = (params[:page] || 1).to_i
 
+    @product_images = []
+
     if params[:search_term].present?
       @search_term = params[:search_term].strip
       product = Product.find_by(sku: @search_term)
@@ -174,6 +176,8 @@ class StockCorrectionsController < ApplicationController
             end
           end
         end
+
+        @product_images = fetch_shopify_product_images_for(product, @location)
       else
         @search_error = 'Produto não encontrado'
       end
@@ -325,7 +329,6 @@ class StockCorrectionsController < ApplicationController
 
     redirect_to stock_corrections_path,
                 notice: "Processamento iniciado em background! #{pending_items.count} correções serão processadas."
-
   rescue StandardError => e
     Rails.logger.error "Erro ao enfileirar job de processamento: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -423,9 +426,10 @@ class StockCorrectionsController < ApplicationController
   end
 
   def retry_shopify_sync
-    item = @stock_correction.stock_correction_items.find(params[:item_id])
+    # ✅ aceita tanto params[:item_id] quanto JSON { item_id: ... }
+    item_id = params[:item_id] || params.dig(:item_id) || params.dig('item_id')
+    item = @stock_correction.stock_correction_items.find(item_id)
 
-    # Valida se o item foi executado
     unless item.executed?
       render json: {
         success: false,
@@ -435,7 +439,6 @@ class StockCorrectionsController < ApplicationController
       return
     end
 
-    # Valida se o item precisa de correção
     unless item.needs_correction?
       render json: {
         success: false,
@@ -445,7 +448,6 @@ class StockCorrectionsController < ApplicationController
       return
     end
 
-    # Valida se o produto tem shopify_inventory_item_id
     unless item.product.shopify_inventory_item_id.present?
       item.update!(
         shopify_sync_status: 'no_shopify_id',
@@ -459,7 +461,6 @@ class StockCorrectionsController < ApplicationController
       return
     end
 
-    # Tenta sincronizar com a Shopify
     if sync_item_with_shopify!(item)
       render json: {
         success: true,
@@ -473,7 +474,6 @@ class StockCorrectionsController < ApplicationController
         shopify_status: 'error'
       }
     end
-
   rescue StandardError => e
     Rails.logger.error "Error in retry_shopify_sync: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -488,7 +488,6 @@ class StockCorrectionsController < ApplicationController
   private
 
   def sync_item_with_shopify!(item)
-    # Valida se a conferência não está finalizada
     if @stock_correction.status == 'completed'
       item.update!(
         shopify_sync_status: 'error',
@@ -499,13 +498,11 @@ class StockCorrectionsController < ApplicationController
 
     Rails.logger.info "=== Starting Shopify sync retry for item #{item.id} (Product: #{item.product.sku}) ==="
 
-    # Marca como sincronizando
     item.update!(
       shopify_sync_status: 'syncing',
       shopify_sync_error: nil
     )
 
-    # Chama o serviço de integração
     result = ShopifyInventoryService.update_inventory(
       item.product,
       item.stock_correction.location,
@@ -559,7 +556,6 @@ class StockCorrectionsController < ApplicationController
 
   def check_admin_permission
     return if current_user.admin?
-
     redirect_to stock_corrections_path, alert: 'Apenas administradores podem executar esta ação.'
   end
 
@@ -723,5 +719,28 @@ class StockCorrectionsController < ApplicationController
     end
 
     Rails.logger.info "Created #{products_count} correction items"
+  end
+
+  def fetch_shopify_product_images_for(product, store_type)
+    return [] unless product&.shopify_variant_id.present?
+
+    config = ShopifyIntegrationService.get_store_config_static(store_type)
+    return [] unless config
+
+    session = ShopifyIntegrationService.create_shopify_session_static(config[:access_token])
+    client = ShopifyAPI::Clients::Rest::Admin.new(session:)
+
+    variant_response = client.get(path: "variants/#{product.shopify_variant_id}.json")
+    product_id = variant_response.body.dig('variant', 'product_id')
+    return [] unless product_id
+
+    images_response = client.get(path: "products/#{product_id}/images.json")
+    images = images_response.body['images'] || []
+
+    images.first(4).map { |img| img['src'] }.compact
+  rescue StandardError => e
+    Rails.logger.error "Erro ao buscar imagens Shopify para #{product&.sku}: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    []
   end
 end
