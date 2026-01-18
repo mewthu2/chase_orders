@@ -25,6 +25,7 @@ Rails.application.routes.draw do
       get :tracking
       get :stockend
       post :update_invoice_id
+      post :delete_order_from_queue
       get :teste_embalagem
     end
   end

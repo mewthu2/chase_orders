@@ -15,6 +15,9 @@
           <button class="btn btn-warning ms-2" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
             <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
           </button>
+          <button class="btn btn-danger ms-2" type="button" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+            <i class="fas fa-trash me-1"></i> Excluir pedido da fila
+          </button>
         </div>
       </div>
     </div>
@@ -51,6 +54,37 @@
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn btn-warning">
               <i class="fas fa-save me-1"></i> Atualizar Nota Fiscal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark border-danger">
+        <div class="modal-header border-danger">
+          <h5 class="modal-title text-white">
+            <i class="fas fa-trash me-2"></i>Excluir pedido da fila
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="<%= delete_order_from_queue_dashboard_index_path %>" method="post">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
+              <input type="number" name="tiny_order_id" class="form-control bg-dark text-white border-danger" required>
+            </div>
+            <div class="alert border-0" style="background: rgba(255,255,255,0.12); color: #ffffff;">
+              <strong>ATENÇÃO:</strong> Esta ação irá excluir todos os attempts relacionados a este pedido. Esta ação é irreversível.
+            </div>
+          </div>
+          <div class="modal-footer border-danger">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">
+              <i class="fas fa-trash me-1"></i> Excluir pedido
             </button>
           </div>
         </form>
@@ -177,86 +211,37 @@
           <table class="table table-dark table-hover" id="trackingTable">
             <thead>
               <tr>
-                <th width="50" class="text-center">
-                  <i class="fas fa-cog"></i>
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-hashtag me-1"></i>
-                  ID Pedido Tiny
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-file-invoice me-1"></i>
-                  Emissão de Nota
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-file-code me-1"></i>
-                  Envio XML
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-shipping-fast me-1"></i>
-                  Rastreamento
-                </th>
-                <th class="text-center">
-                  <i class="fas fa-info-circle me-1"></i>
-                  Status Atual
-                </th>
+                <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
+                <th class="text-center">ID Pedido Tiny</th>
+                <th class="text-center">Emissão de Nota</th>
+                <th class="text-center">Envio XML</th>
+                <th class="text-center">Rastreamento</th>
+                <th class="text-center">Status Atual</th>
               </tr>
             </thead>
             <tbody>
               <% @tracking_summary.each do |order_id, status| %>
                 <tr>
                   <td class="text-center">
-                    <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), 
-                        class: 'btn btn-sm btn-outline-info', 
-                        method: :post, 
-                        target: '_blank',
-                        title: 'Verificar tentativas' do %>
+                    <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), class: 'btn btn-sm btn-outline-info', method: :post, target: '_blank' do %>
                       <i class="fas fa-paperclip"></i>
                     <% end %>
                   </td>
+                  <td class="text-center fw-bold text-white"><%= order_id %></td>
                   <td class="text-center">
-                    <span class="fw-bold text-white"><%= order_id %></span>
+                    <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
+                      <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>
+                    </span>
                   </td>
                   <td class="text-center">
-                    <% if status[:invoice_emition] %>
-                      <span class="badge bg-warning text-dark">
-                        <i class="fas fa-clock"></i> Na Fila
-                      </span>
-                    <% else %>
-                      <span class="badge bg-success">
-                        <i class="fas fa-check"></i> Concluído
-                      </span>
-                    <% end %>
+                    <span class="badge <%= status[:send_xml] ? 'bg-info text-dark' : 'bg-success' %>">
+                      <%= status[:send_xml] ? 'Na Fila' : 'Concluído' %>
+                    </span>
                   </td>
                   <td class="text-center">
-                    <% if status[:send_xml] %>
-                      <span class="badge bg-info text-dark">
-                        <i class="fas fa-clock"></i> Na Fila
-                      </span>
-                    <% elsif status[:invoice_emition] %>
-                      <span class="badge bg-secondary">
-                        <i class="fas fa-minus"></i> Aguardando
-                      </span>
-                    <% else %>
-                      <span class="badge bg-success">
-                        <i class="fas fa-check"></i> Concluído
-                      </span>
-                    <% end %>
-                  </td>
-                  <td class="text-center">
-                    <% if status[:push_tracking] %>
-                      <span class="badge bg-primary">
-                        <i class="fas fa-clock"></i> Na Fila
-                      </span>
-                    <% elsif status[:send_xml] || status[:invoice_emition] %>
-                      <span class="badge bg-secondary">
-                        <i class="fas fa-minus"></i> Aguardando
-                      </span>
-                    <% else %>
-                      <span class="badge bg-success">
-                        <i class="fas fa-check"></i> Concluído
-                      </span>
-                    <% end %>
+                    <span class="badge <%= status[:push_tracking] ? 'bg-primary' : 'bg-success' %>">
+                      <%= status[:push_tracking] ? 'Na Fila' : 'Concluído' %>
+                    </span>
                   </td>
                   <td class="text-center">
                     <% if status[:push_tracking] %>
@@ -278,7 +263,6 @@
         <div class="text-center py-5">
           <i class="fas fa-search fa-3x text-muted mb-3"></i>
           <h5 class="text-white">
-            <!-- Updated empty state message for filters -->
             <% if @filter_params.values.any?(&:present?) %>
               Nenhum pedido encontrado com os filtros aplicados
             <% else %>
@@ -299,137 +283,33 @@
 </div>
 
 <% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
-
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .bg-black {
-      background-color: #121212 !important;
-    }
-
-    .table-responsive {
-      border-radius: 0.5rem;
-      overflow: hidden;
-    }
-
-    .table th {
-      background-color: #1a1a1a;
-      border-color: #343a40;
-      font-weight: 600;
-      font-size: 0.875rem;
-    }
-
-    .table td {
-      border-color: #343a40;
-      vertical-align: middle;
-    }
-
-    .table tbody tr:hover {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .btn-sm {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-    }
-
-    .badge {
-      font-size: 0.75rem;
-    }
-
-    .fs-6 {
-      font-size: 0.875rem !important;
-    }
-
-    .form-select, .form-control {
-      color-scheme: dark;
-    }
-
-    .form-select option {
-      background-color: #212529;
-      color: #f8f9fa;
-    }
-
-    .alert-info {
-      background-color: rgba(13, 202, 240, 0.1);
-      border: 1px solid rgba(13, 202, 240, 0.3);
-      color: #0dcaf0;
-    }
-
-    .alert-primary {
-      background-color: rgba(13, 110, 253, 0.1);
-      border: 1px solid rgba(13, 110, 253, 0.3);
-      color: #0d6efd;
-    }
-  </style>
+<style>
+  body { background-color:#121212;color:#f8f9fa }
+  .bg-black { background-color:#121212!important }
+</style>
 <% end %>
 
 <% content_for :scripts do %>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (document.getElementById('trackingTable')) {
-        $('#trackingTable').DataTable({
-          responsive: true,
-          pageLength: 25,
-          order: [[1, 'asc']],
-          language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
-          },
-          columnDefs: [
-            { orderable: false, targets: [0] },
-            { className: "text-center", targets: "_all" }
-          ]
-        });
-      }
+<script>
+  document.addEventListener('DOMContentLoaded',function(){
+    if(document.getElementById('trackingTable')){
+      $('#trackingTable').DataTable({
+        responsive:true,
+        pageLength:25,
+        order:[[1,'asc']],
+        language:{url:'//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'}
+      })
+    }
 
-      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-      });
-
-      const cards = document.querySelectorAll('.card');
-      cards.forEach((card, index) => {
-        setTimeout(() => {
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-        }, index * 50);
-      });
-
-      setInterval(function() {
-        if (document.visibilityState === 'visible') {
-          location.reload();
+    const deleteForm=document.querySelector('#deleteOrderModal form')
+    if(deleteForm){
+      deleteForm.addEventListener('submit',function(e){
+        const id=deleteForm.querySelector('[name="tiny_order_id"]').value
+        if(!confirm(`ATENÇÃO:\n\nIsso irá excluir TODOS os attempts do pedido ${id}.\n\nDeseja continuar?`)){
+          e.preventDefault()
         }
-      }, 60000);
-
-      const updateForm = document.querySelector('#updateInvoiceModal form');
-      if (updateForm) {
-        updateForm.addEventListener('submit', function(e) {
-          const tinyOrderId = document.getElementById('tiny_order_id').value;
-          const idNotaFiscal = document.getElementById('id_nota_fiscal').value;
-          
-          if (!tinyOrderId || !idNotaFiscal) {
-            e.preventDefault();
-            alert('Por favor, preencha todos os campos obrigatórios.');
-            return false;
-          }
-          
-          if (!confirm(`Tem certeza que deseja atualizar a nota fiscal do pedido ${tinyOrderId} para ${idNotaFiscal}?`)) {
-            e.preventDefault();
-            return false;
-          }
-        });
-      }
-    });
-  </script>
+      })
+    }
+  })
+</script>
 <% end %>

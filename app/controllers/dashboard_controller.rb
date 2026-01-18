@@ -159,23 +159,50 @@ class DashboardController < ApplicationController
     end
 
     begin
-      # Find all successful attempts for the given tiny_order_id
-      attempts = Attempt.where(tiny_order_id: tiny_order_id, status: :success)
-      
+      attempts = Attempt.where(tiny_order_id:, status: :success)
+
       if attempts.empty?
         redirect_to order_correios_tracking_dashboard_index_path, alert: "Nenhum attempt com status 'success' encontrado para o pedido #{tiny_order_id}."
         return
       end
 
-      # Update the id_nota_fiscal for all found attempts
-      updated_count = attempts.update_all(id_nota_fiscal: id_nota_fiscal)
-      
-      redirect_to order_correios_tracking_dashboard_index_path, 
+      updated_count = attempts.update_all(id_nota_fiscal:)
+
+      redirect_to order_correios_tracking_dashboard_index_path,
                   notice: "ID da nota fiscal atualizado com sucesso! #{updated_count} attempt(s) foram atualizados para o pedido #{tiny_order_id}."
-    rescue => e
+    rescue StandardError => e
       Rails.logger.error "Erro ao atualizar ID da nota fiscal: #{e.message}"
       redirect_to order_correios_tracking_dashboard_index_path, 
                   alert: "Erro ao atualizar ID da nota fiscal: #{e.message}"
+    end
+  end
+
+  def delete_order_from_queue
+    tiny_order_id = params[:tiny_order_id]
+
+    if tiny_order_id.blank?
+      redirect_to order_correios_tracking_dashboard_index_path,
+                  alert: 'Tiny Order ID is required.'
+      return
+    end
+
+    begin
+      attempts = Attempt.where(tiny_order_id: tiny_order_id)
+
+      if attempts.empty?
+        redirect_to order_correios_tracking_dashboard_index_path,
+                    alert: "No attempts found for Tiny Order ID #{tiny_order_id}."
+        return
+      end
+
+      deleted_count = attempts.delete_all
+
+      redirect_to order_correios_tracking_dashboard_index_path,
+                  notice: "Order #{tiny_order_id} successfully removed from queue. #{deleted_count} attempt(s) deleted."
+    rescue StandardError => e
+      Rails.logger.error "Error deleting order from queue: #{e.message}"
+      redirect_to order_correios_tracking_dashboard_index_path,
+                  alert: "Error deleting order from queue: #{e.message}"
     end
   end
 
