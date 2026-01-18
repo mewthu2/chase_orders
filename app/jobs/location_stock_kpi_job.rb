@@ -33,7 +33,7 @@ class LocationStockKpiJob < ApplicationJob
 
   def recalculate_kpi_for(location)
     result = StockCorrectionItem.joins(:stock_correction)
-                                .where(stock_corrections: { location_id: location.id })
+                                .where(stock_corrections: { location: location.slug })
                                 .pluck(
                                   Arel.sql('COUNT(*)'),
                                   Arel.sql('SUM(CASE WHEN needs_correction = true THEN 1 ELSE 0 END)')
