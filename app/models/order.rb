@@ -1,7 +1,12 @@
 class Order < ApplicationRecord
   enum kinds: [:lagoa_seca, :bh_shopping, :rj]
+  after_initialize do
+    self.iglu_payments ||= []
+  end
+
   # Callbacks
   # Associacoes
+  belongs_to :location, optional: true
   has_many :order_items
   # Validacoes
   def obtain_order_and_verify_contact(kind, shopify_order_id)

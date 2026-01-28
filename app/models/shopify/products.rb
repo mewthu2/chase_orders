@@ -112,9 +112,9 @@ module Shopify::Products
 
       session = ShopifyAPI::Auth::Session.new(
         shop: 'chasebrasil.myshopify.com',
-        access_token: access_token
+        access_token:
       )
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session: session)
+      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
 
       products.each do |product|
         inventory_item_id = "gid://shopify/InventoryItem/#{product.shopify_inventory_item_id}"

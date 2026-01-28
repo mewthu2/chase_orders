@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_13_194927) do
+ActiveRecord::Schema[7.2].define(version: 2026_01_26_125820) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -105,7 +105,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_13_194927) do
     t.datetime "kpi_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "shopify_location_id"
     t.index ["kpi_ratio"], name: "index_locations_on_kpi_ratio"
+    t.index ["shopify_location_id"], name: "index_locations_on_shopify_location_id", unique: true
     t.index ["slug"], name: "index_locations_on_slug", unique: true
   end
 
@@ -294,13 +296,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_13_194927) do
   end
 
   create_table "orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "location_id"
     t.bigint "kinds"
     t.integer "tiny_order_id"
     t.string "shopify_order_id"
     t.string "tags"
     t.string "tiny_creation_date"
+    t.string "staff_id"
+    t.string "staff_name"
+    t.datetime "shopify_creation_date"
+    t.json "iglu_payments"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["location_id"], name: "index_orders_on_location_id"
   end
 
   create_table "product_updates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -467,6 +475,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_13_194927) do
   add_foreign_key "order_pdv_items", "order_pdvs"
   add_foreign_key "order_pdv_items", "products"
   add_foreign_key "order_pdvs", "users"
+  add_foreign_key "orders", "locations"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
   add_foreign_key "stock_correction_items", "products"
