@@ -342,73 +342,64 @@ class ShopifyInventoryService
     location_id
   end
 
-  def update_inventory_quantity(product, quantity, location_id)
-    mutation = <<~GRAPHQL
-      mutation inventorySetOnHandQuantities($input: InventorySetOnHandQuantitiesInput!) {
-        inventorySetOnHandQuantities(input: $input) {
-          inventoryAdjustmentGroup {
-            id
-            createdAt
-            reason
-          }
-          userErrors {
-            field
-            message
+  def update_inventory_available(product, desired_available, location_id)
+    client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
+
+    query = <<~GRAPHQL
+      query($id: ID!) {
+        inventoryItem(id: $id) {
+          inventoryLevels(first: 10) {
+            edges {
+              node {
+                quantities(names: ["on_hand","available"])
+                location {
+                  id
+                }
+              }
+            }
           }
         }
       }
     GRAPHQL
 
-    input = {
-      reason: 'correction',
-      setQuantities: [
-        {
-          inventoryItemId: inventory_item_gid(product.shopify_inventory_item_id),
-          locationId: "gid://shopify/Location/#{location_id}",
-          quantity: quantity
-        }
-      ]
-    }
+    response = client.query(
+      query: query,
+      variables: {
+        id: inventory_item_gid(product.shopify_inventory_item_id)
+      }
+    )
 
-    Rails.logger.info "GraphQL mutation: #{mutation}"
-    Rails.logger.info "GraphQL input: #{input.to_json}"
-    Rails.logger.info '=== CRITICAL DEBUG INFO ==='
-    Rails.logger.info "Product SKU: #{product.sku}"
-    Rails.logger.info "Inventory Item ID: #{product.shopify_inventory_item_id}"
-    Rails.logger.info "Target Location ID: #{location_id}"
-    Rails.logger.info "Target Quantity: #{quantity}"
-    Rails.logger.info "Full Location GID: gid://shopify/Location/#{location_id}"
-    Rails.logger.info '=========================='
+    levels = response.body.dig('data','inventoryItem','inventoryLevels','edges')
 
-    client = ShopifyAPI::Clients::Graphql::Admin.new(session: @session)
-    response = client.query(query: mutation, variables: { input: input })
-
-    Rails.logger.info "GraphQL response: #{response.body.to_json}"
-
-    user_errors = response.body.dig('data', 'inventorySetOnHandQuantities', 'userErrors') || []
-
-    if response.body['errors'] || user_errors.any?
-      error_msg = response.body['errors'] || user_errors
-      Rails.logger.error "GraphQL error: #{error_msg}"
-      raise StandardError, "Erro GraphQL: #{error_msg}"
+    level = levels.find do |l|
+      l["node"]["location"]["id"] ==
+        "gid://shopify/Location/#{location_id}"
     end
 
-    adjustment_group = response.body.dig('data', 'inventorySetOnHandQuantities', 'inventoryAdjustmentGroup')
+    raise "Location não encontrada" unless level
 
-    if adjustment_group
-      Rails.logger.info "✅ Adjustment Group created: #{adjustment_group['id']}"
-      Rails.logger.info "Created At: #{adjustment_group['createdAt']}"
-      Rails.logger.info "Reason: #{adjustment_group['reason']}"
-    else
-      Rails.logger.warn '⚠️  NO ADJUSTMENT GROUP RETURNED!'
-      Rails.logger.warn 'This usually means:'
-      Rails.logger.warn '1. The quantity is already correct'
-      Rails.logger.warn '2. The location_id is wrong'
-      Rails.logger.warn '3. The inventory_item_id is wrong'
-      Rails.logger.warn '4. The product is not tracked at this location'
-      Rails.logger.warn 'Continuing anyway - will verify in post-update check'
-    end
+    quantities = level["node"]["quantities"]
+
+    on_hand   = quantities.find { |q| q["name"] == "on_hand" }["quantity"]
+    available = quantities.find { |q| q["name"] == "available" }["quantity"]
+
+    # 2️⃣ Calcular reserved
+    reserved = on_hand - available
+
+    # 3️⃣ Calcular novo onHand
+    new_on_hand = desired_available + reserved
+
+    Rails.logger.info "Inventory Calc"
+    Rails.logger.info "OnHand atual: #{on_hand}"
+    Rails.logger.info "Available atual: #{available}"
+    Rails.logger.info "Reserved: #{reserved}"
+    Rails.logger.info "Desired Available: #{desired_available}"
+    Rails.logger.info "New OnHand: #{new_on_hand}"
+
+    # 4️⃣ Atualizar estoque físico
+    update_inventory_quantity(product, new_on_hand, location_id)
   end
+
 
   def update_local_stock_record(product, location, quantity)
     case location

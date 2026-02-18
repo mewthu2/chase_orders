@@ -12,7 +12,7 @@ module Tiny::Invoices
 
   def obtain_invoice(invoice_id)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_NOTA_FISCAL'),
-                                       query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                                       query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
                                                 formato: 'json',
                                                 id: invoice_id }))
     response.with_indifferent_access[:retorno][:nota_fiscal]

@@ -1,0 +1,146 @@
+<% content_for :title, "Pedidos do Planejador" %>
+
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card bg-black border border-success shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-box me-2"></i>Pedidos do Planejador
+          </h5>
+          <%= link_to new_planner_order_path, class: "btn btn-success" do %>
+            <i class="fas fa-plus me-1"></i>Novo Pedido
+          <% end %>
+        </div>
+        
+        <div class="card-body">
+          <!-- Filtros -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <%= form_with url: planner_orders_path, method: :get, local: true, class: "d-flex gap-2" do %>
+                <input type="text" name="search" placeholder="Buscar por referência..." 
+                       value="<%= params[:search] %>"
+                       class="form-control bg-dark text-white border-secondary">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-search"></i>
+                </button>
+              <% end %>
+            </div>
+            <div class="col-md-3">
+              <%= form_with url: planner_orders_path, method: :get, local: true do %>
+                <select name="status" class="form-select bg-dark text-white border-secondary" onchange="this.form.submit()">
+                  <option value="">Todos os Status</option>
+                  <option value="draft" <%= 'selected' if params[:status] == 'draft' %>>Rascunho</option>
+                  <option value="saved" <%= 'selected' if params[:status] == 'saved' %>>Salvo</option>
+                  <option value="transmitted" <%= 'selected' if params[:status] == 'transmitted' %>>Transmitido</option>
+                  <option value="error" <%= 'selected' if params[:status] == 'error' %>>Erro</option>
+                </select>
+              <% end %>
+            </div>
+          </div>
+
+          <!-- Tabela de Pedidos -->
+          <div class="table-responsive">
+            <table class="table table-dark table-hover">
+              <thead>
+                <tr>
+                  <th>
+                    <%= link_to planner_orders_path(sort: 'reference', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-white text-decoration-none' do %>
+                      Referência <i class="fas fa-sort"></i>
+                    <% end %>
+                  </th>
+                  <th>Status</th>
+                  <th>Nota Tiny</th>
+                  <th>Total de Itens</th>
+                  <th>
+                    <%= link_to planner_orders_path(sort: 'created_at', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-white text-decoration-none' do %>
+                      Data <i class="fas fa-sort"></i>
+                    <% end %>
+                  </th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if @planner_orders.any? %>
+                  <% @planner_orders.each do |order| %>
+                    <tr>
+                      <td>
+                        <%= link_to order.reference, planner_order_path(order), class: 'text-info text-decoration-none' %>
+                      </td>
+                      <td>
+                        <% case order.status %>
+                        <% when 'draft' %>
+                          <span class="badge bg-secondary">Rascunho</span>
+                        <% when 'saved' %>
+                          <span class="badge bg-primary">Salvo</span>
+                        <% when 'transmitted' %>
+                          <span class="badge bg-success">Transmitido</span>
+                        <% when 'error' %>
+                          <span class="badge bg-danger">Erro</span>
+                        <% end %>
+                      </td>
+                      <td>
+                        <% if order.tiny_note_number.present? %>
+                          <span class="badge bg-info text-dark">
+                            <i class="fas fa-file-invoice me-1"></i>#<%= order.tiny_note_number %>
+                          </span>
+                        <% else %>
+                          <span class="text-secondary">-</span>
+                        <% end %>
+                      </td>
+                      <td><%= order.total_items %> itens</td>
+                      <td><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                      <td>
+                        <div class="d-flex gap-1">
+                          <%= link_to planner_order_path(order), class: 'btn btn-sm btn-outline-info', title: 'Ver detalhes' do %>
+                            <i class="fas fa-eye"></i>
+                          <% end %>
+                          
+                          <% if order.saved? %>
+                            <%= button_to transmit_planner_order_path(order), 
+                              method: :post,
+                              data: { confirm: 'Tem certeza que deseja transmitir este pedido para o Tiny?' },
+                              class: 'btn btn-sm btn-success',
+                              title: 'Transmitir para Tiny' do %>
+                              <i class="fas fa-paper-plane"></i>
+                            <% end %>
+                          <% end %>
+                          
+                          <% if order.error? || (order.transmitted? && order.tiny_note_number.blank?) %>
+                            <%= button_to transmit_planner_order_path(order), 
+                              method: :post,
+                              data: { confirm: 'Deseja tentar retransmitir este pedido?' },
+                              class: 'btn btn-sm btn-warning',
+                              title: 'Retransmitir' do %>
+                              <i class="fas fa-redo"></i>
+                            <% end %>
+                          <% end %>
+                          
+                          <%= link_to export_csv_planner_order_path(order), 
+                            class: 'btn btn-sm btn-outline-secondary',
+                            title: 'Exportar CSV Correios' do %>
+                            <i class="fas fa-file-csv"></i>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
+                <% else %>
+                  <tr>
+                    <td colspan="6" class="text-center text-light">
+                      <div class="py-4">
+                        <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
+                        <p>Nenhum pedido encontrado</p>
+                        <%= link_to 'Criar Primeiro Pedido', new_planner_order_path, class: 'btn btn-success' %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

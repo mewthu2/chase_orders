@@ -1,0 +1,302 @@
+<% content_for :title, "Pedido #{@planner_order.reference}" %>
+
+<div class="container-fluid py-4">
+  <div class="row mb-3">
+    <div class="col-12">
+      <%= link_to planner_orders_path, class: 'btn btn-outline-light btn-sm' do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Coluna Principal -->
+    <div class="col-lg-8">
+      <!-- Card Header com Informações -->
+      <div class="card bg-black border border-success shadow mb-4">
+        <div class="card-header bg-dark">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="text-white mb-2">
+                <i class="fas fa-file-invoice me-2"></i><%= @planner_order.reference %>
+              </h5>
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <% case @planner_order.status %>
+                <% when 'draft' %>
+                  <span class="badge bg-secondary"><i class="fas fa-pencil-alt me-1"></i>Rascunho</span>
+                <% when 'saved' %>
+                  <span class="badge bg-primary"><i class="fas fa-save me-1"></i>Salvo</span>
+                <% when 'transmitted' %>
+                  <span class="badge bg-success"><i class="fas fa-check me-1"></i>Transmitido</span>
+                <% when 'error' %>
+                  <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Erro</span>
+                <% end %>
+                
+                <% if @planner_order.tiny_note_number.present? %>
+                  <span class="badge bg-info text-dark">
+                    <i class="fas fa-file-invoice me-1"></i>Nota #<%= @planner_order.tiny_note_number %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded p-3 me-3">
+                  <i class="fas fa-calendar-alt fa-2x text-primary"></i>
+                </div>
+                <div>
+                  <small class="text-light d-block">Data de Criação</small>
+                  <strong class="text-white"><%= @planner_order.created_at.strftime('%d/%m/%Y às %H:%M') %></strong>
+                </div>
+              </div>
+            </div>
+            
+            <% if @planner_order.transmitted_at.present? %>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <div class="bg-success bg-opacity-10 rounded p-3 me-3">
+                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                  </div>
+                  <div>
+                    <small class="text-light d-block">Data de Transmissão</small>
+                    <strong class="text-white"><%= @planner_order.transmitted_at.strftime('%d/%m/%Y às %H:%M') %></strong>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+            
+            <% if @planner_order.csv_filename.present? %>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <div class="bg-success bg-opacity-10 rounded p-3 me-3">
+                    <i class="fas fa-file-csv fa-2x text-success"></i>
+                  </div>
+                  <div>
+                    <small class="text-light d-block">Arquivo CSV</small>
+                    <strong class="text-white text-break"><%= @planner_order.csv_filename %></strong>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+            
+            <% if @planner_order.order_number.present? %>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded p-3 me-3">
+                    <i class="fas fa-hashtag fa-2x text-info"></i>
+                  </div>
+                  <div>
+                    <small class="text-light d-block">Número do Pedido</small>
+                    <strong class="text-white"><%= @planner_order.order_number %></strong>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+            
+            <% if @planner_order.user.present? %>
+              <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                  <div class="bg-warning bg-opacity-10 rounded p-3 me-3">
+                    <i class="fas fa-user fa-2x text-warning"></i>
+                  </div>
+                  <div>
+                    <small class="text-light d-block">Criado por</small>
+                    <strong class="text-white"><%= @planner_order.user.name || @planner_order.user.email %></strong>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Alertas -->
+      <% if flash[:notice] %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="fas fa-check-circle me-2"></i>
+          <%= flash[:notice] %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% end %>
+
+      <% if flash[:alert] %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <%= flash[:alert] %>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <% end %>
+
+      <% if @planner_order.error_message.present? %>
+        <div class="alert alert-danger border-start border-5 border-danger mb-4" role="alert">
+          <div class="d-flex align-items-start">
+            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+            <div>
+              <h6 class="alert-heading mb-1">Erro ao Transmitir</h6>
+              <p class="mb-0"><%= @planner_order.error_message %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Card de Produtos -->
+      <div class="card bg-black border border-secondary shadow">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="text-white mb-0">
+            <i class="fas fa-list me-2"></i>Produtos do Pedido
+          </h5>
+          <span class="badge bg-primary"><%= @planner_order_items.count %> produtos</span>
+        </div>
+        
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover table-striped mb-0">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Nome do Produto</th>
+                  <th style="width: 150px;">SKU</th>
+                  <th class="text-end" style="width: 100px;">Quantidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @planner_order_items.each_with_index do |item, index| %>
+                  <tr>
+                    <td class="text-secondary align-middle"><%= index + 1 %></td>
+                    <td class="align-middle"><%= item.name %></td>
+                    <td class="align-middle">
+                      <span class="badge bg-info text-dark"><%= item.sku %></span>
+                    </td>
+                    <td class="text-end align-middle">
+                      <span class="badge bg-success fs-6"><%= item.quantity %></span>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="3" class="text-end fw-bold">Total de Itens:</td>
+                  <td class="text-end">
+                    <span class="badge bg-success fs-5"><%= @total_items %></span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sidebar de Ações -->
+    <div class="col-lg-4">
+      <!-- Card de Resumo -->
+      <div class="card bg-black border border-primary shadow mb-4">
+        <div class="card-header bg-dark">
+          <h6 class="text-white mb-0">
+            <i class="fas fa-chart-bar me-2"></i>Resumo do Pedido
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-secondary">
+            <div>
+              <small class="text-light d-block mb-1">Total de Itens</small>
+              <h3 class="text-primary mb-0"><%= @total_items %></h3>
+            </div>
+            <i class="fas fa-boxes fa-3x text-primary opacity-25"></i>
+          </div>
+          
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <small class="text-light d-block mb-1">Produtos Diferentes</small>
+              <h3 class="text-info mb-0"><%= @planner_order_items.count %></h3>
+            </div>
+            <i class="fas fa-shopping-basket fa-3x text-info opacity-25"></i>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card de Marcadores -->
+      <div class="card bg-black border border-warning shadow mb-4">
+        <div class="card-header bg-dark">
+          <h6 class="text-white mb-0">
+            <i class="fas fa-tags me-2"></i>Marcadores Personalizados
+          </h6>
+        </div>
+        <div class="card-body">
+          <%= form_with model: @planner_order, url: planner_order_path(@planner_order), method: :patch, local: true do |f| %>
+            <div class="mb-3">
+              <%= f.text_area :tags, 
+                class: 'form-control bg-dark text-white border-secondary', 
+                rows: 3,
+                placeholder: 'Ex: pedido 455, depósito padrão...' %>
+              <small class="text-light mt-1 d-block">
+                <i class="fas fa-info-circle me-1"></i>
+                Estes marcadores aparecerão nas observações da nota fiscal
+              </small>
+            </div>
+            <%= f.submit 'Salvar Marcadores', class: 'btn btn-warning w-100' %>
+          <% end %>
+          
+          <% if @planner_order.tags.present? %>
+            <div class="alert alert-info mt-3 mb-0" role="alert">
+              <small class="fw-bold d-block mb-1">Marcadores atuais:</small>
+              <small><%= @planner_order.tags %></small>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Card de Ações -->
+      <div class="card bg-black border border-success shadow">
+        <div class="card-header bg-dark">
+          <h6 class="text-white mb-0">
+            <i class="fas fa-cog me-2"></i>Ações do Pedido
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <%= link_to export_csv_planner_order_path(@planner_order), class: 'btn btn-outline-secondary' do %>
+              <i class="fas fa-file-csv me-2"></i>Exportar CSV Correios
+            <% end %>
+            
+            <% if @planner_order.saved? %>
+              <%= button_to transmit_planner_order_path(@planner_order), 
+                method: :post,
+                data: { confirm: 'Tem certeza que deseja transmitir este pedido para o Tiny?' },
+                class: 'btn btn-success' do %>
+                <i class="fas fa-paper-plane me-2"></i>Transmitir para Tiny
+              <% end %>
+            <% end %>
+            
+            <% if @planner_order.error? || (@planner_order.transmitted? && @planner_order.tiny_note_number.blank?) %>
+              <%= button_to transmit_planner_order_path(@planner_order), 
+                method: :post,
+                data: { confirm: 'Deseja tentar retransmitir este pedido para o Tiny?' },
+                class: 'btn btn-warning' do %>
+                <i class="fas fa-redo me-2"></i>Retransmitir para Tiny
+              <% end %>
+            <% end %>
+          </div>
+          
+          <% if @planner_order.transmitted? && @planner_order.tiny_note_number.present? %>
+            <div class="alert alert-success mt-3 mb-0" role="alert">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle fa-2x me-3"></i>
+                <div>
+                  <small class="fw-bold d-block">Pedido Transmitido</small>
+                  <small>Nota #<%= @planner_order.tiny_note_number %></small>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_01_26_125820) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_17_141553) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -311,6 +311,35 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_26_125820) do
     t.index ["location_id"], name: "index_orders_on_location_id"
   end
 
+  create_table "planner_order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "planner_order_id", null: false
+    t.string "name", null: false
+    t.string "sku", null: false
+    t.integer "quantity", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["planner_order_id"], name: "index_planner_order_items_on_planner_order_id"
+    t.index ["sku"], name: "index_planner_order_items_on_sku"
+  end
+
+  create_table "planner_orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id"
+    t.string "reference", null: false
+    t.integer "status", default: 0, null: false
+    t.text "error_message"
+    t.datetime "transmitted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "tiny_note_number"
+    t.text "tiny_response"
+    t.string "csv_filename"
+    t.string "order_number"
+    t.text "tags"
+    t.index ["reference"], name: "index_planner_orders_on_reference", unique: true
+    t.index ["status"], name: "index_planner_orders_on_status"
+    t.index ["user_id"], name: "index_planner_orders_on_user_id"
+  end
+
   create_table "product_updates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "product_id", null: false
     t.bigint "user_id", null: false
@@ -476,6 +505,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_01_26_125820) do
   add_foreign_key "order_pdv_items", "products"
   add_foreign_key "order_pdvs", "users"
   add_foreign_key "orders", "locations"
+  add_foreign_key "planner_order_items", "planner_orders"
+  add_foreign_key "planner_orders", "users"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
   add_foreign_key "stock_correction_items", "products"

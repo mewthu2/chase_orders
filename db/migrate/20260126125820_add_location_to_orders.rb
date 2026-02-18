@@ -1,4 +1,3 @@
-# db/migrate/xxxx_add_location_id_to_orders.rb
 class AddLocationToOrders < ActiveRecord::Migration[7.2]
   def up
     unless column_exists?(:orders, :location_id)

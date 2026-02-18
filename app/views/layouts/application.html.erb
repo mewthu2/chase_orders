@@ -30,8 +30,8 @@
     <%= yield :styles %>
   </head>
 
-  <body>
-    <div class="wrapper" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>)">
+  <body style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>); background-repeat: repeat;">
+    <div style="min-height: 200vh;" class="d-flex flex-column">
       <% if current_user.present? %>
         <%= render 'layouts/partials/sidebar' %>
         <button class="mobile-sidebar-toggle d-lg-none" id="mobileToggle">

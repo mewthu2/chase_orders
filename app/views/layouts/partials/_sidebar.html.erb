@@ -83,6 +83,31 @@
           </div>
         <% end %>
         
+        <!-- Planner Orders - Only for Admin -->
+        <% if current_user&.admin? %>
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="togglePlannerOrders()">
+              <div class="nav-group-title">
+                <i class="fas fa-clipboard-list"></i>
+                <span class="nav-text">Planejador</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="plannerOrdersIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="plannerOrdersDropdown">
+              <div class="dropdown-content">
+                <%= link_to planner_orders_path, class: "dropdown-link #{'active' if controller_name == 'planner_orders' && action_name == 'index'}" do %>
+                  <i class="fas fa-list"></i>
+                  <span>Pedidos do Planejador</span>
+                <% end %>
+                <%= link_to new_planner_order_path, class: "dropdown-link #{'active' if controller_name == 'planner_orders' && action_name == 'new'}" do %>
+                  <i class="fas fa-plus-circle"></i>
+                  <span>Novo Pedido</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        
         <!-- Produtos section now hidden for Admin Marketing (5) and Agent Marketing (6) profiles -->
         <% unless current_user&.marketing_user? %>
           <div class="nav-item nav-group-collapsible">
@@ -540,6 +565,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const correiosHeader = document.querySelector('[onclick="toggleCorreios()"]')
     const usuariosDropdown = document.getElementById("usuariosDropdown")
     const usuariosHeader = document.querySelector('[onclick="toggleUsuarios()"]')
+    const plannerOrdersDropdown = document.getElementById("plannerOrdersDropdown")
+    const plannerOrdersHeader = document.querySelector('[onclick="togglePlannerOrders()"]')
     const produtosDropdown = document.getElementById("produtosDropdown")
     const produtosHeader = document.querySelector('[onclick="toggleProdutos()"]')
     const marketingDropdown = document.getElementById("marketingDropdown")
@@ -555,6 +582,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (usuariosDropdown && usuariosHeader && !usuariosHeader.contains(e.target) && !usuariosDropdown.contains(e.target)) {
       usuariosDropdown.classList.remove("show")
       document.getElementById("usuariosIcon").classList.remove("rotated")
+    }
+
+    // Close PlannerOrders dropdown
+    if (plannerOrdersDropdown && plannerOrdersHeader && !plannerOrdersHeader.contains(e.target) && !plannerOrdersDropdown.contains(e.target)) {
+      plannerOrdersDropdown.classList.remove("show")
+      document.getElementById("plannerOrdersIcon").classList.remove("rotated")
     }
 
     // Close Produtos dropdown
@@ -577,6 +610,8 @@ function toggleCorreios() {
   const icon = document.getElementById("correiosIcon")
   const usuariosDropdown = document.getElementById("usuariosDropdown")
   const usuariosIcon = document.getElementById("usuariosIcon")
+  const plannerOrdersDropdown = document.getElementById("plannerOrdersDropdown")
+  const plannerOrdersIcon = document.getElementById("plannerOrdersIcon")
   const produtosDropdown = document.getElementById("produtosDropdown")
   const produtosIcon = document.getElementById("produtosIcon")
   const marketingDropdown = document.getElementById("marketingDropdown")
@@ -584,6 +619,52 @@ function toggleCorreios() {
   const button = document.querySelector('[onclick="toggleCorreios()"]')
 
   // Close other dropdowns if open
+  if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
+    usuariosDropdown.classList.remove("show")
+    usuariosIcon.classList.remove("rotated")
+  }
+  if (plannerOrdersDropdown && plannerOrdersDropdown.classList.contains("show")) {
+    plannerOrdersDropdown.classList.remove("show")
+    plannerOrdersIcon.classList.remove("rotated")
+  }
+  if (produtosDropdown && produtosDropdown.classList.contains("show")) {
+    produtosDropdown.classList.remove("show")
+    produtosIcon.classList.remove("rotated")
+  }
+  if (marketingDropdown && marketingDropdown.classList.contains("show")) {
+    marketingDropdown.classList.remove("show")
+    marketingIcon.classList.remove("rotated")
+  }
+
+  // Position dropdown relative to button
+  if (button && dropdown) {
+    const rect = button.getBoundingClientRect()
+    dropdown.style.left = rect.left + 'px'
+  }
+
+  dropdown.classList.toggle("show")
+  icon.classList.toggle("rotated")
+}
+
+// Toggle PlannerOrders dropdown
+function togglePlannerOrders() {
+  const dropdown = document.getElementById("plannerOrdersDropdown")
+  const icon = document.getElementById("plannerOrdersIcon")
+  const correiosDropdown = document.getElementById("correiosDropdown")
+  const correiosIcon = document.getElementById("correiosIcon")
+  const usuariosDropdown = document.getElementById("usuariosDropdown")
+  const usuariosIcon = document.getElementById("usuariosIcon")
+  const produtosDropdown = document.getElementById("produtosDropdown")
+  const produtosIcon = document.getElementById("produtosIcon")
+  const marketingDropdown = document.getElementById("marketingDropdown")
+  const marketingIcon = document.getElementById("marketingIcon")
+  const button = document.querySelector('[onclick="togglePlannerOrders()"]')
+
+  // Close other dropdowns if open
+  if (correiosDropdown && correiosDropdown.classList.contains("show")) {
+    correiosDropdown.classList.remove("show")
+    correiosIcon.classList.remove("rotated")
+  }
   if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
     usuariosDropdown.classList.remove("show")
     usuariosIcon.classList.remove("rotated")
@@ -613,6 +694,8 @@ function toggleUsuarios() {
   const icon = document.getElementById("usuariosIcon")
   const correiosDropdown = document.getElementById("correiosDropdown")
   const correiosIcon = document.getElementById("correiosIcon")
+  const plannerOrdersDropdown = document.getElementById("plannerOrdersDropdown")
+  const plannerOrdersIcon = document.getElementById("plannerOrdersIcon")
   const produtosDropdown = document.getElementById("produtosDropdown")
   const produtosIcon = document.getElementById("produtosIcon")
   const marketingDropdown = document.getElementById("marketingDropdown")
@@ -623,6 +706,10 @@ function toggleUsuarios() {
   if (correiosDropdown && correiosDropdown.classList.contains("show")) {
     correiosDropdown.classList.remove("show")
     correiosIcon.classList.remove("rotated")
+  }
+  if (plannerOrdersDropdown && plannerOrdersDropdown.classList.contains("show")) {
+    plannerOrdersDropdown.classList.remove("show")
+    plannerOrdersIcon.classList.remove("rotated")
   }
   if (produtosDropdown && produtosDropdown.classList.contains("show")) {
     produtosDropdown.classList.remove("show")
@@ -651,6 +738,8 @@ function toggleProdutos() {
   const correiosIcon = document.getElementById("correiosIcon")
   const usuariosDropdown = document.getElementById("usuariosDropdown")
   const usuariosIcon = document.getElementById("usuariosIcon")
+  const plannerOrdersDropdown = document.getElementById("plannerOrdersDropdown")
+  const plannerOrdersIcon = document.getElementById("plannerOrdersIcon")
   const marketingDropdown = document.getElementById("marketingDropdown")
   const marketingIcon = document.getElementById("marketingIcon")
   const button = document.querySelector('[onclick="toggleProdutos()"]')
@@ -663,6 +752,10 @@ function toggleProdutos() {
   if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
     usuariosDropdown.classList.remove("show")
     usuariosIcon.classList.remove("rotated")
+  }
+  if (plannerOrdersDropdown && plannerOrdersDropdown.classList.contains("show")) {
+    plannerOrdersDropdown.classList.remove("show")
+    plannerOrdersIcon.classList.remove("rotated")
   }
   if (marketingDropdown && marketingDropdown.classList.contains("show")) {
     marketingDropdown.classList.remove("show")
@@ -687,6 +780,8 @@ function toggleMarketing() {
   const correiosIcon = document.getElementById("correiosIcon")
   const usuariosDropdown = document.getElementById("usuariosDropdown")
   const usuariosIcon = document.getElementById("usuariosIcon")
+  const plannerOrdersDropdown = document.getElementById("plannerOrdersDropdown")
+  const plannerOrdersIcon = document.getElementById("plannerOrdersIcon")
   const produtosDropdown = document.getElementById("produtosDropdown")
   const produtosIcon = document.getElementById("produtosIcon")
   const button = document.querySelector('[onclick="toggleMarketing()"]')
@@ -699,6 +794,10 @@ function toggleMarketing() {
   if (usuariosDropdown && usuariosDropdown.classList.contains("show")) {
     usuariosDropdown.classList.remove("show")
     usuariosIcon.classList.remove("rotated")
+  }
+  if (plannerOrdersDropdown && plannerOrdersDropdown.classList.contains("show")) {
+    plannerOrdersDropdown.classList.remove("show")
+    plannerOrdersIcon.classList.remove("rotated")
   }
   if (produtosDropdown && produtosDropdown.classList.contains("show")) {
     produtosDropdown.classList.remove("show")

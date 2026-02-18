@@ -37,6 +37,13 @@ Rails.application.routes.draw do
       post :run_product_update
     end
   end
+
+  resources :planner_orders do
+    member do
+      post :transmit
+      get :export_csv
+    end
+  end
   
   resources :stock_corrections do
     member do
