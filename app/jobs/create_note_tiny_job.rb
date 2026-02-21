@@ -136,10 +136,6 @@ class CreateNoteTinyJob < ActiveJob::Base
     0.0
   end
 
-  ############################################
-  # FALLBACK
-  ############################################
-
   def build_basic_item_data(item)
     product = Product.find_by(sku: item.sku)
 
@@ -155,10 +151,6 @@ class CreateNoteTinyJob < ActiveJob::Base
       cfop: '5152'
     }
   end
-
-  ############################################
-  # MONTA NOTA
-  ############################################
 
   def mount_note(planner_order, items_data)
     total_valor_produtos =
@@ -225,10 +217,6 @@ class CreateNoteTinyJob < ActiveJob::Base
     }
   end
 
-  ############################################
-  # ENVIA NOTA
-  ############################################
-
   def send_to_tiny2(nota)
     url = ENV.fetch(
       'INCLUIR_NOTA',
@@ -245,10 +233,6 @@ class CreateNoteTinyJob < ActiveJob::Base
     )
   end
 
-  ############################################
-  # PROCESSA RESPOSTA
-  ############################################
-
   def process_response(planner_order, response)
     retorno = JSON.parse(response.body)
 
@@ -262,8 +246,7 @@ class CreateNoteTinyJob < ActiveJob::Base
 
     erro = registro&.dig('erro')
 
-    if (status_processamento == '3' && status == 'OK') ||
-       erro&.include?('duplicidade')
+    if (status_processamento == '3' && status == 'OK') || erro&.include?('duplicidade')
 
       planner_order.update!(
         status: :transmitted,
@@ -282,5 +265,4 @@ class CreateNoteTinyJob < ActiveJob::Base
       raise erro
     end
   end
-
 end

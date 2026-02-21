@@ -41,7 +41,7 @@ Rails.application.routes.draw do
   resources :planner_orders do
     member do
       post :transmit
-      get :export_csv
+      get :export_xlsx
     end
   end
   
