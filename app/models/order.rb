@@ -1,40 +1,48 @@
 class Order < ApplicationRecord
-  enum kinds: [:lagoa_seca, :bh_shopping, :rj]
+  enum kinds: [:lagoa_seca,
+               :bh_shopping,
+               :rj,
+               :eldorado_sp,
+               :fortaleza_rio_mar,
+               :porto_alegre_bourbon,
+               :shopping_analia_franco,
+               :iguatemi_campinas,
+               :":log+"]
+
   after_initialize do
     self.iglu_payments ||= []
   end
 
-  # Callbacks
-  # Associacoes
   belongs_to :location, optional: true
+  belongs_to :customer, optional: true
   has_many :order_items
-  # Validacoes
+
   def obtain_order_and_verify_contact(kind, shopify_order_id)
     order = Order.find_by(shopify_order_id:)
-
     return unless order
+
     tiny_order_id = order.tiny_order_id
 
-    case kind
-    when 'bh_shopping'
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
-    when 'lagoa_seca'
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION')
-    when 'rj'
-      token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
-    else
-      raise ArgumentError, "Tipo de cliente desconhecido: #{kind}"
-    end
+    token = case kind
+            when 'bh_shopping'
+              ENV.fetch('TOKEN_TINY_PRODUCTION_BH_SHOPPING')
+            when 'lagoa_seca'
+              ENV.fetch('TOKEN_TINY_PRODUCTION')
+            when 'rj'
+              ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+            else
+              raise ArgumentError, "Tipo de cliente desconhecido: #{kind}"
+            end
 
     response = Tiny::Orders.obtain_order(token, tiny_order_id)
     cliente = response.dig('pedido', 'cliente')
 
     if cliente.nil?
       puts "Cliente não encontrado na resposta do pedido #{tiny_order_id}"
-      nil
+      return nil
     end
 
-    fone = cliente['fone'].to_s.strip
+    fone  = cliente['fone'].to_s.strip
     email = cliente['email'].to_s.strip
 
     if fone.empty? && email.empty?
@@ -45,13 +53,4 @@ class Order < ApplicationRecord
       true
     end
   end
-
-  # Escopos
-  # Metodos estaticos
-  # Metodos publicos
-  # Metodos GET
-  # Metodos SET
-
-  # Nota: os metodos somente utilizados em callbacks ou utilizados somente por essa
-  #       propria classe deverao ser privados (remover essa anotacao)
 end

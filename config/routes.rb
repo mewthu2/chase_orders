@@ -44,6 +44,8 @@ Rails.application.routes.draw do
       get :export_xlsx
     end
   end
+
+  resources :customers, only: [:index, :show]
   
   resources :stock_corrections do
     member do
@@ -67,7 +69,11 @@ Rails.application.routes.draw do
   resources :available_locations
 
   resources :motors, only: [:index]
-  resources :orders
+  resources :orders, only: [:index] do
+    collection do
+      get :export
+    end
+  end
   resources :attempts, only: [:index] do
     collection do
       get :reprocess

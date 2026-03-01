@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_17_141553) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_01_001751) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -55,6 +55,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_17_141553) do
     t.index ["marketing_campaign_id", "user_id"], name: "index_campaign_users_on_campaign_and_user", unique: true
     t.index ["marketing_campaign_id"], name: "index_campaign_users_on_marketing_campaign_id"
     t.index ["user_id"], name: "index_campaign_users_on_user_id"
+  end
+
+  create_table "customers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "shopify_customer_id"
+    t.string "name"
+    t.string "email"
+    t.string "phone"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.string "currency"
+    t.string "tags"
+    t.integer "orders_count"
+    t.decimal "total_spent", precision: 15, scale: 2
+    t.boolean "verified_email"
+    t.boolean "tax_exempt"
+    t.datetime "shopify_created_at"
+    t.datetime "shopify_updated_at"
+    t.string "default_address_name"
+    t.string "default_address_company"
+    t.string "default_address_phone"
+    t.string "default_address_address1"
+    t.string "default_address_address2"
+    t.string "default_address_city"
+    t.string "default_address_province"
+    t.string "default_address_country"
+    t.string "default_address_zip"
+    t.string "default_address_country_code"
+    t.string "default_address_province_code"
+    t.json "addresses"
+    t.index ["shopify_customer_id"], name: "index_customers_on_shopify_customer_id", unique: true
   end
 
   create_table "discounts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -308,6 +340,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_17_141553) do
     t.json "iglu_payments"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "customer_id"
+    t.index ["customer_id"], name: "index_orders_on_customer_id"
     t.index ["location_id"], name: "index_orders_on_location_id"
   end
 
@@ -504,6 +538,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_17_141553) do
   add_foreign_key "order_pdv_items", "order_pdvs"
   add_foreign_key "order_pdv_items", "products"
   add_foreign_key "order_pdvs", "users"
+  add_foreign_key "orders", "customers"
   add_foreign_key "orders", "locations"
   add_foreign_key "planner_order_items", "planner_orders"
   add_foreign_key "planner_orders", "users"

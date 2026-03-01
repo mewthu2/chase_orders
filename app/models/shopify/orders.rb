@@ -588,45 +588,43 @@ class Shopify::Orders
     end
 
     def sync_shopify_orders_to_rails(limit: 100, status: 'any')
-  session = ShopifyAPI::Auth::Session.new(
-    shop: 'chasebrasil.myshopify.com',
-    access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
-  )
+      session = ShopifyAPI::Auth::Session.new(
+        shop: 'chasebrasil.myshopify.com',
+        access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+      )
 
-  client = ShopifyAPI::Clients::Rest::Admin.new(session:)
+      client = ShopifyAPI::Clients::Rest::Admin.new(session:)
 
-  total = 0
+      total = 0
 
-  response = client.get(
-    path: 'orders',
-    query: {
-      limit: limit,
-      status: status,
-      fields: 'id,created_at,line_items,note_attributes'
-    }
-  )
+      response = client.get(
+        path: 'orders',
+        query: {
+          limit: limit,
+          status: status,
+          fields: 'id,created_at,line_items,note_attributes'
+        }
+      )
 
-  loop do
-    response.body['orders'].each do |shopify_order|
-      create_or_update_order_from_shopify(shopify_order)
-      total += 1
+      loop do
+        response.body['orders'].each do |shopify_order|
+          create_or_update_order_from_shopify(shopify_order)
+          total += 1
+        end
+
+        break unless response.next_page_info
+
+        # 🚨 IMPORTANTE: aqui só vai page_info
+        response = client.get(
+          path: 'orders',
+          query: {
+            page_info: response.next_page_info
+          }
+        )
+      end
+
+      Rails.logger.info "[OrdersUpdateJob] Sincronizados #{total} pedidos"
     end
-
-    break unless response.next_page_info
-
-    # 🚨 IMPORTANTE: aqui só vai page_info
-    response = client.get(
-      path: 'orders',
-      query: {
-        page_info: response.next_page_info
-      }
-    )
-  end
-
-  Rails.logger.info "[OrdersUpdateJob] Sincronizados #{total} pedidos"
-end
-
-
 
     # Busca um pedido específico da Shopify por ID
     def fetch_shopify_order_by_id(shopify_order_id)
@@ -648,101 +646,106 @@ end
 
     # Cria ou atualiza um pedido no Rails a partir de dados da Shopify
     def create_or_update_order_from_shopify(shopify_order)
-  shopify_order_id = shopify_order['id'].to_s
-  shopify_created_at = Time.parse(shopify_order['created_at'])
+      shopify_order_id   = shopify_order['id'].to_s
+      shopify_created_at = Time.parse(shopify_order['created_at'])
 
-  # -----------------------------
-  # NOTE ATTRIBUTES
-  # -----------------------------
-  note_attributes = extract_note_attributes_from_hash(
-    shopify_order['note_attributes']
-  )
-
-  staff_id   = note_attributes['staff_ID']
-  staff_name = note_attributes['staff_name']
-
-  iglu_payments = parse_iglu_payments(
-    note_attributes['iglu_payments']
-  )
-
-  location_shopify_id = note_attributes['location_ID']
-
-  location =
-    if location_shopify_id.present?
-      Location.find_by(shopify_location_id: location_shopify_id)
-    else
-      Location.find_by(slug: 'log+')
-    end
-
-  # -----------------------------
-  # FIND OR INIT ORDER
-  # -----------------------------
-  order = Order.find_or_initialize_by(
-    shopify_order_id: shopify_order_id
-  )
-
-  # -----------------------------
-  # ORDER ATTRIBUTES
-  # (SEMPRE ATUALIZA)
-  # -----------------------------
-  order.assign_attributes(
-    staff_id: staff_id.presence || order.staff_id,
-    staff_name: staff_name.presence || order.staff_name,
-    location_id: location&.id,
-    shopify_creation_date: shopify_created_at,
-    iglu_payments: iglu_payments
-  )
-
-  if order.new_record?
-    order.created_at = shopify_created_at
-  end
-  order.updated_at = Time.current
-
-  order.save! if order.changed?
-
-  # -----------------------------
-  # ORDER ITEMS
-  # (NUNCA DELETA)
-  # -----------------------------
-  existing_items = order.order_items.index_by(&:sku)
-
-  Array(shopify_order['line_items']).each do |line_item|
-    sku = line_item['sku']
-    next if sku.blank?
-
-    price    = line_item['price'].to_f
-    quantity = line_item['quantity'].to_i
-
-    item = existing_items[sku]
-
-    if item
-      # atualiza SOMENTE se mudou
-      if item.price != price || item.quantity != quantity
-        item.update!(
-          price: price,
-          quantity: quantity
-        )
-      end
-    else
-      # cria apenas se não existir
-      product = Product.find_by(sku: sku)
-
-      order.order_items.create!(
-        product_id: product&.id,
-        sku: sku,
-        price: price,
-        quantity: quantity,
-        canceled: false
+      # -----------------------------
+      # NOTE ATTRIBUTES
+      # -----------------------------
+      note_attributes = extract_note_attributes_from_hash(
+        shopify_order['note_attributes']
       )
-    end
-  end
 
-  order
-rescue StandardError => e
-  Rails.logger.error "[Shopify::Orders] Erro ao processar pedido #{shopify_order_id}: #{e.message}"
-  Rails.logger.error e.backtrace.join("\n")
-  nil
-end
+      staff_id   = note_attributes['staff_ID']
+      staff_name = note_attributes['staff_name']
+
+      iglu_payments = parse_iglu_payments(
+        note_attributes['iglu_payments']
+      )
+
+      location_shopify_id = note_attributes['location_ID']
+
+      location =
+        if location_shopify_id.present?
+          Location.find_by(shopify_location_id: location_shopify_id)
+        else
+          Location.find_by(slug: 'log+')
+        end
+
+      # -----------------------------
+      # CUSTOMER
+      # -----------------------------
+      customer = find_or_create_customer_from_shopify(shopify_order)
+
+      # -----------------------------
+      # FIND OR INIT ORDER
+      # -----------------------------
+      order = Order.find_or_initialize_by(
+        shopify_order_id: shopify_order_id
+      )
+
+      # -----------------------------
+      # ORDER ATTRIBUTES
+      # (SEMPRE ATUALIZA)
+      # -----------------------------
+      order.assign_attributes(
+        staff_id: staff_id.presence || order.staff_id,
+        staff_name: staff_name.presence || order.staff_name,
+        location_id: location&.id,
+        shopify_creation_date: shopify_created_at,
+        iglu_payments: iglu_payments,
+        customer_id: customer&.id
+      )
+
+      if order.new_record?
+        order.created_at = shopify_created_at
+      end
+
+      order.updated_at = Time.current
+      order.save! if order.changed?
+
+      # -----------------------------
+      # ORDER ITEMS
+      # (NUNCA DELETA)
+      # -----------------------------
+      existing_items = order.order_items.index_by(&:sku)
+
+      Array(shopify_order['line_items']).each do |line_item|
+        sku = line_item['sku']
+        next if sku.blank?
+
+        price    = line_item['price'].to_f
+        quantity = line_item['quantity'].to_i
+
+        item = existing_items[sku]
+
+        if item
+          # Atualiza somente se mudou
+          if item.price != price || item.quantity != quantity
+            item.update!(
+              price: price,
+              quantity: quantity
+            )
+          end
+        else
+          product = Product.find_by(sku: sku)
+
+          order.order_items.create!(
+            product_id: product&.id,
+            sku: sku,
+            price: price,
+            quantity: quantity,
+            canceled: false
+          )
+        end
+      end
+
+      order
+    rescue StandardError => e
+      Rails.logger.error "[Shopify::Orders] Erro ao processar pedido #{shopify_order_id}: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      nil
+    end
 
 
     def extract_note_attributes_from_hash(note_attributes_array)

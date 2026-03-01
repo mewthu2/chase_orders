@@ -1,0 +1,1062 @@
+<%
+  badge_colors = [
+    { bg: "#0D6EFD", fg: "#fff" },
+    { bg: "#198754", fg: "#fff" },
+    { bg: "#DC3545", fg: "#fff" },
+    { bg: "#FFC107", fg: "#000" },
+    { bg: "#0DCAF0", fg: "#000" },
+    { bg: "#6F42C1", fg: "#fff" },
+    { bg: "#FD7E14", fg: "#fff" },
+    { bg: "#20C997", fg: "#000" },
+  ]
+
+  location_index_map = {}
+  @locations.each_with_index { |loc, i| location_index_map[loc.id] = i }
+
+  has_filters = params[:search].present? || params[:location_id].present?
+%>
+
+<div class="customers-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-users me-2"></i>Clientes
+      </h1>
+      <small class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
+      </small>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge">
+        <i class="fas fa-user me-1"></i><%= @total %> cliente(s)
+      </span>
+    </div>
+  </div>
+
+  <%# ===== FILTROS ===== %>
+  <div class="filters-panel">
+
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-search me-1"></i>Buscar cliente
+      </label>
+      <%= form_with url: customers_path, method: :get, local: true do |f| %>
+        <%= hidden_field_tag :location_id, params[:location_id] if params[:location_id].present? %>
+        <div class="search-row">
+          <%= f.text_field :search,
+                           value: params[:search],
+                           class: "search-input",
+                           placeholder: "Nome, email ou telefone..." %>
+          <%= f.submit "Buscar", class: "btn-primary-sm" %>
+          <% if has_filters %>
+            <%= link_to customers_path, class: "btn-clear" do %>
+              <i class="fas fa-times me-1"></i>Limpar tudo
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-map-marker-alt me-1"></i>Filtrar por location
+      </label>
+      <div class="period-buttons">
+        <%= link_to customers_path(search: params[:search]),
+                    class: "btn-period #{params[:location_id].blank? ? 'btn-period--active-white' : ''}" do %>
+          <i class="fas fa-border-all me-1"></i>Todas
+        <% end %>
+
+        <% @locations.each_with_index do |location, i| %>
+          <% color     = badge_colors[i % badge_colors.size]
+             is_active = params[:location_id].to_s == location.id.to_s
+             style_active   = "background-color:#{color[:bg]}; color:#{color[:fg]}; border-color:#{color[:bg]}; font-weight:700;"
+             style_inactive = "background-color:transparent; color:#{color[:bg]}; border-color:#{color[:bg]};"
+          %>
+          <%= link_to customers_path(location_id: location.id, search: params[:search]),
+                      class: "btn-period",
+                      style: is_active ? style_active : style_inactive do %>
+            <i class="fas fa-warehouse me-1"></i><%= location.name %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+  </div>
+
+  <%# ===== TABELA ===== %>
+  <div class="table-card">
+
+    <div class="table-card-header">
+      <h5 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Lista de Clientes
+      </h5>
+      <% if params[:search].present? %>
+        <span class="filter-tag filter-tag--gray">
+          <i class="fas fa-search me-1"></i>"<%= params[:search] %>"
+        </span>
+      <% end %>
+    </div>
+
+    <% if @customers.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Email</th>
+              <th>Telefone</th>
+              <th>Cidade / Estado</th>
+              <th>Moeda</th>
+              <th>Cliente desde</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @customers.each do |customer| %>
+              <tr>
+                <td>
+                  <div class="customer-name-cell">
+                    <div class="customer-avatar">
+                      <%= "#{customer.first_name.to_s[0]}#{customer.last_name.to_s[0]}".upcase.presence || "?" %>
+                    </div>
+                    <div>
+                      <div class="text-main fw-semibold">
+                        <%= [customer.first_name, customer.last_name].compact.join(" ").presence || "Sem nome" %>
+                      </div>
+                      <div class="text-muted-custom" style="font-size:0.75rem;">
+                        ID: <%= customer.shopify_customer_id %>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="text-muted-custom"><%= customer.email.presence || "—" %></td>
+                <td class="text-muted-custom"><%= customer.phone.presence || "—" %></td>
+
+                <td class="text-main">
+                  <% if customer.default_address_city.present? %>
+                    <%= customer.default_address_city %>
+                    <span class="text-muted-custom">&mdash; <%= customer.default_address_province_code %></span>
+                  <% else %>
+                    <span class="text-muted-custom">—</span>
+                  <% end %>
+                </td>
+
+                <td>
+                  <% if customer.currency.present? %>
+                    <span class="currency-badge"><%= customer.currency %></span>
+                  <% else %>
+                    <span class="text-muted-custom">—</span>
+                  <% end %>
+                </td>
+
+                <td class="text-muted-custom">
+                  <%= customer.shopify_created_at&.strftime('%d/%m/%Y') || customer.created_at.strftime('%d/%m/%Y') %>
+                </td>
+
+                <td>
+                  <button class="btn-view-customer"
+                          data-customer-url="<%= customer_path(customer, format: :json) %>">
+                    <i class="fas fa-eye me-1"></i>Ver
+                  </button>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-users fa-3x mb-3 d-block"></i>
+        <h5>Nenhum cliente encontrado</h5>
+        <p>Tente ajustar os filtros aplicados</p>
+        <% if has_filters %>
+          <%= link_to customers_path, class: "btn-clear" do %>
+            <i class="fas fa-times me-1"></i>Limpar filtros
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# PAGINACAO %>
+    <% if @total_pages > 1 %>
+      <div class="pagination-footer">
+        <div class="pagination-info">
+          Mostrando
+          <strong><%= [(@current_page - 1) * @per_page + 1, @total].min %></strong>
+          a
+          <strong><%= [@current_page * @per_page, @total].min %></strong>
+          de <strong><%= @total %></strong> clientes
+        </div>
+        <div class="pagination-controls">
+          <% if @current_page > 1 %>
+            <%= link_to customers_path(request.query_parameters.merge("page" => @current_page - 1)),
+                        class: "page-btn" do %>
+              <i class="fas fa-chevron-left me-1"></i>Anterior
+            <% end %>
+          <% end %>
+
+          <% window  = 2
+             p_start = [@current_page - window, 1].max
+             p_end   = [@current_page + window, @total_pages].min %>
+
+          <% (p_start..p_end).each do |pnum| %>
+            <% if pnum == @current_page %>
+              <span class="page-btn page-btn--active"><%= pnum %></span>
+            <% else %>
+              <%= link_to pnum, customers_path(request.query_parameters.merge("page" => pnum)), class: "page-btn" %>
+            <% end %>
+          <% end %>
+
+          <% if @current_page < @total_pages %>
+            <%= link_to customers_path(request.query_parameters.merge("page" => @current_page + 1)),
+                        class: "page-btn" do %>
+              Proxima<i class="fas fa-chevron-right ms-1"></i>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+  </div>
+</div>
+
+<%# ===== MODAL ===== %>
+<div id="customerModal" class="modal-overlay" style="display:none;" aria-modal="true" role="dialog">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <div class="modal-avatar" id="modalAvatar"></div>
+      <div>
+        <h4 class="modal-title" id="modalName">Carregando...</h4>
+        <small class="modal-subtitle" id="modalSubtitle"></small>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-tabs">
+      <button class="modal-tab modal-tab--active" data-tab="info">
+        <i class="fas fa-user me-1"></i>Informacoes
+      </button>
+      <button class="modal-tab" data-tab="orders">
+        <i class="fas fa-shopping-cart me-1"></i>Pedidos
+        <span class="orders-count-badge" id="ordersCountBadge">0</span>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div id="loadingState" class="modal-loading">
+        <div class="spinner"></div>
+        <span>Carregando dados...</span>
+      </div>
+
+      <%# Tab: Informacoes %>
+      <div id="tabInfo" class="tab-pane" style="display:none;">
+        <div class="info-grid">
+
+          <div class="info-section">
+            <h6 class="info-section-title"><i class="fas fa-id-card me-2"></i>Dados Pessoais</h6>
+            <div class="info-row"><span class="info-key">Nome completo</span><span class="info-val" id="iName"></span></div>
+            <div class="info-row"><span class="info-key">Email</span><span class="info-val" id="iEmail"></span></div>
+            <div class="info-row"><span class="info-key">Telefone</span><span class="info-val" id="iPhone"></span></div>
+            <div class="info-row"><span class="info-key">Moeda</span><span class="info-val" id="iCurrency"></span></div>
+            <div class="info-row"><span class="info-key">Email verificado</span><span class="info-val" id="iVerified"></span></div>
+            <div class="info-row"><span class="info-key">Isento de imposto</span><span class="info-val" id="iTaxExempt"></span></div>
+            <div class="info-row"><span class="info-key">Tags</span><span class="info-val" id="iTags"></span></div>
+            <div class="info-row"><span class="info-key">ID Shopify</span><span class="info-val info-val--mono" id="iShopifyId"></span></div>
+          </div>
+
+          <div class="info-section">
+            <h6 class="info-section-title"><i class="fas fa-map-marker-alt me-2"></i>Endereco Padrao</h6>
+            <div class="info-row"><span class="info-key">Destinatario</span><span class="info-val" id="iAddrName"></span></div>
+            <div class="info-row"><span class="info-key">Empresa</span><span class="info-val" id="iAddrCompany"></span></div>
+            <div class="info-row"><span class="info-key">Telefone</span><span class="info-val" id="iAddrPhone"></span></div>
+            <div class="info-row"><span class="info-key">Endereco</span><span class="info-val" id="iAddr1"></span></div>
+            <div class="info-row"><span class="info-key">Complemento</span><span class="info-val" id="iAddr2"></span></div>
+            <div class="info-row"><span class="info-key">Cidade</span><span class="info-val" id="iCity"></span></div>
+            <div class="info-row"><span class="info-key">Estado</span><span class="info-val" id="iProvince"></span></div>
+            <div class="info-row"><span class="info-key">CEP</span><span class="info-val" id="iZip"></span></div>
+            <div class="info-row"><span class="info-key">Pais</span><span class="info-val" id="iCountry"></span></div>
+          </div>
+
+          <div class="info-section info-section--full">
+            <h6 class="info-section-title"><i class="fas fa-clock me-2"></i>Datas</h6>
+            <div class="info-row"><span class="info-key">Cliente Shopify desde</span><span class="info-val" id="iShopifyCreated"></span></div>
+            <div class="info-row"><span class="info-key">Ultima atualizacao Shopify</span><span class="info-val" id="iShopifyUpdated"></span></div>
+            <div class="info-row"><span class="info-key">Criado no sistema</span><span class="info-val" id="iCreatedAt"></span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <%# Tab: Pedidos %>
+      <div id="tabOrders" class="tab-pane" style="display:none;">
+        <div id="ordersTableWrap"></div>
+        <div id="ordersEmpty" class="empty-state" style="display:none;">
+          <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+          <h6>Nenhum pedido encontrado para este cliente</h6>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+/* =========================================
+   CUSTOMERS
+   ========================================= */
+
+.customers-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.page-title { color: #e6edf3; font-size: 1.4rem; font-weight: 700; margin: 0 0 0.2rem; }
+.page-subtitle { color: #8b949e; font-size: 0.8rem; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.total-badge {
+  background: #1f6feb;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Filters */
+.filters-panel {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-section { padding: 0.5rem 0; }
+
+.filter-divider { border-top: 1px solid #21262d; margin: 0.75rem 0; }
+
+.filter-label {
+  display: block;
+  color: #8b949e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.search-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.search-input {
+  flex: 1;
+  min-width: 220px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.88rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus { outline: none; border-color: #1f6feb; box-shadow: 0 0 0 3px rgba(31,111,235,0.15); }
+.search-input::placeholder { color: #484f58; }
+
+.btn-primary-sm {
+  background: #1f6feb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary-sm:hover { background: #388bfd; }
+
+.btn-clear {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #8b949e !important;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.84rem;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-clear:hover { border-color: #e57373; color: #e57373 !important; }
+
+.period-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.btn-period {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: 20px;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-period:hover { border-color: #8b949e; color: #e6edf3; }
+
+.btn-period--active-white {
+  background: #e6edf3 !important;
+  color: #0d1117 !important;
+  border-color: #e6edf3 !important;
+  font-weight: 700;
+}
+
+/* Table */
+.table-card {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-card-header {
+  background: #1c2128;
+  border-bottom: 1px solid #21262d;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.table-card-title { color: #e6edf3; font-size: 1rem; font-weight: 600; margin: 0; }
+.filter-tag { border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.76rem; font-weight: 600; }
+.filter-tag--gray { background: #30363d; color: #8b949e; }
+
+.orders-table { width: 100%; border-collapse: collapse; }
+.orders-table thead tr { background: #1c2128; }
+.orders-table thead th {
+  color: #8b949e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid #21262d;
+  white-space: nowrap;
+}
+.orders-table tbody tr { border-bottom: 1px solid #21262d; transition: background 0.15s; }
+.orders-table tbody tr:hover { background: #1c2128; }
+.orders-table tbody td { padding: 0.75rem 1.25rem; vertical-align: middle; }
+
+.customer-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+
+.customer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1f6feb;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.text-main { color: #e6edf3; font-size: 0.88rem; }
+.text-muted-custom { color: #8b949e; font-size: 0.85rem; }
+
+.currency-badge {
+  background: #21262d;
+  color: #8b949e;
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.btn-view-customer {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #58a6ff;
+  border-radius: 8px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-view-customer:hover { background: rgba(88,166,255,0.1); border-color: #58a6ff; }
+
+/* Empty */
+.empty-state { text-align: center; padding: 3.5rem 1rem; color: #484f58; }
+.empty-state h5, .empty-state h6 { color: #8b949e; margin-bottom: 0.5rem; }
+.empty-state p { color: #484f58; font-size: 0.88rem; margin-bottom: 1rem; }
+
+/* Paginacao */
+.pagination-footer {
+  background: #1c2128;
+  border-top: 1px solid #21262d;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.pagination-info { color: #8b949e; font-size: 0.82rem; }
+.pagination-info strong { color: #e6edf3; }
+.pagination-controls { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.page-btn {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #c9d1d9 !important;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-block;
+}
+.page-btn:hover { border-color: #58a6ff; color: #58a6ff !important; }
+.page-btn--active { background: #1f6feb; border-color: #1f6feb; color: #fff !important; font-weight: 700; }
+
+/* =========================================
+   MODAL
+   ========================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(4px);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.modal-box {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.22s ease;
+}
+
+.modal-header {
+  background: #1c2128;
+  border-bottom: 1px solid #21262d;
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.modal-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #1f6feb;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.modal-title { color: #e6edf3; font-size: 1.1rem; font-weight: 700; margin: 0 0 0.15rem; }
+.modal-subtitle { color: #8b949e; font-size: 0.8rem; }
+
+.modal-close {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.modal-close:hover { border-color: #e57373; color: #e57373; }
+
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid #21262d;
+  background: #1c2128;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+}
+
+.modal-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8b949e;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.modal-tab:hover { color: #e6edf3; }
+.modal-tab--active { color: #58a6ff; border-bottom-color: #1f6feb; }
+
+.orders-count-badge {
+  background: #21262d;
+  color: #8b949e;
+  border-radius: 20px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.2rem;
+}
+
+.modal-body { overflow-y: auto; flex: 1; padding: 1.5rem; }
+
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: #8b949e;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #21262d;
+  border-top-color: #1f6feb;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+
+.info-section {
+  background: #1c2128;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+.info-section--full { grid-column: 1 / -1; }
+
+.info-section-title {
+  color: #8b949e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #21262d;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.info-row:last-child { border-bottom: none; }
+.info-key { color: #8b949e; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+.info-val { color: #e6edf3; font-size: 0.84rem; text-align: right; word-break: break-all; }
+.info-val--mono { font-family: monospace; font-size: 0.78rem; color: #8b949e; }
+
+/* =========================================
+   ORDERS TAB — blocos detalhados
+   ========================================= */
+
+.orders-blocks { display: flex; flex-direction: column; gap: 0.85rem; }
+
+.order-block {
+  background: #1c2128;
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.order-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #21262d;
+  border-bottom: 1px solid #30363d;
+}
+
+.order-block-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.order-block-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.order-block-id { color: #58a6ff; font-weight: 700; font-size: 0.9rem; }
+
+.order-meta-info { color: #8b949e; font-size: 0.76rem; }
+
+.order-block-total {
+  color: #3fb950;
+  font-weight: 700;
+  font-size: 0.88rem;
+  background: rgba(63,185,80,0.1);
+  border: 1px solid rgba(63,185,80,0.25);
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+}
+
+.order-items-list { display: flex; flex-direction: column; }
+
+.order-item-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.order-item-card:last-child { border-bottom: none; }
+.order-item-card:hover { background: rgba(255,255,255,0.02); }
+.order-item-card--canceled { opacity: 0.45; }
+
+.item-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #30363d;
+  background: #0d1117;
+}
+
+.item-img-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #484f58;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.order-item-info { flex: 1; min-width: 0; }
+
+.order-item-name {
+  color: #e6edf3;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.item-canceled-badge {
+  background: rgba(248,81,73,0.15);
+  color: #f85149;
+  border: 1px solid rgba(248,81,73,0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.order-item-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.item-meta-tag {
+  background: #21262d;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-family: monospace;
+}
+
+.order-item-qty { text-align: center; flex-shrink: 0; min-width: 48px; }
+.qty-value { color: #e6edf3; font-weight: 700; font-size: 0.95rem; }
+.qty-unit { color: #8b949e; font-size: 0.7rem; }
+
+.order-item-total {
+  color: #e6edf3;
+  font-weight: 700;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+  min-width: 90px;
+  text-align: right;
+}
+
+.location-badge {
+  border-radius: 20px;
+  padding: 0.22rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.location-badge--empty { background: #30363d; color: #8b949e; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  const LOCATION_COLORS = [
+    { bg: "#0D6EFD", fg: "#fff" },
+    { bg: "#198754", fg: "#fff" },
+    { bg: "#DC3545", fg: "#fff" },
+    { bg: "#FFC107", fg: "#000" },
+    { bg: "#0DCAF0", fg: "#000" },
+    { bg: "#6F42C1", fg: "#fff" },
+    { bg: "#FD7E14", fg: "#fff" },
+    { bg: "#20C997", fg: "#000" },
+  ];
+
+  const LOCATION_MAP = {};
+  <% @locations.each_with_index do |loc, i| %>
+    LOCATION_MAP[<%= loc.id %>] = { name: "<%= j loc.name %>", colorIndex: <%= i %> };
+  <% end %>
+
+  const modal      = document.getElementById('customerModal');
+  const modalClose = document.getElementById('modalClose');
+  let activeTab    = 'info';
+
+  function openModal()  { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function closeModal() { modal.style.display = 'none';  document.body.style.overflow = ''; }
+
+  modalClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  document.querySelectorAll('.modal-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('modal-tab--active'));
+      tab.classList.add('modal-tab--active');
+      activeTab = tab.dataset.tab;
+      document.getElementById('tabInfo').style.display   = activeTab === 'info'   ? 'block' : 'none';
+      document.getElementById('tabOrders').style.display = activeTab === 'orders' ? 'block' : 'none';
+    });
+  });
+
+  function fmt(val)    { return (val !== null && val !== undefined && val !== '') ? val : '—'; }
+  function fmtBool(val){ return val ? 'Sim' : 'Nao'; }
+
+  function fmtDate(val) {
+    if (!val) return '—';
+    const d = new Date(val);
+    if (isNaN(d)) return val;
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function fmtMoney(val) {
+    if (!val && val !== 0) return '—';
+    return Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function populateInfo(c) {
+    const initials = ((c.first_name || '')[0] || '') + ((c.last_name || '')[0] || '');
+    document.getElementById('modalAvatar').textContent  = initials.toUpperCase() || '?';
+    document.getElementById('modalName').textContent    = [c.first_name, c.last_name].filter(Boolean).join(' ') || 'Sem nome';
+    document.getElementById('modalSubtitle').textContent = c.email || '';
+
+    document.getElementById('iName').textContent        = fmt([c.first_name, c.last_name].filter(Boolean).join(' '));
+    document.getElementById('iEmail').textContent       = fmt(c.email);
+    document.getElementById('iPhone').textContent       = fmt(c.phone);
+    document.getElementById('iCurrency').textContent   = fmt(c.currency);
+    document.getElementById('iVerified').textContent   = fmtBool(c.verified_email);
+    document.getElementById('iTaxExempt').textContent  = fmtBool(c.tax_exempt);
+    document.getElementById('iTags').textContent       = fmt(c.tags);
+    document.getElementById('iShopifyId').textContent  = fmt(c.shopify_customer_id);
+
+    document.getElementById('iAddrName').textContent    = fmt(c.default_address_name);
+    document.getElementById('iAddrCompany').textContent = fmt(c.default_address_company);
+    document.getElementById('iAddrPhone').textContent   = fmt(c.default_address_phone);
+    document.getElementById('iAddr1').textContent       = fmt(c.default_address_address1);
+    document.getElementById('iAddr2').textContent       = fmt(c.default_address_address2);
+    document.getElementById('iCity').textContent        = fmt(c.default_address_city);
+    document.getElementById('iProvince').textContent    = fmt(c.default_address_province);
+    document.getElementById('iZip').textContent         = fmt(c.default_address_zip);
+    document.getElementById('iCountry').textContent     = fmt(c.default_address_country);
+
+    document.getElementById('iShopifyCreated').textContent  = fmtDate(c.shopify_created_at);
+    document.getElementById('iShopifyUpdated').textContent  = fmtDate(c.shopify_updated_at);
+    document.getElementById('iCreatedAt').textContent       = fmtDate(c.created_at);
+  }
+
+  function populateOrders(orders) {
+    document.getElementById('ordersCountBadge').textContent = orders.length;
+    const wrap  = document.getElementById('ordersTableWrap');
+    const empty = document.getElementById('ordersEmpty');
+
+    if (!orders.length) {
+      wrap.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+
+    const rows = orders.map(function (o) {
+      const locInfo  = LOCATION_MAP[o.location_id];
+      const color    = locInfo ? LOCATION_COLORS[locInfo.colorIndex % LOCATION_COLORS.length] : null;
+      const locBadge = color
+        ? `<span class="location-badge" style="background-color:${color.bg};color:${color.fg};"><i class="fas fa-warehouse" style="font-size:0.65rem;margin-right:4px;"></i>${locInfo.name}</span>`
+        : `<span class="location-badge location-badge--empty">${o.location_name || 'Sem location'}</span>`;
+
+      const itemsHtml = (o.items || []).map(function (item) {
+        const imgHtml = item.image_url
+          ? `<img src="${item.image_url}" alt="${item.product_name || item.sku || ''}" class="item-img" />`
+          : `<div class="item-img-placeholder"><i class="fas fa-tshirt"></i></div>`;
+
+        const options = [item.product_option1, item.product_option2].filter(Boolean).join(' / ');
+        const canceled = item.canceled
+          ? `<span class="item-canceled-badge">Cancelado</span>`
+          : '';
+
+        return `
+          <div class="order-item-card ${item.canceled ? 'order-item-card--canceled' : ''}">
+            ${imgHtml}
+            <div class="order-item-info">
+              <div class="order-item-name">
+                ${fmt(item.product_name)}
+                ${canceled}
+              </div>
+              <div class="order-item-meta">
+                <span class="item-meta-tag"><i class="fas fa-tag" style="margin-right:3px;"></i>${fmt(item.sku)}</span>
+                ${options ? `<span class="item-meta-tag"><i class="fas fa-layer-group" style="margin-right:3px;"></i>${options}</span>` : ''}
+              </div>
+            </div>
+            <div class="order-item-qty">
+              <div class="qty-value">${item.quantity}x</div>
+              <div class="qty-unit">${fmtMoney(item.price)}</div>
+            </div>
+            <div class="order-item-total">${fmtMoney(item.price * item.quantity)}</div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="order-block">
+          <div class="order-block-header">
+            <div class="order-block-left">
+              <span class="order-block-id">#${o.shopify_order_id}</span>
+              ${locBadge}
+            </div>
+            <div class="order-block-right">
+              <span class="order-meta-info"><i class="fas fa-box" style="margin-right:4px;"></i>${o.total_items} item(ns)</span>
+              <span class="order-meta-info"><i class="fas fa-calendar" style="margin-right:4px;"></i>${o.shopify_creation_date || o.created_at}</span>
+              <span class="order-block-total">${fmtMoney(o.total_value)}</span>
+            </div>
+          </div>
+          <div class="order-items-list">
+            ${itemsHtml || '<div style="padding:0.85rem 1rem; color:#8b949e; font-size:0.82rem;">Sem itens registrados</div>'}
+          </div>
+        </div>`;
+    }).join('');
+
+    wrap.innerHTML = `<div class="orders-blocks">${rows}</div>`;
+  }
+
+  function showLoading() {
+    document.getElementById('loadingState').style.display = 'flex';
+    document.getElementById('tabInfo').style.display      = 'none';
+    document.getElementById('tabOrders').style.display    = 'none';
+  }
+
+  function hideLoading() {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('tabInfo').style.display      = activeTab === 'info'   ? 'block' : 'none';
+    document.getElementById('tabOrders').style.display    = activeTab === 'orders' ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('.btn-view-customer').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activeTab = 'info';
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('modal-tab--active'));
+      document.querySelector('[data-tab="info"]').classList.add('modal-tab--active');
+
+      openModal();
+      showLoading();
+
+      fetch(btn.dataset.customerUrl, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          populateInfo(data.customer);
+          populateOrders(data.orders);
+          hideLoading();
+        })
+        .catch(function () {
+          hideLoading();
+          document.getElementById('modalName').textContent = 'Erro ao carregar dados';
+        });
+    });
+  });
+
+});
+</script>
