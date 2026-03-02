@@ -587,7 +587,7 @@ class Shopify::Orders
       end
     end
 
-    def sync_shopify_orders_to_rails(limit: 100, status: 'any')
+    def sync_shopify_orders_to_rails(limit: 100, status: 'any', time_range: :all)
       session = ShopifyAPI::Auth::Session.new(
         shop: 'chasebrasil.myshopify.com',
         access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
@@ -597,13 +597,29 @@ class Shopify::Orders
 
       total = 0
 
+      created_at_min =
+        case time_range.to_sym
+        when :last_3_days
+          3.days.ago.iso8601
+        when :last_3_hours
+          3.hours.ago.iso8601
+        else
+          nil
+        end
+
+      Rails.logger.info "[Shopify::Orders] Sync iniciado (range: #{time_range})"
+
+      query_params = {
+        limit: limit,
+        status: status,
+        fields: 'id,created_at,line_items,note_attributes'
+      }
+
+      query_params[:created_at_min] = created_at_min if created_at_min.present?
+
       response = client.get(
         path: 'orders',
-        query: {
-          limit: limit,
-          status: status,
-          fields: 'id,created_at,line_items,note_attributes'
-        }
+        query: query_params
       )
 
       loop do
@@ -614,7 +630,6 @@ class Shopify::Orders
 
         break unless response.next_page_info
 
-        # 🚨 IMPORTANTE: aqui só vai page_info
         response = client.get(
           path: 'orders',
           query: {
@@ -623,10 +638,78 @@ class Shopify::Orders
         )
       end
 
-      Rails.logger.info "[OrdersUpdateJob] Sincronizados #{total} pedidos"
+        Rails.logger.info "[Shopify::Orders] Sincronizados #{total} pedidos"
     end
 
-    # Busca um pedido específico da Shopify por ID
+    def find_or_create_customer_from_shopify(shopify_order)
+      customer_stub = shopify_order['customer']
+      return nil unless customer_stub
+
+      shopify_customer_id = customer_stub['id'].to_s
+
+      session = ShopifyAPI::Auth::Session.new(
+        shop: 'chasebrasil.myshopify.com',
+        access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+      )
+
+      shopify_customer = ShopifyAPI::Customer.find(
+        session:,
+        id: shopify_customer_id
+      )
+
+      return nil unless shopify_customer
+
+      data = shopify_customer.as_json
+
+      customer = Customer.find_or_initialize_by(
+        shopify_customer_id:
+      )
+
+      assign_full_customer_data(customer, data)
+
+      customer.save! if customer.changed?
+
+      customer
+    end
+
+    def assign_full_customer_data(customer, shopify_customer)
+      data = shopify_customer.respond_to?(:as_json) ? shopify_customer.as_json : shopify_customer
+
+      default_address = data['default_address'] || {}
+      addresses = data['addresses'] || []
+
+      customer.assign_attributes(
+        first_name: data['first_name'],
+        last_name: data['last_name'],
+        email: data['email'],
+        phone: data['phone'],
+        currency: data['currency'],
+        tags: data['tags'],
+        orders_count: data['orders_count'],
+        total_spent: data['total_spent'],
+        verified_email: data['verified_email'],
+        tax_exempt: data['tax_exempt'],
+        shopify_created_at: data['created_at'],
+        shopify_updated_at: data['updated_at'],
+        addresses:
+      )
+
+      return unless default_address.present?
+      customer.assign_attributes(
+        default_address_name: default_address['name'],
+        default_address_company: default_address['company'],
+        default_address_phone: default_address['phone'],
+        default_address_address1: default_address['address1'],
+        default_address_address2: default_address['address2'],
+        default_address_city: default_address['city'],
+        default_address_province: default_address['province'],
+        default_address_country: default_address['country'],
+        default_address_zip: default_address['zip'],
+        default_address_country_code: default_address['country_code'],
+        default_address_province_code: default_address['province_code']
+      )
+    end
+
     def fetch_shopify_order_by_id(shopify_order_id)
       session = ShopifyAPI::Auth::Session.new(
         shop: 'chasebrasil.myshopify.com',
@@ -634,7 +717,7 @@ class Shopify::Orders
       )
 
       shopify_order = ShopifyAPI::Order.find(
-        session: session,
+        session:,
         id: shopify_order_id
       )
 
@@ -644,14 +727,10 @@ class Shopify::Orders
       nil
     end
 
-    # Cria ou atualiza um pedido no Rails a partir de dados da Shopify
     def create_or_update_order_from_shopify(shopify_order)
       shopify_order_id   = shopify_order['id'].to_s
       shopify_created_at = Time.parse(shopify_order['created_at'])
 
-      # -----------------------------
-      # NOTE ATTRIBUTES
-      # -----------------------------
       note_attributes = extract_note_attributes_from_hash(
         shopify_order['note_attributes']
       )
@@ -672,42 +751,26 @@ class Shopify::Orders
           Location.find_by(slug: 'log+')
         end
 
-      # -----------------------------
-      # CUSTOMER
-      # -----------------------------
       customer = find_or_create_customer_from_shopify(shopify_order)
 
-      # -----------------------------
-      # FIND OR INIT ORDER
-      # -----------------------------
       order = Order.find_or_initialize_by(
-        shopify_order_id: shopify_order_id
+        shopify_order_id:
       )
 
-      # -----------------------------
-      # ORDER ATTRIBUTES
-      # (SEMPRE ATUALIZA)
-      # -----------------------------
       order.assign_attributes(
         staff_id: staff_id.presence || order.staff_id,
         staff_name: staff_name.presence || order.staff_name,
         location_id: location&.id,
         shopify_creation_date: shopify_created_at,
-        iglu_payments: iglu_payments,
+        iglu_payments:,
         customer_id: customer&.id
       )
 
-      if order.new_record?
-        order.created_at = shopify_created_at
-      end
+      order.created_at = shopify_created_at if order.new_record?
 
       order.updated_at = Time.current
       order.save! if order.changed?
 
-      # -----------------------------
-      # ORDER ITEMS
-      # (NUNCA DELETA)
-      # -----------------------------
       existing_items = order.order_items.index_by(&:sku)
 
       Array(shopify_order['line_items']).each do |line_item|
@@ -720,21 +783,20 @@ class Shopify::Orders
         item = existing_items[sku]
 
         if item
-          # Atualiza somente se mudou
           if item.price != price || item.quantity != quantity
             item.update!(
-              price: price,
-              quantity: quantity
+              price:,
+              quantity:
             )
           end
         else
-          product = Product.find_by(sku: sku)
+          product = Product.find_by(sku:)
 
           order.order_items.create!(
             product_id: product&.id,
-            sku: sku,
-            price: price,
-            quantity: quantity,
+            sku:,
+            price:,
+            quantity:,
             canceled: false
           )
         end
@@ -747,7 +809,6 @@ class Shopify::Orders
       nil
     end
 
-
     def extract_note_attributes_from_hash(note_attributes_array)
       return {} unless note_attributes_array.is_a?(Array)
 
@@ -756,29 +817,27 @@ class Shopify::Orders
       end
     end
 
-    # Converte o JSON string do iglu_payments para array
-  def parse_iglu_payments(raw)
-    return [] if raw.blank?
+    def parse_iglu_payments(raw)
+      return [] if raw.blank?
 
-    return raw if raw.is_a?(Array)
+      return raw if raw.is_a?(Array)
 
-    JSON.parse(raw)
-  rescue JSON::ParserError
-    begin
-      # tenta corrigir apenas pix_id sem aspas
-      fixed = raw.gsub(
-        /"pix_id"\s*:\s*([A-Za-z0-9]+)/,
-        '"pix_id":"\1"'
-      )
-
-      JSON.parse(fixed)
+      JSON.parse(raw)
     rescue JSON::ParserError
-      Rails.logger.warn "[IGLU] JSON inválido ignorado (mantido pedido): #{raw}"
-      []
-    end
-  end
+      begin
+        fixed = raw.gsub(
+          /"pix_id"\s*:\s*([A-Za-z0-9]+)/,
+          '"pix_id":"\1"'
+        )
 
-   def update_order_staff_and_payments(shopify_order_id, staff_id:, staff_name:)
+        JSON.parse(fixed)
+      rescue JSON::ParserError
+        Rails.logger.warn "[IGLU] JSON inválido ignorado (mantido pedido): #{raw}"
+        []
+      end
+    end
+
+    def update_order_staff_and_payments(shopify_order_id, staff_id:, staff_name:)
       clean_order_id = shopify_order_id.to_s.gsub('gid://shopify/Order/', '')
 
       order = Order.find_by(shopify_order_id: clean_order_id)
