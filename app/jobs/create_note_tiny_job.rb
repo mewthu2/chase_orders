@@ -212,6 +212,16 @@ class CreateNoteTinyJob < ActiveJob::Base
 
         frete_por_conta: 'R',
 
+        parcelas: [
+          {
+            parcela: {
+              data_vencimento: Time.current.strftime('%d/%m/%Y'),
+              valor: format('%.2f', valor_nota),
+              meio_pagamento: '90'
+            }
+          }
+        ],
+
         obs: obs_parts.join(' | ')
       }
     }

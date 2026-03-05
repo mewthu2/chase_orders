@@ -1,39 +1,47 @@
 <div class="container-fluid py-4">
+
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h4 class="text-white mb-0">
             <i class="fas fa-edit me-2"></i>
-            Editar Conferência #<%= @stock_correction.id %> - <%= location_display_name(@stock_correction.location) %>
+            Editar Conferencia #<%= @stock_correction.id %> - <%= location_display_name(@stock_correction.location) %>
           </h4>
           <div class="d-flex gap-2">
             <% if @stock_correction.status != 'executed' %>
-              <% if @stock_correction.stock_correction_items.where(needs_correction: true, executed: false).any? %>
-                <%= button_to execute_all_stock_correction_path(@stock_correction), 
-                    method: :post,
-                    form_class: "d-inline",
-                    class: "btn btn-sm btn-info text-dark",
-                    data: { confirm: "Deseja executar todas as correções pendentes?", turbo_confirm: "Deseja executar todas as correções pendentes?" } do %>
-                  <i class="fas fa-play me-1"></i>Executar Todas
+              <% pending_items = @stock_correction.stock_correction_items.where(shopify_sync_status: 'error') %>
+              <% if pending_items.any? %>
+                <% if @stock_correction.integration_status == 'pending' %>
+                  <button type="button" class="btn btn-sm btn-secondary text-white" disabled>
+                    <i class="fas fa-spinner fa-spin me-1"></i>Em andamento...
+                  </button>
+                <% else %>
+                  <%= button_to execute_all_stock_correction_path(@stock_correction),
+                      method: :post,
+                      form_class: "d-inline",
+                      class: "btn btn-sm btn-info text-dark",
+                      data: { confirm: "Deseja executar todas as correcoes pendentes?", turbo_confirm: "Deseja executar todas as correcoes pendentes?" } do %>
+                    <i class="fas fa-play me-1"></i>Executar Todas (<%= pending_items.count %>)
+                  <% end %>
                 <% end %>
               <% end %>
-              <%= link_to finalize_correction_stock_correction_path(@stock_correction), 
+              <%= link_to finalize_correction_stock_correction_path(@stock_correction),
                   method: :get,
                   class: "btn btn-sm btn-success text-dark",
-                  data: { confirm: "Tem certeza que deseja finalizar esta conferência?" } do %>
+                  data: { confirm: "Tem certeza que deseja finalizar esta conferencia?" } do %>
                 <i class="fas fa-check me-1"></i>Finalizar
               <% end %>
             <% else %>
               <span class="badge bg-success text-dark px-3 py-2">
-                <i class="fas fa-check-circle me-1"></i>Conferência Finalizada
+                <i class="fas fa-check-circle me-1"></i>Conferencia Finalizada
               </span>
               <% if current_user.admin? %>
-                <%= button_to reopen_stock_correction_path(@stock_correction), 
+                <%= button_to reopen_stock_correction_path(@stock_correction),
                     method: :patch,
                     form_class: "d-inline",
                     class: "btn btn-sm btn-warning text-dark",
-                    data: { confirm: "Tem certeza que deseja reabrir esta conferência?", turbo_confirm: "Tem certeza que deseja reabrir esta conferência?" } do %>
+                    data: { confirm: "Tem certeza que deseja reabrir esta conferencia?", turbo_confirm: "Tem certeza que deseja reabrir esta conferencia?" } do %>
                   <i class="fas fa-undo me-1"></i>Reabrir
                 <% end %>
               <% end %>
@@ -62,7 +70,7 @@
           <% if @stock_correction.notes.present? %>
             <div class="row">
               <div class="col-12">
-                <strong class="text-white">Observações:</strong>
+                <strong class="text-white">Observacoes:</strong>
                 <p class="text-white-50 mb-0"><%= @stock_correction.notes %></p>
               </div>
             </div>
@@ -72,7 +80,6 @@
     </div>
   </div>
 
-  <!-- Estatísticas -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -87,7 +94,7 @@
             <div class="col-md-4">
               <div class="p-3">
                 <h4 class="text-warning mb-1"><%= @stats[:corrections] %></h4>
-                <small class="text-white-50">Com Correção</small>
+                <small class="text-white-50">Com Correcao</small>
               </div>
             </div>
             <div class="col-md-4">
@@ -102,7 +109,114 @@
     </div>
   </div>
 
-  <!-- Busca -->
+  <% error_items = @stock_correction.stock_correction_items.where(shopify_sync_status: 'error').includes(:product) %>
+  <% if error_items.any? %>
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card bg-black border border-danger shadow-lg">
+          <div class="card-header bg-dark border-bottom border-danger d-flex justify-content-between align-items-center"
+               data-bs-toggle="collapse"
+               data-bs-target="#shopifyErrorsCollapse"
+               aria-expanded="false"
+               aria-controls="shopifyErrorsCollapse"
+               style="cursor: pointer;">
+            <div class="d-flex align-items-center gap-3">
+              <h5 class="text-danger mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>Erros de Integracao Shopify
+              </h5>
+              <span class="badge bg-danger text-white px-2 py-1">
+                <%= error_items.count %> pendente<%= error_items.count > 1 ? 's' : '' %>
+              </span>
+              <% if @stock_correction.integration_status == 'pending' %>
+                <span class="badge bg-info text-dark px-2 py-1">
+                  <i class="fas fa-spinner fa-spin me-1"></i>Processando...
+                </span>
+              <% end %>
+            </div>
+            <i class="fas fa-chevron-down text-white-50" id="shopifyErrorsChevron" style="transition: transform 0.25s ease;"></i>
+          </div>
+          <div class="collapse" id="shopifyErrorsCollapse">
+            <div class="card-body bg-black p-0">
+              <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                <table class="table table-dark table-hover mb-0">
+                  <thead class="bg-dark" style="position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                      <th class="text-white-50 fw-semibold px-3 py-2" style="width: 45px;">#</th>
+                      <th class="text-white-50 fw-semibold px-3 py-2" style="width: 140px;">SKU</th>
+                      <th class="text-white-50 fw-semibold px-3 py-2">Produto</th>
+                      <th class="text-white-50 fw-semibold px-3 py-2 text-center" style="width: 110px;">Estoque Corrigido</th>
+                      <th class="text-white-50 fw-semibold px-3 py-2">Mensagem de Erro</th>
+                      <th class="text-white-50 fw-semibold px-3 py-2 text-center" style="width: 90px;">Acao</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% error_items.each_with_index do |item, index| %>
+                      <tr class="border-secondary" id="error-row-<%= item.id %>">
+                        <td class="px-3 py-2 text-white-50">
+                          <small><%= index + 1 %></small>
+                        </td>
+                        <td class="px-3 py-2">
+                          <span class="text-warning fw-bold font-monospace" style="font-size: 0.8rem;">
+                            <%= item.product.sku %>
+                          </span>
+                        </td>
+                        <td class="px-3 py-2">
+                          <span class="text-white d-block" style="font-size: 0.875rem;">
+                            <%= truncate(format_product_name_for_correction(item.product), length: 45) %>
+                          </span>
+                          <% if item.product.shopify_variant_id.present? %>
+                            <small class="text-white-50">
+                              <i class="fab fa-shopify me-1"></i>ID: <%= item.product.shopify_variant_id %>
+                            </small>
+                          <% else %>
+                            <small class="text-danger">
+                              <i class="fas fa-unlink me-1"></i>Sem ID Shopify
+                            </small>
+                          <% end %>
+                        </td>
+                        <td class="px-3 py-2 text-center">
+                          <span class="badge bg-info text-dark px-2 py-1">
+                            <%= item.corrected_stock %> un.
+                          </span>
+                        </td>
+                        <td class="px-3 py-2">
+                          <small class="text-danger" style="white-space: normal; word-break: break-word;">
+                            <i class="fas fa-times-circle me-1"></i><%= item.shopify_sync_error.presence || 'Erro desconhecido' %>
+                          </small>
+                        </td>
+                        <td class="px-3 py-2 text-center">
+                          <% if @stock_correction.status != 'executed' %>
+                            <button class="btn btn-outline-warning btn-sm"
+                                    onclick="retryShopifySync('<%= item.id %>')"
+                                    id="retry-btn-<%= item.id %>"
+                                    title="Tentar novamente">
+                              <i class="fas fa-redo"></i>
+                            </button>
+                          <% else %>
+                            <span class="text-white-50"><i class="fas fa-lock"></i></span>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card-footer bg-dark border-top border-secondary d-flex justify-content-between align-items-center py-2">
+              <small class="text-white-50">
+                <i class="fas fa-info-circle me-1"></i>
+                Use "Executar Todas" no topo para re-sincronizar todos os itens, ou clique em <i class="fas fa-redo ms-1 me-1"></i> para tentar individualmente.
+              </small>
+              <small class="text-white-50">
+                Atualizado em <%= Time.current.strftime('%d/%m/%Y %H:%M') %>
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <div class="row mb-4">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
@@ -114,8 +228,8 @@
                 <span class="input-group-text bg-dark border-dark text-white">
                   <i class="fas fa-search"></i>
                 </span>
-                <%= f.text_field :search_term, 
-                    placeholder: "Digite SKU exato ou nome do produto...", 
+                <%= f.text_field :search_term,
+                    placeholder: "Digite SKU exato ou nome do produto...",
                     value: @search_term,
                     class: "form-control bg-dark text-white border-dark" %>
               </div>
@@ -134,7 +248,6 @@
     </div>
   </div>
 
-  <!-- Produto da Busca Atual -->
   <% if @search_item %>
     <div class="row mb-4">
       <div class="col-12">
@@ -144,11 +257,11 @@
               <i class="fas fa-search me-2"></i>Produto Encontrado
               <% if @search_item.needs_correction? %>
                 <span class="badge bg-warning text-dark ms-2">
-                  <i class="fas fa-edit me-1"></i>Com Correção
+                  <i class="fas fa-edit me-1"></i>Com Correcao
                 </span>
               <% else %>
                 <span class="badge bg-secondary text-white ms-2">
-                  <i class="fas fa-plus me-1"></i>Disponível para Correção
+                  <i class="fas fa-plus me-1"></i>Disponivel para Correcao
                 </span>
               <% end %>
             </h5>
@@ -163,7 +276,7 @@
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Status</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 140px;">Corrigido</th>
                     <th class="text-white fw-bold px-3 py-3" style="width: 200px;">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,23 +287,20 @@
                           <% @product_images.each do |img| %>
                             <a href="<%= img %>" target="_blank" title="Abrir imagem">
                               <img src="<%= img %>"
-                                  class="rounded border border-secondary"
-                                  style="width: 55px; height: 55px; object-fit: cover;"
-                                  loading="lazy">
+                                   class="rounded border border-secondary"
+                                   style="width: 55px; height: 55px; object-fit: cover;"
+                                   loading="lazy">
                             </a>
                           <% end %>
                         </div>
                       <% end %>
-
                       <div>
                         <span class="text-white fw-medium d-block">
                           <%= format_product_name_for_correction(@search_item.product) %>
                         </span>
-
                         <small class="text-warning fw-bold font-monospace">
                           SKU: <%= @search_item.product.sku %>
                         </small>
-
                         <% if @search_item.product.shopify_variant_id.present? %>
                           <br>
                           <small class="text-white-50">
@@ -236,11 +346,11 @@
                           <span class="text-white-50">-</span>
                         <% end %>
                       <% else %>
-                        <input type="number" 
-                               id="correctedStock_<%= @search_item.product.id %>" 
-                               class="form-control form-control-sm bg-dark text-white border-dark text-center" 
-                               value="<%= @search_item.needs_correction? ? @search_item.corrected_stock : @search_item.real_stock %>" 
-                               min="0" 
+                        <input type="number"
+                               id="correctedStock_<%= @search_item.product.id %>"
+                               class="form-control form-control-sm bg-dark text-white border-dark text-center"
+                               value="<%= @search_item.needs_correction? ? @search_item.corrected_stock : @search_item.real_stock %>"
+                               min="0"
                                style="width: 80px;"
                                placeholder="Novo">
                       <% end %>
@@ -263,11 +373,11 @@
                           <span class="text-white-50">-</span>
                         <% end %>
                       <% else %>
-                        <input type="text" 
-                               id="correctionReason_<%= @search_item.product.id %>" 
-                               class="form-control form-control-sm bg-dark text-white border-dark" 
-                               value="<%= @search_item.correction_reason %>" 
-                               placeholder="Motivo da correção..." 
+                        <input type="text"
+                               id="correctionReason_<%= @search_item.product.id %>"
+                               class="form-control form-control-sm bg-dark text-white border-dark"
+                               value="<%= @search_item.correction_reason %>"
+                               placeholder="Motivo da correcao..."
                                style="width: 180px;">
                       <% end %>
                     </td>
@@ -301,20 +411,19 @@
             <%= @search_error %>
           <% else %>
             Nenhum produto encontrado para "<strong><%= @search_term %></strong>".
-            Verifique se o SKU está correto ou se o produto existe na base de dados.
+            Verifique se o SKU esta correto ou se o produto existe na base de dados.
           <% end %>
         </div>
       </div>
     </div>
   <% end %>
 
-  <!-- Lista de Produtos Processados -->
   <div class="row">
     <div class="col-12">
       <div class="card bg-black border border-dark shadow-lg">
         <div class="card-header bg-dark d-flex justify-content-between align-items-center">
           <h5 class="text-white mb-0">
-            <i class="fas fa-check-circle me-2"></i>Produtos com Correção
+            <i class="fas fa-check-circle me-2"></i>Produtos com Correcao
           </h5>
           <% if @total_processed > 0 %>
             <span class="badge bg-success text-dark px-3 py-2">
@@ -333,7 +442,7 @@
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 120px;">Corrigido</th>
                     <th class="text-white fw-bold px-3 py-3" style="width: 180px;">Motivo</th>
                     <th class="text-white fw-bold px-3 py-3 text-center" style="width: 100px;">Shopify</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Ações</th>
+                    <th class="text-white fw-bold px-3 py-3 text-center" style="width: 80px;">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -381,7 +490,7 @@
                       </td>
                       <td class="px-3 py-3 text-center" style="width: 100px;">
                         <% if item.product.shopify_inventory_item_id.present? %>
-                          <span class="badge <%= item.shopify_sync_status_badge_class %> text-white px-2 py-1" 
+                          <span class="badge <%= item.shopify_sync_status_badge_class %> text-white px-2 py-1"
                                 title="<%= item.shopify_sync_error if item.shopify_sync_status == 'error' %>"
                                 id="shopify-status-<%= item.id %>">
                             <% case item.shopify_sync_status %>
@@ -395,10 +504,8 @@
                               <i class="fas fa-clock me-1"></i>Pendente
                             <% end %>
                           </span>
-                          
-                          <%# Botão aparece para qualquer status diferente de 'synced' %>
                           <% if item.shopify_sync_status != 'synced' && @stock_correction.status != 'executed' %>
-                            <button class="btn btn-warning btn-sm mt-1 d-block mx-auto" 
+                            <button class="btn btn-warning btn-sm mt-1 d-block mx-auto"
                                     onclick="retryShopifySync('<%= item.id %>')"
                                     id="retry-btn-<%= item.id %>"
                                     title="<%= item.shopify_sync_error %>">
@@ -434,8 +541,8 @@
           <% else %>
             <div class="text-center py-5">
               <i class="fas fa-clipboard-list fa-3x text-white-50 mb-3"></i>
-              <h5 class="text-white-50">Nenhum produto com correção ainda</h5>
-              <p class="text-white-50">Os produtos com correção aparecerão aqui</p>
+              <h5 class="text-white-50">Nenhum produto com correcao ainda</h5>
+              <p class="text-white-50">Os produtos com correcao aparecerao aqui</p>
             </div>
           <% end %>
         </div>
@@ -465,7 +572,7 @@
                 <% if @current_page < @total_pages %>
                   <%= link_to edit_stock_correction_path(@stock_correction, page: @current_page + 1, search_term: @search_term),
                       class: "btn btn-outline-light btn-sm" do %>
-                    Próxima <i class="fas fa-chevron-right"></i>
+                    Proxima <i class="fas fa-chevron-right"></i>
                   <% end %>
                 <% end %>
               </div>
@@ -492,37 +599,30 @@ body {
   background-color: #121212;
   color: #f8f9fa;
 }
-
 .bg-black {
   background-color: #121212 !important;
 }
-
 .form-control, .form-select {
   background-color: #343a40;
   border-color: #495057;
   color: #fff;
 }
-
 .form-control:focus, .form-select:focus {
   background-color: #495057;
   border-color: #6c757d;
   color: #fff;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
-
 .table-dark {
   --bs-table-bg: transparent;
 }
-
 .table-hover tbody tr:hover {
   background-color: rgba(255, 255, 255, 0.075);
 }
-
 .table-fixed {
   table-layout: fixed;
   width: 100%;
 }
-
 .table-fixed th,
 .table-fixed td {
   overflow: hidden;
@@ -530,90 +630,82 @@ body {
   white-space: nowrap;
   vertical-align: middle;
 }
-
 .table-fixed td:nth-child(1),
 .table-fixed td:nth-child(4) {
   white-space: normal;
   word-wrap: break-word;
 }
-
 .font-monospace {
   font-family: 'Courier New', monospace;
 }
-
 .card {
   border-radius: 8px;
 }
-
 .btn {
   border-radius: 6px;
   font-weight: 500;
 }
-
 .shadow-lg {
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
 }
-
 .badge {
   font-weight: 500;
 }
-
 .form-control-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
 }
-
 .btn-sm {
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
 }
-
 .border-info {
   border-color: #0dcaf0 !important;
 }
-
 .bg-info {
   background-color: #0dcaf0 !important;
 }
-
 .text-warning {
   color: #ffc107 !important;
 }
-
 @media (max-width: 1200px) {
   .table-fixed th:nth-child(1),
-  .table-fixed td:nth-child(1) {
-    width: 200px !important;
-  }
+  .table-fixed td:nth-child(1) { width: 200px !important; }
   .table-fixed th:nth-child(4),
-  .table-fixed td:nth-child(4) {
-    width: 150px !important;
-  }
+  .table-fixed td:nth-child(4) { width: 150px !important; }
 }
-
 @media (max-width: 768px) {
-  .table-responsive {
-    font-size: 0.875rem;
-  }
-  .btn-sm {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.8rem;
-  }
+  .table-responsive { font-size: 0.875rem; }
+  .btn-sm { padding: 0.2rem 0.4rem; font-size: 0.8rem; }
 }
 </style>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+  const collapse = document.getElementById('shopifyErrorsCollapse');
+  const chevron = document.getElementById('shopifyErrorsChevron');
+
+  if (collapse && chevron) {
+    collapse.addEventListener('show.bs.collapse', function() {
+      chevron.style.transform = 'rotate(180deg)';
+    });
+    collapse.addEventListener('hide.bs.collapse', function() {
+      chevron.style.transform = 'rotate(0deg)';
+    });
+  }
+});
+
 function saveCorrection(productId) {
   const correctedStock = document.getElementById('correctedStock_' + productId).value;
   const correctionReason = document.getElementById('correctionReason_' + productId).value;
 
   if (!correctedStock || correctedStock < 0) {
-    alert('Por favor, informe um estoque válido.');
+    alert('Por favor, informe um estoque valido.');
     return;
   }
 
   if (!correctionReason.trim()) {
-    alert('Por favor, informe o motivo da correção.');
+    alert('Por favor, informe o motivo da correcao.');
     return;
   }
 
@@ -638,24 +730,15 @@ function saveCorrection(productId) {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      let message = 'Correção salva com sucesso!';
-      
+      let message = 'Correcao salva com sucesso!';
       if (data.shopify_status) {
         switch(data.shopify_status) {
-          case 'synced':
-            message += '\n✅ Integrado com Shopify!';
-            break;
-          case 'error':
-            message += '\n⚠️ Erro na integração com Shopify (verifique os logs)';
-            break;
-          case 'no_shopify_id':
-            message += '\n⚠️ Produto sem ID da Shopify';
-            break;
-          default:
-            message += '\n🔄 Integração em processamento...';
+          case 'synced':        message += '\nIntegrado com Shopify!'; break;
+          case 'error':         message += '\nErro na integracao com Shopify (verifique os logs)'; break;
+          case 'no_shopify_id': message += '\nProduto sem ID da Shopify'; break;
+          default:              message += '\nIntegracao em processamento...';
         }
       }
-      
       alert(message);
       location.reload();
     } else {
@@ -666,7 +749,7 @@ function saveCorrection(productId) {
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Erro ao salvar correção');
+    alert('Erro ao salvar correcao');
     button.innerHTML = originalText;
     button.disabled = false;
   });
@@ -675,13 +758,13 @@ function saveCorrection(productId) {
 function retryShopifySync(itemId) {
   const button = document.getElementById('retry-btn-' + itemId);
   const statusBadge = document.getElementById('shopify-status-' + itemId);
-  
-  if (!button || !statusBadge) {
-    alert('Erro ao localizar elementos na página');
+
+  if (!button) {
+    alert('Erro ao localizar elementos na pagina');
     return;
   }
 
-  if (!confirm('Deseja tentar novamente a integração com a Shopify?')) {
+  if (!confirm('Deseja tentar novamente a integracao com a Shopify?')) {
     return;
   }
 
@@ -689,8 +772,10 @@ function retryShopifySync(itemId) {
   button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Tentando...';
   button.disabled = true;
 
-  statusBadge.className = 'badge bg-info text-white px-2 py-1';
-  statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sync...';
+  if (statusBadge) {
+    statusBadge.className = 'badge bg-info text-white px-2 py-1';
+    statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sync...';
+  }
 
   fetch('<%= retry_shopify_sync_stock_correction_path(@stock_correction) %>', {
     method: 'POST',
@@ -704,34 +789,41 @@ function retryShopifySync(itemId) {
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      statusBadge.className = 'badge bg-success text-white px-2 py-1';
-      statusBadge.innerHTML = '<i class="fab fa-shopify me-1"></i>Sync';
-      statusBadge.title = '';
-      
+      if (statusBadge) {
+        statusBadge.className = 'badge bg-success text-white px-2 py-1';
+        statusBadge.innerHTML = '<i class="fab fa-shopify me-1"></i>Sync';
+        statusBadge.title = '';
+      }
       button.remove();
-      
-      alert('✅ Integração com Shopify realizada com sucesso!');
+
+      const errorRow = document.getElementById('error-row-' + itemId);
+      if (errorRow) {
+        errorRow.style.transition = 'opacity 0.3s ease';
+        errorRow.style.opacity = '0';
+        setTimeout(() => errorRow.remove(), 300);
+      }
+
+      alert('Integracao com Shopify realizada com sucesso!');
     } else {
-      statusBadge.className = 'badge bg-danger text-white px-2 py-1';
-      statusBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Erro';
-      statusBadge.title = data.error_details || data.message;
-      
+      if (statusBadge) {
+        statusBadge.className = 'badge bg-danger text-white px-2 py-1';
+        statusBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Erro';
+        statusBadge.title = data.error_details || data.message;
+      }
       button.innerHTML = originalButtonText;
       button.disabled = false;
-      
-      alert('❌ Erro na integração:\n' + data.message);
+      alert('Erro na integracao:\n' + data.message);
     }
   })
   .catch(error => {
     console.error('Error retrying Shopify sync:', error);
-    
-    statusBadge.className = 'badge bg-danger text-white px-2 py-1';
-    statusBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Erro';
-    
+    if (statusBadge) {
+      statusBadge.className = 'badge bg-danger text-white px-2 py-1';
+      statusBadge.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Erro';
+    }
     button.innerHTML = originalButtonText;
     button.disabled = false;
-    
-    alert('Erro ao tentar integração. Verifique sua conexão e tente novamente.');
+    alert('Erro ao tentar integracao. Verifique sua conexao e tente novamente.');
   });
 }
 </script>

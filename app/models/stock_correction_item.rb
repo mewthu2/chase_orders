@@ -92,7 +92,7 @@ class StockCorrectionItem < ApplicationRecord
 
           update!(shopify_sync_status: 'syncing')
 
-          result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
+          result = ShopifyInventoryService.update_inventory(product, location, corrected_stock)
 
           if result[:success]
             update!(
@@ -165,7 +165,7 @@ class StockCorrectionItem < ApplicationRecord
 
       update!(shopify_sync_status: 'syncing')
 
-      result = ShopifyInventoryService.update_inventory(product, location, corrected_stock, 'correction')
+      result = ShopifyInventoryService.update_inventory(product, location, corrected_stock)
 
       if result[:success]
         update!(

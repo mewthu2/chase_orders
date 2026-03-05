@@ -15,6 +15,8 @@ class OrdersUpdateJob < ApplicationJob
     when 'sync_shopify_orders_routine'
       sync_shopify_orders_routine(options)
 
+    when 'sync_customers_from_orders'
+      sync_customers_from_orders(options)
     else
       Rails.logger.error "[OrdersUpdateJob] Ação desconhecida: #{action}"
     end
@@ -67,9 +69,7 @@ class OrdersUpdateJob < ApplicationJob
 
     return unless shopify_order
 
-    Shopify::Orders.create_or_update_order_from_shopify(
-      shopify_order.as_json
-    )
+    Shopify::Orders.create_or_update_order_from_shopify(shopify_order.as_json)
   end
 
   def update_staff_and_payments(options)
