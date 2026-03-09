@@ -215,7 +215,7 @@ class CreateNoteTinyJob < ActiveJob::Base
         parcelas: [
           {
             parcela: {
-              data_vencimento: Time.current.strftime('%d/%m/%Y'),
+              data: Time.current.strftime('%d/%m/%Y'),
               valor: format('%.2f', valor_nota),
               meio_pagamento: '90'
             }
