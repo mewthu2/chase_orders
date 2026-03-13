@@ -72,6 +72,7 @@ Rails.application.routes.draw do
   resources :orders, only: [:index] do
     collection do
       get :export
+      get :coupon_usage
     end
   end
   resources :attempts, only: [:index] do

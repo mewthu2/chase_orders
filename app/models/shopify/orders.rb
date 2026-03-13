@@ -587,10 +587,10 @@ class Shopify::Orders
       end
     end
 
-    def sync_shopify_orders_to_rails(limit: 100, status: 'any', time_range: :all)
+    def sync_shopify_orders_to_rails(limit: 250, status: 'any', time_range: :all, from_date: nil)
       session = ShopifyAPI::Auth::Session.new(
         shop: 'chasebrasil.myshopify.com',
-        access_token: ENV.fetch('BH_SHOPPING_TOKEN_APP')
+        access_token: ENV.fetch('CHASE_ORDERS_TOKEN')
       )
 
       client = ShopifyAPI::Clients::Rest::Admin.new(session:)
@@ -598,21 +598,25 @@ class Shopify::Orders
       total = 0
 
       created_at_min =
-        case time_range.to_sym
-        when :last_3_days
-          3.days.ago.iso8601
-        when :last_3_hours
-          3.hours.ago.iso8601
+        if from_date.present?
+          Time.parse(from_date.to_s).iso8601
         else
-          nil
+          case time_range.to_sym
+          when :last_3_days
+            3.days.ago.iso8601
+          when :last_3_hours
+            3.hours.ago.iso8601
+          else
+            nil
+          end
         end
 
-      Rails.logger.info "[Shopify::Orders] Sync iniciado (range: #{time_range})"
+      Rails.logger.info "[Shopify::Orders] Sync iniciado (range: #{time_range}, from_date: #{created_at_min})"
 
       query_params = {
-        limit: limit,
-        status: status,
-        fields: 'id,created_at,line_items,note_attributes'
+        limit:,
+        status:,
+        fields: 'id,created_at,line_items,note_attributes,discount_codes,current_total_price,current_total_discounts'
       }
 
       query_params[:created_at_min] = created_at_min if created_at_min.present?
@@ -626,9 +630,13 @@ class Shopify::Orders
         response.body['orders'].each do |shopify_order|
           create_or_update_order_from_shopify(shopify_order)
           total += 1
+
+          sleep 1
         end
 
         break unless response.next_page_info
+
+        sleep 1
 
         response = client.get(
           path: 'orders',
@@ -638,7 +646,7 @@ class Shopify::Orders
         )
       end
 
-        Rails.logger.info "[Shopify::Orders] Sincronizados #{total} pedidos"
+      Rails.logger.info "[Shopify::Orders] Sincronizados #{total} pedidos"
     end
 
     def find_or_create_customer_from_shopify(shopify_order)
@@ -718,7 +726,7 @@ class Shopify::Orders
 
       shopify_order = ShopifyAPI::Order.find(
         session:,
-        id: shopify_order_id
+        id: 6624034979914
       )
 
       create_or_update_order_from_shopify(shopify_order) if shopify_order
@@ -731,9 +739,9 @@ class Shopify::Orders
       shopify_order_id   = shopify_order['id'].to_s
       shopify_created_at = Time.parse(shopify_order['created_at'])
 
-      note_attributes = extract_note_attributes_from_hash(
-        shopify_order['note_attributes']
-      )
+      raw_note_attributes = shopify_order['note_attributes'] || []
+
+      note_attributes = extract_note_attributes_from_hash(raw_note_attributes)
 
       staff_id   = note_attributes['staff_ID']
       staff_name = note_attributes['staff_name']
@@ -741,6 +749,23 @@ class Shopify::Orders
       iglu_payments = parse_iglu_payments(
         note_attributes['iglu_payments']
       )
+
+      current_total_price     = shopify_order['current_total_price']&.to_d
+      current_total_discounts = shopify_order['current_total_discounts']&.to_d
+
+      shopify_discount_codes = Array(shopify_order['discount_codes']).map { |d| d['code'] }
+
+      note_discount_codes =
+        raw_note_attributes.select { |a| a['name'] == 'discount_codes' }
+                           .map { |a| a['value'] }
+
+      order_discounts_info = JSON.parse(note_attributes['order_discounts_info'] || '[]')
+
+      extra_discount_codes =
+        order_discounts_info.map { |d| d['description'] }
+
+      discount_codes =
+        (shopify_discount_codes + note_discount_codes + extra_discount_codes).compact.uniq
 
       location_shopify_id = note_attributes['location_ID']
 
@@ -754,7 +779,7 @@ class Shopify::Orders
       customer = find_or_create_customer_from_shopify(shopify_order)
 
       order = Order.find_or_initialize_by(
-        shopify_order_id:
+        shopify_order_id: shopify_order_id
       )
 
       order.assign_attributes(
@@ -762,8 +787,12 @@ class Shopify::Orders
         staff_name: staff_name.presence || order.staff_name,
         location_id: location&.id,
         shopify_creation_date: shopify_created_at,
-        iglu_payments:,
-        customer_id: customer&.id
+        iglu_payments: iglu_payments,
+        customer_id: customer&.id,
+        note_attributes: raw_note_attributes,
+        discount_codes: discount_codes,
+        current_total_price: current_total_price,
+        current_total_discounts: current_total_discounts
       )
 
       order.created_at = shopify_created_at if order.new_record?
@@ -785,24 +814,25 @@ class Shopify::Orders
         if item
           if item.price != price || item.quantity != quantity
             item.update!(
-              price:,
-              quantity:
+              price: price,
+              quantity: quantity
             )
           end
         else
-          product = Product.find_by(sku:)
+          product = Product.find_by(sku: sku)
 
           order.order_items.create!(
             product_id: product&.id,
-            sku:,
-            price:,
-            quantity:,
+            sku: sku,
+            price: price,
+            quantity: quantity,
             canceled: false
           )
         end
       end
 
       order
+
     rescue StandardError => e
       Rails.logger.error "[Shopify::Orders] Erro ao processar pedido #{shopify_order_id}: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")

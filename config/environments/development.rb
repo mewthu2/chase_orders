@@ -8,6 +8,9 @@ Rails.application.configure do
   # since you don't have to restart the web server when you make code changes.
   config.cache_classes = false
 
+  config.hosts << "36b2-2804-14d-587b-872b-1485-f0c8-8cb-16a1.ngrok-free.app"
+  config.hosts << "36b2-2804-14d-587b-872b-1485-f0c8-8cb-16a1.ngrok-free.app"
+
   config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {

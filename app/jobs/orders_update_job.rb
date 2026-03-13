@@ -17,9 +17,11 @@ class OrdersUpdateJob < ApplicationJob
 
     when 'sync_customers_from_orders'
       sync_customers_from_orders(options)
+
     else
       Rails.logger.error "[OrdersUpdateJob] Ação desconhecida: #{action}"
     end
+
   rescue StandardError => e
     Rails.logger.error "[OrdersUpdateJob] Erro: #{e.message}"
     Rails.logger.error e.backtrace.join("\n")
@@ -27,29 +29,33 @@ class OrdersUpdateJob < ApplicationJob
   end
 
   def sync_all_orders(options)
-    limit  = options[:limit] || 100
-    status = options[:status] || 'any'
+    limit     = options[:limit] || 250
+    status    = options[:status] || 'any'
+    from_date = options[:from_date]
 
     Rails.logger.info '[OrdersUpdateJob] Iniciando sincronização completa'
 
     Shopify::Orders.sync_shopify_orders_to_rails(
-      limit:,
-      status:,
+      limit: limit,
+      status: status,
+      from_date: from_date,
       time_range: :all
     )
   end
 
   def sync_shopify_orders_routine(options)
-    limit   = options[:limit] || 250
-    status  = options[:status] || 'any'
-    routine = options[:routine] || :last_3_hours
+    limit     = options[:limit] || 250
+    status    = options[:status] || 'any'
+    routine   = options[:routine] || :last_3_hours
+    from_date = options[:from_date]
 
     Rails.logger.info "[OrdersUpdateJob] Iniciando rotina Shopify (#{routine})"
 
     Shopify::Orders.sync_shopify_orders_to_rails(
-      limit:,
-      status:,
-      time_range: routine
+      limit: limit,
+      status: status,
+      time_range: routine,
+      from_date: from_date
     )
 
     sync_customers_from_orders(batch_size: 50)
@@ -62,7 +68,7 @@ class OrdersUpdateJob < ApplicationJob
     session = build_shopify_session
 
     shopify_order = ShopifyAPI::Order.find(
-      session:,
+      session: session,
       id: shopify_order_id,
       fields: 'id,name,email,created_at,total_price,line_items,customer,financial_status,fulfillment_status,note_attributes'
     )
@@ -89,10 +95,13 @@ class OrdersUpdateJob < ApplicationJob
 
     session = build_shopify_session
 
-    Order.where.not(shopify_order_id: nil).where(customer_id: nil)
-         .find_in_batches(batch_size:) do |orders|
+    Order.where.not(shopify_order_id: nil)
+         .where(customer_id: nil)
+         .find_in_batches(batch_size: batch_size) do |orders|
+
       orders.each do |order|
         sync_customer_for_order(order, session)
+
       rescue StandardError => e
         Rails.logger.error "[OrdersUpdateJob] Erro no order #{order.id}: #{e.message}"
       end
@@ -112,7 +121,7 @@ class OrdersUpdateJob < ApplicationJob
     return if order.shopify_order_id.blank?
 
     shopify_order = ShopifyAPI::Order.find(
-      session:,
+      session: session,
       id: order.shopify_order_id,
       fields: 'id,customer'
     )

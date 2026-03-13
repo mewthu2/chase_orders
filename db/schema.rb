@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_01_001751) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -341,6 +341,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_01_001751) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "customer_id"
+    t.json "note_attributes"
+    t.json "discount_codes"
+    t.decimal "current_total_price", precision: 10, scale: 2
+    t.decimal "current_total_discounts", precision: 10, scale: 2
     t.index ["customer_id"], name: "index_orders_on_customer_id"
     t.index ["location_id"], name: "index_orders_on_location_id"
   end

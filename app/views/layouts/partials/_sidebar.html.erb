@@ -49,13 +49,17 @@
             </div>
             <div class="nav-group-dropdown" id="crmDropdown">
               <div class="dropdown-content">
-                <%= link_to orders_path, class: "dropdown-link #{'active' if controller_name == 'orders'}" do %>
+                <%= link_to orders_path, class: "dropdown-link #{'active' if controller_name == 'orders' && action_name == 'index'}" do %>
                   <i class="fas fa-shopping-cart"></i>
                   <span>Pedidos</span>
                 <% end %>
                 <%= link_to customers_path, class: "dropdown-link #{'active' if controller_name == 'customers'}" do %>
                   <i class="fas fa-users"></i>
                   <span>Clientes</span>
+                <% end %>
+                <%= link_to coupon_usage_orders_path, class: "dropdown-link #{'active' if current_page?(coupon_usage_orders_path)}" do %>
+                  <i class="fas fa-ticket-alt"></i>
+                  <span>Uso de Cupons</span>
                 <% end %>
               </div>
             </div>
@@ -490,15 +494,14 @@ document.addEventListener("DOMContentLoaded", () => {
     carousel.scrollLeft = scrollLeft - (x - startX) * 2
   })
 
-  // Fecha todos os dropdowns ao clicar fora
   document.addEventListener("click", (e) => {
     const dropdowns = [
-      { id: "crmDropdown",          header: '[onclick="toggleCRM()"]',           icon: "crmIcon"          },
-      { id: "correiosDropdown",     header: '[onclick="toggleCorreios()"]',       icon: "correiosIcon"     },
-      { id: "usuariosDropdown",     header: '[onclick="toggleUsuarios()"]',       icon: "usuariosIcon"     },
-      { id: "plannerOrdersDropdown",header: '[onclick="togglePlannerOrders()"]',  icon: "plannerOrdersIcon"},
-      { id: "produtosDropdown",     header: '[onclick="toggleProdutos()"]',       icon: "produtosIcon"     },
-      { id: "marketingDropdown",    header: '[onclick="toggleMarketing()"]',      icon: "marketingIcon"    },
+      { id: "crmDropdown",           header: '[onclick="toggleCRM()"]',            icon: "crmIcon"           },
+      { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]',        icon: "correiosIcon"      },
+      { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]',        icon: "usuariosIcon"      },
+      { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]',   icon: "plannerOrdersIcon" },
+      { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]',        icon: "produtosIcon"      },
+      { id: "marketingDropdown",     header: '[onclick="toggleMarketing()"]',       icon: "marketingIcon"     },
     ]
 
     dropdowns.forEach(({ id, header, icon }) => {
@@ -514,13 +517,11 @@ document.addEventListener("DOMContentLoaded", () => {
   })
 })
 
-// Função reutilizável para toggle de qualquer dropdown
 function toggleDropdown(dropdownId, iconId, buttonSelector) {
   const dropdown = document.getElementById(dropdownId)
   const icon     = document.getElementById(iconId)
   const button   = document.querySelector(buttonSelector)
 
-  // Fecha todos os outros
   document.querySelectorAll(".nav-group-dropdown.show").forEach((d) => {
     if (d !== dropdown) d.classList.remove("show")
   })
@@ -528,7 +529,6 @@ function toggleDropdown(dropdownId, iconId, buttonSelector) {
     if (i !== icon) i.classList.remove("rotated")
   })
 
-  // Posiciona alinhado ao botão
   if (button && dropdown) {
     const rect = button.getBoundingClientRect()
     dropdown.style.left = rect.left + "px"
@@ -538,10 +538,10 @@ function toggleDropdown(dropdownId, iconId, buttonSelector) {
   icon.classList.toggle("rotated")
 }
 
-function toggleCRM()          { toggleDropdown("crmDropdown",           "crmIcon",           '[onclick="toggleCRM()"]')           }
-function toggleCorreios()     { toggleDropdown("correiosDropdown",       "correiosIcon",       '[onclick="toggleCorreios()"]')       }
-function toggleUsuarios()     { toggleDropdown("usuariosDropdown",       "usuariosIcon",       '[onclick="toggleUsuarios()"]')       }
-function togglePlannerOrders(){ toggleDropdown("plannerOrdersDropdown",  "plannerOrdersIcon",  '[onclick="togglePlannerOrders()"]')  }
-function toggleProdutos()     { toggleDropdown("produtosDropdown",       "produtosIcon",       '[onclick="toggleProdutos()"]')       }
-function toggleMarketing()    { toggleDropdown("marketingDropdown",      "marketingIcon",      '[onclick="toggleMarketing()"]')      }
+function toggleCRM()           { toggleDropdown("crmDropdown",           "crmIcon",           '[onclick="toggleCRM()"]')           }
+function toggleCorreios()      { toggleDropdown("correiosDropdown",       "correiosIcon",       '[onclick="toggleCorreios()"]')       }
+function toggleUsuarios()      { toggleDropdown("usuariosDropdown",       "usuariosIcon",       '[onclick="toggleUsuarios()"]')       }
+function togglePlannerOrders() { toggleDropdown("plannerOrdersDropdown",  "plannerOrdersIcon",  '[onclick="togglePlannerOrders()"]')  }
+function toggleProdutos()      { toggleDropdown("produtosDropdown",       "produtosIcon",       '[onclick="toggleProdutos()"]')       }
+function toggleMarketing()     { toggleDropdown("marketingDropdown",      "marketingIcon",      '[onclick="toggleMarketing()"]')      }
 </script>
