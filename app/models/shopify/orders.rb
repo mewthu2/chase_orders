@@ -726,7 +726,7 @@ class Shopify::Orders
 
       shopify_order = ShopifyAPI::Order.find(
         session:,
-        id: 6624034979914
+        id: shopify_order_id
       )
 
       create_or_update_order_from_shopify(shopify_order) if shopify_order
