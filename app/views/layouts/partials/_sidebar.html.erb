@@ -38,7 +38,7 @@
           </div>
         </div>
 
-        <% if current_user&.admin? || current_user&.profile&.marketing_profile? %>
+        <% if current_user&.admin? %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCRM()">
               <div class="nav-group-title">
