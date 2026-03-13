@@ -96,7 +96,7 @@ class CustomersController < ApplicationController
   end
 
   def require_admin!
-    unless current_user&.admin?
+    unless current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?)
       redirect_to root_path, alert: "Acesso restrito a administradores."
     end
   end

@@ -289,6 +289,6 @@ class OrdersController < ApplicationController
   end
 
   def require_admin!
-    redirect_to root_path, alert: "Acesso restrito a administradores." unless current_user&.admin?
+    redirect_to root_path, alert: "Acesso restrito a administradores." unless current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?)
   end
 end
