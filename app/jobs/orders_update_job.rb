@@ -68,7 +68,7 @@ class OrdersUpdateJob < ApplicationJob
     session = build_shopify_session
 
     shopify_order = ShopifyAPI::Order.find(
-      session: session,
+      session:,
       id: shopify_order_id,
       fields: 'id,name,email,created_at,total_price,line_items,customer,financial_status,fulfillment_status,note_attributes'
     )
