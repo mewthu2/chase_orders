@@ -3,14 +3,14 @@ class OrdersController < ApplicationController
   before_action :require_admin!
 
   LOCATION_COLORS = [
-    { bg: "0D6EFD", fg: "FFFFFF" },
-    { bg: "198754", fg: "FFFFFF" },
-    { bg: "DC3545", fg: "FFFFFF" },
-    { bg: "FFC107", fg: "000000" },
-    { bg: "0DCAF0", fg: "000000" },
-    { bg: "6F42C1", fg: "FFFFFF" },
-    { bg: "FD7E14", fg: "FFFFFF" },
-    { bg: "20C997", fg: "000000" },
+    { bg: '0D6EFD', fg: 'FFFFFF' },
+    { bg: '198754', fg: 'FFFFFF' },
+    { bg: 'DC3545', fg: 'FFFFFF' },
+    { bg: 'FFC107', fg: '000000' },
+    { bg: '0DCAF0', fg: '000000' },
+    { bg: '6F42C1', fg: 'FFFFFF' },
+    { bg: 'FD7E14', fg: 'FFFFFF' },
+    { bg: '20C997', fg: '000000' }
   ].freeze
 
   COUPON_PER_PAGE = 20
@@ -37,27 +37,27 @@ class OrdersController < ApplicationController
     location_name = if params[:location_id].present?
                       @locations.find { |l| l.id.to_s == params[:location_id] }&.name || "todos"
                     else
-                      "todos"
+                      'todos'
                     end
 
     filename  = "pedidos_#{location_name.parameterize}_#{Date.today.strftime('%d-%m-%Y')}.xlsx"
-    file_path = Rails.root.join("tmp", "orders_export_#{SecureRandom.hex(4)}.xlsx")
+    file_path = Rails.root.join('tmp', "orders_export_#{SecureRandom.hex(4)}.xlsx")
 
     workbook  = RubyXL::Workbook.new
     worksheet = workbook[0]
     worksheet.sheet_name = location_name.truncate(31)
 
-    header_bg  = "1A73E8"
-    header_fg  = "FFFFFF"
-    alt_row_bg = "F0F5FF"
+    header_bg  = '1A73E8'
+    header_fg  = 'FFFFFF'
+    alt_row_bg = 'F0F5FF'
 
-    headers = ["# Pedido Shopify", "Nome do Cliente", "Email", "Telefone", "Localização", "Data Shopify", "Criado em"]
+    headers = ['# Pedido Shopify', 'Nome do Cliente', 'Email', 'Telefone', 'Localização', 'Data Shopify', 'Criado em']
     headers.each_with_index do |h, col|
       cell = worksheet.add_cell(0, col, h)
       cell.change_font_bold(true)
       cell.change_font_color(header_fg)
       cell.change_fill(header_bg)
-      cell.change_horizontal_alignment("center")
+      cell.change_horizontal_alignment('center')
     end
 
     [22, 28, 32, 18, 24, 22, 22].each_with_index do |w, i|
@@ -66,18 +66,18 @@ class OrdersController < ApplicationController
 
     @orders.each_with_index do |order, i|
       row_num  = i + 1
-      row_bg   = i.odd? ? alt_row_bg : "FFFFFF"
+      row_bg   = i.odd? ? alt_row_bg : 'FFFFFF'
       loc      = order.location
       loc_color = loc ? LOCATION_COLORS[@locations.index(loc) % LOCATION_COLORS.size] : nil
 
       row_data = [
         order.shopify_order_id.to_s,
-        [order.customer&.first_name, order.customer&.last_name].compact.join(" "),
+        [order.customer&.first_name, order.customer&.last_name].compact.join(''),
         order.customer&.email.to_s,
         order.customer&.phone.to_s,
-        loc&.name || "Sem location",
-        order.shopify_creation_date&.strftime("%d/%m/%Y %H:%M") || "",
-        order.created_at.strftime("%d/%m/%Y %H:%M")
+        loc&.name || 'Sem location',
+        order.shopify_creation_date&.strftime('%d/%m/%Y %H:%M') || '',
+        order.created_at.strftime('%d/%m/%Y %H:%M')
       ]
 
       row_data.each_with_index do |value, col|
@@ -88,7 +88,7 @@ class OrdersController < ApplicationController
           cell.change_font_color(loc_color[:fg])
           cell.change_font_bold(true)
         end
-        cell.change_horizontal_alignment(col == 0 ? "center" : "left")
+        cell.change_horizontal_alignment(col == 0 ? 'center' : 'left')
       end
     end
 
@@ -99,40 +99,28 @@ class OrdersController < ApplicationController
     workbook.write(file_path.to_s)
 
     send_file file_path,
-              filename:    filename,
-              type:        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              disposition: "attachment"
+              filename:,
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              disposition: 'attachment'
   end
 
-  # GET  /orders/coupon_usage          — tela HTML
-  # GET  /orders/coupon_usage.xlsx     — exportação para planilha
   def coupon_usage
-    # Monta a query base respeitando filtros de data
     base_scope = Order.where.not(discount_codes: nil).where.not(discount_codes: [])
 
-    # Filtro de período rápido (30 / 60 / 90 dias)
     if params[:period].present?
       days       = params[:period].to_i
-      base_scope = base_scope.where("orders.created_at >= ?", days.days.ago.beginning_of_day)
+      base_scope = base_scope.where('orders.created_at >= ?', days.days.ago.beginning_of_day)
     end
 
-    # Filtro de intervalo customizado
-    if params[:date_from].present?
-      base_scope = base_scope.where("orders.created_at >= ?", Date.parse(params[:date_from]).beginning_of_day)
-    end
+    base_scope = base_scope.where('orders.created_at >= ?', Date.parse(params[:date_from]).beginning_of_day) if params[:date_from].present?
 
-    if params[:date_to].present?
-      base_scope = base_scope.where("orders.created_at <= ?", Date.parse(params[:date_to]).end_of_day)
-    end
+    base_scope = base_scope.where('orders.created_at <= ?', Date.parse(params[:date_to]).end_of_day) if params[:date_to].present?
 
-    # Filtro por código digitado
     if params[:coupon_search].present?
-      term       = params[:coupon_search].strip.upcase
-      # discount_codes é um array serializado; filtra em Ruby após carregar
+      term = params[:coupon_search].strip.upcase
       @search_term = term
     end
 
-    # Conta usos por cupom
     coupon_counts = Hash.new(0)
     base_scope.each do |order|
       Array(order.discount_codes).each do |code|
@@ -141,22 +129,15 @@ class OrdersController < ApplicationController
       end
     end
 
-    # Aplica filtro de busca por nome de cupom
-    if @search_term.present?
-      coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) }
-    end
+    coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) } if @search_term.present?
 
     all_stats = coupon_counts.sort_by { |_, count| -count }
 
-    # Totais gerais (sem paginação) para os cards de resumo
     @total_unique_coupons = all_stats.size
     @total_with_coupon    = base_scope.count
     @total_orders_global  = Order.count
     @top_coupon           = all_stats.first
 
-    # Receita líquida (current_total_price) agrupada por cupom
-    # Precisamos saber qual pedido tem qual cupom; como discount_codes é array serializado,
-    # iteramos igual ao contador de usos, mas somando o valor.
     coupon_revenue = Hash.new(0.0)
     base_scope.pluck(:discount_codes, :current_total_price).each do |codes, price|
       Array(codes).each do |code|
@@ -166,7 +147,6 @@ class OrdersController < ApplicationController
     end
     @coupon_revenue = coupon_revenue
 
-    # Paginação
     @current_page  = (params[:page] || 1).to_i
     @per_page      = COUPON_PER_PAGE
     @total_pages   = (all_stats.size.to_f / @per_page).ceil

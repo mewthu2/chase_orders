@@ -650,10 +650,10 @@ class Shopify::Orders
     end
 
     def find_or_create_customer_from_shopify(shopify_order)
-      customer_stub = shopify_order['customer']
+      customer_stub = shopify_order.customer
       return nil unless customer_stub
 
-      shopify_customer_id = customer_stub['id'].to_s
+      shopify_customer_id = customer_stub.id.to_s
 
       session = ShopifyAPI::Auth::Session.new(
         shop: 'chasebrasil.myshopify.com',
@@ -726,7 +726,7 @@ class Shopify::Orders
 
       shopify_order = ShopifyAPI::Order.find(
         session:,
-        id: shopify_order_id
+        id: 6702907261002
       )
 
       create_or_update_order_from_shopify(shopify_order) if shopify_order
@@ -736,10 +736,10 @@ class Shopify::Orders
     end
 
     def create_or_update_order_from_shopify(shopify_order)
-      shopify_order_id   = shopify_order['id'].to_s
-      shopify_created_at = Time.parse(shopify_order['created_at'])
+      shopify_order_id   = shopify_order.id.to_s
+      shopify_created_at = Time.parse(shopify_order.created_at.to_s)
 
-      raw_note_attributes = shopify_order['note_attributes'] || []
+      raw_note_attributes = shopify_order.note_attributes || []
 
       note_attributes = extract_note_attributes_from_hash(raw_note_attributes)
 
@@ -750,36 +750,31 @@ class Shopify::Orders
         note_attributes['iglu_payments']
       )
 
-      current_total_price     = shopify_order['current_total_price']&.to_d
-      current_total_discounts = shopify_order['current_total_discounts']&.to_d
+      current_total_price     = shopify_order.current_total_price&.to_d
+      current_total_discounts = shopify_order.current_total_discounts&.to_d
 
-      shopify_discount_codes = Array(shopify_order['discount_codes']).map { |d| d['code'] }
+      shopify_discount_codes = Array(shopify_order.discount_codes).map { |d| d.code }
 
-      note_discount_codes =
-        raw_note_attributes.select { |a| a['name'] == 'discount_codes' }
-                           .map { |a| a['value'] }
+      note_discount_codes = raw_note_attributes.select { |a| a['name'] == 'discount_codes' }.map { |a| a['value'] }
 
       order_discounts_info = JSON.parse(note_attributes['order_discounts_info'] || '[]')
 
-      extra_discount_codes =
-        order_discounts_info.map { |d| d['description'] }
+      extra_discount_codes = order_discounts_info.map { |d| d['description'] }
 
-      discount_codes =
-        (shopify_discount_codes + note_discount_codes + extra_discount_codes).compact.uniq
+      discount_codes = (shopify_discount_codes + note_discount_codes + extra_discount_codes).compact.uniq
 
       location_shopify_id = note_attributes['location_ID']
 
-      location =
-        if location_shopify_id.present?
-          Location.find_by(shopify_location_id: location_shopify_id)
-        else
-          Location.find_by(slug: 'log+')
-        end
+      location = if location_shopify_id.present?
+                   Location.find_by(shopify_location_id: location_shopify_id)
+                 else
+                   Location.find_by(slug: 'log+')
+                 end
 
       customer = find_or_create_customer_from_shopify(shopify_order)
 
       order = Order.find_or_initialize_by(
-        shopify_order_id: shopify_order_id
+        shopify_order_id:
       )
 
       order.assign_attributes(
@@ -796,18 +791,18 @@ class Shopify::Orders
       )
 
       order.created_at = shopify_created_at if order.new_record?
-
       order.updated_at = Time.current
+
       order.save! if order.changed?
 
       existing_items = order.order_items.index_by(&:sku)
 
-      Array(shopify_order['line_items']).each do |line_item|
-        sku = line_item['sku']
+      Array(shopify_order.line_items).each do |line_item|
+        sku = line_item.sku
         next if sku.blank?
 
-        price    = line_item['price'].to_f
-        quantity = line_item['quantity'].to_i
+        price    = line_item.price.to_f
+        quantity = line_item.quantity.to_i
 
         item = existing_items[sku]
 
