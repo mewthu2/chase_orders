@@ -29,11 +29,10 @@ Rails.application.routes.draw do
     collection do
       post :search_product
       post :add_to_cart
-      post :update_cart_quantity
-      post :remove_from_cart
-      post :clear_cart
-      post :search_coupon
-      post :create_order
+      patch :update_cart_quantity
+      post  :remove_from_cart
+      post  :clear_cart
+      post  :create_order
     end
   end
 
