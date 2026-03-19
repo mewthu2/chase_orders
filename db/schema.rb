@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_18_192320) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_19_164358) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -316,14 +316,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_18_192320) do
     t.string "state"
     t.string "zip"
     t.string "store_type", null: false
-    t.string "payment_method", null: false
+    t.string "payment_method"
     t.decimal "subtotal", precision: 10, scale: 2, null: false
     t.decimal "discount_amount", precision: 10, scale: 2, default: "0.0"
     t.string "discount_reason"
     t.decimal "total_price", precision: 10, scale: 2, null: false
     t.text "notes"
     t.text "order_note"
-    t.string "status", default: "pending"
+    t.string "status", limit: 20, default: "pending", null: false
     t.string "shopify_order_id"
     t.string "shopify_order_number"
     t.text "integration_error"

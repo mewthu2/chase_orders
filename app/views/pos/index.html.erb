@@ -278,8 +278,13 @@
           </div>
         </form>
       </div>
-      <div class="modal-footer pos-modal-footer">
+      <div class="modal-footer pos-modal-footer" style="gap:8px;">
         <button type="button" class="pos-btn pos-btn-ghost" onclick="closeCheckoutModal()">Cancelar</button>
+        <button type="button" class="pos-btn" id="save-incomplete-btn"
+                style="background:#21262d; border:1px solid #30363d; color:#8b949e;"
+                onclick="saveIncompleteOrder()">
+          <i class="fas fa-save me-1"></i>Salvar Incompleto
+        </button>
         <button type="submit" form="checkout-form" class="pos-btn pos-btn-green" id="finalize-btn">
           <i class="fas fa-check me-1"></i>Finalizar Venda
         </button>
@@ -336,7 +341,7 @@
 <% content_for :styles do %>
 <style>
   /* ── Base ── */
-  body { background:#0d1117 !important; color:#e6edf3; }
+  body { color:#e6edf3; }
 
   /* ── Search ── */
   .pos-search-wrap { position:relative; }
@@ -483,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setupFormValidation();
 });
 
-// ── Event listeners ───────────────────────────────────────────────────────���
+// ── Event listeners ───────────────────────────────────────────────────────�����
 function setupEventListeners() {
   const searchInput = document.getElementById('product-search');
   if (searchInput) {
@@ -1131,6 +1136,48 @@ function validatePaymentTotal(paymentTotal) {
 
   paymentValidation.style.display = 'none';
   return true;
+}
+
+// ── Salvar incompleto ──────────────────────────────────────────────────────
+function saveIncompleteOrder() {
+  const form     = document.getElementById('checkout-form');
+  const formData = new FormData(form);
+  const orderData = { incomplete: true, payment_parcels: [] };
+
+  for (let [key, value] of formData.entries()) {
+    if (!key.includes('payment_parcels[')) orderData[key] = value;
+  }
+
+  const btn = document.getElementById('save-incomplete-btn');
+  btn.disabled = true;
+  showLoadingOverlay('Salvando pedido...');
+
+  fetch('/pos/create_order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+    body: JSON.stringify(orderData)
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        closeCheckoutModal();
+        showNotification('Pedido salvo como incompleto.', 'success', 5000);
+        document.getElementById('checkout-form').reset();
+        paymentParcels = [];
+        updateCartDisplay([], 0);
+        clearSelectedClient();
+        const container = document.getElementById('payment-parcels-container');
+        if (container) container.innerHTML = '';
+        setTimeout(() => addPaymentParcel(), 100);
+        if (confirm('Pedido salvo! Deseja visualizar o pedido?')) {
+          window.open(`/order_pdvs/${data.order_id}`, '_blank');
+        }
+      } else {
+        showNotification(data.error || 'Erro ao salvar pedido', 'error');
+      }
+    })
+    .catch(() => showNotification('Erro de comunicação ao salvar pedido', 'error'))
+    .finally(() => { btn.disabled = false; hideLoadingOverlay(); });
 }
 
 // ── Checkout submit ────────────────────────────────────────────────────────

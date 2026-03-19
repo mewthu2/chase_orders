@@ -166,6 +166,8 @@ class PosController < ApplicationController
     subtotal    = calculate_cart_total(cart_items)
     total_price = subtotal
 
+    incomplete = params[:incomplete] == true || params[:incomplete] == 'true'
+
     order = OrderPdv.new(
       user:            current_user,
       client_id:       params[:client_id].presence,
@@ -173,19 +175,19 @@ class PosController < ApplicationController
       customer_email:  params[:customer_email],
       customer_phone:  params[:customer_phone],
       customer_cpf:    params[:customer_cpf],
-      address1:        "#{params[:street]}, #{params[:number]}",
+      address1:        [params[:street], params[:number]].select(&:present?).join(', ').presence,
       address2:        params[:complement],
       city:            params[:city],
       state:           params[:state],
       zip:             params[:zip],
       store_type:      'online',
-      payment_method:  determine_payment_method(params[:payment_parcels]),
+      payment_method:  incomplete ? nil : determine_payment_method(params[:payment_parcels]),
       subtotal:        subtotal,
       discount_amount: 0,
       discount_reason: nil,
       total_price:     total_price,
       order_note:      params[:notes],
-      status:          'pending'
+      status:          incomplete ? 'incomplete' : 'pending'
     )
 
     ActiveRecord::Base.transaction do
@@ -206,17 +208,19 @@ class PosController < ApplicationController
         )
       end
 
-      if params[:payment_parcels].present?
-        params[:payment_parcels].each do |parcel_data|
-          next if parcel_data[:payment_method].blank? || parcel_data[:amount].blank?
+      unless incomplete
+        if params[:payment_parcels].present?
+          params[:payment_parcels].each do |parcel_data|
+            next if parcel_data[:payment_method].blank? || parcel_data[:amount].blank?
 
-          OrderParcel.create!(
-            order_pdv:      order,
-            payment_method: parcel_data[:payment_method],
-            amount:         parcel_data[:amount].to_f,
-            notes:          parcel_data[:notes],
-            status:         'pending'
-          )
+            OrderParcel.create!(
+              order_pdv:      order,
+              payment_method: parcel_data[:payment_method],
+              amount:         parcel_data[:amount].to_f,
+              notes:          parcel_data[:notes],
+              status:         'pending'
+            )
+          end
         end
       end
     end

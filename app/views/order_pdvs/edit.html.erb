@@ -245,7 +245,7 @@
 </style>
 <% end %>
 
-<div style="padding: 24px 16px;">
+<div class="container-fluid" style="max-width: 1400px; padding: 24px 16px;">
 
   <%# ── Header ──────────────────────────────────────────────────────────────── %>
   <div class="gh-card" style="margin-bottom: 20px;">
@@ -268,8 +268,20 @@
         </span>
 
         <% unless @order_pdv.tiny_order_id.present? %>
-          <button type="button" id="btn-integrate-tiny" class="gh-btn gh-btn-warning gh-btn-sm" onclick="integrateTiny()">
+          <% is_incomplete = @order_pdv.status == 'incomplete' %>
+          <button type="button" id="btn-integrate-tiny"
+                  class="gh-btn gh-btn-sm <%= is_incomplete ? '' : 'gh-btn-warning' %>"
+                  <% if is_incomplete %>
+                    disabled
+                    title="Complete o pedido (pagamento e endereço) antes de integrar ao Tiny"
+                    style="opacity: 0.45; cursor: not-allowed;"
+                  <% else %>
+                    onclick="integrateTiny()"
+                  <% end %>>
             <i class="fas fa-plug"></i> Integrar Tiny
+            <% if is_incomplete %>
+              <span class="gh-badge gh-badge-yellow" style="font-size: 0.65rem; padding: 1px 6px;">incompleto</span>
+            <% end %>
           </button>
         <% else %>
           <span class="gh-badge gh-badge-blue">
@@ -283,7 +295,11 @@
           </button>
         <% end %>
 
-        <% if @order_pdv.status == 'paid' %>
+        <% if @order_pdv.status == 'incomplete' %>
+          <span class="gh-badge gh-badge-yellow">
+            <i class="fas fa-exclamation-circle"></i> Incompleto
+          </span>
+        <% elsif @order_pdv.status == 'paid' %>
           <span class="gh-badge gh-badge-green">
             <i class="fas fa-check-double"></i> Pago
           </span>

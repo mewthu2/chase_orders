@@ -8,15 +8,17 @@ class OrderPdv < ApplicationRecord
   accepts_nested_attributes_for :order_parcels, allow_destroy: true, reject_if: :all_blank
 
   validates :store_type, presence: true
-  validates :payment_method, presence: true
+  validates :payment_method, presence: true, unless: :incomplete?
   validates :subtotal, :total_price, presence: true, numericality: { greater_than: 0 }
 
-  validate :validate_parcels_total, if: :has_parcels?
+  validate :validate_parcels_total, if: -> { has_parcels? && !incomplete? }
 
   enum :status, {
-    pending: 'pending',
-    integrated: 'integrated',
-    error: 'error'
+    incomplete:  'incomplete',
+    pending:     'pending',
+    integrated:  'integrated',
+    error:       'error',
+    paid:        'paid'
   }
 
   enum :reservation_status, {

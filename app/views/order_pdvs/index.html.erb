@@ -85,7 +85,8 @@
   .gh-badge-error    { background: rgba(218,54,51,0.15);   color: #f85149;          border: 1px solid rgba(218,54,51,0.4); }
   .gh-badge-info     { background: rgba(31,111,235,0.15);  color: #58a6ff;          border: 1px solid rgba(31,111,235,0.4); }
   .gh-badge-neutral  { background: rgba(139,148,158,0.15); color: var(--gh-muted);  border: 1px solid rgba(139,148,158,0.3); }
-  .gh-badge-paid     { background: rgba(35,134,54,0.25);   color: #3fb950;          border: 1px solid rgba(35,134,54,0.6); }
+        .gh-badge-paid     { background: rgba(35,134,54,0.25);   color: #3fb950;          border: 1px solid rgba(35,134,54,0.6); }
+        .gh-badge-warning  { background: rgba(210,153,34,0.2);   color: #d29922;          border: 1px solid rgba(210,153,34,0.5); }
 
   /* Inputs */
   .gh-input, .gh-select {
@@ -147,7 +148,7 @@
 </style>
 <% end %>
 
-<div style="padding: 24px 16px;">
+<div class="container-fluid" style="max-width: 1400px; padding: 24px 16px;">
 
   <%# Flash %>
   <% flash.each do |type, msg| %>
@@ -301,18 +302,23 @@
                 <td>
                   <%
                     badge_class = case order.status
-                    when 'integrated' then 'gh-badge-success'
-                    when 'error'      then 'gh-badge-error'
-                    when 'paid'       then 'gh-badge-paid'
-                    else                   'gh-badge-pending'
+                    when 'integrated'  then 'gh-badge-success'
+                    when 'error'       then 'gh-badge-error'
+                    when 'paid'        then 'gh-badge-paid'
+                    when 'incomplete'  then 'gh-badge-warning'
+                    else                    'gh-badge-pending'
                     end
                     badge_icon = case order.status
-                    when 'integrated' then 'check-circle'
-                    when 'error'      then 'times-circle'
-                    when 'paid'       then 'check-double'
-                    else                   'clock'
+                    when 'integrated'  then 'check-circle'
+                    when 'error'       then 'times-circle'
+                    when 'paid'        then 'check-double'
+                    when 'incomplete'  then 'exclamation-circle'
+                    else                    'clock'
                     end
-                    badge_text = order.respond_to?(:integration_status_text) ? order.integration_status_text : order.status.humanize
+                    badge_text = case order.status
+                    when 'incomplete' then 'Incompleto'
+                    else order.respond_to?(:integration_status_text) ? order.integration_status_text : order.status.humanize
+                    end
                   %>
                   <span class="gh-badge <%= badge_class %>">
                     <i class="fas fa-<%= badge_icon %>"></i> <%= badge_text %>
@@ -334,6 +340,14 @@
                     <% end %>
                     <%= link_to edit_order_pdv_path(order), class: "gh-btn gh-btn-sm gh-btn-icon", title: "Editar" do %>
                       <i class="fas fa-pencil-alt" style="font-size: 0.75rem;"></i>
+                    <% end %>
+                    <% if order.status != 'paid' %>
+                      <button onclick="markAsPaid(<%= order.id %>, this)"
+                              class="gh-btn gh-btn-sm gh-btn-icon"
+                              title="Marcar como Pago"
+                              style="color: #3fb950;">
+                        <i class="fas fa-check-circle" style="font-size: 0.75rem;"></i>
+                      </button>
                     <% end %>
                     <% if order.respond_to?(:can_retry_integration?) && order.can_retry_integration? %>
                       <button onclick="integrateOrder(<%= order.id %>)"
@@ -416,18 +430,65 @@ function integrateOrder(orderId) {
 
   fetch(`/order_pdvs/${orderId}/integrate`, {
     method: 'POST',
-    headers: {
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-    }
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
   })
     .then(r => {
       if (r.ok) location.reload();
       else throw new Error('Erro na integração');
     })
     .catch(() => {
-      alert('Erro ao integrar pedido. Tente novamente.');
+      showIndexToast('Erro ao integrar pedido. Tente novamente.', 'error');
       icon.className = 'fas fa-sync';
       button.disabled = false;
     });
+}
+
+function markAsPaid(orderId, btn) {
+  if (!confirm('Marcar este pedido como PAGO?')) return;
+
+  const icon = btn.querySelector('i');
+  icon.className = 'fas fa-spinner fa-spin';
+  btn.disabled = true;
+
+  fetch(`/order_pdvs/${orderId}/mark_as_paid`, {
+    method: 'PATCH',
+    headers: {
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json'
+    }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showIndexToast(data.message, 'success');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showIndexToast(data.message || 'Erro ao marcar como pago.', 'error');
+        icon.className = 'fas fa-check-circle';
+        btn.disabled = false;
+      }
+    })
+    .catch(() => {
+      showIndexToast('Erro de comunicação.', 'error');
+      icon.className = 'fas fa-check-circle';
+      btn.disabled = false;
+    });
+}
+
+function showIndexToast(message, type = 'success') {
+  const color   = type === 'success' ? '#238636' : '#da3633';
+  const icon    = type === 'success' ? 'check-circle' : 'times-circle';
+  const toast   = document.createElement('div');
+  toast.innerHTML = `<i class="fas fa-${icon}" style="margin-right:8px;"></i>${message}`;
+  Object.assign(toast.style, {
+    position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
+    background: '#161b22', border: `1px solid ${color}`,
+    borderLeft: `4px solid ${color}`, color: '#e6edf3',
+    padding: '12px 18px', borderRadius: '8px',
+    fontSize: '0.875rem', boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    maxWidth: '360px', animation: 'fadeInUp 0.2s ease'
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
 }
 </script>

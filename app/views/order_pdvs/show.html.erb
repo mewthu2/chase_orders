@@ -282,9 +282,9 @@
           <div class="mb-3">
             <label class="form-label text-muted">Pagamento:</label>
             <div class="text-white">
-              <%= @order_pdv.payment_method.humanize %>
+              <%= @order_pdv&.payment_method&.humanize %>
               
-              <% if @order_pdv.has_multi_payments? %>
+              <% if @order_pdv&.has_multi_payments? %>
                 <div class="mt-2">
                   <strong class="text-info">Parcelas:</strong>
                   <div class="ms-3">
