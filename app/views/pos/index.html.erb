@@ -22,7 +22,7 @@
 </div>
 
 <%# ── Corpo principal ─────────────────────────────────────────────────────── %>
-<div>
+<div style="padding:24px;">
   <div class="row g-4">
 
     <%# ── Busca de produtos ──────────────────────────────────────────────── %>
@@ -475,7 +475,7 @@ let searchTimeout    = null;
 let paymentParcels   = [];
 let clientSearchTimeout = null;
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────��─────────────
 document.addEventListener('DOMContentLoaded', function () {
   setupEventListeners();
   setupClientSearch();
@@ -556,22 +556,25 @@ function validateField(field) {
 
 // ── Client search & selection ──────────────────────────────────────────────
 function setupClientSearch() {
-  const input = document.getElementById('client-search-input');
-  if (!input) return;
+  const input     = document.getElementById('client-search-input');
+  const resultsEl = document.getElementById('client-search-results');
+  if (!input || !resultsEl) return;
 
   input.addEventListener('input', function () {
     clearTimeout(clientSearchTimeout);
     const q = this.value.trim();
     if (q.length < 2) {
-      document.getElementById('client-search-results').style.display = 'none';
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
       return;
     }
-    clientSearchTimeout = setTimeout(() => searchClients(q), 300);
+    clientSearchTimeout = setTimeout(() => searchClients(q), 350);
   });
 
+  // Fecha dropdown ao clicar fora — verifica tanto #client-search-section quanto .pos-dropdown
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('#client-search-section')) {
-      document.getElementById('client-search-results').style.display = 'none';
+    if (!e.target.closest('#client-search-section') && !e.target.closest('#client-search-results')) {
+      resultsEl.style.display = 'none';
     }
   });
 
@@ -591,13 +594,18 @@ function setupClientSearch() {
 }
 
 function searchClients(query) {
-  fetch(`/clients/search?q=${encodeURIComponent(query)}`)
+  const resultsEl = document.getElementById('client-search-results');
+  resultsEl.innerHTML = '<div class="pos-dropdown-item" style="color:#8b949e; font-size:0.82rem;">Buscando...</div>';
+  resultsEl.style.display = 'block';
+
+  fetch(`/clients/search?q=${encodeURIComponent(query)}`, {
+    headers: { 'Accept': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
+  })
     .then(r => r.json())
     .then(data => {
-      const resultsEl = document.getElementById('client-search-results');
       resultsEl.innerHTML = '';
 
-      if (!data.success || data.clients.length === 0) {
+      if (!data.success || !data.clients || data.clients.length === 0) {
         resultsEl.innerHTML = '<div class="pos-dropdown-item" style="color:#8b949e; font-size:0.82rem;">Nenhum cliente encontrado</div>';
         resultsEl.style.display = 'block';
         return;
@@ -606,16 +614,25 @@ function searchClients(query) {
       data.clients.forEach(client => {
         const item = document.createElement('div');
         item.className = 'pos-dropdown-item';
+        item.style.cursor = 'pointer';
         item.innerHTML = `
           <div style="color:#e6edf3; font-size:0.85rem; font-weight:600;">${client.display_name}</div>
           <small style="color:#8b949e; font-size:0.75rem;">${client.registration || ''}${client.city ? ' · ' + client.city : ''}</small>`;
-        item.addEventListener('click', () => selectClient(client));
+        // mousedown em vez de click evita conflito com o blur/click-outside
+        item.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectClient(client);
+        });
         resultsEl.appendChild(item);
       });
 
       resultsEl.style.display = 'block';
     })
-    .catch(err => console.error('Erro ao buscar clientes:', err));
+    .catch(err => {
+      resultsEl.innerHTML = '<div class="pos-dropdown-item" style="color:#da3633; font-size:0.82rem;">Erro ao buscar clientes</div>';
+      resultsEl.style.display = 'block';
+    });
 }
 
 function selectClient(client) {

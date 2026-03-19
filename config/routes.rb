@@ -101,8 +101,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :clients
-  get 'clients/search', to: 'clients#search', as: :search_clients
+  resources :clients do
+    collection do
+      get :search
+    end
+  end
 
   resources :attempts, only: [:index] do
     collection do
