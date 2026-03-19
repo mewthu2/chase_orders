@@ -1,460 +1,286 @@
 <% content_for :title, "PDV - Point of Sale" %>
 
-<div class="container-fluid py-4">
-  <% title 'PDV - Point of Sale' %>
-  
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-success shadow">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-cash-register me-2"></i>PDV - Ponto de Venda
-          </h5>
-          <div class="d-flex gap-3">
-            <span class="badge bg-success text-dark px-3 py-2">
-              <i class="fas fa-user me-1"></i><%= current_user.name %>
-            </span>
-            <span class="badge bg-info text-dark px-3 py-2">
-              <i class="fas fa-clock me-1"></i> <%= Time.now.strftime('%H:%M') %>
-            </span>
-            <%= link_to order_pdvs_path, class: "btn btn-outline-light btn-sm" do %>
-              <i class="fas fa-list me-1"></i>Gerenciar Pedidos
-            <% end %>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <div class="card bg-black border border-primary h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-shopping-cart me-2"></i>Carrinho Atual
-                    </h6>
-                    <span class="badge bg-primary" id="cart-count-badge"><%= @cart_items.sum { |item| item['quantity'] } %> itens</span>
-                  </div>
-                  <div class="text-center">
-                    <div class="h3 text-primary mb-0" id="cart-total-display">R$ <%= sprintf('%.2f', @total) %></div>
-                    <small class="text-light">Total do carrinho</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card bg-black border border-warning h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-search me-2"></i>Busca Inteligente
-                    </h6>
-                    <span class="badge bg-warning text-dark">
-                      <i class="fas fa-database me-1"></i>Multi-Location
-                    </span>
-                  </div>
-                  <div class="text-center">
-                    <div class="h6 text-warning mb-0">Estoque por Loja</div>
-                    <small class="text-light">Verificação em tempo real</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="card bg-black border border-success h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-tags me-2"></i>Cupons de Desconto
-                    </h6>
-                    <span class="badge bg-success text-dark" id="coupon-status-badge">
-                      <i class="fas fa-ticket-alt me-1"></i>Disponível
-                    </span>
-                  </div>
-                  <div class="text-center">
-                    <div class="h6 text-success mb-0" id="coupon-discount-display">R$ 0,00</div>
-                    <small class="text-light">Desconto aplicado</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+<%# ── Header ──────────────────────────────────────────────────────────────── %>
+<div style="background:#161b22; border-bottom:1px solid #21262d; padding:16px 24px;" class="d-flex align-items-center justify-content-between mb-0">
+  <div class="d-flex align-items-center gap-3">
+    <div style="background:#238636; width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+      <i class="fas fa-cash-register" style="color:#fff; font-size:16px;"></i>
+    </div>
+    <div>
+      <h1 style="color:#e6edf3; font-size:1.1rem; font-weight:600; margin:0; line-height:1;">PDV — Ponto de Venda</h1>
+      <small style="color:#8b949e; font-size:0.75rem;"><%= current_user.name %> &middot; <%= Time.now.strftime('%H:%M') %></small>
     </div>
   </div>
+  <div class="d-flex gap-2">
+    <%= link_to clients_path, style: "color:#8b949e; background:#21262d; border:1px solid #30363d; border-radius:6px; padding:6px 14px; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" do %>
+      <i class="fas fa-users" style="font-size:12px;"></i>Clientes
+    <% end %>
+    <%= link_to order_pdvs_path, style: "color:#8b949e; background:#21262d; border:1px solid #30363d; border-radius:6px; padding:6px 14px; font-size:0.8rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px;" do %>
+      <i class="fas fa-list" style="font-size:12px;"></i>Pedidos
+    <% end %>
+  </div>
+</div>
 
-  <div class="row">
+<%# ── Corpo principal ─────────────────────────────────────────────────────── %>
+<div>
+  <div class="row g-4">
+
+    <%# ── Busca de produtos ──────────────────────────────────────────────── %>
     <div class="col-lg-8">
-      <div class="card bg-black border border-dark shadow mb-4">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-search me-2"></i>Buscar Produtos
-            <small class="text-success ms-2">
-              <i class="fas fa-store me-1"></i>Estoque por Location em Tempo Real
-            </small>
-          </h5>
+      <div style="background:#161b22; border:1px solid #21262d; border-radius:10px; overflow:hidden;">
+        <div style="padding:16px 20px; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:10px;">
+          <i class="fas fa-search" style="color:#8b949e; font-size:14px;"></i>
+          <span style="color:#e6edf3; font-weight:600; font-size:0.95rem;">Buscar Produtos</span>
         </div>
-        <div class="card-body">
-          <div class="row mb-3">
-            <div class="col-md-8">
-              <input type="text" id="product-search" placeholder="Digite SKU ou nome do produto..."
-                     class="form-control form-control-lg bg-dark text-white border-secondary">
-            </div>
-            <div class="col-md-4">
-              <select id="store-type-select" class="form-select form-select-lg bg-dark text-white border-secondary store-select">
-                <option value="lagoa_seca" data-color="lagoa-seca">● Lagoa Seca</option>
-                <option value="bh_shopping" data-color="bh-shopping">● BH Shopping</option>
-                <option value="rj" data-color="barra-shopping">● Barra Shopping (RJ)</option>
-                <option value="online" data-color="online">● Online Store</option>
-              </select>
-            </div>
+        <div style="padding:20px;">
+          <div class="pos-search-wrap mb-3">
+            <i class="fas fa-search pos-search-icon"></i>
+            <input type="text" id="product-search"
+                   class="pos-search-input"
+                   placeholder="Digite SKU ou nome do produto...">
           </div>
-          
-          <div id="search-results" class="mt-4"></div>
+          <div id="search-results"></div>
         </div>
       </div>
     </div>
-    
+
+    <%# ── Carrinho ───────────────────────────────────────────────────────── %>
     <div class="col-lg-4">
-      <div class="card bg-black border border-dark shadow position-sticky mb-4" style="top: 20px;">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-shopping-cart me-2"></i>Carrinho 
-            <small class="text-success">(<span id="cart-unique-count"><%= @cart_items.count %></span> produtos, <span id="cart-total-items"><%= @cart_items.sum { |item| item['quantity'] } %></span> itens)</small>
-          </h5>
-          <button onclick="clearCart()" class="btn btn-outline-danger btn-sm" id="clear-cart-btn" style="<%= @cart_items.empty? ? 'display: none;' : '' %>">
+      <div style="background:#161b22; border:1px solid #21262d; border-radius:10px; overflow:hidden; position:sticky; top:16px;">
+        <div style="padding:14px 18px; border-bottom:1px solid #21262d; display:flex; align-items:center; justify-content:space-between;">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-shopping-cart" style="color:#8b949e; font-size:14px;"></i>
+            <span style="color:#e6edf3; font-weight:600; font-size:0.9rem;">Carrinho</span>
+            <span style="background:rgba(35,134,54,.15); color:#3fb950; border:1px solid rgba(35,134,54,.3); border-radius:20px; padding:2px 10px; font-size:0.75rem; font-weight:600;">
+              <span id="cart-unique-count"><%= @cart_items.count %></span> prod /
+              <span id="cart-total-items"><%= @cart_items.sum { |i| i['quantity'] } %></span> it
+            </span>
+          </div>
+          <button onclick="clearCart()" id="clear-cart-btn"
+                  style="background:transparent; border:1px solid #da3633; color:#f85149; border-radius:6px; padding:4px 10px; font-size:0.75rem; cursor:pointer; <%= @cart_items.empty? ? 'display:none;' : '' %>">
             <i class="fas fa-trash me-1"></i>Limpar
           </button>
         </div>
-        <div class="card-body">
-          <div class="mb-3" id="coupon-section">
-            <div class="d-flex gap-2 mb-2">
-              <input type="text" id="coupon-input" placeholder="Código do cupom..."
-                     class="form-control form-control-sm bg-dark text-white border-secondary">
-              <button onclick="searchCoupon()" class="btn btn-success btn-sm" id="search-coupon-btn">
-                <i class="fas fa-search"></i>
-              </button>
-            </div>
-            <div id="coupon-result" class="mt-2"></div>
-          </div>
-          
-          <div id="cart-items">
-            <% if @cart_items.any? %>
-              <div id="cart-items-container">
-                <% @cart_items.each_with_index do |item, index| %>
-                  <div class="cart-item-card mb-2" data-product-id="<%= item['product_id'] %>" data-item-index="<%= index %>">
-                    <div class="cart-item-content">
-                      <div class="cart-item-image">
-                        <% if item['image_url'].present? %>
-                          <img src="<%= item['image_url'] %>" alt="<%= item['name'] %>" class="cart-product-image">
-                        <% else %>
-                          <div class="cart-image-placeholder">
-                            <i class="fas fa-image"></i>
-                          </div>
-                        <% end %>
-                      </div>
-                      
-                      <div class="cart-item-details">
-                        <div class="cart-item-sku"><%= item['sku'] %></div>
-                        <div class="cart-item-name">
-                          <% if item['name'].present? %>
-                            <%= truncate(item['name'], length: 25) %>
-                          <% else %>
-                            Nome não disponível
-                          <% end %>
-                        </div>
-                        
-                        <div class="cart-item-controls">
-                          <div class="quantity-controls">
-                            <button onclick="updateCartQuantity('<%= item['product_id'] %>', <%= item['quantity'].to_i - 1 %>)" class="quantity-btn quantity-minus">
-                              <i class="fas fa-minus"></i>
-                            </button>
-                            <span class="quantity-display"><%= item['quantity'] %></span>
-                            <button onclick="updateCartQuantity('<%= item['product_id'] %>', <%= item['quantity'].to_i + 1 %>)" class="quantity-btn quantity-plus">
-                              <i class="fas fa-plus"></i>
-                            </button>
-                          </div>
-                          
-                          <div class="cart-item-price">
-                            <div class="item-total">R$ <%= sprintf('%.2f', item['price'].to_f * item['quantity'].to_i) %></div>
-                            <div class="item-unit-price">R$ <%= sprintf('%.2f', item['price'].to_f) %> cada</div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button onclick="removeFromCart('<%= item['product_id'] %>')" class="cart-remove-btn">
-                        <i class="fas fa-times"></i>
-                      </button>
+        <div style="padding:16px;" id="cart-items">
+          <% if @cart_items.any? %>
+            <div id="cart-items-container">
+              <% @cart_items.each_with_index do |item, index| %>
+                <div class="pos-cart-item" data-product-id="<%= item['product_id'] %>" data-item-index="<%= index %>">
+                  <div class="pos-cart-item-inner">
+                    <div class="pos-cart-thumb">
+                      <% if item['image_url'].present? %>
+                        <img src="<%= item['image_url'] %>" alt="<%= item['name'] %>" class="pos-cart-img">
+                      <% else %>
+                        <i class="fas fa-image" style="color:#8b949e; font-size:18px;"></i>
+                      <% end %>
                     </div>
+                    <div class="pos-cart-details">
+                      <div class="pos-cart-sku"><%= item['sku'] %></div>
+                      <div class="pos-cart-name"><%= item['name'].present? ? truncate(item['name'], length: 28) : 'Nome não disponível' %></div>
+                      <div class="pos-cart-controls">
+                        <div class="pos-qty-controls">
+                          <button onclick="updateCartQuantity('<%= item['product_id'] %>', <%= item['quantity'].to_i - 1 %>)" class="pos-qty-btn pos-qty-minus"><i class="fas fa-minus"></i></button>
+                          <span class="pos-qty-num"><%= item['quantity'] %></span>
+                          <button onclick="updateCartQuantity('<%= item['product_id'] %>', <%= item['quantity'].to_i + 1 %>)" class="pos-qty-btn pos-qty-plus"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div class="pos-cart-price">
+                          <div class="pos-item-total">R$ <%= sprintf('%.2f', item['price'].to_f * item['quantity'].to_i) %></div>
+                          <div class="pos-item-unit">R$ <%= sprintf('%.2f', item['price'].to_f) %> un.</div>
+                        </div>
+                      </div>
+                    </div>
+                    <button onclick="removeFromCart('<%= item['product_id'] %>')" class="pos-remove-btn"><i class="fas fa-times"></i></button>
                   </div>
-                <% end %>
-              </div>
-              
-              <div id="cart-summary-section">
-                <div class="cart-summary">
-                  <div class="summary-row">
-                    <span>Subtotal:</span>
-                    <span id="subtotal-display">R$ <%= sprintf('%.2f', @total) %></span>
-                  </div>
-                  <div class="summary-row coupon-row" id="coupon-discount-row" style="display: none;">
-                    <span class="text-success">Desconto (Cupom):</span>
-                    <span class="text-success" id="coupon-discount-amount">R$ 0,00</span>
-                  </div>
-                  <div class="summary-row total-row">
-                    <span>Total:</span>
-                    <span id="final-total-display">R$ <%= sprintf('%.2f', @total) %></span>
-                  </div>
-                  
-                  <button onclick="openCheckoutModal()" class="checkout-btn">
-                    <i class="fas fa-credit-card me-2"></i>Finalizar Venda
-                  </button>
                 </div>
-              </div>
-            <% else %>
-              <div class="empty-cart" id="empty-cart-message">
-                <div class="empty-cart-icon">
-                  <i class="fas fa-shopping-cart"></i>
-                </div>
-                <div class="empty-cart-text">Carrinho vazio</div>
-                <div class="empty-cart-subtext">Adicione produtos para começar</div>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal de Confirmação de Mudança de Loja -->
-<div id="store-change-modal" class="modal fade" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark border-warning">
-      <div class="modal-header border-warning">
-        <h5 class="modal-title text-warning">
-          <i class="fas fa-exclamation-triangle me-2"></i>Mudança de Loja
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <div class="text-center mb-3">
-          <i class="fas fa-store fa-3x text-warning mb-3"></i>
-          <h6 class="text-white">Atenção!</h6>
-        </div>
-        <div class="alert alert-warning" role="alert">
-          <div class="d-flex align-items-start">
-            <i class="fas fa-info-circle me-2 mt-1"></i>
-            <div>
-              <strong>Você possui itens no carrinho!</strong><br>
-              Ao mudar de loja, todos os itens do carrinho serão removidos, pois os produtos podem ter estoques diferentes em cada localização.
+              <% end %>
             </div>
-          </div>
+            <div id="cart-summary-section">
+              <div class="pos-cart-summary">
+                <div class="pos-summary-row pos-total-row">
+                  <span>Total</span>
+                  <span id="final-total-display">R$ <%= sprintf('%.2f', @total) %></span>
+                </div>
+                <button onclick="openCheckoutModal()" class="pos-checkout-btn">
+                  <i class="fas fa-credit-card me-2"></i>Finalizar Venda
+                </button>
+              </div>
+            </div>
+          <% else %>
+            <div class="pos-empty-cart" id="empty-cart-message">
+              <i class="fas fa-shopping-cart pos-empty-icon"></i>
+              <div class="pos-empty-title">Carrinho vazio</div>
+              <div class="pos-empty-sub">Adicione produtos para começar</div>
+            </div>
+          <% end %>
         </div>
-        <div class="text-center">
-          <p class="text-light mb-0">
-            <strong>De:</strong> <span id="current-store-name" class="text-info"></span><br>
-            <strong>Para:</strong> <span id="new-store-name" class="text-success"></span>
-          </p>
-        </div>
-      </div>
-      <div class="modal-footer border-warning">
-        <button type="button" class="btn btn-secondary" onclick="cancelStoreChange()">
-          <i class="fas fa-times me-1"></i>Cancelar
-        </button>
-        <button type="button" class="btn btn-warning" onclick="confirmStoreChange()">
-          <i class="fas fa-check me-1"></i>Confirmar Mudança
-        </button>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- Modal de Checkout -->
+<%# ── Modal de Checkout ────────────────────────────────────────────────────── %>
 <div id="checkout-modal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-xl">
-    <div class="modal-content bg-dark border-secondary">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white">
-          <i class="fas fa-credit-card me-2"></i>Finalizar Venda
+    <div class="modal-content pos-modal">
+      <div class="modal-header pos-modal-header">
+        <h5 class="modal-title" style="color:#e6edf3; font-size:1rem; font-weight:600; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-credit-card" style="color:#1f6feb;"></i>Finalizar Venda
         </h5>
         <button type="button" class="btn-close btn-close-white" onclick="closeCheckoutModal()"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="padding:24px;">
         <form id="checkout-form">
-          <div class="row">
+          <div class="row g-4">
+
+            <%# Coluna esquerda %>
             <div class="col-md-6">
-              <div class="card bg-black border-secondary mb-3">
-                <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Configurações da Venda</h6>
+
+              <%# Cliente %>
+              <div class="pos-modal-card mb-3">
+                <div class="pos-modal-card-header">
+                  <i class="fas fa-user-check" style="color:#3fb950; font-size:13px;"></i>
+                  <span>Cliente (opcional)</span>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-12 mb-3">
-                      <label class="form-label text-white">Loja *</label>
-                      <select name="store_type" id="checkout-store-type" class="form-select bg-dark text-white border-secondary store-select" required>
-                        <option value="">Selecione a loja</option>
-                        <option value="lagoa_seca" data-color="lagoa-seca">● Lagoa Seca</option>
-                        <option value="bh_shopping" data-color="bh-shopping">● BH Shopping</option>
-                        <option value="rj" data-color="barra-shopping">● Barra Shopping (RJ)</option>
-                        <option value="online" data-color="online">● Online Store</option>
-                      </select>
+                <div class="pos-modal-card-body">
+                  <div id="client-search-section">
+                    <div class="pos-input-group mb-2">
+                      <i class="fas fa-search pos-input-icon"></i>
+                      <input type="text" id="client-search-input" class="pos-input pos-input-with-icon"
+                             placeholder="Nome, razão social ou CNPJ...">
                     </div>
-                    
-                    <div class="col-12 mb-3">
-                      <div class="card bg-dark border-info">
-                        <div class="card-header bg-info text-dark">
-                          <h6 class="mb-0">
-                            <i class="fas fa-credit-card me-2"></i>Configurar Pagamento
-                            <small class="ms-2">(Mínimo 1 parcela)</small>
-                          </h6>
-                        </div>
-                        <div class="card-body">
-                          <div id="payment-parcels-container">
-                          </div>
-                          <div class="d-flex justify-content-between align-items-center mb-3">
-                            <button type="button" onclick="addPaymentParcel()" class="btn btn-outline-info btn-sm">
-                              <i class="fas fa-plus me-1"></i>Adicionar Parcela
-                            </button>
-                            <div class="text-info">
-                              <small>
-                                <i class="fas fa-info-circle me-1"></i>
-                                Total: <span id="payment-total-display">R$ 0,00</span>
-                              </small>
-                            </div>
-                          </div>
-                          <div id="payment-validation" class="mt-2" style="display: none;">
-                            <div class="alert alert-danger py-2 mb-0">
-                              <small>
-                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                <span id="payment-validation-message"></span>
-                              </small>
-                            </div>
-                          </div>
-                          <div class="mt-2">
-                            <small class="text-muted">
-                              <i class="fas fa-lightbulb me-1"></i>
-                              <strong>Dica:</strong> Para pagamento único, adicione apenas 1 parcela com o valor total.
-                            </small>
-                          </div>
-                        </div>
-                      </div>
+                    <div id="client-search-results" class="pos-dropdown" style="display:none;"></div>
+                  </div>
+
+                  <div id="selected-client-display" style="display:none;"
+                       class="d-flex align-items-center justify-content-between pos-client-selected mb-2">
+                    <div>
+                      <span style="color:#e6edf3; font-weight:600; font-size:0.85rem;" id="selected-client-name"></span>
+                      <small style="color:#8b949e; display:block; font-size:0.75rem;" id="selected-client-cnpj"></small>
                     </div>
-                    
-                    <div class="col-12">
-                      <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="integrate-shopify" name="integrate_shopify" checked>
-                        <label class="form-check-label text-white" for="integrate-shopify">
-                          <i class="fas fa-sync me-2"></i>Integrar automaticamente com Shopify
-                        </label>
-                        <div class="form-text text-info">
-                          <small>Pedido será integrado automaticamente após criação</small>
-                        </div>
+                    <button type="button" id="clear-client-btn" class="pos-icon-btn pos-icon-btn-danger">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+
+                  <input type="hidden" name="client_id" id="checkout-client-id">
+
+                  <button type="button" id="toggle-new-client-form-btn" class="pos-link-btn">
+                    <i class="fas fa-plus-circle" style="font-size:11px;"></i>Cadastrar novo cliente
+                  </button>
+
+                  <div id="new-client-inline-form" style="display:none;" class="mt-3 pt-3" style="border-top:1px solid #21262d;">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                      <span style="color:#e6edf3; font-size:0.8rem; font-weight:600;">Novo Cliente</span>
+                      <button type="button" class="btn-close btn-close-white btn-sm" id="close-new-client-form-btn"></button>
+                    </div>
+                    <div class="row g-2">
+                      <div class="col-md-6"><input type="text" id="nc-responsible-name" class="pos-input" placeholder="Nome do Responsável *"></div>
+                      <div class="col-md-6"><input type="text" id="nc-business-name" class="pos-input" placeholder="Razão Social"></div>
+                      <div class="col-md-4"><input type="text" id="nc-registration" class="pos-input" placeholder="CNPJ"></div>
+                      <div class="col-md-4"><input type="text" id="nc-state-registration" class="pos-input" placeholder="Insc. Estadual"></div>
+                      <div class="col-md-4"><input type="text" id="nc-municipal-registration" class="pos-input" placeholder="Insc. Municipal"></div>
+                      <div class="col-md-6"><input type="email" id="nc-email" class="pos-input" placeholder="E-mail"></div>
+                      <div class="col-md-6"><input type="text" id="nc-phone" class="pos-input" placeholder="Telefone"></div>
+                      <div class="col-12">
+                        <button type="button" id="save-new-client-btn" class="pos-btn pos-btn-green">
+                          <i class="fas fa-save me-1"></i>Salvar e Selecionar
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <div class="card bg-black border-secondary mb-3">
-                <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Dados do Cliente</h6>
+
+              <%# Pagamento %>
+              <div class="pos-modal-card">
+                <div class="pos-modal-card-header">
+                  <i class="fas fa-credit-card" style="color:#1f6feb; font-size:13px;"></i>
+                  <span>Pagamento</span>
+                  <small style="color:#8b949e; margin-left:auto; font-size:0.75rem;">mínimo 1 parcela</small>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-12 mb-3">
-                      <label class="form-label text-white">Nome Completo *</label>
-                      <input type="text" name="customer_name" required class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <div class="col-12 mb-3">
-                      <label class="form-label text-white">Email *</label>
-                      <input type="email" name="customer_email" required class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                      <label class="form-label text-white">Telefone *</label>
-                      <input type="tel" name="customer_phone" required class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label text-white">CPF *</label>
-                      <input type="text" name="customer_cpf" required class="form-control bg-dark text-white border-secondary">
+                <div class="pos-modal-card-body">
+                  <div id="payment-parcels-container"></div>
+                  <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
+                    <button type="button" onclick="addPaymentParcel()" class="pos-link-btn">
+                      <i class="fas fa-plus" style="font-size:11px;"></i>Adicionar Parcela
+                    </button>
+                    <span style="color:#8b949e; font-size:0.8rem;">
+                      Total: <strong style="color:#e6edf3;" id="payment-total-display">R$ 0,00</strong>
+                    </span>
+                  </div>
+                  <div id="payment-validation" style="display:none;">
+                    <div class="pos-alert pos-alert-danger mt-2">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <span id="payment-validation-message"></span>
                     </div>
                   </div>
                 </div>
               </div>
+
             </div>
-            
+
+            <%# Coluna direita %>
             <div class="col-md-6">
-              <div class="card bg-black border-secondary mb-3">
-                <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Endereço de Entrega</h6>
+
+              <%# Endereço %>
+              <div class="pos-modal-card mb-3">
+                <div class="pos-modal-card-header">
+                  <i class="fas fa-map-marker-alt" style="color:#d29922; font-size:13px;"></i>
+                  <span>Endereço de Entrega</span>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label class="form-label text-white">CEP *</label>
-                      <input type="text" name="zip" required class="form-control bg-dark text-white border-secondary" placeholder="00000-000" id="cep-input">
+                <div class="pos-modal-card-body">
+                  <div class="row g-2">
+                    <div class="col-md-5">
+                      <label class="pos-label">CEP *</label>
+                      <input type="text" name="zip" required class="pos-input" placeholder="00000-000" id="cep-input">
                     </div>
-                    <div class="col-md-6 mb-3">
-                      <label class="form-label text-white">Estado *</label>
-                      <input type="text" name="state" required class="form-control bg-dark text-white border-secondary" placeholder="SP" maxlength="2" id="state-input">
-                    </div>
-                    <div class="col-12 mb-3">
-                      <label class="form-label text-white">Cidade *</label>
-                      <input type="text" name="city" required class="form-control bg-dark text-white border-secondary" id="city-input">
-                    </div>
-                    <div class="col-12 mb-3">
-                      <label class="form-label text-white">Bairro *</label>
-                      <input type="text" name="neighborhood" required class="form-control bg-dark text-white border-secondary" id="neighborhood-input">
-                    </div>
-                    <div class="col-md-8 mb-3">
-                      <label class="form-label text-white">Rua *</label>
-                      <input type="text" name="street" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores" id="street-input">
-                    </div>
-                    <div class="col-md-4 mb-3">
-                      <label class="form-label text-white">Número *</label>
-                      <input type="text" name="number" required class="form-control bg-dark text-white border-secondary" placeholder="123" id="number-input">
+                    <div class="col-md-7">
+                      <label class="pos-label">Estado *</label>
+                      <input type="text" name="state" required id="state-input" class="pos-input" placeholder="SP" maxlength="2">
                     </div>
                     <div class="col-12">
-                      <label class="form-label text-white">Complemento</label>
-                      <input type="text" name="complement" class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Bloco B">
+                      <label class="pos-label">Cidade *</label>
+                      <input type="text" name="city" required id="city-input" class="pos-input">
+                    </div>
+                    <div class="col-12">
+                      <label class="pos-label">Bairro *</label>
+                      <input type="text" name="neighborhood" required id="neighborhood-input" class="pos-input">
+                    </div>
+                    <div class="col-8">
+                      <label class="pos-label">Rua *</label>
+                      <input type="text" name="street" required id="street-input" class="pos-input" placeholder="Ex: Rua das Flores">
+                    </div>
+                    <div class="col-4">
+                      <label class="pos-label">Número *</label>
+                      <input type="text" name="number" required id="number-input" class="pos-input" placeholder="123">
+                    </div>
+                    <div class="col-12">
+                      <label class="pos-label">Complemento</label>
+                      <input type="text" name="complement" class="pos-input" placeholder="Apto 45, Bloco B">
                     </div>
                   </div>
                 </div>
               </div>
-              
-              <div class="card bg-black border-secondary mb-3">
-                <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Desconto Adicional (Opcional)</h6>
+
+              <%# Observações %>
+              <div class="pos-modal-card">
+                <div class="pos-modal-card-header">
+                  <i class="fas fa-comment-alt" style="color:#8b949e; font-size:13px;"></i>
+                  <span>Observações</span>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label class="form-label text-white">Valor do Desconto (R$)</label>
-                      <input type="number" name="discount_amount" step="0.01" min="0" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label text-white">Motivo do Desconto</label>
-                      <input type="text" name="discount_reason" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                  </div>
+                <div class="pos-modal-card-body">
+                  <textarea name="notes" rows="3" class="pos-input" placeholder="Observações adicionais..."></textarea>
                 </div>
               </div>
-              
-              <div class="card bg-black border-secondary">
-                <div class="card-header bg-secondary">
-                  <h6 class="text-white mb-0">Observações</h6>
-                </div>
-                <div class="card-body">
-                  <textarea name="notes" rows="3" class="form-control bg-dark text-white border-secondary" placeholder="Observações adicionais..."></textarea>
-                </div>
-              </div>
+
             </div>
           </div>
         </form>
       </div>
-      <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-secondary" onclick="closeCheckoutModal()">
-          Cancelar
-        </button>
-        <button type="submit" form="checkout-form" class="btn btn-success" id="finalize-btn">
+      <div class="modal-footer pos-modal-footer">
+        <button type="button" class="pos-btn pos-btn-ghost" onclick="closeCheckoutModal()">Cancelar</button>
+        <button type="submit" form="checkout-form" class="pos-btn pos-btn-green" id="finalize-btn">
           <i class="fas fa-check me-1"></i>Finalizar Venda
         </button>
       </div>
@@ -462,1041 +288,418 @@
   </div>
 </div>
 
-<!-- Modal de Quantidade -->
+<%# ── Modal de Quantidade ─────────────────────────────────────────────────── %>
 <div id="quantity-modal" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-sm">
-    <div class="modal-content bg-dark border-secondary">
-      <div class="modal-header border-secondary">
-        <h5 class="modal-title text-white">
-          <i class="fas fa-plus-circle me-2"></i>Adicionar ao Carrinho
+    <div class="modal-content pos-modal">
+      <div class="modal-header pos-modal-header">
+        <h5 class="modal-title" style="color:#e6edf3; font-size:0.95rem; font-weight:600; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-cart-plus" style="color:#3fb950;"></i>Adicionar ao Carrinho
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body text-center">
-        <div id="selected-product-info" class="mb-3">
-        </div>
-        
+      <div class="modal-body text-center" style="padding:24px;">
+        <div id="selected-product-info" class="mb-3"></div>
         <div class="mb-3">
-          <label class="form-label text-white">Quantidade:</label>
+          <label class="pos-label" style="display:block; margin-bottom:8px;">Quantidade</label>
           <div class="d-flex justify-content-center align-items-center gap-3">
-            <button type="button" onclick="decreaseQuantity()" class="btn btn-outline-secondary btn-sm">
-              <i class="fas fa-minus"></i>
-            </button>
+            <button type="button" onclick="decreaseQuantity()" class="pos-qty-btn pos-qty-minus" style="width:36px;height:36px;"><i class="fas fa-minus"></i></button>
             <input type="number" id="quantity-input" value="1" min="1" max="999"
-                   class="form-control form-control-sm bg-dark text-white border-secondary text-center"
-                   style="width: 80px;">
-            <button type="button" onclick="increaseQuantity()" class="btn btn-outline-secondary btn-sm">
-              <i class="fas fa-plus"></i>
-            </button>
+                   class="pos-input text-center" style="width:80px;">
+            <button type="button" onclick="increaseQuantity()" class="pos-qty-btn pos-qty-plus" style="width:36px;height:36px;"><i class="fas fa-plus"></i></button>
           </div>
         </div>
-        
-        <div id="quantity-stock-info" class="mb-3">
-        </div>
+        <div id="quantity-stock-info" class="mb-2"></div>
       </div>
-      <div class="modal-footer border-secondary">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Cancelar
-        </button>
-        <button type="button" id="confirm-add-btn" onclick="confirmAddToCart()" class="btn btn-success">
-          <i class="fas fa-cart-plus me-1"></i>Adicionar ao Carrinho
+      <div class="modal-footer pos-modal-footer">
+        <button type="button" class="pos-btn pos-btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="confirm-add-btn" onclick="confirmAddToCart()" class="pos-btn pos-btn-green">
+          <i class="fas fa-cart-plus me-1"></i>Adicionar
         </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Loading Overlay -->
+<%# ── Loading Overlay ─────────────────────────────────────────────────────── %>
 <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none"
-     style="background: rgba(0,0,0,0.8); z-index: 9999;">
+     style="background:rgba(13,17,23,.9); z-index:9999;">
   <div class="d-flex justify-content-center align-items-center h-100">
     <div class="text-center">
-      <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
-      <h5 class="text-white" id="loading-message">Processando...</h5>
+      <div class="spinner-border mb-3" style="color:#1f6feb; width:3rem; height:3rem;"></div>
+      <h5 style="color:#e6edf3;" id="loading-message">Processando...</h5>
     </div>
   </div>
 </div>
 
+<%# ── Styles ──────────────────────────────────────────────────────────────── %>
 <% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
-    
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
-    }
-    
-    .bg-black {
-      background-color: #121212 !important;
-    }
-    
-    .form-control.bg-dark {
-      background-color: #212529 !important;
-      border-color: #495057;
-    }
-    
-    .form-control.bg-dark:focus {
-      background-color: #212529 !important;
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    
-    .form-select.bg-dark {
-      background-color: #212529 !important;
-      border-color: #495057;
-    }
-    
-    .form-select.bg-dark:focus {
-      background-color: #212529 !important;
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    
-    .modal-content.bg-dark {
-      background-color: #212529 !important;
-    }
-    
-    .form-check-input {
-      background-color: #495057;
-      border-color: #6c757d;
-    }
-    
-    .form-check-input:checked {
-      background-color: #198754;
-      border-color: #198754;
-    }
-    
-    .form-check-input:focus {
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    
-    /* Cart Item Styles */
-    .cart-item-card {
-      background: #2d3748;
-      border: 1px solid #4a5568;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-    
-    .cart-item-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      border-color: #68d391;
-    }
-    
-    .cart-item-content {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px;
-    }
-    
-    .cart-item-image {
-      width: 50px;
-      height: 60px;
-      border-radius: 6px;
-      overflow: hidden;
-      flex-shrink: 0;
-      background: #4a5568;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .cart-product-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .cart-image-placeholder {
-      color: #a0aec0;
-      font-size: 18px;
-    }
-    
-    .cart-item-details {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .cart-item-sku {
-      font-weight: 700;
-      font-size: 0.85rem;
-      color: #68d391;
-      margin-bottom: 2px;
-    }
-    
-    .cart-item-name {
-      color: #e2e8f0;
-      font-size: 0.8rem;
-      margin-bottom: 8px;
-      line-height: 1.2;
-    }
-    
-    .cart-item-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .quantity-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .quantity-btn {
-      width: 24px;
-      height: 24px;
-      border: 1px solid #4a5568;
-      background: #374151;
-      color: #e2e8f0;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.7rem;
-    }
-    
-    .quantity-btn:hover {
-      background: #4a5568;
-      border-color: #68d391;
-    }
-    
-    .quantity-minus:hover {
-      background: #e53e3e;
-      border-color: #e53e3e;
-    }
-    
-    .quantity-plus:hover {
-      background: #38a169;
-      border-color: #38a169;
-    }
-    
-    .quantity-display {
-      background: rgba(13, 110, 253, 0.2);
-      border: 1px solid rgba(13, 110, 253, 0.3);
-      border-radius: 4px;
-      padding: 2px 8px;
-      font-weight: 600;
-      color: #e2e8f0;
-      font-size: 0.8rem;
-      min-width: 30px;
-      text-align: center;
-    }
-    
-    .cart-item-price {
-      text-align: right;
-    }
-    
-    .item-total {
-      font-weight: 700;
-      color: #4fd1c7;
-      font-size: 0.9rem;
-      margin-bottom: 2px;
-    }
-    
-    .item-unit-price {
-      font-size: 0.7rem;
-      color: #a0aec0;
-    }
-    
-    .cart-remove-btn {
-      width: 28px;
-      height: 28px;
-      background: #e53e3e;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-      font-size: 0.8rem;
-    }
-    
-    .cart-remove-btn:hover {
-      background: #c53030;
-      transform: scale(1.05);
-    }
-    
-    /* Cart Summary */
-    .cart-summary {
-      background: #2d3748;
-      border: 1px solid #4a5568;
-      border-radius: 8px;
-      padding: 16px;
-      margin-top: 16px;
-    }
-    
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      color: #e2e8f0;
-      font-size: 0.9rem;
-    }
-    
-    .summary-row.coupon-row {
-      color: #48bb78;
-    }
-    
-    .summary-row.total-row {
-      border-top: 1px solid #4a5568;
-      padding-top: 12px;
-      margin-top: 12px;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-    
-    .summary-row.total-row span:last-child {
-      color: #4fd1c7;
-      font-size: 1.2rem;
-    }
-    
-    .checkout-btn {
-      width: 100%;
-      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      margin-top: 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
-    }
-    
-    .checkout-btn:hover {
-      background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
-    }
-    
-    /* Empty Cart */
-    .empty-cart {
-      text-align: center;
-      padding: 40px 20px;
-      color: #a0aec0;
-    }
-    
-    .empty-cart-icon {
-      font-size: 3rem;
-      margin-bottom: 16px;
-      opacity: 0.5;
-    }
-    
-    .empty-cart-text {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #e2e8f0;
-      margin-bottom: 8px;
-    }
-    
-    .empty-cart-subtext {
-      font-size: 0.9rem;
-      opacity: 0.7;
-    }
-    
-    /* Product Item Styles */
-    .product-item {
-      background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-      border: 1px solid #4a5568;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 12px;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-    
-    .product-item:hover {
-      transform: translateY(-3px);
-      border-color: #68d391;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-      background: linear-gradient(135deg, #374151 0%, #4a5568 100%);
-    }
-    
-    .product-image-container {
-      width: 70px;
-      height: 90px;
-      border-radius: 8px;
-      overflow: hidden;
-      background: #4a5568;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #68d391;
-      flex-shrink: 0;
-    }
-    
-    .product-image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .product-info {
-      flex: 1;
-      min-width: 0;
-      padding: 0 12px;
-    }
-    
-    .product-sku {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: #68d391;
-      margin: 0 0 4px 0;
-      letter-spacing: 0.5px;
-    }
-    
-    .product-name {
-      color: #e2e8f0;
-      font-size: 0.85rem;
-      margin: 0 0 8px 0;
-      line-height: 1.3;
-      font-weight: 500;
-    }
-    
-    .product-price {
-      color: #4fd1c7;
-      font-weight: 700;
-      font-size: 1rem;
-      margin: 0 0 6px 0;
-    }
-    
-    .product-option {
-      display: inline-block;
-      background: rgba(104, 211, 145, 0.2);
-      color: #68d391;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      border: 1px solid rgba(104, 211, 145, 0.3);
-      margin-right: 4px;
-    }
-    
-    .product-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    
-    .add-to-cart-btn {
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      border: none;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      min-width: 100px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .add-to-cart-btn:enabled {
-      background: linear-gradient(135deg, #68d391 0%, #48bb78 100%);
-      color: #1a202c;
-      box-shadow: 0 4px 12px rgba(104, 211, 145, 0.3);
-    }
-    
-    .add-to-cart-btn:enabled:hover {
-      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(104, 211, 145, 0.4);
-    }
-    
-    .add-to-cart-btn:disabled {
-      background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
-      color: #a0aec0;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    
-    .stock-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 6px;
-    }
-    
-    .stock-badge {
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border: 1px solid;
-    }
-    
-    .stock-high {
-      background: rgba(72, 187, 120, 0.2);
-      color: #48bb78;
-      border-color: #48bb78;
-    }
-    
-    .stock-low {
-      background: rgba(237, 137, 54, 0.2);
-      color: #ed8936;
-      border-color: #ed8936;
-    }
-    
-    .stock-out {
-      background: rgba(245, 101, 101, 0.2);
-      color: #f56565;
-      border-color: #f56565;
-    }
-    
-    .stock-quantity {
-      font-weight: 700;
-      font-size: 0.8rem;
-      color: #e2e8f0;
-      background: rgba(45, 55, 72, 0.8);
-      padding: 2px 8px;
-      border-radius: 12px;
-      border: 1px solid #4a5568;
-    }
-    
-    .location-dot {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-right: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .stock-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .location-info {
-      margin-top: 4px;
-    }
-    
-    .location-info small {
-      font-size: 0.7rem;
-      opacity: 0.9;
-      color: #cbd5e0 !important;
-    }
-    
-    .search-empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #a0aec0;
-    }
-    
-    .search-empty-state i {
-      font-size: 4rem;
-      margin-bottom: 20px;
-      opacity: 0.5;
-    }
-    
-    .search-empty-state h6 {
-      font-size: 1.2rem;
-      margin-bottom: 10px;
-      color: #e2e8f0;
-    }
-    
-    .search-empty-state p {
-      font-size: 0.9rem;
-      margin: 0;
-      opacity: 0.7;
-    }
-    
-    .coupon-valid {
-      background: rgba(40, 167, 69, 0.15);
-      border: 2px solid #28a745;
-      border-radius: 10px;
-      padding: 14px;
-      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
-    }
-    
-    .coupon-invalid {
-      background: rgba(220, 53, 69, 0.15);
-      border: 2px solid #dc3545;
-      border-radius: 10px;
-      padding: 14px;
-      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
-    }
-    
-    .coupon-applied {
-      background: rgba(13, 110, 253, 0.15);
-      border: 2px solid #0d6efd;
-      border-radius: 10px;
-      padding: 14px;
-      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
-    }
-    
-    .payment-parcel-item {
-      background: rgba(13, 110, 253, 0.1);
-      border: 1px solid rgba(13, 110, 253, 0.3);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 8px;
-      transition: all 0.3s ease;
-    }
-    
-    .payment-parcel-item:hover {
-      background: rgba(13, 110, 253, 0.15);
-      border-color: rgba(13, 110, 253, 0.4);
-    }
-    
-    .payment-parcel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    
-    .payment-parcel-number {
-      background: rgba(13, 110, 253, 0.2);
-      color: #0d6efd;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    
-    .btn-loading {
-      position: relative;
-      color: transparent !important;
-    }
-    
-    .btn-loading::after {
-      content: "";
-      position: absolute;
-      width: 16px;
-      height: 16px;
-      top: 50%;
-      left: 50%;
-      margin-left: -8px;
-      margin-top: -8px;
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      border-top-color: transparent;
-      animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    
-    .store-select option[data-color="lagoa-seca"] {
-      color: #28a745;
-    }
-    
-    .store-select option[data-color="bh-shopping"] {
-      color: #007bff;
-    }
-    
-    .store-select option[data-color="barra-shopping"] {
-      color: #ffc107;
-    }
-    
-    .store-select option[data-color="online"] {
-      color: #6f42c1;
-    }
-    
-    .fade-in {
-      animation: fadeIn 0.5s ease-in;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .slide-in {
-      animation: slideIn 0.3s ease-out;
-    }
-    
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateX(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 992px) {
-      .position-sticky {
-        position: relative !important;
-        top: auto !important;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      .product-item {
-        flex-direction: column;
-        text-align: center;
-      }
-      
-      .product-image-container {
-        width: 100px;
-        height: 120px;
-        margin: 0 auto 15px;
-      }
-      
-      .product-info {
-        padding: 0;
-        margin-bottom: 15px;
-      }
-      
-      .product-actions {
-        flex-direction: row;
-        justify-content: center;
-        gap: 10px;
-      }
-      
-      .cart-item-content {
-        flex-direction: column;
-        text-align: center;
-      }
-      
-      .cart-item-image {
-        width: 80px;
-        height: 100px;
-        margin: 0 auto 12px;
-      }
-      
-      .cart-item-controls {
-        flex-direction: column;
-        gap: 12px;
-      }
-    }
-  </style>
+<style>
+  /* ── Base ── */
+  body { color:#e6edf3; }
+
+  /* ── Search ── */
+  .pos-search-wrap { position:relative; }
+  .pos-search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#8b949e; font-size:15px; pointer-events:none; }
+  .pos-search-input { width:100%; background:#0d1117; border:1px solid #30363d; border-radius:8px; color:#e6edf3; padding:12px 14px 12px 42px; font-size:0.95rem; outline:none; transition:border-color .2s; }
+  .pos-search-input::placeholder { color:#8b949e; }
+  .pos-search-input:focus { border-color:#1f6feb; box-shadow:0 0 0 3px rgba(31,111,235,.15); }
+
+  /* ── Product card ── */
+  .pos-product-item { background:#0d1117; border:1px solid #21262d; border-radius:8px; padding:14px; margin-bottom:10px; display:flex; align-items:flex-start; gap:14px; transition:border-color .2s, background .2s; }
+  .pos-product-item:hover { border-color:#30363d; background:#161b22; }
+  .pos-product-thumb { width:64px; height:80px; border-radius:6px; overflow:hidden; background:#21262d; border:1px solid #30363d; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .pos-product-thumb img { width:100%; height:100%; object-fit:cover; }
+  .pos-product-sku { color:#3fb950; font-weight:700; font-size:0.85rem; margin-bottom:2px; }
+  .pos-product-name { color:#e6edf3; font-size:0.82rem; margin-bottom:6px; line-height:1.3; }
+  .pos-product-price { color:#79c0ff; font-weight:700; font-size:0.95rem; margin-bottom:6px; }
+  .pos-product-option { background:rgba(31,111,235,.15); color:#79c0ff; border:1px solid rgba(31,111,235,.3); border-radius:12px; padding:2px 8px; font-size:0.7rem; font-weight:600; margin-right:4px; display:inline-block; }
+  .pos-add-btn { background:#238636; color:#fff; border:none; border-radius:6px; padding:8px 14px; font-size:0.78rem; font-weight:600; cursor:pointer; transition:background .2s; white-space:nowrap; }
+  .pos-add-btn:hover:not(:disabled) { background:#2ea043; }
+  .pos-add-btn:disabled { background:#21262d; color:#8b949e; cursor:not-allowed; }
+
+  /* ── Stock badge ── */
+  .pos-stock-badge { display:inline-flex; align-items:center; gap:5px; border-radius:20px; padding:3px 10px; font-size:0.72rem; font-weight:600; border:1px solid; text-transform:uppercase; letter-spacing:.4px; }
+  .pos-stock-high { background:rgba(35,134,54,.15); color:#3fb950; border-color:rgba(35,134,54,.4); }
+  .pos-stock-low { background:rgba(210,153,34,.15); color:#d29922; border-color:rgba(210,153,34,.4); }
+  .pos-stock-out { background:rgba(218,54,51,.15); color:#f85149; border-color:rgba(218,54,51,.4); }
+  .pos-stock-qty { color:#8b949e; font-size:0.78rem; }
+
+  /* ── Cart item ── */
+  .pos-cart-item { background:#0d1117; border:1px solid #21262d; border-radius:8px; margin-bottom:8px; transition:border-color .15s; }
+  .pos-cart-item:hover { border-color:#30363d; }
+  .pos-cart-item-inner { display:flex; align-items:flex-start; gap:10px; padding:10px; }
+  .pos-cart-thumb { width:44px; height:54px; border-radius:5px; overflow:hidden; background:#21262d; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid #30363d; }
+  .pos-cart-img { width:100%; height:100%; object-fit:cover; }
+  .pos-cart-details { flex:1; min-width:0; }
+  .pos-cart-sku { color:#3fb950; font-weight:700; font-size:0.78rem; margin-bottom:1px; }
+  .pos-cart-name { color:#e6edf3; font-size:0.75rem; margin-bottom:7px; line-height:1.2; }
+  .pos-cart-controls { display:flex; justify-content:space-between; align-items:center; }
+  .pos-qty-controls { display:flex; align-items:center; gap:6px; }
+  .pos-qty-btn { width:22px; height:22px; border-radius:4px; border:1px solid #30363d; background:#21262d; color:#e6edf3; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.65rem; transition:background .15s; }
+  .pos-qty-minus:hover { background:#da3633; border-color:#da3633; }
+  .pos-qty-plus:hover { background:#238636; border-color:#238636; }
+  .pos-qty-num { background:rgba(31,111,235,.15); border:1px solid rgba(31,111,235,.3); border-radius:4px; padding:1px 8px; color:#e6edf3; font-size:0.78rem; font-weight:600; min-width:28px; text-align:center; }
+  .pos-item-total { color:#79c0ff; font-weight:700; font-size:0.82rem; }
+  .pos-item-unit { color:#8b949e; font-size:0.68rem; }
+  .pos-remove-btn { width:24px; height:24px; background:#da3633; border:none; border-radius:4px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.7rem; flex-shrink:0; transition:background .15s; }
+  .pos-remove-btn:hover { background:#b91c1c; }
+
+  /* ── Cart summary ── */
+  .pos-cart-summary { background:#0d1117; border:1px solid #21262d; border-radius:8px; padding:14px; margin-top:12px; }
+  .pos-summary-row { display:flex; justify-content:space-between; align-items:center; color:#8b949e; font-size:0.85rem; margin-bottom:6px; }
+  .pos-total-row { border-top:1px solid #21262d; padding-top:10px; margin-top:10px; font-weight:700; font-size:1rem; color:#e6edf3; }
+  .pos-total-row span:last-child { color:#79c0ff; font-size:1.05rem; }
+  .pos-checkout-btn { width:100%; background:#238636; color:#fff; border:none; padding:11px; border-radius:8px; font-weight:600; font-size:0.95rem; margin-top:12px; cursor:pointer; transition:background .2s; }
+  .pos-checkout-btn:hover { background:#2ea043; }
+
+  /* ── Empty cart ── */
+  .pos-empty-cart { text-align:center; padding:40px 20px; }
+  .pos-empty-icon { font-size:2.5rem; color:#30363d; display:block; margin-bottom:12px; }
+  .pos-empty-title { color:#8b949e; font-size:0.95rem; font-weight:600; margin-bottom:4px; }
+  .pos-empty-sub { color:#6e7681; font-size:0.8rem; }
+
+  /* ── Modal ── */
+  .pos-modal { background:#161b22; border:1px solid #21262d; border-radius:12px; }
+  .pos-modal-header { background:#161b22; border-bottom:1px solid #21262d; padding:16px 20px; }
+  .pos-modal-footer { background:#161b22; border-top:1px solid #21262d; padding:14px 20px; }
+  .pos-modal-card { background:#0d1117; border:1px solid #21262d; border-radius:8px; overflow:hidden; }
+  .pos-modal-card-header { padding:10px 14px; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px; color:#e6edf3; font-size:0.85rem; font-weight:600; background:#161b22; }
+  .pos-modal-card-body { padding:14px; }
+
+  /* ── Form elements ── */
+  .pos-input { background:#0d1117; border:1px solid #30363d; border-radius:6px; color:#e6edf3; padding:8px 12px; font-size:0.85rem; width:100%; outline:none; transition:border-color .15s; }
+  .pos-input::placeholder { color:#6e7681; }
+  .pos-input:focus { border-color:#1f6feb; box-shadow:0 0 0 3px rgba(31,111,235,.12); }
+  .pos-input-group { position:relative; }
+  .pos-input-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#8b949e; font-size:13px; pointer-events:none; }
+  .pos-input-with-icon { padding-left:36px; }
+  .pos-label { color:#8b949e; font-size:0.78rem; margin-bottom:4px; display:block; }
+
+  /* ── Buttons ── */
+  .pos-btn { border-radius:6px; padding:8px 16px; font-size:0.85rem; font-weight:600; cursor:pointer; transition:background .15s, border-color .15s; border:1px solid transparent; display:inline-flex; align-items:center; gap:6px; }
+  .pos-btn-green { background:#238636; color:#fff; border-color:#238636; }
+  .pos-btn-green:hover { background:#2ea043; }
+  .pos-btn-ghost { background:transparent; color:#8b949e; border-color:#30363d; }
+  .pos-btn-ghost:hover { background:#21262d; color:#e6edf3; }
+  .pos-link-btn { background:transparent; border:none; color:#1f6feb; font-size:0.8rem; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:5px; }
+  .pos-link-btn:hover { color:#79c0ff; }
+  .pos-icon-btn { width:28px; height:28px; border-radius:6px; border:1px solid; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .pos-icon-btn-danger { border-color:rgba(218,54,51,.5); color:#f85149; }
+  .pos-icon-btn-danger:hover { background:rgba(218,54,51,.15); }
+
+  /* ── Payment parcel ── */
+  .payment-parcel-item { background:#161b22; border:1px solid #21262d; border-radius:8px; padding:12px; margin-bottom:8px; }
+  .payment-parcel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .payment-parcel-number { background:rgba(31,111,235,.15); color:#1f6feb; padding:3px 8px; border-radius:4px; font-size:0.72rem; font-weight:600; }
+  .pos-dropdown { border:1px solid #21262d; border-radius:8px; background:#161b22; overflow:hidden; max-height:200px; overflow-y:auto; }
+  .pos-dropdown-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #21262d; transition:background .15s; }
+  .pos-dropdown-item:last-child { border-bottom:none; }
+  .pos-dropdown-item:hover { background:#21262d; }
+  .pos-client-selected { background:#0d1117; border:1px solid rgba(35,134,54,.4); border-radius:8px; padding:10px 12px; }
+
+  /* ── Alerts ── */
+  .pos-alert { border-radius:6px; padding:8px 12px; font-size:0.8rem; display:flex; align-items:center; gap:8px; }
+  .pos-alert-danger { background:rgba(218,54,51,.12); border:1px solid rgba(218,54,51,.3); color:#f85149; }
+  .pos-alert-warning { background:rgba(210,153,34,.12); border:1px solid rgba(210,153,34,.3); color:#d29922; }
+  .pos-alert-success { background:rgba(35,134,54,.12); border:1px solid rgba(35,134,54,.3); color:#3fb950; }
+
+  /* ── Loading btn ── */
+  .btn-loading { position:relative; color:transparent !important; pointer-events:none; }
+  .btn-loading::after { content:""; position:absolute; width:14px; height:14px; top:50%; left:50%; margin:-7px 0 0 -7px; border:2px solid #fff; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── Animations ── */
+  .pos-fade-in { animation:posFade .3s ease; }
+  @keyframes posFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── Responsive ── */
+  @media (max-width:992px) { [style*="position:sticky"] { position:relative !important; top:auto !important; } }
+  @media (max-width:768px) {
+    .pos-product-item { flex-wrap:wrap; }
+    .pos-product-thumb { width:80px; height:100px; }
+    .pos-cart-item-inner { flex-wrap:wrap; }
+  }
+  
+  /* ── Form selects dark ── */
+  select.pos-input { background-color:#0d1117 !important; }
+  select.pos-input option { background:#161b22; color:#e6edf3; }
+</style>
 <% end %>
 
+<%# ── JavaScript ──────────────────────────────────────────────────────────── %>
 <script>
-// Global variables
-let selectedProduct = null;
-let currentStore = 'lagoa_seca';
-let searchTimeout = null;
-let appliedCoupon = null;
-let paymentParcels = [];
-let pendingStoreChange = null;
+// ── Globals ────────────────────────────────────────────────────────────────
+let selectedProduct  = null;
+let searchTimeout    = null;
+let paymentParcels   = [];
+let clientSearchTimeout = null;
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('🚀 PDV System initialized');
-  
-  // Set initial store
-  const storeSelect = document.getElementById('store-type-select');
-  if (storeSelect) {
-    currentStore = storeSelect.value;
-    console.log('📍 Initial store set to:', currentStore);
-  }
-  
-  // Setup event listeners
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
   setupEventListeners();
-  
-  // Initialize payment parcels with one default parcel
+  setupClientSearch();
   addPaymentParcel();
-  
-  // Setup form validation
   setupFormValidation();
-  
-  console.log('✅ PDV System ready');
 });
 
+// ── Event listeners ────────────────────────────────────────────────────────
 function setupEventListeners() {
-  console.log('🔧 Setting up event listeners');
-  
-  // Product search
   const searchInput = document.getElementById('product-search');
   if (searchInput) {
-    console.log('✅ Search input found, adding listeners');
-    
-    searchInput.addEventListener('input', function(e) {
+    searchInput.addEventListener('input', function (e) {
       const query = e.target.value.trim();
-      console.log('🔍 Search input changed:', query);
-      
-      // Clear previous timeout
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
+      clearTimeout(searchTimeout);
+      if (query.length < 2) {
+        clearSearchResults();
+        return;
       }
-      
-      // Set new timeout for search
-      searchTimeout = setTimeout(() => {
-        if (query.length >= 2) {
-          console.log('🔍 Triggering search for:', query);
-          searchProducts(query);
-        } else {
-          console.log('🔍 Query too short, clearing results');
-          clearSearchResults();
-        }
-      }, 300);
+      searchTimeout = setTimeout(() => searchProducts(query), 500);
     });
-    
-    searchInput.addEventListener('keypress', function(e) {
+
+    searchInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
         e.preventDefault();
+        clearTimeout(searchTimeout);
         const query = e.target.value.trim();
-        if (query.length >= 2) {
-          console.log('🔍 Enter pressed, searching for:', query);
-          searchProducts(query);
-        }
+        if (query.length >= 2) searchProducts(query);
       }
     });
-  } else {
-    console.error('❌ Search input not found!');
   }
 
-  // Store selection with cart reset warning
-  const storeSelect = document.getElementById('store-type-select');
-  if (storeSelect) {
-    console.log('✅ Store select found, adding listener');
-    
-    storeSelect.addEventListener('change', function(e) {
-      const newStore = e.target.value;
-      console.log('🏪 Store change requested from', currentStore, 'to', newStore);
-      
-      // Check if there are items in cart
-      if (hasItemsInCart()) {
-        console.log('⚠️ Cart has items, showing confirmation modal');
-        showStoreChangeConfirmation(currentStore, newStore);
-        // Reset select to current store until confirmed
-        e.target.value = currentStore;
-      } else {
-        console.log('✅ Cart is empty, changing store directly');
-        changeStore(newStore);
-      }
-    });
-  } else {
-    console.error('❌ Store select not found!');
-  }
-
-  // Checkout form
   const checkoutForm = document.getElementById('checkout-form');
-  if (checkoutForm) {
-    checkoutForm.addEventListener('submit', handleCheckoutSubmit);
-  }
+  if (checkoutForm) checkoutForm.addEventListener('submit', handleCheckoutSubmit);
 
-  // CEP input for address lookup
   const cepInput = document.getElementById('cep-input');
   if (cepInput) {
-    cepInput.addEventListener('blur', function(e) {
+    cepInput.addEventListener('blur', function (e) {
       const cep = e.target.value.replace(/\D/g, '');
-      if (cep.length === 8) {
-        lookupAddress(cep);
-      }
+      if (cep.length === 8) lookupAddress(cep);
     });
   }
 
-  // Quantity modal input
   const quantityInput = document.getElementById('quantity-input');
   if (quantityInput) {
-    quantityInput.addEventListener('change', function(e) {
-      const quantity = parseInt(e.target.value);
-      if (quantity < 1) {
-        e.target.value = 1;
-      }
+    quantityInput.addEventListener('change', function (e) {
+      if (parseInt(e.target.value) < 1) e.target.value = 1;
       updateQuantityStockInfo();
     });
   }
-  
-  console.log('✅ Event listeners setup complete');
 }
 
 function hasItemsInCart() {
-  const cartCountBadge = document.getElementById('cart-count-badge');
-  if (cartCountBadge) {
-    const itemCount = parseInt(cartCountBadge.textContent.split(' ')[0]);
-    return itemCount > 0;
-  }
-  return false;
+  const cartUniqueCount = document.getElementById('cart-unique-count');
+  return cartUniqueCount ? parseInt(cartUniqueCount.textContent) > 0 : false;
 }
 
-function showStoreChangeConfirmation(currentStoreValue, newStoreValue) {
-  console.log('🔔 Showing store change confirmation modal');
-  
-  pendingStoreChange = newStoreValue;
-  
-  // Update modal content
-  const currentStoreName = document.getElementById('current-store-name');
-  const newStoreName = document.getElementById('new-store-name');
-  
-  if (currentStoreName) {
-    currentStoreName.textContent = getLocationName(currentStoreValue);
-  }
-  
-  if (newStoreName) {
-    newStoreName.textContent = getLocationName(newStoreValue);
-  }
-  
-  // Show modal
-  const modal = new bootstrap.Modal(document.getElementById('store-change-modal'));
-  modal.show();
-}
-
-function confirmStoreChange() {
-  console.log('✅ Store change confirmed, clearing cart and changing store');
-  
-  if (pendingStoreChange) {
-    // Clear cart first
-    clearCartSilently().then(() => {
-      // Change store
-      changeStore(pendingStoreChange);
-      
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('store-change-modal'));
-      if (modal) {
-        modal.hide();
-      }
-      
-      // Show success message
-      showNotification(`Loja alterada para ${getLocationName(pendingStoreChange)}. Carrinho foi limpo.`, 'info', 4000);
-      
-      pendingStoreChange = null;
-    });
-  }
-}
-
-function cancelStoreChange() {
-  console.log('❌ Store change cancelled');
-  
-  pendingStoreChange = null;
-  
-  // Close modal
-  const modal = bootstrap.Modal.getInstance(document.getElementById('store-change-modal'));
-  if (modal) {
-    modal.hide();
-  }
-}
-
-function changeStore(newStore) {
-  const oldStore = currentStore;
-  currentStore = newStore;
-  
-  console.log('🏪 Store changed from', oldStore, 'to', currentStore);
-  
-  // Update store select
-  const storeSelect = document.getElementById('store-type-select');
-  if (storeSelect) {
-    storeSelect.value = currentStore;
-  }
-  
-  // Clear search results since they're for the old store
-  clearSearchResults();
-  
-  // Clear search input
-  const searchInput = document.getElementById('product-search');
-  if (searchInput) {
-    searchInput.value = '';
-  }
-  
-  // Re-search if there was a query
-  const query = searchInput ? searchInput.value.trim() : '';
-  if (query.length >= 2) {
-    console.log('🔍 Re-searching with new store');
-    searchProducts(query);
-  }
-}
-
-function clearCartSilently() {
-  console.log('🧹 Clearing cart silently');
-  
-  return fetch('/pos/clear_cart', {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    }
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Cart cleared silently:', data);
-    
-    if (data.success) {
-      updateCartDisplay([], 0);
-      // Clear any applied coupons
-      appliedCoupon = null;
-      clearCouponDisplay();
-    }
-    
-    return data;
-  })
-  .catch(error => {
-    console.error('❌ Error clearing cart silently:', error);
-    throw error;
-  });
-}
-
+// ── Form validation ────────────────────────────────────────────────────────
 function setupFormValidation() {
-  // Add real-time validation for required fields
-  const requiredFields = document.querySelectorAll('input[required], select[required]');
-  requiredFields.forEach(field => {
-    field.addEventListener('blur', function() {
-      validateField(this);
-    });
-    
-    field.addEventListener('input', function() {
-      if (this.classList.contains('is-invalid')) {
-        validateField(this);
-      }
+  document.querySelectorAll('input[required], select[required]').forEach(field => {
+    field.addEventListener('blur', () => validateField(field));
+    field.addEventListener('input', () => {
+      if (field.classList.contains('is-invalid')) validateField(field);
     });
   });
 }
 
 function validateField(field) {
-  const isValid = field.checkValidity();
-  if (isValid) {
+  if (field.checkValidity()) {
     field.classList.remove('is-invalid');
     field.classList.add('is-valid');
+    return true;
   } else {
     field.classList.remove('is-valid');
     field.classList.add('is-invalid');
+    return false;
   }
-  return isValid;
 }
 
+// ── Client search & selection ──────────────────────────────────────────────
+function setupClientSearch() {
+  const input = document.getElementById('client-search-input');
+  if (!input) return;
+
+  input.addEventListener('input', function () {
+    clearTimeout(clientSearchTimeout);
+    const q = this.value.trim();
+    if (q.length < 2) {
+      document.getElementById('client-search-results').style.display = 'none';
+      return;
+    }
+    clientSearchTimeout = setTimeout(() => searchClients(q), 300);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#client-search-section')) {
+      document.getElementById('client-search-results').style.display = 'none';
+    }
+  });
+
+  document.getElementById('clear-client-btn')?.addEventListener('click', clearSelectedClient);
+
+  document.getElementById('toggle-new-client-form-btn')?.addEventListener('click', function () {
+    document.getElementById('new-client-inline-form').style.display = 'block';
+    this.style.display = 'none';
+  });
+
+  document.getElementById('close-new-client-form-btn')?.addEventListener('click', function () {
+    document.getElementById('new-client-inline-form').style.display = 'none';
+    document.getElementById('toggle-new-client-form-btn').style.display = 'inline-flex';
+  });
+
+  document.getElementById('save-new-client-btn')?.addEventListener('click', saveAndSelectNewClient);
+}
+
+function searchClients(query) {
+  fetch(`/clients/search?q=${encodeURIComponent(query)}`)
+    .then(r => r.json())
+    .then(data => {
+      const resultsEl = document.getElementById('client-search-results');
+      resultsEl.innerHTML = '';
+
+      if (!data.success || data.clients.length === 0) {
+        resultsEl.innerHTML = '<div class="pos-dropdown-item" style="color:#8b949e; font-size:0.82rem;">Nenhum cliente encontrado</div>';
+        resultsEl.style.display = 'block';
+        return;
+      }
+
+      data.clients.forEach(client => {
+        const item = document.createElement('div');
+        item.className = 'pos-dropdown-item';
+        item.innerHTML = `
+          <div style="color:#e6edf3; font-size:0.85rem; font-weight:600;">${client.display_name}</div>
+          <small style="color:#8b949e; font-size:0.75rem;">${client.registration || ''}${client.city ? ' · ' + client.city : ''}</small>`;
+        item.addEventListener('click', () => selectClient(client));
+        resultsEl.appendChild(item);
+      });
+
+      resultsEl.style.display = 'block';
+    })
+    .catch(err => console.error('Erro ao buscar clientes:', err));
+}
+
+function selectClient(client) {
+  document.getElementById('checkout-client-id').value          = client.id;
+  document.getElementById('selected-client-name').textContent  = client.display_name;
+  document.getElementById('selected-client-cnpj').textContent  = client.registration || '';
+  document.getElementById('selected-client-display').style.display = 'flex';
+  document.getElementById('client-search-input').value         = '';
+  document.getElementById('client-search-results').style.display = 'none';
+
+  if (client.email)         setFieldIfEmpty('checkout-email', client.email);
+  if (client.phone)         setFieldIfEmpty('checkout-phone', client.phone);
+  if (client.street)        setFieldIfEmpty('street-input', client.street);
+  if (client.number)        setFieldIfEmpty('number-input', client.number);
+  if (client.city)          setFieldIfEmpty('city-input', client.city);
+  if (client.state)         setFieldIfEmpty('state-input', client.state);
+  if (client.zip)           setFieldIfEmpty('cep-input', client.zip);
+  if (client.neighbourhood) setFieldIfEmpty('neighborhood-input', client.neighbourhood);
+}
+
+function setFieldIfEmpty(id, value) {
+  const el = document.getElementById(id);
+  if (el && !el.value) el.value = value;
+}
+
+function clearSelectedClient() {
+  document.getElementById('checkout-client-id').value = '';
+  document.getElementById('selected-client-display').style.display = 'none';
+  document.getElementById('client-search-input').value = '';
+}
+
+function saveAndSelectNewClient() {
+  const responsibleName = document.getElementById('nc-responsible-name').value.trim();
+  if (!responsibleName) {
+    showNotification('Nome do Responsável é obrigatório.', 'warning');
+    return;
+  }
+
+  const payload = {
+    client: {
+      responsible_name:       responsibleName,
+      business_name:          document.getElementById('nc-business-name').value,
+      registration:           document.getElementById('nc-registration').value,
+      state_registration:     document.getElementById('nc-state-registration').value,
+      municipal_registration: document.getElementById('nc-municipal-registration').value,
+      email:                  document.getElementById('nc-email').value,
+      phone:                  document.getElementById('nc-phone').value
+    }
+  };
+
+  const saveBtn = document.getElementById('save-new-client-btn');
+  if (saveBtn) { saveBtn.classList.add('btn-loading'); saveBtn.disabled = true; }
+
+  fetch('/clients', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        selectClient(data.client);
+        document.getElementById('new-client-inline-form').style.display = 'none';
+        document.getElementById('toggle-new-client-form-btn').style.display = 'inline-flex';
+        ['nc-responsible-name','nc-business-name','nc-registration',
+         'nc-state-registration','nc-municipal-registration','nc-email','nc-phone']
+          .forEach(id => { document.getElementById(id).value = ''; });
+        showNotification('Cliente cadastrado e selecionado!', 'success');
+      } else {
+        showNotification('Erro ao salvar cliente:\n' + (data.errors || []).join('\n'), 'error');
+      }
+    })
+    .catch(() => showNotification('Erro de comunicação ao salvar cliente.', 'error'))
+    .finally(() => {
+      if (saveBtn) { saveBtn.classList.remove('btn-loading'); saveBtn.disabled = false; }
+    });
+}
+
+// ── Product search ─────────────────────────────────────────────────────────
 function searchProducts(query) {
-  console.log('🔍 Searching for:', query, 'in store:', currentStore);
   showSearchLoading();
 
   fetch('/pos/search_product', {
@@ -1505,332 +708,156 @@ function searchProducts(query) {
       'Content-Type': 'application/json',
       'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     },
-    body: JSON.stringify({
-      query: query,
-      store_type: currentStore
+    body: JSON.stringify({ query: query })
+  })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
     })
-  })
-  .then(response => {
-    console.log('📡 Search response status:', response.status);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('📦 Search results received:', data);
-    displaySearchResults(data.products || []);
-  })
-  .catch(error => {
-    console.error('❌ Search error:', error);
-    showSearchError('Erro ao buscar produtos. Tente novamente.');
-  });
+    .then(data => displaySearchResults(data.products || []))
+    .catch(() => showSearchError('Erro ao buscar produtos. Tente novamente.'));
 }
 
 function showSearchLoading() {
-  const resultsContainer = document.getElementById('search-results');
-  if (resultsContainer) {
-    resultsContainer.innerHTML = `
-      <div class="text-center py-4">
-        <div class="spinner-border text-success mb-3" role="status">
-          <span class="visually-hidden">Carregando...</span>
-        </div>
-        <p class="text-light">Buscando produtos...</p>
-      </div>
-    `;
-  }
+  const el = document.getElementById('search-results');
+  if (el) el.innerHTML = `
+    <div class="text-center py-5">
+      <div class="spinner-border mb-3" style="color:#1f6feb; width:2rem; height:2rem;"></div>
+      <p style="color:#8b949e; font-size:0.85rem;">Buscando produtos...</p>
+    </div>`;
 }
 
 function showSearchError(message) {
-  const resultsContainer = document.getElementById('search-results');
-  if (resultsContainer) {
-    resultsContainer.innerHTML = `
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
-        ${message}
-      </div>
-    `;
-  }
+  const el = document.getElementById('search-results');
+  if (el) el.innerHTML = `<div class="pos-alert pos-alert-danger"><i class="fas fa-exclamation-triangle"></i>${message}</div>`;
 }
 
 function clearSearchResults() {
-  const resultsContainer = document.getElementById('search-results');
-  if (resultsContainer) {
-    resultsContainer.innerHTML = '';
-  }
+  const el = document.getElementById('search-results');
+  if (el) el.innerHTML = '';
 }
 
 function displaySearchResults(products) {
-  console.log('🎨 Displaying search results for', products.length, 'products');
-  
-  const resultsContainer = document.getElementById('search-results');
-  if (!resultsContainer) {
-    console.error('❌ Search results container not found');
-    return;
-  }
+  const container = document.getElementById('search-results');
+  if (!container) return;
 
   if (!products || products.length === 0) {
-    resultsContainer.innerHTML = `
-      <div class="search-empty-state">
-        <i class="fas fa-search"></i>
-        <h6>Nenhum produto encontrado</h6>
-        <p>Tente buscar por SKU, nome ou características do produto</p>
-      </div>
-    `;
+    container.innerHTML = `
+      <div class="text-center py-5" style="color:#8b949e;">
+        <i class="fas fa-search" style="font-size:2.5rem; opacity:.3; display:block; margin-bottom:12px;"></i>
+        <div style="font-size:0.95rem; color:#e6edf3; margin-bottom:4px;">Nenhum produto encontrado</div>
+        <div style="font-size:0.82rem;">Tente buscar por SKU, nome ou características do produto</div>
+      </div>`;
     return;
   }
 
-  console.log('🎨 Displaying', products.length, 'products');
-
-  const productsHtml = products.map(product => {
-    // Use stock and stock_status directly from backend response
-    const stockQuantity = parseInt(product.stock || 0);
+  container.innerHTML = products.map(product => {
+    const stockQty    = parseInt(product.stock || 0);
     const stockStatus = product.stock_status || 'out';
-    const location = product.location || getLocationName(currentStore);
-    
-    console.log('Product:', product.sku, 'Stock:', stockQuantity, 'Status:', stockStatus, 'Location:', location);
-    
-    const stockInfo = {
-      quantity: stockQuantity,
-      available: stockQuantity > 0,
-      class: getStockBadgeClass(stockStatus),
-      text: getStockText(stockQuantity, stockStatus)
-    };
-    
-    const imageHtml = product.image_url ? 
-      `<img src="${product.image_url}" alt="${product.name || product.sku}" class="product-image">` :
-      `<i class="fas fa-image text-light"></i>`;
-    
+    const location    = product.location || 'Online Store';
+    const available   = stockQty > 0;
+    const badgeCls    = { high: 'pos-stock-high', low: 'pos-stock-low', out: 'pos-stock-out' }[stockStatus] || 'pos-stock-out';
+    const stockText   = stockQty === 0 || stockStatus === 'out' ? 'Sem Estoque' : stockStatus === 'low' ? 'Estoque Baixo' : 'Em Estoque';
+    const imgHtml     = product.image_url
+      ? `<img src="${product.image_url}" alt="${product.name || product.sku}">`
+      : `<i class="fas fa-image" style="color:#8b949e; font-size:20px;"></i>`;
+
     return `
-      <div class="product-item d-flex align-items-start gap-3 fade-in" data-product-id="${product.id}">
-        <div class="product-image-container">
-          ${imageHtml}
-        </div>
-        
-        <div class="product-info flex-grow-1">
-          <h6 class="product-sku">${product.sku}</h6>
-          <p class="product-name">${product.name || 'Nome não disponível'}</p>
-          <div class="product-price">R$ ${parseFloat(product.price || 0).toFixed(2)}</div>
-          
-          ${product.option1 || product.option2 || product.option3 ? `
-            <div class="mt-2">
-              ${product.option1 ? `<span class="product-option me-1">${product.option1}</span>` : ''}
-              ${product.option2 ? `<span class="product-option me-1">${product.option2}</span>` : ''}
-              ${product.option3 ? `<span class="product-option">${product.option3}</span>` : ''}
-            </div>
-          ` : ''}
-          
-          <div class="stock-info mt-2">
-            <span class="stock-badge ${stockInfo.class}">
-              <i class="stock-dot ${stockInfo.class}"></i>
-              ${stockInfo.text}
-            </span>
-            ${stockInfo.quantity > 0 ? `
-              <span class="stock-quantity">${stockInfo.quantity} unidades</span>
-            ` : ''}
-          </div>
-          
-          <div class="location-info">
-            <small class="text-muted">
-              <i class="location-dot ${getLocationClass(currentStore)}"></i>
-              ${location}
-            </small>
+      <div class="pos-product-item pos-fade-in" data-product-id="${product.id}">
+        <div class="pos-product-thumb">${imgHtml}</div>
+        <div class="flex-grow-1" style="min-width:0;">
+          <div class="pos-product-sku">${product.sku}</div>
+          <div class="pos-product-name">${product.name || 'Nome não disponível'}</div>
+          <div class="pos-product-price">R$ ${parseFloat(product.price || 0).toFixed(2)}</div>
+          ${product.option1 || product.option2 || product.option3 ? `<div class="mb-1">
+            ${product.option1 ? `<span class="pos-product-option">${product.option1}</span>` : ''}
+            ${product.option2 ? `<span class="pos-product-option">${product.option2}</span>` : ''}
+            ${product.option3 ? `<span class="pos-product-option">${product.option3}</span>` : ''}
+          </div>` : ''}
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="pos-stock-badge ${badgeCls}">${stockText}</span>
+            ${available ? `<span class="pos-stock-qty">${stockQty} un.</span>` : ''}
+            <small style="color:#6e7681; font-size:0.7rem;"><i class="fas fa-store" style="margin-right:3px;"></i>${location}</small>
           </div>
         </div>
-        
-        <div class="product-actions">
-          <button onclick="openQuantityModal('${product.id}', '${product.sku}', '${product.name || ''}', ${product.price || 0}, '${product.image_url || ''}', ${stockInfo.quantity})"
-                  class="add-to-cart-btn ${stockInfo.available ? '' : 'disabled'}"
-                  ${stockInfo.available ? '' : 'disabled'}>
-            <i class="fas fa-cart-plus me-1"></i>
-            ${stockInfo.available ? 'Adicionar' : 'Sem Estoque'}
+        <div style="flex-shrink:0;">
+          <button onclick="openQuantityModal('${product.id}','${product.sku}','${(product.name || '').replace(/'/g,"\\'")}',${product.price || 0},'${product.image_url || ''}',${stockQty})"
+                  class="pos-add-btn" ${available ? '' : 'disabled'}>
+            <i class="fas fa-cart-plus" style="margin-right:5px;"></i>${available ? 'Adicionar' : 'Sem Estoque'}
           </button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
-
-  resultsContainer.innerHTML = productsHtml;
-
-  // Add animation classes
-  setTimeout(() => {
-    const items = resultsContainer.querySelectorAll('.product-item');
-    items.forEach((item, index) => {
-      setTimeout(() => {
-        item.classList.add('slide-in');
-      }, index * 100);
-    });
-  }, 50);
-
-  console.log('✅ Search results displayed successfully');
 }
 
-function getStockBadgeClass(stockStatus) {
-  switch(stockStatus) {
-    case 'high': return 'stock-high';
-    case 'low': return 'stock-low';
-    case 'out': return 'stock-out';
-    default: return 'stock-out';
-  }
-}
-
-function getStockText(stockQuantity, stockStatus) {
-  if (stockQuantity === 0 || stockStatus === 'out') {
-    return 'Sem Estoque';
-  } else if (stockStatus === 'low') {
-    return 'Estoque Baixo';
-  } else if (stockStatus === 'high') {
-    return 'Em Estoque';
-  } else {
-    return stockQuantity > 0 ? 'Disponível' : 'Sem Estoque';
-  }
-}
-
-function getLocationClass(store) {
-  const classes = {
-    'lagoa_seca': 'bg-success',
-    'bh_shopping': 'bg-primary',
-    'rj': 'bg-warning',
-    'online': 'bg-info'
-  };
-  return classes[store] || 'bg-secondary';
-}
-
-function getLocationName(store) {
-  const names = {
-    'lagoa_seca': 'Lagoa Seca',
-    'bh_shopping': 'BH Shopping',
-    'rj': 'Barra Shopping (RJ)',
-    'online': 'Online Store'
-  };
-  return names[store] || 'Loja Desconhecida';
-}
-
+// ── Quantity modal ─────────────────────────────────────────────────────────
 function openQuantityModal(productId, sku, name, price, imageUrl, stockQuantity) {
-  selectedProduct = {
-    id: productId,
-    sku: sku,
-    name: name,
-    price: parseFloat(price),
-    image_url: imageUrl,
-    stock_quantity: parseInt(stockQuantity)
-  };
+  selectedProduct = { id: productId, sku, name, price: parseFloat(price), image_url: imageUrl, stock_quantity: parseInt(stockQuantity) };
 
-  console.log('📦 Opening quantity modal for:', selectedProduct);
-
-  // Update modal content
   const productInfo = document.getElementById('selected-product-info');
   if (productInfo) {
-    const imageHtml = imageUrl ? 
-      `<img src="${imageUrl}" alt="${name}" class="rounded mb-2" style="width: 80px; height: 100px; object-fit: cover;">` :
-      `<div class="bg-secondary rounded mb-2 d-flex align-items-center justify-content-center" style="width: 80px; height: 100px;">
-        <i class="fas fa-image text-light"></i>
-      </div>`;
-    
+    const imgHtml = imageUrl
+      ? `<img src="${imageUrl}" alt="${name}" style="width:70px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #21262d;" class="mb-2">`
+      : `<div style="width:70px;height:90px;background:#21262d;border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;"><i class="fas fa-image" style="color:#8b949e;"></i></div>`;
     productInfo.innerHTML = `
-      ${imageHtml}
-      <h6 class="text-white mb-1">${sku}</h6>
-      <p class="text-light small mb-2">${name || 'Nome não disponível'}</p>
-      <div class="text-success fw-bold">R$ ${price.toFixed(2)}</div>
-    `;
+      ${imgHtml}
+      <div style="color:#3fb950; font-weight:700; font-size:0.85rem;">${sku}</div>
+      <div style="color:#e6edf3; font-size:0.8rem; margin:2px 0 6px;">${name || 'Nome não disponível'}</div>
+      <div style="color:#79c0ff; font-weight:700;">R$ ${parseFloat(price).toFixed(2)}</div>`;
   }
 
-  // Reset quantity
   const quantityInput = document.getElementById('quantity-input');
-  if (quantityInput) {
-    quantityInput.value = 1;
-    quantityInput.max = stockQuantity;
-  }
+  if (quantityInput) { quantityInput.value = 1; quantityInput.max = stockQuantity; }
 
-  // Update stock info
   updateQuantityStockInfo();
-
-  // Show modal
-  const modal = new bootstrap.Modal(document.getElementById('quantity-modal'));
-  modal.show();
+  new bootstrap.Modal(document.getElementById('quantity-modal')).show();
 }
 
 function updateQuantityStockInfo() {
   if (!selectedProduct) return;
 
   const quantityInput = document.getElementById('quantity-input');
-  const stockInfo = document.getElementById('quantity-stock-info');
-  const confirmBtn = document.getElementById('confirm-add-btn');
-
+  const stockInfo     = document.getElementById('quantity-stock-info');
+  const confirmBtn    = document.getElementById('confirm-add-btn');
   if (!quantityInput || !stockInfo || !confirmBtn) return;
 
-  const requestedQuantity = parseInt(quantityInput.value);
-  const availableStock = selectedProduct.stock_quantity;
+  const requested = parseInt(quantityInput.value);
+  const available = selectedProduct.stock_quantity;
 
-  if (requestedQuantity > availableStock) {
-    stockInfo.innerHTML = `
-      <div class="alert alert-warning py-2 mb-0">
-        <small>
-          <i class="fas fa-exclamation-triangle me-1"></i>
-          Quantidade solicitada (${requestedQuantity}) excede o estoque disponível (${availableStock})
-        </small>
-      </div>
-    `;
+  if (requested > available) {
+    stockInfo.innerHTML = `<div class="pos-alert pos-alert-warning"><i class="fas fa-exclamation-triangle"></i>Excede o estoque disponível (${available})</div>`;
     confirmBtn.disabled = true;
-    quantityInput.value = availableStock;
+    quantityInput.value = available;
   } else {
-    stockInfo.innerHTML = `
-      <div class="text-success small">
-        <i class="fas fa-check-circle me-1"></i>
-        ${availableStock} unidades disponíveis em ${getLocationName(currentStore)}
-      </div>
-    `;
+    stockInfo.innerHTML = `<div class="pos-alert pos-alert-success"><i class="fas fa-check-circle"></i>${available} unidades disponíveis</div>`;
     confirmBtn.disabled = false;
   }
 }
 
 function increaseQuantity() {
   const input = document.getElementById('quantity-input');
-  if (input) {
-    const currentValue = parseInt(input.value);
-    const maxValue = parseInt(input.max);
-    
-    if (currentValue < maxValue) {
-      input.value = currentValue + 1;
-      updateQuantityStockInfo();
-    }
+  if (input && parseInt(input.value) < parseInt(input.max)) {
+    input.value = parseInt(input.value) + 1;
+    updateQuantityStockInfo();
   }
 }
 
 function decreaseQuantity() {
   const input = document.getElementById('quantity-input');
-  if (input) {
-    const currentValue = parseInt(input.value);
-    
-    if (currentValue > 1) {
-      input.value = currentValue - 1;
-      updateQuantityStockInfo();
-    }
+  if (input && parseInt(input.value) > 1) {
+    input.value = parseInt(input.value) - 1;
+    updateQuantityStockInfo();
   }
 }
 
 function confirmAddToCart() {
-  if (!selectedProduct) {
-    console.error('❌ No product selected');
-    return;
-  }
+  if (!selectedProduct) return;
 
-  const quantityInput = document.getElementById('quantity-input');
-  const quantity = parseInt(quantityInput.value);
+  const quantity  = parseInt(document.getElementById('quantity-input').value);
+  if (quantity < 1 || quantity > selectedProduct.stock_quantity) return;
 
-  if (quantity < 1 || quantity > selectedProduct.stock_quantity) {
-    console.error('❌ Invalid quantity:', quantity);
-    return;
-  }
-
-  console.log('🛒 Adding to cart:', selectedProduct.sku, 'quantity:', quantity);
-
-  // Show loading state
   const confirmBtn = document.getElementById('confirm-add-btn');
-  if (confirmBtn) {
-    confirmBtn.classList.add('btn-loading');
-    confirmBtn.disabled = true;
-  }
+  if (confirmBtn) { confirmBtn.classList.add('btn-loading'); confirmBtn.disabled = true; }
 
   fetch('/pos/add_to_cart', {
     method: 'POST',
@@ -1838,568 +865,184 @@ function confirmAddToCart() {
       'Content-Type': 'application/json',
       'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     },
-    body: JSON.stringify({
-      product_id: selectedProduct.id,
-      quantity: quantity,
-      store_type: currentStore
+    body: JSON.stringify({ product_id: selectedProduct.id, quantity })
+  })
+    .then(r => { if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`); return r.json(); })
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('quantity-modal'))?.hide();
+        updateCartDisplay(data.cart_items, data.total);
+        showNotification('Produto adicionado ao carrinho!', 'success');
+      } else {
+        throw new Error(data.error || 'Erro ao adicionar produto ao carrinho');
+      }
     })
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Added to cart:', data);
-    
-    if (data.success) {
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('quantity-modal'));
-      if (modal) {
-        modal.hide();
-      }
-      
-      // Update cart display
-      updateCartDisplay(data.cart_items, data.total);
-      
-      // Show success message
-      showNotification('Produto adicionado ao carrinho!', 'success');
-      
-      // Update search results to reflect new stock
-      const searchInput = document.getElementById('product-search');
-      if (searchInput && searchInput.value.trim().length >= 2) {
-        setTimeout(() => {
-          searchProducts(searchInput.value.trim());
-        }, 500);
-      }
-    } else {
-      throw new Error(data.error || 'Erro ao adicionar produto ao carrinho');
-    }
-  })
-  .catch(error => {
-    console.error('❌ Add to cart error:', error);
-    showNotification(error.message || 'Erro ao adicionar produto ao carrinho', 'error');
-  })
-  .finally(() => {
-    // Remove loading state
-    if (confirmBtn) {
-      confirmBtn.classList.remove('btn-loading');
-      confirmBtn.disabled = false;
-    }
-  });
+    .catch(error => showNotification(error.message || 'Erro ao adicionar produto ao carrinho', 'error'))
+    .finally(() => {
+      if (confirmBtn) { confirmBtn.classList.remove('btn-loading'); confirmBtn.disabled = false; }
+    });
 }
 
+// ── Cart display ───────────────────────────────────────────────────────────
 function updateCartDisplay(cartItems, total) {
-  console.log('🛒 Updating cart display:', cartItems.length, 'items, total:', total);
-
-  // Update cart counters
-  const cartCountBadge = document.getElementById('cart-count-badge');
-  const cartUniqueCount = document.getElementById('cart-unique-count');
-  const cartTotalItems = document.getElementById('cart-total-items');
-  const cartTotalDisplay = document.getElementById('cart-total-display');
-  const subtotalDisplay = document.getElementById('subtotal-display');
-  const finalTotalDisplay = document.getElementById('final-total-display');
-
-  const totalItems = cartItems.reduce((sum, item) => sum + parseInt(item.quantity), 0);
+  const totalItems  = cartItems.reduce((sum, item) => sum + parseInt(item.quantity), 0);
   const uniqueItems = cartItems.length;
 
-  if (cartCountBadge) cartCountBadge.textContent = `${totalItems} itens`;
-  if (cartUniqueCount) cartUniqueCount.textContent = uniqueItems;
-  if (cartTotalItems) cartTotalItems.textContent = totalItems;
-  if (cartTotalDisplay) cartTotalDisplay.textContent = `R$ ${parseFloat(total).toFixed(2)}`;
-  if (subtotalDisplay) subtotalDisplay.textContent = `R$ ${parseFloat(total).toFixed(2)}`;
+  const cartUniqueCount   = document.getElementById('cart-unique-count');
+  const cartTotalItems    = document.getElementById('cart-total-items');
+  const finalTotalDisplay = document.getElementById('final-total-display');
+
+  if (cartUniqueCount)   cartUniqueCount.textContent  = uniqueItems;
+  if (cartTotalItems)    cartTotalItems.textContent    = totalItems;
   if (finalTotalDisplay) finalTotalDisplay.textContent = `R$ ${parseFloat(total).toFixed(2)}`;
 
-  // Update cart items container
   const cartItemsContainer = document.getElementById('cart-items-container');
-  const emptyCartMessage = document.getElementById('empty-cart-message');
+  const emptyCartMessage   = document.getElementById('empty-cart-message');
   const cartSummarySection = document.getElementById('cart-summary-section');
-  const clearCartBtn = document.getElementById('clear-cart-btn');
-  const cartItemsElement = document.getElementById('cart-items');
+  const clearCartBtn       = document.getElementById('clear-cart-btn');
+  const cartItemsElement   = document.getElementById('cart-items');
 
   if (cartItems.length === 0) {
-    // Show empty cart message
     if (cartItemsContainer) cartItemsContainer.style.display = 'none';
     if (cartSummarySection) cartSummarySection.style.display = 'none';
-    if (clearCartBtn) clearCartBtn.style.display = 'none';
-    
+    if (clearCartBtn)       clearCartBtn.style.display = 'none';
     if (emptyCartMessage) {
       emptyCartMessage.style.display = 'block';
-    } else {
-      // Create empty cart message if it doesn't exist
-      if (cartItemsElement) {
-        cartItemsElement.innerHTML = `
-          <div class="empty-cart" id="empty-cart-message">
-            <div class="empty-cart-icon">
-              <i class="fas fa-shopping-cart"></i>
-            </div>
-            <div class="empty-cart-text">Carrinho vazio</div>
-            <div class="empty-cart-subtext">Adicione produtos para começar</div>
-          </div>
-        `;
-      }
+    } else if (cartItemsElement) {
+      cartItemsElement.innerHTML = `
+        <div class="pos-empty-cart" id="empty-cart-message">
+          <i class="fas fa-shopping-cart pos-empty-icon"></i>
+          <div class="pos-empty-title">Carrinho vazio</div>
+          <div class="pos-empty-sub">Adicione produtos para começar</div>
+        </div>`;
     }
   } else {
-    // Show cart items
     if (emptyCartMessage) emptyCartMessage.style.display = 'none';
     if (cartSummarySection) cartSummarySection.style.display = 'block';
-    if (clearCartBtn) clearCartBtn.style.display = 'inline-block';
-    
+    if (clearCartBtn) clearCartBtn.style.display = 'inline-flex';
+
     if (cartItemsContainer) {
       cartItemsContainer.style.display = 'block';
       cartItemsContainer.innerHTML = generateCartItemsHtml(cartItems);
-    } else {
-      // Create cart items container if it doesn't exist
-      if (cartItemsElement) {
-        cartItemsElement.innerHTML = `
-          <div id="cart-items-container">
-            ${generateCartItemsHtml(cartItems)}
-          </div>
-          <div id="cart-summary-section">
-            <div class="cart-summary">
-              <div class="summary-row">
-                <span>Subtotal:</span>
-                <span id="subtotal-display">R$ ${parseFloat(total).toFixed(2)}</span>
-              </div>
-              <div class="summary-row coupon-row" id="coupon-discount-row" style="display: none;">
-                <span class="text-success">Desconto (Cupom):</span>
-                <span id="coupon-discount-amount">R$ 0,00</span>
-              </div>
-              <div class="summary-row total-row">
-                <span>Total:</span>
-                <span id="final-total-display">R$ ${parseFloat(total).toFixed(2)}</span>
-              </div>
-              
-              <button onclick="openCheckoutModal()" class="checkout-btn">
-                <i class="fas fa-credit-card me-2"></i>Finalizar Venda
-              </button>
+    } else if (cartItemsElement) {
+      cartItemsElement.innerHTML = `
+        <div id="cart-items-container">${generateCartItemsHtml(cartItems)}</div>
+        <div id="cart-summary-section">
+          <div class="pos-cart-summary">
+            <div class="pos-summary-row pos-total-row">
+              <span>Total</span>
+              <span id="final-total-display">R$ ${parseFloat(total).toFixed(2)}</span>
             </div>
+            <button onclick="openCheckoutModal()" class="pos-checkout-btn">
+              <i class="fas fa-credit-card" style="margin-right:8px;"></i>Finalizar Venda
+            </button>
           </div>
-        `;
-      }
+        </div>`;
     }
   }
 }
 
 function generateCartItemsHtml(cartItems) {
   return cartItems.map((item, index) => {
-    const imageHtml = item.image_url ? 
-      `<img src="${item.image_url}" alt="${item.name}" class="cart-product-image">` :
-      `<div class="cart-image-placeholder">
-        <i class="fas fa-image"></i>
-      </div>`;
-
-    const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+    const imageHtml  = item.image_url
+      ? `<img src="${item.image_url}" alt="${item.name}" class="pos-cart-img">`
+      : `<i class="fas fa-image" style="color:#8b949e; font-size:16px;"></i>`;
+    const itemTotal  = parseFloat(item.price) * parseInt(item.quantity);
 
     return `
-      <div class="cart-item-card mb-2" data-product-id="${item.product_id}" data-item-index="${index}">
-        <div class="cart-item-content">
-          <div class="cart-item-image">
-            ${imageHtml}
-          </div>
-          
-          <div class="cart-item-details">
-            <div class="cart-item-sku">${item.sku}</div>
-            <div class="cart-item-name">${item.name || 'Nome não disponível'}</div>
-            
-            <div class="cart-item-controls">
-              <div class="quantity-controls">
-                <button onclick="updateCartQuantity('${item.product_id}', ${parseInt(item.quantity) - 1})" class="quantity-btn quantity-minus">
-                  <i class="fas fa-minus"></i>
-                </button>
-                <span class="quantity-display">${item.quantity}</span>
-                <button onclick="updateCartQuantity('${item.product_id}', ${parseInt(item.quantity) + 1})" class="quantity-btn quantity-plus">
-                  <i class="fas fa-plus"></i>
-                </button>
+      <div class="pos-cart-item" data-product-id="${item.product_id}" data-item-index="${index}">
+        <div class="pos-cart-item-inner">
+          <div class="pos-cart-thumb">${imageHtml}</div>
+          <div class="pos-cart-details">
+            <div class="pos-cart-sku">${item.sku}</div>
+            <div class="pos-cart-name">${item.name || 'Nome não disponível'}</div>
+            <div class="pos-cart-controls">
+              <div class="pos-qty-controls">
+                <button onclick="updateCartQuantity('${item.product_id}', ${parseInt(item.quantity) - 1})" class="pos-qty-btn pos-qty-minus"><i class="fas fa-minus"></i></button>
+                <span class="pos-qty-num">${item.quantity}</span>
+                <button onclick="updateCartQuantity('${item.product_id}', ${parseInt(item.quantity) + 1})" class="pos-qty-btn pos-qty-plus"><i class="fas fa-plus"></i></button>
               </div>
-              
-              <div class="cart-item-price">
-                <div class="item-total">R$ ${itemTotal.toFixed(2)}</div>
-                <div class="item-unit-price">R$ ${parseFloat(item.price).toFixed(2)} cada</div>
+              <div class="pos-cart-price">
+                <div class="pos-item-total">R$ ${itemTotal.toFixed(2)}</div>
+                <div class="pos-item-unit">R$ ${parseFloat(item.price).toFixed(2)} un.</div>
               </div>
             </div>
           </div>
-          
-          <button onclick="removeFromCart('${item.product_id}')" class="cart-remove-btn">
-            <i class="fas fa-times"></i>
-          </button>
+          <button onclick="removeFromCart('${item.product_id}')" class="pos-remove-btn"><i class="fas fa-times"></i></button>
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
+// ── Cart actions ───────────────────────────────────────────────────────────
 function updateCartQuantity(productId, newQuantity) {
-  if (newQuantity < 1) {
-    removeFromCart(productId);
-    return;
-  }
-
-  console.log('🔄 Updating cart quantity:', productId, 'to', newQuantity);
+  if (newQuantity < 1) { removeFromCart(productId); return; }
 
   fetch('/pos/update_cart_quantity', {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({
-      product_id: productId,
-      quantity: newQuantity,
-      store_type: currentStore
-    })
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+    body: JSON.stringify({ product_id: productId, quantity: newQuantity })
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Cart quantity updated:', data);
-    
-    if (data.success) {
-      updateCartDisplay(data.cart_items, data.total);
-    } else {
-      throw new Error(data.error || 'Erro ao atualizar quantidade');
-    }
-  })
-  .catch(error => {
-    console.error('❌ Update quantity error:', error);
-    showNotification(error.message || 'Erro ao atualizar quantidade', 'error');
-  });
+    .then(r => { if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`); return r.json(); })
+    .then(data => { if (data.success) updateCartDisplay(data.cart_items, data.total); else throw new Error(data.error); })
+    .catch(error => showNotification(error.message || 'Erro ao atualizar quantidade', 'error'));
 }
 
 function removeFromCart(productId) {
-  console.log('🗑️ Removing from cart:', productId);
-
   fetch('/pos/remove_from_cart', {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({
-      product_id: productId
-    })
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+    body: JSON.stringify({ product_id: productId })
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Removed from cart:', data);
-    
-    if (data.success) {
-      updateCartDisplay(data.cart_items, data.total);
-      showNotification('Produto removido do carrinho', 'success');
-    } else {
-      throw new Error(data.error || 'Erro ao remover produto');
-    }
-  })
-  .catch(error => {
-    console.error('❌ Remove from cart error:', error);
-    showNotification(error.message || 'Erro ao remover produto', 'error');
-  });
+    .then(r => { if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`); return r.json(); })
+    .then(data => { if (data.success) { updateCartDisplay(data.cart_items, data.total); showNotification('Produto removido do carrinho', 'success'); } else throw new Error(data.error); })
+    .catch(error => showNotification(error.message || 'Erro ao remover produto', 'error'));
 }
 
 function clearCart() {
-  if (!confirm('Tem certeza que deseja limpar o carrinho?')) {
-    return;
-  }
-
-  console.log('🧹 Clearing cart');
+  if (!confirm('Tem certeza que deseja limpar o carrinho?')) return;
 
   fetch('/pos/clear_cart', {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    }
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Cart cleared:', data);
-    
-    if (data.success) {
-      updateCartDisplay([], 0);
-      showNotification('Carrinho limpo', 'success');
-    } else {
-      throw new Error(data.error || 'Erro ao limpar carrinho');
-    }
-  })
-  .catch(error => {
-    console.error('❌ Clear cart error:', error);
-    showNotification(error.message || 'Erro ao limpar carrinho', 'error');
-  });
+    .then(r => { if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`); return r.json(); })
+    .then(data => { if (data.success) { updateCartDisplay([], 0); showNotification('Carrinho limpo', 'success'); } else throw new Error(data.error); })
+    .catch(error => showNotification(error.message || 'Erro ao limpar carrinho', 'error'));
 }
 
-function searchCoupon() {
-  const couponInput = document.getElementById('coupon-input');
-  const couponCode = couponInput.value.trim().toUpperCase();
-
-  if (!couponCode) {
-    showNotification('Digite um código de cupom', 'warning');
-    return;
-  }
-
-  console.log('🎫 Searching coupon:', couponCode);
-
-  const searchBtn = document.getElementById('search-coupon-btn');
-  if (searchBtn) {
-    searchBtn.classList.add('btn-loading');
-    searchBtn.disabled = true;
-  }
-
-  fetch('/pos/search_coupon', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({
-      coupon_code: couponCode
-    })
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('🎫 Coupon search result:', data);
-    
-    if (data.success) {
-      displayCouponResult(data.coupon, true);
-    } else {
-      displayCouponResult(null, false, data.error);
-    }
-  })
-  .catch(error => {
-    console.error('❌ Coupon search error:', error);
-    displayCouponResult(null, false, error.message || 'Erro ao buscar cupom');
-  })
-  .finally(() => {
-    if (searchBtn) {
-      searchBtn.classList.remove('btn-loading');
-      searchBtn.disabled = false;
-    }
-  });
-}
-
-function displayCouponResult(coupon, isValid, errorMessage = null) {
-  const resultContainer = document.getElementById('coupon-result');
-  if (!resultContainer) return;
-
-  if (isValid && coupon) {
-    resultContainer.innerHTML = `
-      <div class="coupon-valid">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div>
-            <h6 class="text-success mb-1">
-              <i class="fas fa-check-circle me-1"></i>
-              Cupom Válido: ${coupon.code}
-            </h6>
-            <p class="text-success small mb-0">${coupon.description}</p>
-          </div>
-          <button onclick="applyCoupon('${coupon.code}', ${coupon.discount_amount})" class="btn btn-success btn-sm">
-            <i class="fas fa-tag me-1"></i>Aplicar
-          </button>
-        </div>
-        <div class="text-success small">
-          <strong>Desconto:</strong> R$ ${parseFloat(coupon.discount_amount).toFixed(2)}
-        </div>
-      </div>
-    `;
-  } else {
-    resultContainer.innerHTML = `
-      <div class="coupon-invalid">
-        <h6 class="text-danger mb-1">
-          <i class="fas fa-times-circle me-1"></i>
-          Cupom Inválido
-        </h6>
-        <p class="text-danger small mb-0">${errorMessage || 'Cupom não encontrado ou expirado'}</p>
-      </div>
-    `;
-  }
-}
-
-function applyCoupon(couponCode, discountAmount) {
-  console.log('🎫 Applying coupon:', couponCode, 'discount:', discountAmount);
-
-  appliedCoupon = {
-    code: couponCode,
-    discount_amount: parseFloat(discountAmount)
-  };
-
-  // Update coupon display
-  const couponResult = document.getElementById('coupon-result');
-  if (couponResult) {
-    couponResult.innerHTML = `
-      <div class="coupon-applied">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="text-primary mb-1">
-              <i class="fas fa-tag me-1"></i>
-              Cupom Aplicado: ${couponCode}
-            </h6>
-            <div class="text-primary small">
-              <strong>Desconto:</strong> R$ ${discountAmount.toFixed(2)}
-            </div>
-          </div>
-          <button onclick="removeCoupon()" class="btn btn-outline-danger btn-sm">
-            <i class="fas fa-times me-1"></i>Remover
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
-  // Update cart totals
-  updateCartTotalsWithCoupon();
-
-  // Update header coupon display
-  const couponStatusBadge = document.getElementById('coupon-status-badge');
-  const couponDiscountDisplay = document.getElementById('coupon-discount-display');
-  
-  if (couponStatusBadge) {
-    couponStatusBadge.innerHTML = '<i class="fas fa-check me-1"></i>Aplicado';
-    couponStatusBadge.className = 'badge bg-success text-dark';
-  }
-  
-  if (couponDiscountDisplay) {
-    couponDiscountDisplay.textContent = `R$ ${discountAmount.toFixed(2)}`;
-  }
-
-  showNotification('Cupom aplicado com sucesso!', 'success');
-}
-
-function removeCoupon() {
-  console.log('🎫 Removing coupon');
-
-  appliedCoupon = null;
-
-  // Clear coupon display
-  clearCouponDisplay();
-
-  // Update cart totals
-  updateCartTotalsWithCoupon();
-
-  // Update header coupon display
-  const couponStatusBadge = document.getElementById('coupon-status-badge');
-  const couponDiscountDisplay = document.getElementById('coupon-discount-display');
-  
-  if (couponStatusBadge) {
-    couponStatusBadge.innerHTML = '<i class="fas fa-ticket-alt me-1"></i>Disponível';
-    couponStatusBadge.className = 'badge bg-success text-dark';
-  }
-  
-  if (couponDiscountDisplay) {
-    couponDiscountDisplay.textContent = 'R$ 0,00';
-  }
-
-  showNotification('Cupom removido', 'info');
-}
-
-function clearCouponDisplay() {
-  const couponResult = document.getElementById('coupon-result');
-  const couponInput = document.getElementById('coupon-input');
-  
-  if (couponResult) {
-    couponResult.innerHTML = '';
-  }
-  
-  if (couponInput) {
-    couponInput.value = '';
-  }
-}
-
-function updateCartTotalsWithCoupon() {
-  const subtotalDisplay = document.getElementById('subtotal-display');
-  const couponDiscountRow = document.getElementById('coupon-discount-row');
-  const couponDiscountAmount = document.getElementById('coupon-discount-amount');
-  const finalTotalDisplay = document.getElementById('final-total-display');
-  const cartTotalDisplay = document.getElementById('cart-total-display');
-
-  if (!subtotalDisplay) return;
-
-  const subtotal = parseFloat(subtotalDisplay.textContent.replace('R$ ', '').replace(',', '.'));
-  let discount = 0;
-  let finalTotal = subtotal;
-
-  if (appliedCoupon) {
-    discount = appliedCoupon.discount_amount;
-    finalTotal = Math.max(0, subtotal - discount);
-
-    if (couponDiscountRow) couponDiscountRow.style.display = 'flex';
-    if (couponDiscountAmount) couponDiscountAmount.textContent = `R$ ${discount.toFixed(2)}`;
-  } else {
-    if (couponDiscountRow) couponDiscountRow.style.display = 'none';
-  }
-
-  if (finalTotalDisplay) finalTotalDisplay.textContent = `R$ ${finalTotal.toFixed(2)}`;
-  if (cartTotalDisplay) cartTotalDisplay.textContent = `R$ ${finalTotal.toFixed(2)}`;
-}
-
+// ── Checkout modal ─────────────────────────────────────────────────────────
 function openCheckoutModal() {
-  console.log('💳 Opening checkout modal');
-
-  // Check if cart has items
   if (!hasItemsInCart()) {
     showNotification('Adicione produtos ao carrinho antes de finalizar a venda', 'warning');
     return;
   }
-
-  // Set store type in checkout form
-  const checkoutStoreType = document.getElementById('checkout-store-type');
-  if (checkoutStoreType) {
-    checkoutStoreType.value = currentStore;
-  }
-
-  // Update payment total
   updatePaymentTotal();
-
-  // Show modal
-  const modal = new bootstrap.Modal(document.getElementById('checkout-modal'));
-  modal.show();
+  new bootstrap.Modal(document.getElementById('checkout-modal')).show();
 }
 
 function closeCheckoutModal() {
-  const modal = bootstrap.Modal.getInstance(document.getElementById('checkout-modal'));
-  if (modal) {
-    modal.hide();
-  }
+  bootstrap.Modal.getInstance(document.getElementById('checkout-modal'))?.hide();
 }
 
+// ── Payment parcels ────────────────────────────────────────────────────────
 function addPaymentParcel() {
   const container = document.getElementById('payment-parcels-container');
   if (!container) return;
 
   const parcelNumber = paymentParcels.length + 1;
-  const parcelId = `parcel-${Date.now()}-${parcelNumber}`;
+  const parcelId     = `parcel-${Date.now()}-${parcelNumber}`;
 
-  const parcelHtml = `
+  container.insertAdjacentHTML('beforeend', `
     <div class="payment-parcel-item" data-parcel-id="${parcelId}">
       <div class="payment-parcel-header">
         <span class="payment-parcel-number">Parcela ${parcelNumber}</span>
-        ${parcelNumber > 1 ? `
-          <button type="button" onclick="removePaymentParcel('${parcelId}')" class="btn btn-outline-danger btn-sm">
-            <i class="fas fa-trash"></i>
-          </button>
-        ` : ''}
+        ${parcelNumber > 1 ? `<button type="button" onclick="removePaymentParcel('${parcelId}')" style="background:transparent; border:1px solid rgba(218,54,51,.4); color:#f85149; border-radius:4px; padding:3px 8px; font-size:0.72rem; cursor:pointer;"><i class="fas fa-trash"></i></button>` : ''}
       </div>
-      <div class="row">
-        <div class="col-md-6 mb-2">
-          <select name="payment_parcels[${parcelNumber - 1}][payment_method]" class="form-select form-select-sm bg-dark text-white border-secondary" required onchange="updatePaymentTotal()">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <select name="payment_parcels[${parcelNumber - 1}][payment_method]"
+                  class="pos-input" required onchange="updatePaymentTotal()" style="background:#0d1117 !important;">
             <option value="">Método de Pagamento</option>
             <option value="dinheiro">Dinheiro</option>
             <option value="cartao_credito">Cartão de Crédito</option>
@@ -2409,54 +1052,33 @@ function addPaymentParcel() {
             <option value="cheque">Cheque</option>
           </select>
         </div>
-        <div class="col-md-6 mb-2">
-          <input type="number" name="payment_parcels[${parcelNumber - 1}][amount]" step="0.01" min="0.01" 
-                 placeholder="Valor (R$)" class="form-control form-control-sm bg-dark text-white border-secondary" 
-                 required onchange="updatePaymentTotal()">
+        <div class="col-md-6">
+          <input type="number" name="payment_parcels[${parcelNumber - 1}][amount]"
+                 step="0.01" min="0.01" placeholder="Valor (R$)"
+                 class="pos-input" required onchange="updatePaymentTotal()">
         </div>
         <div class="col-12">
-          <input type="text" name="payment_parcels[${parcelNumber - 1}][notes]" 
-                 placeholder="Observações (opcional)" class="form-control form-control-sm bg-dark text-white border-secondary">
+          <input type="text" name="payment_parcels[${parcelNumber - 1}][notes]"
+                 placeholder="Observações (opcional)" class="pos-input">
         </div>
       </div>
-    </div>
-  `;
+    </div>`);
 
-  container.insertAdjacentHTML('beforeend', parcelHtml);
-
-  paymentParcels.push({
-    id: parcelId,
-    number: parcelNumber
-  });
-
+  paymentParcels.push({ id: parcelId, number: parcelNumber });
   updatePaymentTotal();
 }
 
 function removePaymentParcel(parcelId) {
-  const parcelElement = document.querySelector(`[data-parcel-id="${parcelId}"]`);
-  if (parcelElement) {
-    parcelElement.remove();
-  }
-
-  // Remove from array
+  document.querySelector(`[data-parcel-id="${parcelId}"]`)?.remove();
   paymentParcels = paymentParcels.filter(p => p.id !== parcelId);
 
-  // Renumber remaining parcels
-  const remainingParcels = document.querySelectorAll('.payment-parcel-item');
-  remainingParcels.forEach((parcel, index) => {
+  document.querySelectorAll('.payment-parcel-item').forEach((parcel, index) => {
     const numberSpan = parcel.querySelector('.payment-parcel-number');
-    if (numberSpan) {
-      numberSpan.textContent = `Parcela ${index + 1}`;
-    }
-
-    // Update input names
-    const inputs = parcel.querySelectorAll('input, select');
-    inputs.forEach(input => {
+    if (numberSpan) numberSpan.textContent = `Parcela ${index + 1}`;
+    parcel.querySelectorAll('input, select').forEach(input => {
       const name = input.getAttribute('name');
-      if (name && name.includes('payment_parcels[')) {
-        const newName = name.replace(/payment_parcels\[\d+\]/, `payment_parcels[${index}]`);
-        input.setAttribute('name', newName);
-      }
+      if (name && name.includes('payment_parcels['))
+        input.setAttribute('name', name.replace(/payment_parcels\[\d+\]/, `payment_parcels[${index}]`));
     });
   });
 
@@ -2464,93 +1086,57 @@ function removePaymentParcel(parcelId) {
 }
 
 function updatePaymentTotal() {
-  const amountInputs = document.querySelectorAll('input[name*="[amount]"]');
   let total = 0;
+  document.querySelectorAll('input[name*="[amount]"]').forEach(input => { total += parseFloat(input.value) || 0; });
 
-  amountInputs.forEach(input => {
-    const value = parseFloat(input.value) || 0;
-    total += value;
-  });
-
-  const paymentTotalDisplay = document.getElementById('payment-total-display');
-  if (paymentTotalDisplay) {
-    paymentTotalDisplay.textContent = `R$ ${total.toFixed(2)}`;
-  }
-
-  // Validate payment total
+  const el = document.getElementById('payment-total-display');
+  if (el) el.textContent = `R$ ${total.toFixed(2)}`;
   validatePaymentTotal(total);
 }
 
 function validatePaymentTotal(paymentTotal) {
-  const finalTotalDisplay = document.getElementById('final-total-display');
-  const paymentValidation = document.getElementById('payment-validation');
-  const paymentValidationMessage = document.getElementById('payment-validation-message');
+  const finalTotalEl         = document.getElementById('final-total-display');
+  const paymentValidation    = document.getElementById('payment-validation');
+  const paymentValidationMsg = document.getElementById('payment-validation-message');
+  if (!finalTotalEl || !paymentValidation || !paymentValidationMsg) return true;
 
-  if (!finalTotalDisplay || !paymentValidation || !paymentValidationMessage) return;
-
-  const cartTotal = parseFloat(finalTotalDisplay.textContent.replace('R$ ', '').replace(',', '.'));
+  const cartTotal  = parseFloat(finalTotalEl.textContent.replace('R$ ', '').replace(',', '.'));
   const difference = Math.abs(cartTotal - paymentTotal);
 
-  if (difference > 0.01) { // Allow for small rounding differences
+  if (difference > 0.01) {
     paymentValidation.style.display = 'block';
-    
-    if (paymentTotal > cartTotal) {
-      paymentValidationMessage.textContent = `Valor do pagamento (R$ ${paymentTotal.toFixed(2)}) é maior que o total do carrinho (R$ ${cartTotal.toFixed(2)})`;
-    } else {
-      paymentValidationMessage.textContent = `Valor do pagamento (R$ ${paymentTotal.toFixed(2)}) é menor que o total do carrinho (R$ ${cartTotal.toFixed(2)})`;
-    }
-    
+    paymentValidationMsg.textContent = paymentTotal > cartTotal
+      ? `Pagamento (R$ ${paymentTotal.toFixed(2)}) maior que o total (R$ ${cartTotal.toFixed(2)})`
+      : `Pagamento (R$ ${paymentTotal.toFixed(2)}) menor que o total (R$ ${cartTotal.toFixed(2)})`;
     return false;
-  } else {
-    paymentValidation.style.display = 'none';
-    return true;
   }
+
+  paymentValidation.style.display = 'none';
+  return true;
 }
 
+// ── Checkout submit ────────────────────────────────────────────────────────
 function handleCheckoutSubmit(e) {
   e.preventDefault();
-  
-  console.log('💳 Processing checkout');
 
-  // Validate payment total
-  const amountInputs = document.querySelectorAll('input[name*="[amount]"]');
   let paymentTotal = 0;
-  amountInputs.forEach(input => {
-    paymentTotal += parseFloat(input.value) || 0;
-  });
+  document.querySelectorAll('input[name*="[amount]"]').forEach(input => { paymentTotal += parseFloat(input.value) || 0; });
 
-  if (!validatePaymentTotal(paymentTotal)) {
-    showNotification('Corrija os valores de pagamento antes de continuar', 'error');
-    return;
-  }
+  if (!validatePaymentTotal(paymentTotal)) { showNotification('Corrija os valores de pagamento antes de continuar', 'error'); return; }
+  if (paymentTotal === 0) { showNotification('Configure pelo menos uma forma de pagamento', 'error'); return; }
 
-  // Check if at least one payment parcel is configured
-  if (paymentTotal === 0) {
-    showNotification('Configure pelo menos uma forma de pagamento', 'error');
-    return;
-  }
-
-  const form = e.target;
-  const formData = new FormData(form);
-  
-  // Convert FormData to object
+  const form      = e.target;
+  const formData  = new FormData(form);
   const orderData = {};
+
   for (let [key, value] of formData.entries()) {
     if (key.includes('payment_parcels[')) {
-      // Handle payment parcels array
-      if (!orderData.payment_parcels) {
-        orderData.payment_parcels = [];
-      }
-      
+      if (!orderData.payment_parcels) orderData.payment_parcels = [];
       const match = key.match(/payment_parcels\[(\d+)\]\[(\w+)\]/);
       if (match) {
         const index = parseInt(match[1]);
         const field = match[2];
-        
-        if (!orderData.payment_parcels[index]) {
-          orderData.payment_parcels[index] = {};
-        }
-        
+        if (!orderData.payment_parcels[index]) orderData.payment_parcels[index] = {};
         orderData.payment_parcels[index][field] = value;
       }
     } else {
@@ -2558,252 +1144,93 @@ function handleCheckoutSubmit(e) {
     }
   }
 
-  // Add coupon data if applied
-  if (appliedCoupon) {
-    orderData.coupon_code = appliedCoupon.code;
-    orderData.discount_amount = appliedCoupon.discount_amount;
-    orderData.discount_reason = `Cupom: ${appliedCoupon.code}`;
-  }
-
-  console.log('📦 Order data:', orderData);
-
-  // Show loading
   showLoadingOverlay('Criando pedido...');
-  
+
   const submitBtn = document.getElementById('finalize-btn');
-  if (submitBtn) {
-    submitBtn.classList.add('btn-loading');
-    submitBtn.disabled = true;
-  }
+  if (submitBtn) { submitBtn.classList.add('btn-loading'); submitBtn.disabled = true; }
 
   fetch('/pos/create_order', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
     body: JSON.stringify(orderData)
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    console.log('✅ Order created:', data);
-    
-    if (data.success) {
-      // Close modal
-      closeCheckoutModal();
-      
-      // Show success message
-      showNotification(data.message, 'success', 5000);
-      
-      // Reset form and clear cart display
-      form.reset();
-      paymentParcels = [];
-      appliedCoupon = null;
-      updateCartDisplay([], 0);
-      clearCouponDisplay();
-      
-      // Clear payment parcels
-      const container = document.getElementById('payment-parcels-container');
-      if (container) {
-        container.innerHTML = '';
-      }
-      
-      // Add default payment parcel
-      setTimeout(() => {
-        addPaymentParcel();
-      }, 100);
-      
-      // Optionally redirect to order management
-      if (confirm('Pedido criado com sucesso! Deseja visualizar o pedido?')) {
-        window.open(`/order_pdvs/${data.order_id}`, '_blank');
-      }
-    } else {
-      throw new Error(data.error || 'Erro ao criar pedido');
-    }
-  })
-  .catch(error => {
-    console.error('❌ Checkout error:', error);
-    showNotification(error.message || 'Erro ao processar pedido', 'error');
-  })
-  .finally(() => {
-    hideLoadingOverlay();
-    
-    if (submitBtn) {
-      submitBtn.classList.remove('btn-loading');
-      submitBtn.disabled = false;
-    }
-  });
-}
-
-function lookupAddress(cep) {
-  console.log('📍 Looking up address for CEP:', cep);
-
-  fetch(`https://viacep.com.br/ws/${cep}/json/`)
-    .then(response => response.json())
+    .then(r => { if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`); return r.json(); })
     .then(data => {
-      if (data.erro) {
-        throw new Error('CEP não encontrado');
+      if (data.success) {
+        closeCheckoutModal();
+        showNotification(data.message, 'success', 5000);
+        form.reset();
+        paymentParcels = [];
+        updateCartDisplay([], 0);
+        clearSelectedClient();
+        const container = document.getElementById('payment-parcels-container');
+        if (container) container.innerHTML = '';
+        setTimeout(() => addPaymentParcel(), 100);
+        if (confirm('Pedido criado com sucesso! Deseja visualizar o pedido?')) {
+          window.open(`/order_pdvs/${data.order_id}`, '_blank');
+        }
+      } else {
+        throw new Error(data.error || 'Erro ao criar pedido');
       }
-
-      console.log('📍 Address found:', data);
-
-      // Fill address fields
-      const stateInput = document.getElementById('state-input');
-      const cityInput = document.getElementById('city-input');
-      const neighborhoodInput = document.getElementById('neighborhood-input');
-      const streetInput = document.getElementById('street-input');
-
-      if (stateInput) stateInput.value = data.uf || '';
-      if (cityInput) cityInput.value = data.localidade || '';
-      if (neighborhoodInput) neighborhoodInput.value = data.bairro || '';
-      if (streetInput) streetInput.value = data.logradouro || '';
-
-      showNotification('Endereço preenchido automaticamente', 'success');
     })
-    .catch(error => {
-      console.error('❌ Address lookup error:', error);
-      showNotification('Erro ao buscar endereço. Verifique o CEP.', 'warning');
+    .catch(error => showNotification(error.message || 'Erro ao processar pedido', 'error'))
+    .finally(() => {
+      hideLoadingOverlay();
+      if (submitBtn) { submitBtn.classList.remove('btn-loading'); submitBtn.disabled = false; }
     });
 }
 
+// ── CEP lookup ─────────────────────────────────────────────────────────────
+function lookupAddress(cep) {
+  fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.erro) throw new Error('CEP não encontrado');
+      setFieldIfEmpty('state-input',        data.uf         || '');
+      setFieldIfEmpty('city-input',         data.localidade || '');
+      setFieldIfEmpty('neighborhood-input', data.bairro     || '');
+      setFieldIfEmpty('street-input',       data.logradouro || '');
+      showNotification('Endereço preenchido automaticamente', 'success');
+    })
+    .catch(() => showNotification('Erro ao buscar endereço. Verifique o CEP.', 'warning'));
+}
+
+// ── Loading overlay ────────────────────────────────────────────────────────
 function showLoadingOverlay(message = 'Carregando...') {
   const overlay = document.getElementById('loading-overlay');
-  const messageElement = document.getElementById('loading-message');
-  
-  if (overlay) {
-    overlay.classList.remove('d-none');
-    overlay.classList.add('d-flex');
-  }
-  
-  if (messageElement) {
-    messageElement.textContent = message;
-  }
+  const msg     = document.getElementById('loading-message');
+  if (overlay) { overlay.classList.remove('d-none'); overlay.classList.add('d-flex'); }
+  if (msg) msg.textContent = message;
 }
 
 function hideLoadingOverlay() {
   const overlay = document.getElementById('loading-overlay');
-  
-  if (overlay) {
-    overlay.classList.remove('d-flex');
-    overlay.classList.add('d-none');
-  }
+  if (overlay) { overlay.classList.remove('d-flex'); overlay.classList.add('d-none'); }
 }
 
+// ── Notifications ──────────────────────────────────────────────────────────
 function showNotification(message, type = 'info', duration = 3000) {
-  console.log(`📢 Notification [${type}]:`, message);
+  const colorMap = { success: '#3fb950', error: '#f85149', warning: '#d29922', info: '#79c0ff' };
+  const iconMap  = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-triangle', warning: 'fas fa-exclamation-triangle', info: 'fas fa-info-circle' };
+  const color    = colorMap[type] || colorMap.info;
+  const icon     = iconMap[type]  || iconMap.info;
 
-  // Create notification element
-  const notification = document.createElement('div');
-  notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-  notification.style.cssText = `
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
-    min-width: 300px;
-    max-width: 500px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  `;
-  
-  const icon = {
-    'success': 'fas fa-check-circle',
-    'error': 'fas fa-exclamation-triangle',
-    'warning': 'fas fa-exclamation-triangle',
-    'info': 'fas fa-info-circle'
-  }[type] || 'fas fa-info-circle';
-  
-  notification.innerHTML = `
-    <i class="${icon} me-2"></i>
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  // Auto remove after duration
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, duration);
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed; top:20px; right:20px; z-index:10000; min-width:280px; max-width:420px;
+    background:#161b22; border:1px solid #21262d; border-left:3px solid ${color};
+    border-radius:8px; padding:12px 16px; box-shadow:0 8px 24px rgba(0,0,0,.4);
+    display:flex; align-items:center; gap:10px; animation:posFade .3s ease;`;
+  el.innerHTML = `
+    <i class="${icon}" style="color:${color}; font-size:15px; flex-shrink:0;"></i>
+    <span style="color:#e6edf3; font-size:0.85rem; flex:1;">${message}</span>
+    <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#8b949e; cursor:pointer; padding:0; font-size:16px; line-height:1;">&times;</button>`;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.remove(); }, duration);
 }
 
-// Utility functions
+// ── Utilities ──────────────────────────────────────────────────────────────
 function truncate(str, length) {
   if (!str) return '';
   return str.length > length ? str.substring(0, length) + '...' : str;
 }
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-}
-
-function formatPhone(phone) {
-  if (!phone) return '';
-  const cleaned = phone.replace(/\D/g, '');
-  
-  if (cleaned.length === 11) {
-    return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-  } else if (cleaned.length === 10) {
-    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-  }
-  
-  return phone;
-}
-
-function formatCPF(cpf) {
-  if (!cpf) return '';
-  const cleaned = cpf.replace(/\D/g, '');
-  
-  if (cleaned.length === 11) {
-    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  }
-  
-  return cpf;
-}
-
-function formatCEP(cep) {
-  if (!cep) return '';
-  const cleaned = cep.replace(/\D/g, '');
-  
-  if (cleaned.length === 8) {
-    return cleaned.replace(/(\d{5})(\d{3})/, '$1-$2');
-  }
-  
-  return cep;
-}
-
-// Debug functions
-function debugCart() {
-  console.log('🐛 Current cart state:');
-  console.log('- Store:', currentStore);
-  console.log('- Applied coupon:', appliedCoupon);
-  console.log('- Payment parcels:', paymentParcels);
-  
-  const cartItems = document.querySelectorAll('.cart-item-card');
-  console.log('- Cart items in DOM:', cartItems.length);
-}
-
-function debugSearch() {
-  console.log('🐛 Current search state:');
-  const searchInput = document.getElementById('product-search');
-  console.log('- Search query:', searchInput ? searchInput.value : 'N/A');
-  console.log('- Current store:', currentStore);
-  
-  const results = document.querySelectorAll('.product-item');
-  console.log('- Search results in DOM:', results.length);
-}
-
-// Make debug functions available globally
-window.debugCart = debugCart;
-window.debugSearch = debugSearch;
-
-console.log('✅ PDV JavaScript loaded successfully');
 </script>

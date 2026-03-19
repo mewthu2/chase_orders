@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_18_192320) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -55,6 +55,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
     t.index ["marketing_campaign_id", "user_id"], name: "index_campaign_users_on_campaign_and_user", unique: true
     t.index ["marketing_campaign_id"], name: "index_campaign_users_on_marketing_campaign_id"
     t.index ["user_id"], name: "index_campaign_users_on_user_id"
+  end
+
+  create_table "clients", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "responsible_name", null: false
+    t.string "business_name"
+    t.string "registration"
+    t.string "state_registration"
+    t.string "municipal_registration"
+    t.string "street"
+    t.string "neighbourhood"
+    t.string "number"
+    t.string "city"
+    t.string "state"
+    t.string "zip"
+    t.string "email"
+    t.string "phone"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["registration"], name: "index_clients_on_registration"
+    t.index ["responsible_name"], name: "index_clients_on_responsible_name"
   end
 
   create_table "customers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -287,7 +307,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
 
   create_table "order_pdvs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.string "customer_name", null: false
+    t.string "customer_name"
     t.string "customer_email"
     t.string "customer_phone"
     t.string "customer_cpf"
@@ -318,12 +338,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
     t.text "multi_payments"
     t.text "inventory_reservations"
     t.text "reservation_error"
+    t.bigint "client_id"
+    t.string "tiny_order_id"
+    t.string "tiny_order_number"
+    t.string "tiny_status"
+    t.datetime "tiny_integrated_at"
+    t.text "tiny_error"
+    t.index ["client_id"], name: "index_order_pdvs_on_client_id"
     t.index ["coupon_code"], name: "index_order_pdvs_on_coupon_code"
     t.index ["created_at"], name: "index_order_pdvs_on_created_at"
     t.index ["payment_method"], name: "index_order_pdvs_on_payment_method"
     t.index ["reservation_status"], name: "index_order_pdvs_on_reservation_status"
     t.index ["shopify_order_id"], name: "index_order_pdvs_on_shopify_order_id"
     t.index ["status"], name: "index_order_pdvs_on_status"
+    t.index ["tiny_order_id"], name: "index_order_pdvs_on_tiny_order_id"
     t.index ["user_id"], name: "index_order_pdvs_on_user_id"
   end
 
@@ -541,6 +569,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_13_164431) do
   add_foreign_key "order_parcels", "order_pdvs"
   add_foreign_key "order_pdv_items", "order_pdvs"
   add_foreign_key "order_pdv_items", "products"
+  add_foreign_key "order_pdvs", "clients"
   add_foreign_key "order_pdvs", "users"
   add_foreign_key "orders", "customers"
   add_foreign_key "orders", "locations"

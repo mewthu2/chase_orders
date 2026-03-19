@@ -13,6 +13,30 @@ Rails.application.routes.draw do
     post '/add_packaging', to: 'shopify_flow#add_packaging'
   end
 
+  resources :order_pdvs do
+    member do
+      post   :integrate
+      post   :integrate_tiny
+      patch  :mark_as_paid
+      patch  :attach_client
+      post   :add_product
+      delete :remove_product
+      get    :items
+    end
+  end
+
+  resources :pos, only: [:index] do
+    collection do
+      post :search_product
+      post :add_to_cart
+      post :update_cart_quantity
+      post :remove_from_cart
+      post :clear_cart
+      post :search_coupon
+      post :create_order
+    end
+  end
+
   resources :dashboard, only: [:index] do
     collection do
       get :ranking_sellers
@@ -69,12 +93,17 @@ Rails.application.routes.draw do
   resources :available_locations
 
   resources :motors, only: [:index]
+
   resources :orders, only: [:index] do
     collection do
       get :export
       get :coupon_usage
     end
   end
+
+  resources :clients
+  get 'clients/search', to: 'clients#search', as: :search_clients
+
   resources :attempts, only: [:index] do
     collection do
       get :reprocess
@@ -97,7 +126,7 @@ Rails.application.routes.draw do
       post :add_user
       delete :remove_user
       get :statistics
-      delete :delete_all_tasks # Added route to delete all tasks from campaign
+      delete :delete_all_tasks
     end
   end
   

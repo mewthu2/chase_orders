@@ -1,0 +1,217 @@
+<% content_for :title, "Clientes" %>
+
+<div class="clients-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-users me-2"></i>Clientes
+      </h1>
+      <small class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
+      </small>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge">
+        <i class="fas fa-user me-1"></i><%= @clients.total_count rescue @clients.size %> cliente(s)
+      </span>
+      <%= link_to new_client_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Novo Cliente
+      <% end %>
+    </div>
+  </div>
+
+  <%# ===== FLASH ===== %>
+  <% flash.each do |type, msg| %>
+    <div class="flash-msg flash-msg--<%= type == 'notice' ? 'success' : 'danger' %>">
+      <i class="fas fa-<%= type == 'notice' ? 'check-circle' : 'exclamation-triangle' %> me-2"></i>
+      <%= msg %>
+    </div>
+  <% end %>
+
+  <%# ===== FILTRO / BUSCA ===== %>
+  <div class="filters-panel">
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-search me-1"></i>Buscar cliente
+      </label>
+      <%= form_with url: clients_path, method: :get, local: true do |f| %>
+        <div class="search-row">
+          <%= f.text_field :q,
+              value: params[:q],
+              class: "search-input",
+              placeholder: "Nome, razão social ou CNPJ...",
+              autofocus: !params[:q].present? %>
+          <%= f.submit "Buscar", class: "btn-primary-sm" %>
+          <% if params[:q].present? %>
+            <%= link_to clients_path, class: "btn-clear" do %>
+              <i class="fas fa-times me-1"></i>Limpar
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ===== TABELA ===== %>
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Lista de Clientes
+      </h5>
+      <% if params[:q].present? %>
+        <div class="active-filters-row">
+          <span class="filter-tag filter-tag--gray">
+            <i class="fas fa-search me-1"></i>"<%= params[:q] %>"
+          </span>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @clients.any? %>
+      <div class="table-responsive">
+        <table class="clients-table">
+          <thead>
+            <tr>
+              <th>Responsável</th>
+              <th>Razão Social</th>
+              <th>CNPJ</th>
+              <th>Cidade / UF</th>
+              <th>Telefone</th>
+              <th>Insc. Estadual</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @clients.each do |client| %>
+              <tr>
+                <td class="text-main fw-semibold"><%= client.responsible_name %></td>
+                <td class="text-muted-custom"><%= client.business_name.presence || "—" %></td>
+                <td>
+                  <span class="cnpj-badge"><%= client.cnpj_formatted.presence || "—" %></span>
+                </td>
+                <td class="text-muted-custom">
+                  <%= [client.city, client.state].compact.join(' / ').presence || "—" %>
+                </td>
+                <td class="text-muted-custom"><%= client.phone.presence || "—" %></td>
+                <td class="text-muted-custom"><%= client.state_registration.presence || "—" %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_client_path(client), class: "action-btn action-btn--edit" do %>
+                      <i class="fas fa-pencil-alt"></i>
+                    <% end %>
+                    <%= button_to client_path(client), method: :delete,
+                        class: "action-btn action-btn--danger",
+                        form: { data: { turbo_confirm: "Deseja remover #{client.display_name}?" } } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-users fa-3x mb-3 d-block"></i>
+        <% if params[:q].present? %>
+          <h5>Nenhum cliente encontrado</h5>
+          <p>Nenhum resultado para "<strong><%= params[:q] %></strong>"</p>
+          <%= link_to clients_path, class: "btn-clear" do %>
+            <i class="fas fa-times me-1"></i>Limpar busca
+          <% end %>
+        <% else %>
+          <h5>Nenhum cliente cadastrado</h5>
+          <p>Comece cadastrando o primeiro cliente</p>
+          <%= link_to new_client_path, class: "btn-export" do %>
+            <i class="fas fa-plus me-1"></i>Novo Cliente
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+</div>
+
+<style>
+/* =========================================
+   CLIENTS — design system compartilhado
+   ========================================= */
+
+.clients-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+  background: #0d1117;
+}
+
+/* ---- Header ---- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.page-title { color: #e6edf3; font-size: 1.4rem; font-weight: 700; margin: 0 0 0.2rem; }
+.page-subtitle { color: #8b949e; font-size: 0.8rem; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.total-badge { background: #1f6feb; color: #fff; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+.btn-export { background: #238636; color: #fff !important; border: none; padding: 0.45rem 1.1rem; border-radius: 8px; font-size: 0.84rem; font-weight: 600; text-decoration: none; cursor: pointer; transition: background 0.2s; }
+.btn-export:hover { background: #2ea043; color: #fff !important; }
+
+/* ---- Flash ---- */
+.flash-msg { border-radius: 10px; padding: 0.75rem 1.25rem; margin-bottom: 1rem; font-size: 0.88rem; font-weight: 500; }
+.flash-msg--success { background: rgba(35,134,54,0.15); border: 1px solid #238636; color: #3fb950; }
+.flash-msg--danger  { background: rgba(248,81,73,0.1);  border: 1px solid #f85149; color: #f85149; }
+
+/* ---- Filtros ---- */
+.filters-panel { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.filter-section { padding: 0.25rem 0; }
+.filter-label { display: block; color: #8b949e; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem; }
+.search-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.search-input { flex: 1; min-width: 220px; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; border-radius: 8px; padding: 0.45rem 0.9rem; font-size: 0.88rem; transition: border-color 0.2s; }
+.search-input:focus { outline: none; border-color: #1f6feb; box-shadow: 0 0 0 3px rgba(31,111,235,0.15); }
+.search-input::placeholder { color: #484f58; }
+.btn-primary-sm { background: #1f6feb; color: #fff; border: none; border-radius: 8px; padding: 0.45rem 1.1rem; font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-primary-sm:hover { background: #388bfd; }
+.btn-clear { background: transparent; border: 1px solid #30363d; color: #8b949e !important; border-radius: 8px; padding: 0.45rem 0.9rem; font-size: 0.84rem; text-decoration: none; transition: border-color 0.2s, color 0.2s; }
+.btn-clear:hover { border-color: #f85149; color: #f85149 !important; }
+
+/* ---- Tabela ---- */
+.table-card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; overflow: hidden; }
+.table-card-header { background: #1c2128; border-bottom: 1px solid #21262d; padding: 0.9rem 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.table-card-title { color: #e6edf3; font-size: 1rem; font-weight: 600; margin: 0; }
+.active-filters-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.filter-tag { border-radius: 20px; padding: 0.25rem 0.75rem; font-size: 0.76rem; font-weight: 600; }
+.filter-tag--gray { background: #30363d; color: #8b949e; }
+
+.clients-table { width: 100%; border-collapse: collapse; }
+.clients-table thead tr { background: #1c2128; }
+.clients-table thead th { color: #8b949e; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.75rem 1.25rem; border-bottom: 1px solid #21262d; white-space: nowrap; }
+.clients-table tbody tr { border-bottom: 1px solid #21262d; transition: background 0.15s; }
+.clients-table tbody tr:hover { background: #1c2128; }
+.clients-table tbody tr:last-child { border-bottom: none; }
+.clients-table tbody td { padding: 0.75rem 1.25rem; vertical-align: middle; }
+
+.text-main { color: #e6edf3; font-size: 0.88rem; }
+.text-muted-custom { color: #8b949e; font-size: 0.85rem; }
+.cnpj-badge { font-family: monospace; color: #58a6ff; font-size: 0.85rem; }
+
+.table-actions { display: flex; justify-content: flex-end; gap: 0.4rem; }
+.action-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; border: 1px solid #30363d; background: transparent; color: #8b949e; font-size: 0.8rem; text-decoration: none; cursor: pointer; transition: all 0.2s; }
+.action-btn--edit:hover { border-color: #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.08); }
+.action-btn--danger:hover { border-color: #f85149; color: #f85149; background: rgba(248,81,73,0.08); }
+
+/* ---- Empty state ---- */
+.empty-state { text-align: center; padding: 3.5rem 1rem; color: #484f58; }
+.empty-state h5 { color: #8b949e; margin-bottom: 0.5rem; }
+.empty-state p { color: #484f58; font-size: 0.88rem; margin-bottom: 1rem; }
+</style>

@@ -1,381 +1,776 @@
 <% content_for :title, "Editar Pedido PDV ##{@order_pdv.id}" %>
 
-<div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black shadow">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <div>
-            <h4 class="text-white mb-1">
-              <i class="fas fa-edit me-2"></i>Editar Pedido PDV #<%= @order_pdv.id %>
-            </h4>
-            <small class="text-muted">
-              <i class="fas fa-info-circle me-1"></i>
-              Edite os dados do pedido e adicione/remova produtos
-            </small>
-          </div>
-          <div class="d-flex gap-2">
-            <span class="badge bg-warning text-dark px-3 py-2">
-              <i class="fas fa-exclamation-triangle me-1"></i>Modo Edição
-            </span>
-            <span class="badge bg-info text-dark px-3 py-2">
-              <i class="fas fa-calendar me-1"></i><%= @order_pdv.created_at.strftime('%d/%m/%Y') %>
-            </span>
-            <span class="badge bg-success px-3 py-2" id="total-badge">
-              <i class="fas fa-dollar-sign me-1"></i><%= @order_pdv.formatted_total %>
-            </span>
-          </div>
+<% content_for :styles do %>
+<style>
+  :root {
+    --gh-bg:        #0d1117;
+    --gh-surface:   #161b22;
+    --gh-border:    #21262d;
+    --gh-border-hi: #30363d;
+    --gh-text:      #e6edf3;
+    --gh-muted:     #8b949e;
+    --gh-blue:      #1f6feb;
+    --gh-green:     #238636;
+    --gh-red:       #da3633;
+    --gh-yellow:    #d29922;
+  }
+
+  body { background-color: var(--gh-bg) !important; color: var(--gh-text); }
+
+  /* Cards */
+  .gh-card {
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .gh-card-header {
+    border-bottom: 1px solid var(--gh-border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .gh-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gh-text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .gh-card-title i { color: var(--gh-muted); font-size: 0.8rem; }
+  .gh-card-body { padding: 16px; }
+
+  /* Inputs */
+  .gh-input, .gh-select {
+    background: var(--gh-bg) !important;
+    border: 1px solid var(--gh-border-hi) !important;
+    border-radius: 6px;
+    color: var(--gh-text) !important;
+    font-size: 0.875rem;
+    width: 100%;
+    padding: 6px 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .gh-input:focus, .gh-select:focus {
+    border-color: var(--gh-blue) !important;
+    box-shadow: 0 0 0 3px rgba(31,111,235,0.15) !important;
+    outline: none;
+  }
+  .gh-input::placeholder { color: var(--gh-muted); }
+  .gh-select option { background: var(--gh-surface); color: var(--gh-text); }
+  .gh-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gh-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  /* Buttons */
+  .gh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--gh-border-hi);
+    background: var(--gh-surface);
+    color: var(--gh-text);
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+  .gh-btn:hover { background: #21262d; border-color: #8b949e; color: var(--gh-text); }
+  .gh-btn-primary  { background: var(--gh-blue);  border-color: var(--gh-blue);  color: #fff; }
+  .gh-btn-primary:hover  { background: #388bfd; border-color: #388bfd; color: #fff; }
+  .gh-btn-success  { background: var(--gh-green); border-color: var(--gh-green); color: #fff; }
+  .gh-btn-success:hover  { background: #2ea043; border-color: #2ea043; color: #fff; }
+  .gh-btn-danger   { background: var(--gh-red);   border-color: var(--gh-red);   color: #fff; }
+  .gh-btn-danger:hover   { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+  .gh-btn-warning  { background: #bb8009; border-color: #bb8009; color: #fff; }
+  .gh-btn-warning:hover  { background: #d29922; border-color: #d29922; color: #fff; }
+  .gh-btn-sm { padding: 3px 10px; font-size: 0.78rem; }
+  .gh-btn-lg { padding: 8px 24px; font-size: 0.95rem; }
+
+  /* Badges */
+  .gh-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .gh-badge-green   { background: rgba(35,134,54,0.2);   color: #3fb950; border: 1px solid rgba(35,134,54,0.5); }
+  .gh-badge-blue    { background: rgba(31,111,235,0.2);  color: #58a6ff; border: 1px solid rgba(31,111,235,0.5); }
+  .gh-badge-yellow  { background: rgba(210,153,34,0.2);  color: #d29922; border: 1px solid rgba(210,153,34,0.5); }
+  .gh-badge-red     { background: rgba(218,54,51,0.2);   color: #f85149; border: 1px solid rgba(218,54,51,0.5); }
+  .gh-badge-neutral { background: rgba(139,148,158,0.15); color: var(--gh-muted); border: 1px solid rgba(139,148,158,0.3); }
+
+  /* Product items */
+  .product-item-edit {
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border-hi);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s ease;
+    cursor: default;
+  }
+  .product-item-edit:hover { border-color: #3fb950; }
+  .product-image-sm {
+    width: 44px; height: 52px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--gh-border);
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--gh-border-hi);
+    flex-shrink: 0;
+  }
+  .product-image-sm img { width: 100%; height: 100%; object-fit: cover; }
+  .product-sku-sm   { font-weight: 700; font-size: 0.8rem; color: #3fb950; }
+  .product-name-sm  { color: var(--gh-muted); font-size: 0.75rem; line-height: 1.3; }
+  .product-price-sm { color: #58a6ff; font-weight: 700; font-size: 0.85rem; }
+
+  /* Order items */
+  .order-item-card {
+    background: var(--gh-bg);
+    border: 1px solid var(--gh-border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 6px;
+    transition: border-color 0.15s ease;
+  }
+  .order-item-card:hover { border-color: var(--gh-border-hi); }
+
+  /* Payment parcels */
+  .payment-parcel-item {
+    background: rgba(31,111,235,0.06);
+    border: 1px solid rgba(31,111,235,0.25);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .payment-parcel-number {
+    background: rgba(31,111,235,0.15);
+    color: #58a6ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  /* Loading btn */
+  .btn-loading { position: relative; color: transparent !important; }
+  .btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 14px; height: 14px;
+    top: 50%; left: 50%;
+    margin-left: -7px; margin-top: -7px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .fade-in { animation: fadeIn 0.25s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Client search */
+  .gh-search-results {
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border-hi);
+    border-radius: 6px;
+    overflow: hidden;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 20;
+  }
+  .gh-search-result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--gh-border);
+    transition: background 0.1s ease;
+  }
+  .gh-search-result-item:last-child { border-bottom: none; }
+  .gh-search-result-item:hover { background: rgba(177,186,196,0.06); }
+
+  /* Info rows */
+  .info-row { margin-bottom: 12px; }
+  .info-label { font-size: 0.72rem; color: var(--gh-muted); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
+  .info-value { font-size: 0.875rem; color: var(--gh-text); }
+
+  /* Textarea */
+  textarea.gh-input { resize: vertical; min-height: 80px; }
+
+  /* Alert */
+  .gh-alert { padding: 10px 14px; border-radius: 6px; font-size: 0.875rem; margin-bottom: 16px; }
+  .gh-alert-danger { background: rgba(218,54,51,0.1); border: 1px solid rgba(218,54,51,0.4); color: #f85149; }
+
+  /* Notification toast */
+  .gh-toast {
+    position: fixed; top: 20px; right: 20px; z-index: 10000;
+    min-width: 280px; max-width: 460px;
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border-hi);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    color: var(--gh-text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: fadeIn 0.2s ease;
+  }
+  .gh-toast-success { border-left: 3px solid #3fb950; }
+  .gh-toast-error   { border-left: 3px solid #f85149; }
+  .gh-toast-warning { border-left: 3px solid #d29922; }
+
+  /* Amount */
+  .amount { color: #3fb950; font-weight: 700; font-variant-numeric: tabular-nums; }
+</style>
+<% end %>
+
+<div style="padding: 24px 16px;">
+
+  <%# ── Header ──────────────────────────────────────────────────────────────── %>
+  <div class="gh-card" style="margin-bottom: 20px;">
+    <div class="gh-card-header" style="padding: 14px 20px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <%= link_to order_pdvs_path, class: "gh-btn gh-btn-sm" do %>
+          <i class="fas fa-arrow-left"></i>
+        <% end %>
+        <div>
+          <h5 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--gh-text);">
+            Editar Pedido PDV <span style="color: #3fb950;">#<%= @order_pdv.id %></span>
+          </h5>
+          <small style="color: var(--gh-muted);">Criado em <%= @order_pdv.created_at.strftime('%d/%m/%Y às %H:%M') %></small>
         </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span class="gh-badge gh-badge-green" id="total-badge">
+          <i class="fas fa-dollar-sign"></i> <span id="total-badge-text"><%= @order_pdv.formatted_total %></span>
+        </span>
+
+        <% unless @order_pdv.tiny_order_id.present? %>
+          <button type="button" id="btn-integrate-tiny" class="gh-btn gh-btn-warning gh-btn-sm" onclick="integrateTiny()">
+            <i class="fas fa-plug"></i> Integrar Tiny
+          </button>
+        <% else %>
+          <span class="gh-badge gh-badge-blue">
+            <i class="fas fa-check"></i> Tiny #<%= @order_pdv.tiny_order_id %>
+          </span>
+        <% end %>
+
+        <% if @order_pdv.tiny_order_id.present? && @order_pdv.status != 'paid' %>
+          <button type="button" id="btn-mark-paid" class="gh-btn gh-btn-success gh-btn-sm" onclick="markAsPaid()">
+            <i class="fas fa-check-circle"></i> Marcar como Pago
+          </button>
+        <% end %>
+
+        <% if @order_pdv.status == 'paid' %>
+          <span class="gh-badge gh-badge-green">
+            <i class="fas fa-check-double"></i> Pago
+          </span>
+        <% end %>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-lg-8">
-      <%= form_with model: @order_pdv, local: true do |f| %>
-        <% if @order_pdv.errors.any? %>
-          <div class="card bg-black shadow mb-4">
-            <div class="card-body">
-              <div class="alert alert-danger bg-dark text-white">
-                <div class="d-flex align-items-center mb-2">
-                  <i class="fas fa-exclamation-triangle me-2"></i>
-                  <h6 class="mb-0">Erro ao salvar pedido:</h6>
-                </div>
-                <ul class="mb-0 ps-3">
-                  <% @order_pdv.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            </div>
-          </div>
+  <%# Erros %>
+  <% if @order_pdv.errors.any? %>
+    <div class="gh-alert gh-alert-danger">
+      <i class="fas fa-exclamation-triangle me-2"></i><strong>Erro ao salvar:</strong>
+      <ul style="margin: 6px 0 0; padding-left: 18px;">
+        <% @order_pdv.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
         <% end %>
+      </ul>
+    </div>
+  <% end %>
 
-        <div class="card bg-black shadow mb-4">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-cog me-2"></i>Configurações da Venda
-            </h5>
+  <%# ── Card de Cliente ──────────────────────────────────────────────────────── %>
+  <div class="gh-card">
+    <div class="gh-card-header">
+      <span class="gh-card-title">
+        <i class="fas fa-building"></i> Cliente
+      </span>
+      <% if @order_pdv.respond_to?(:client) && @order_pdv.client.present? %>
+        <div style="display: flex; gap: 8px;">
+          <%= link_to edit_client_path(@order_pdv.client), class: "gh-btn gh-btn-sm" do %>
+            <i class="fas fa-pencil-alt"></i> Editar
+          <% end %>
+          <button type="button" class="gh-btn gh-btn-sm gh-btn-danger" onclick="detachClient()">
+            <i class="fas fa-times"></i> Desvincular
+          </button>
+        </div>
+      <% end %>
+    </div>
+    <div class="gh-card-body">
+
+      <% if @order_pdv.respond_to?(:client) && @order_pdv.client.present? %>
+        <%# COM cliente %>
+        <div class="row g-3">
+          <div class="col-md-4 col-6">
+            <span class="info-label">Responsável</span>
+            <span class="info-value" style="font-weight: 600;"><%= @order_pdv.client.responsible_name %></span>
           </div>
-          <div class="card-body">
-            <div class="row">
+          <% if @order_pdv.client.business_name.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">Razão Social</span>
+              <span class="info-value"><%= @order_pdv.client.business_name %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.registration.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">CNPJ</span>
+              <span class="info-value" style="font-family: monospace;"><%= @order_pdv.client.cnpj_formatted %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.state_registration.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">Inscrição Estadual</span>
+              <span class="info-value"><%= @order_pdv.client.state_registration %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.municipal_registration.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">Inscrição Municipal</span>
+              <span class="info-value"><%= @order_pdv.client.municipal_registration %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.phone.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">Telefone</span>
+              <span class="info-value"><%= @order_pdv.client.phone %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.email.present? %>
+            <div class="col-md-4 col-6">
+              <span class="info-label">E-mail</span>
+              <span class="info-value"><%= @order_pdv.client.email %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.client.street.present? %>
+            <div class="col-md-8 col-12">
+              <span class="info-label">Endereço</span>
+              <span class="info-value">
+                <%= [@order_pdv.client.street, @order_pdv.client.number].compact.join(', ') %>
+                <% if @order_pdv.client.neighbourhood.present? %> — <%= @order_pdv.client.neighbourhood %><% end %>
+                <% if @order_pdv.client.city.present? %>, <%= @order_pdv.client.city %> / <%= @order_pdv.client.state %><% end %>
+              </span>
+            </div>
+          <% end %>
+        </div>
+
+      <% else %>
+        <%# SEM cliente %>
+        <div id="no-client-section">
+          <p style="color: var(--gh-muted); font-size: 0.875rem; margin: 0 0 16px;">Nenhum cliente vinculado a este pedido.</p>
+
+          <div style="max-width: 480px; margin-bottom: 16px;">
+            <label class="gh-label">Buscar cliente cadastrado</label>
+            <div style="position: relative;">
+              <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--gh-muted); pointer-events: none;">
+                <i class="fas fa-search" style="font-size: 0.8rem;"></i>
+              </span>
+              <input type="text" id="edit-client-search-input"
+                     class="gh-input"
+                     style="padding-left: 32px;"
+                     placeholder="Nome, razão social ou CNPJ...">
+            </div>
+            <div id="edit-client-search-results" class="gh-search-results mt-1" style="display: none;"></div>
+          </div>
+
+          <button type="button" id="toggle-inline-client-btn" class="gh-btn gh-btn-success gh-btn-sm">
+            <i class="fas fa-plus"></i> Cadastrar novo cliente
+          </button>
+
+          <div id="inline-new-client-form" style="display: none; margin-top: 16px; padding: 16px; background: var(--gh-bg); border: 1px solid var(--gh-border-hi); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <span style="font-weight: 600; font-size: 0.875rem;">Novo Cliente</span>
+              <button type="button" class="gh-btn gh-btn-sm" id="close-inline-client-btn" style="padding: 2px 8px;">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="row g-2">
               <div class="col-md-6">
-                <%= f.label :store_type, class: "form-label text-white" do %>
-                  <i class="fas fa-store me-1"></i>Loja *
-                <% end %>
-                <%= f.select :store_type, 
-                    options_for_select([
-                      ['Lagoa Seca', 'lagoa_seca'],
-                      ['BH Shopping', 'bh_shopping'],
-                      ['Barra Shopping (RJ)', 'rj']
-                    ], @order_pdv.store_type), 
-                    {}, 
-                    { class: "form-select bg-dark text-white border-secondary" } %>
+                <label class="gh-label">Nome do Responsável *</label>
+                <input type="text" id="inc-responsible-name" class="gh-input">
               </div>
               <div class="col-md-6">
-                <%= f.label :payment_method, class: "form-label text-white" do %>
-                  <i class="fas fa-credit-card me-1"></i>Forma de Pagamento *
-                <% end %>
-                <%= f.select :payment_method, 
-                    options_for_select([
-                      ['Dinheiro', 'dinheiro'],
-                      ['Cartão de Crédito', 'cartao_credito'],
-                      ['Cartão de Débito', 'cartao_debito'],
-                      ['PIX', 'pix']
-                    ], @order_pdv.payment_method), 
-                    {}, 
-                    { class: "form-select bg-dark text-white border-secondary" } %>
+                <label class="gh-label">Razão Social</label>
+                <input type="text" id="inc-business-name" class="gh-input">
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-black shadow mb-4">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-user me-2"></i>Dados do Cliente
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <%= f.label :customer_name, class: "form-label text-white" do %>
-                  <i class="fas fa-user me-1"></i>Nome Completo *
-                <% end %>
-                <%= f.text_field :customer_name, class: "form-control bg-dark text-white border-secondary", required: true %>
+              <div class="col-md-4">
+                <label class="gh-label">CNPJ</label>
+                <input type="text" id="inc-registration" class="gh-input" placeholder="00.000.000/0000-00">
               </div>
-              <div class="col-md-6 mb-3">
-                <%= f.label :customer_email, class: "form-label text-white" do %>
-                  <i class="fas fa-envelope me-1"></i>Email *
-                <% end %>
-                <%= f.email_field :customer_email, class: "form-control bg-dark text-white border-secondary", required: true %>
+              <div class="col-md-4">
+                <label class="gh-label">Inscrição Estadual</label>
+                <input type="text" id="inc-state-registration" class="gh-input">
               </div>
-              <div class="col-md-6 mb-3">
-                <%= f.label :customer_phone, class: "form-label text-white" do %>
-                  <i class="fas fa-phone me-1"></i>Telefone *
-                <% end %>
-                <%= f.text_field :customer_phone, class: "form-control bg-dark text-white border-secondary", required: true %>
+              <div class="col-md-4">
+                <label class="gh-label">Inscrição Municipal</label>
+                <input type="text" id="inc-municipal-registration" class="gh-input">
               </div>
-              <div class="col-md-6 mb-3">
-                <%= f.label :customer_cpf, class: "form-label text-white" do %>
-                  <i class="fas fa-id-card me-1"></i>CPF *
-                <% end %>
-                <%= f.text_field :customer_cpf, class: "form-control bg-dark text-white border-secondary", required: true %>
+              <div class="col-md-6">
+                <label class="gh-label">E-mail</label>
+                <input type="email" id="inc-email" class="gh-input">
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-black shadow mb-4">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-map-marker-alt me-2"></i>Endereço de Entrega
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <%= f.label :zip, class: "form-label text-white" do %>
-                  <i class="fas fa-mail-bulk me-1"></i>CEP *
-                <% end %>
-                <%= f.text_field :zip, class: "form-control bg-dark text-white border-secondary", placeholder: "00000-000", required: true %>
+              <div class="col-md-6">
+                <label class="gh-label">Telefone</label>
+                <input type="text" id="inc-phone" class="gh-input">
               </div>
-              <div class="col-md-6 mb-3">
-                <%= f.label :state, class: "form-label text-white" do %>
-                  <i class="fas fa-flag me-1"></i>Estado *
-                <% end %>
-                <%= f.text_field :state, class: "form-control bg-dark text-white border-secondary", placeholder: "SP", maxlength: 2, required: true %>
-              </div>
-              <div class="col-12 mb-3">
-                <%= f.label :city, class: "form-label text-white" do %>
-                  <i class="fas fa-city me-1"></i>Cidade *
-                <% end %>
-                <%= f.text_field :city, class: "form-control bg-dark text-white border-secondary", required: true %>
-              </div>
-              <div class="col-12 mb-3">
-                <label class="form-label text-white">
-                  <i class="fas fa-map me-1"></i>Bairro *
-                </label>
-                <input type="text" name="order_pdv[neighborhood]" value="<%= @address_parts[:neighborhood] %>" required class="form-control bg-dark text-white border-secondary">
-              </div>
-              <div class="col-md-8 mb-3">
-                <label class="form-label text-white">
-                  <i class="fas fa-road me-1"></i>Rua *
-                </label>
-                <input type="text" name="order_pdv[street]" value="<%= @address_parts[:street] %>" required class="form-control bg-dark text-white border-secondary" placeholder="Ex: Rua das Flores">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label text-white">
-                  <i class="fas fa-hashtag me-1"></i>Número *
-                </label>
-                <input type="text" name="order_pdv[number]" value="<%= @address_parts[:number] %>" required class="form-control bg-dark text-white border-secondary" placeholder="123">
-              </div>
-              <div class="col-12">
-                <label class="form-label text-white">
-                  <i class="fas fa-building me-1"></i>Complemento
-                </label>
-                <input type="text" name="order_pdv[complement]" value="<%= @address_parts[:complement] %>" class="form-control bg-dark text-white border-secondary" placeholder="Ex: Apto 45, Bloco B">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-black shadow mb-4">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-percentage me-2"></i>Desconto (Opcional)
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <%= f.label :discount_amount, class: "form-label text-white" do %>
-                  <i class="fas fa-dollar-sign me-1"></i>Valor do Desconto (R$)
-                <% end %>
-                <%= f.number_field :discount_amount, step: 0.01, min: 0, class: "form-control bg-dark text-white border-secondary", placeholder: "0,00" %>
-              </div>
-              <div class="col-md-6 mb-3">
-                <%= f.label :discount_reason, class: "form-label text-white" do %>
-                  <i class="fas fa-comment me-1"></i>Motivo do Desconto
-                <% end %>
-                <%= f.text_field :discount_reason, class: "form-control bg-dark text-white border-secondary", placeholder: "Ex: Promoção, Cliente fidelidade..." %>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-black shadow mb-4">
-          <div class="card-header bg-dark">
-            <h5 class="text-white mb-0">
-              <i class="fas fa-sticky-note me-2"></i>Observações Adicionais
-            </h5>
-          </div>
-          <div class="card-body">
-            <%= f.label :notes, class: "form-label text-white" do %>
-              <i class="fas fa-edit me-1"></i>Observações
-            <% end %>
-            <%= f.text_area :notes, rows: 4, class: "form-control bg-dark text-white border-secondary", placeholder: "Observações adicionais sobre o pedido..." %>
-          </div>
-        </div>
-
-        <div class="card bg-black shadow mb-4">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <div>
-                <%= link_to @order_pdv, class: "btn btn-outline-secondary" do %>
-                  <i class="fas fa-times me-2"></i>Cancelar
-                <% end %>
-              </div>
-              <div class="d-flex gap-3">
-                <button type="button" class="btn btn-outline-info" onclick="previewChanges()">
-                  <i class="fas fa-eye me-2"></i>Visualizar
+              <div class="col-12" style="margin-top: 4px;">
+                <button type="button" class="gh-btn gh-btn-success gh-btn-sm" id="save-inline-client-btn">
+                  <i class="fas fa-save"></i> Salvar e Vincular
                 </button>
-                <%= f.submit "Salvar Alterações", class: "btn btn-success btn-lg" %>
               </div>
             </div>
           </div>
         </div>
       <% end %>
+
+    </div>
+  </div>
+
+  <%# ── Grid principal ──────────────────────────────────────────────────────── %>
+  <div class="row g-3">
+
+    <%# Coluna esquerda: formulário %>
+    <div class="col-lg-8">
+      <%= form_with model: @order_pdv, local: true do |f| %>
+
+        <%# Endereço %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title"><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</span>
+          </div>
+          <div class="gh-card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="gh-label">CEP *</label>
+                <%= f.text_field :zip, class: "gh-input", placeholder: "00000-000", id: "edit-cep-input", required: true %>
+              </div>
+              <div class="col-md-8">
+                <label class="gh-label">Cidade *</label>
+                <%= f.text_field :city, class: "gh-input", id: "edit-city-input", required: true %>
+              </div>
+              <div class="col-md-2">
+                <label class="gh-label">UF *</label>
+                <%= f.text_field :state, class: "gh-input", placeholder: "SP", maxlength: 2, id: "edit-state-input", required: true %>
+              </div>
+              <div class="col-md-10">
+                <label class="gh-label">Bairro *</label>
+                <input type="text" name="order_pdv[neighborhood]" value="<%= @address_parts[:neighborhood] %>"
+                       id="edit-neighborhood-input" required class="gh-input">
+              </div>
+              <div class="col-md-9">
+                <label class="gh-label">Rua *</label>
+                <input type="text" name="order_pdv[street]" value="<%= @address_parts[:street] %>"
+                       id="edit-street-input" required class="gh-input" placeholder="Ex: Rua das Flores">
+              </div>
+              <div class="col-md-3">
+                <label class="gh-label">Número *</label>
+                <input type="text" name="order_pdv[number]" value="<%= @address_parts[:number] %>"
+                       required class="gh-input" placeholder="123">
+              </div>
+              <div class="col-12">
+                <label class="gh-label">Complemento</label>
+                <input type="text" name="order_pdv[complement]" value="<%= @address_parts[:complement] %>"
+                       class="gh-input" placeholder="Ex: Apto 45, Bloco B">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <%# Pagamento %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title">
+              <i class="fas fa-credit-card"></i> Pagamento
+              <span style="color: var(--gh-muted); font-size: 0.72rem; font-weight: 400;">(mínimo 1 parcela)</span>
+            </span>
+          </div>
+          <div class="gh-card-body">
+            <div style="background: rgba(31,111,235,0.05); border: 1px solid rgba(31,111,235,0.2); border-radius: 6px; padding: 14px;">
+
+              <div id="edit-payment-parcels-container">
+                <% @order_pdv.order_parcels.each_with_index do |parcel, index| %>
+                  <div class="payment-parcel-item" data-parcel-id="existing-<%= parcel.id %>">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                      <span class="payment-parcel-number">Parcela <%= index + 1 %></span>
+                      <% if @order_pdv.order_parcels.count > 1 %>
+                        <button type="button"
+                                onclick="removeEditParcel('existing-<%= parcel.id %>', <%= parcel.id %>)"
+                                class="gh-btn gh-btn-sm gh-btn-danger">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      <% end %>
+                    </div>
+                    <input type="hidden" name="order_pdv[parcels][<%= index %>][id]" value="<%= parcel.id %>">
+                    <div class="row g-2">
+                      <div class="col-md-6">
+                        <select name="order_pdv[parcels][<%= index %>][payment_method]"
+                                class="gh-select" onchange="updateEditPaymentTotal()">
+                          <option value="">Método de Pagamento</option>
+                          <option value="dinheiro"       <%= parcel.payment_method == 'dinheiro'       ? 'selected' : '' %>>Dinheiro</option>
+                          <option value="cartao_credito" <%= parcel.payment_method == 'cartao_credito' ? 'selected' : '' %>>Cartão de Crédito</option>
+                          <option value="cartao_debito"  <%= parcel.payment_method == 'cartao_debito'  ? 'selected' : '' %>>Cartão de Débito</option>
+                          <option value="pix"            <%= parcel.payment_method == 'pix'            ? 'selected' : '' %>>PIX</option>
+                          <option value="transferencia"  <%= parcel.payment_method == 'transferencia'  ? 'selected' : '' %>>Transferência</option>
+                          <option value="cheque"         <%= parcel.payment_method == 'cheque'         ? 'selected' : '' %>>Cheque</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <input type="number" name="order_pdv[parcels][<%= index %>][amount]"
+                               step="0.01" min="0.01" value="<%= parcel.amount %>"
+                               placeholder="Valor (R$)" class="gh-input"
+                               onchange="updateEditPaymentTotal()">
+                      </div>
+                      <div class="col-12">
+                        <input type="text" name="order_pdv[parcels][<%= index %>][notes]"
+                               value="<%= parcel.notes %>" placeholder="Observações (opcional)"
+                               class="gh-input">
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <button type="button" onclick="addEditPaymentParcel()" class="gh-btn gh-btn-sm">
+                  <i class="fas fa-plus"></i> Adicionar Parcela
+                </button>
+                <span style="color: #58a6ff; font-size: 0.8rem;">
+                  Total: <strong id="edit-payment-total-display">R$ 0,00</strong>
+                </span>
+              </div>
+
+              <div id="edit-payment-validation" style="display: none; margin-top: 8px;">
+                <div style="background: rgba(218,54,51,0.1); border: 1px solid rgba(218,54,51,0.3); border-radius: 4px; padding: 8px 12px;">
+                  <small style="color: #f85149;">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <span id="edit-payment-validation-message"></span>
+                  </small>
+                </div>
+              </div>
+
+              <p style="color: var(--gh-muted); font-size: 0.75rem; margin: 10px 0 0;">
+                <i class="fas fa-lightbulb me-1"></i>
+                Para pagamento único, adicione apenas 1 parcela com o valor total.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <%# Observações %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title"><i class="fas fa-sticky-note"></i> Observações</span>
+          </div>
+          <div class="gh-card-body">
+            <%= f.text_area :order_note, rows: 3, class: "gh-input", style: "resize: vertical;",
+                placeholder: "Observações adicionais sobre o pedido..." %>
+          </div>
+        </div>
+
+        <%# Ações %>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <%= link_to @order_pdv, class: "gh-btn" do %>
+            <i class="fas fa-times"></i> Cancelar
+          <% end %>
+          <%= f.submit "Salvar Alterações", class: "gh-btn gh-btn-success gh-btn-lg" %>
+        </div>
+
+      <% end %>
     </div>
 
+    <%# Coluna direita: busca + itens %>
     <div class="col-lg-4">
-      <div class="card bg-black shadow mb-4">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-search me-2"></i>Adicionar Produtos
-          </h5>
+
+      <%# Buscar produto %>
+      <div class="gh-card" style="position: sticky; top: 16px;">
+        <div class="gh-card-header">
+          <span class="gh-card-title"><i class="fas fa-search"></i> Adicionar Produto</span>
         </div>
-        <div class="card-body">
-          <input type="text" id="product-search" placeholder="Digite SKU ou nome do produto..." 
-                 class="form-control bg-dark text-white border-secondary mb-3">
-          
-          <div id="search-results"></div>
+        <div class="gh-card-body">
+          <input type="text" id="edit-product-search"
+                 class="gh-input" style="margin-bottom: 12px;"
+                 placeholder="Digite SKU ou nome do produto...">
+          <div id="edit-search-results"></div>
         </div>
       </div>
 
-      <div class="card bg-black shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-shopping-bag me-2"></i>Itens do Pedido (<%= @items.count %>)
-          </h5>
+      <%# Itens do pedido %>
+      <div class="gh-card">
+        <div class="gh-card-header">
+          <span class="gh-card-title">
+            <i class="fas fa-shopping-bag"></i> Itens do Pedido
+            <span class="gh-badge gh-badge-blue" id="items-count-badge"><%= @items.count %></span>
+          </span>
+          <span class="amount" id="order-total-display"><%= @order_pdv.formatted_total %></span>
         </div>
-        <div class="card-body">
-          <div style="max-height: 400px; overflow-y: auto;">
-            <% @items.each do |item| %>
-              <div class="card bg-dark border-secondary mb-2">
-                <div class="card-body p-3">
-                  <div class="d-flex align-items-center gap-3">
-                    <% if item.image_url.present? %>
-                      <img src="<%= item.image_url %>" alt="<%= item.product_name %>" 
-                           class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
-                    <% else %>
-                      <div class="bg-secondary rounded d-flex align-items-center justify-content-center" 
-                           style="width: 50px; height: 50px;">
-                        <i class="fas fa-image text-muted"></i>
-                      </div>
-                    <% end %>
-
-                    <div class="flex-grow-1 min-w-0">
-                      <h6 class="text-white mb-1"><%= item.sku %></h6>
-                      <p class="text-muted mb-1 small"><%= truncate(item.product_name, length: 30) %></p>
-                      <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Qtd: <%= item.quantity %></span>
-                        <span class="text-success fw-bold"><%= item.formatted_total %></span>
+        <div class="gh-card-body" style="padding: 8px; max-height: 480px; overflow-y: auto;">
+          <div id="order-items-list">
+            <% if @items.any? %>
+              <% @items.each do |item| %>
+                <div class="order-item-card" id="order-item-<%= item.id %>">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="product-image-sm">
+                      <% if item.image_url.present? %>
+                        <img src="<%= item.image_url %>" alt="<%= item.product_name %>">
+                      <% else %>
+                        <i class="fas fa-image" style="color: var(--gh-muted); font-size: 0.85rem;"></i>
+                      <% end %>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div class="product-sku-sm"><%= item.sku %></div>
+                      <div class="product-name-sm"><%= truncate(item.product_name, length: 35) %></div>
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                        <small style="color: var(--gh-muted);">Qtd: <%= item.quantity %></small>
+                        <span class="product-price-sm"><%= item.formatted_total %></span>
                       </div>
                     </div>
-
-                    <button onclick="removeItem(<%= item.id %>)" 
-                            class="btn btn-outline-danger btn-sm">
+                    <button type="button" onclick="removeOrderItem(<%= item.id %>)"
+                            class="gh-btn gh-btn-sm gh-btn-danger" style="flex-shrink: 0;">
                       <i class="fas fa-times"></i>
                     </button>
                   </div>
                 </div>
+              <% end %>
+            <% else %>
+              <div style="text-align: center; padding: 32px 16px; color: var(--gh-muted);" id="empty-items-msg">
+                <i class="fas fa-box-open" style="font-size: 2rem; display: block; margin-bottom: 8px; opacity: 0.4;"></i>
+                Nenhum item no pedido
               </div>
             <% end %>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
 
-<% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
-
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .bg-black {
-      background-color: #121212 !important;
-    }
-
-    .form-control.bg-dark {
-      background-color: #212529 !important;
-      border-color: #495057;
-    }
-
-    .form-control.bg-dark:focus {
-      background-color: #212529 !important;
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-
-    .form-select.bg-dark {
-      background-color: #212529 !important;
-      border-color: #495057;
-    }
-
-    .form-select.bg-dark:focus {
-      background-color: #212529 !important;
-      border-color: #86b7fe;
-      box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-
-    .form-label {
-      font-weight: 600;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-    }
-
-    .alert {
-      border-radius: 8px;
-      border-width: 1px;
-    }
-
-    .badge {
-      font-size: 0.75rem;
-      padding: 6px 12px;
-    }
-
-    .btn {
-      transition: all 0.3s ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-    }
-  </style>
-<% end %>
-
+<%# ── JavaScript ──────────────────────────────────────────────────────────────── %>
 <script>
-function previewChanges() {
-  alert('Funcionalidade de preview será implementada em breve!');
+// ── Globals ─────────────────────────────────────────────────────────────────
+let editSearchTimeout  = null;
+let editParcelCounter  = <%= @order_pdv.order_parcels.count %>;
+const ORDER_PDV_ID     = <%= @order_pdv.id %>;
+let ORDER_TOTAL        = <%= @order_pdv.total_price.to_f %>;
+
+document.addEventListener('DOMContentLoaded', function () {
+  setupEditSearch();
+  setupEditCepLookup();
+  updateEditPaymentTotal();
+});
+
+// ── Busca de produto ─────────────────────────────────────────────────────────
+function setupEditSearch() {
+  const input = document.getElementById('edit-product-search');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    clearTimeout(editSearchTimeout);
+    const query = this.value.trim();
+    if (query.length < 2) { document.getElementById('edit-search-results').innerHTML = ''; return; }
+    editSearchTimeout = setTimeout(() => searchEditProducts(query), 500);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(editSearchTimeout);
+      const query = this.value.trim();
+      if (query.length >= 2) searchEditProducts(query);
+    }
+  });
 }
 
-function removeItem(itemId) {
+function searchEditProducts(query) {
+  const container = document.getElementById('edit-search-results');
+  container.innerHTML = `<div style="text-align:center;padding:12px;color:var(--gh-muted);font-size:0.8rem;"><i class="fas fa-spinner fa-spin me-1"></i>Buscando...</div>`;
+  fetch('/pos/search_product', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ query })
+  })
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(data => renderEditSearchResults(data.products || []))
+    .catch(() => {
+      container.innerHTML = `<div style="color:#f85149;font-size:0.8rem;padding:8px;"><i class="fas fa-exclamation-triangle me-1"></i>Erro ao buscar produtos</div>`;
+    });
+}
+
+function renderEditSearchResults(products) {
+  const container = document.getElementById('edit-search-results');
+  if (!products.length) {
+    container.innerHTML = `<div style="text-align:center;padding:16px;color:var(--gh-muted);font-size:0.8rem;"><i class="fas fa-search" style="display:block;margin-bottom:6px;opacity:0.4;"></i>Nenhum produto encontrado</div>`;
+    return;
+  }
+  container.innerHTML = products.map(p => {
+    const imgHtml = p.image_url ? `<img src="${p.image_url}" alt="${p.sku}">` : `<i class="fas fa-image" style="color:var(--gh-muted);font-size:0.85rem;"></i>`;
+    const stockColor = p.stock_status === 'high' ? '#3fb950' : p.stock_status === 'low' ? '#d29922' : '#f85149';
+    return `
+      <div class="product-item-edit" style="display:flex;align-items:center;gap:8px;">
+        <div class="product-image-sm">${imgHtml}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="product-sku-sm">${p.sku}</div>
+          <div class="product-name-sm">${(p.name || '').substring(0, 40)}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+            <span class="product-price-sm">R$ ${parseFloat(p.price || 0).toFixed(2)}</span>
+            <small style="color:${stockColor};">${p.stock || 0} un.</small>
+          </div>
+        </div>
+        <button type="button" onclick="addProductToOrder('${p.id}')"
+                class="gh-btn gh-btn-success gh-btn-sm" style="flex-shrink:0;"
+                ${(p.stock || 0) <= 0 ? 'disabled' : ''}>
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function addProductToOrder(productId) {
+  fetch(`/order_pdvs/${ORDER_PDV_ID}/add_product`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ product_id: productId, quantity: 1 })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) { showEditNotification('Produto adicionado ao pedido!', 'success'); refreshOrderItems(); }
+      else showEditNotification(data.message || 'Erro ao adicionar produto', 'error');
+    })
+    .catch(() => showEditNotification('Erro ao adicionar produto', 'error'));
+}
+
+// ── Itens ────────────────────────────────────────────────────────────────────
+function removeOrderItem(itemId) {
   if (!confirm('Remover este item do pedido?')) return;
-  
-  fetch(`/order_pdvs/<%= @order_pdv.id %>/remove_product`, {
+  fetch(`/order_pdvs/${ORDER_PDV_ID}/remove_product`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
@@ -383,113 +778,312 @@ function removeItem(itemId) {
     },
     body: JSON.stringify({ item_id: itemId })
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      location.reload();
-    } else {
-      alert(data.message || 'Erro ao remover item');
-    }
-  })
-  .catch(error => {
-    console.error('Erro:', error);
-    alert('Erro ao remover item do pedido');
-  });
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) { showEditNotification('Item removido', 'success'); refreshOrderItems(); }
+      else showEditNotification(data.message || 'Erro ao remover item', 'error');
+    })
+    .catch(() => showEditNotification('Erro ao remover item', 'error'));
 }
 
-let searchTimeout;
+function refreshOrderItems() {
+  fetch(`/order_pdvs/${ORDER_PDV_ID}/items`, { headers: { 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) return;
+      const list        = document.getElementById('order-items-list');
+      const badge       = document.getElementById('items-count-badge');
+      const totalDisplay = document.getElementById('order-total-display');
+      const totalBadge  = document.getElementById('total-badge-text');
 
-document.getElementById('product-search').addEventListener('input', function(e) {
-  clearTimeout(searchTimeout);
-  const query = e.target.value.trim();
+      ORDER_TOTAL = parseFloat(data.total);
+      if (badge) badge.textContent = data.items.length;
+      if (totalDisplay) totalDisplay.textContent = `R$ ${ORDER_TOTAL.toFixed(2)}`;
+      if (totalBadge) totalBadge.textContent = `R$ ${ORDER_TOTAL.toFixed(2)}`;
+      updateEditPaymentTotal();
 
-  if (query.length < 2) {
-    document.getElementById('search-results').innerHTML = '';
-    return;
-  }
+      if (!data.items.length) {
+        list.innerHTML = `<div style="text-align:center;padding:32px 16px;color:var(--gh-muted);" id="empty-items-msg"><i class="fas fa-box-open" style="font-size:2rem;display:block;margin-bottom:8px;opacity:0.4;"></i>Nenhum item no pedido</div>`;
+        return;
+      }
 
-  searchTimeout = setTimeout(() => {
-    searchProducts(query);
-  }, 300);
-});
-
-function searchProducts(query) {
-  fetch('/order_pdvs/search_product', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ 
-      query: query,
-      order_pdv_id: <%= @order_pdv.id %>
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    const resultsContainer = document.getElementById('search-results');
-
-    if (data.success && data.products.length > 0) {
-      resultsContainer.innerHTML = data.products.map(product => {
-        return `
-          <div class="card bg-dark border-secondary mb-2">
-            <div class="card-body p-2">
-              <div class="d-flex align-items-center gap-2">
-                <div style="width: 40px; height: 40px; background: #4a5568; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
-                  ${product.image_url ? 
-                    `<img src="${product.image_url}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">` :
-                    `<i class="fas fa-image text-muted"></i>`
-                  }
-                </div>
-                <div class="flex-grow-1 min-w-0">
-                  <div class="text-white small fw-bold">${product.sku}</div>
-                  <div class="text-muted" style="font-size: 0.75rem;">${product.name.substring(0, 30)}...</div>
-                  <div class="text-success small">R$ ${product.price.toFixed(2)}</div>
-                </div>
-                <button onclick="addProductToOrder(${product.id})" class="btn btn-success btn-sm">
-                  <i class="fas fa-plus"></i>
-                </button>
+      list.innerHTML = data.items.map(item => `
+        <div class="order-item-card" id="order-item-${item.id}">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="product-image-sm">
+              ${item.image_url ? `<img src="${item.image_url}" alt="${item.product_name}">` : `<i class="fas fa-image" style="color:var(--gh-muted);font-size:0.85rem;"></i>`}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="product-sku-sm">${item.sku}</div>
+              <div class="product-name-sm">${(item.product_name || '').substring(0, 35)}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+                <small style="color:var(--gh-muted);">Qtd: ${item.quantity}</small>
+                <span class="product-price-sm">R$ ${parseFloat(item.total).toFixed(2)}</span>
               </div>
             </div>
+            <button type="button" onclick="removeOrderItem(${item.id})" class="gh-btn gh-btn-sm gh-btn-danger" style="flex-shrink:0;">
+              <i class="fas fa-times"></i>
+            </button>
           </div>
-        `;
-      }).join('');
-    } else {
-      resultsContainer.innerHTML = `
-        <div class="text-center py-3">
-          <div class="text-muted">Nenhum produto encontrado</div>
+        </div>`).join('');
+    });
+}
+
+// ── Pagamento ────────────────────────────────────────────────────────────────
+function addEditPaymentParcel() {
+  const container = document.getElementById('edit-payment-parcels-container');
+  if (!container) return;
+  editParcelCounter++;
+  const parcelId     = `new-${Date.now()}`;
+  const parcelNumber = container.querySelectorAll('.payment-parcel-item').length + 1;
+  container.insertAdjacentHTML('beforeend', `
+    <div class="payment-parcel-item" data-parcel-id="${parcelId}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span class="payment-parcel-number">Parcela ${parcelNumber}</span>
+        <button type="button" onclick="removeEditParcel('${parcelId}', null)" class="gh-btn gh-btn-sm gh-btn-danger">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <select name="order_pdv[parcels][new_${parcelId}][payment_method]" class="gh-select" onchange="updateEditPaymentTotal()">
+            <option value="">Método de Pagamento</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="cartao_credito">Cartão de Crédito</option>
+            <option value="cartao_debito">Cartão de Débito</option>
+            <option value="pix">PIX</option>
+            <option value="transferencia">Transferência</option>
+            <option value="cheque">Cheque</option>
+          </select>
         </div>
-      `;
-    }
-  })
-  .catch(error => {
-    console.error('Erro na busca:', error);
+        <div class="col-md-6">
+          <input type="number" name="order_pdv[parcels][new_${parcelId}][amount]"
+                 step="0.01" min="0.01" placeholder="Valor (R$)" class="gh-input" onchange="updateEditPaymentTotal()">
+        </div>
+        <div class="col-12">
+          <input type="text" name="order_pdv[parcels][new_${parcelId}][notes]"
+                 placeholder="Observações (opcional)" class="gh-input">
+        </div>
+      </div>
+    </div>`);
+  updateEditPaymentTotal();
+}
+
+function removeEditParcel(parcelId, dbId) {
+  const container   = document.getElementById('edit-payment-parcels-container');
+  const totalParcels = container.querySelectorAll('.payment-parcel-item').length;
+  if (totalParcels <= 1) {
+    showEditNotification('O pedido deve ter pelo menos 1 parcela de pagamento.', 'warning');
+    return;
+  }
+  document.querySelector(`[data-parcel-id="${parcelId}"]`)?.remove();
+  container.querySelectorAll('.payment-parcel-item').forEach((el, i) => {
+    const span = el.querySelector('.payment-parcel-number');
+    if (span) span.textContent = `Parcela ${i + 1}`;
+  });
+  updateEditPaymentTotal();
+}
+
+function updateEditPaymentTotal() {
+  let total = 0;
+  document.querySelectorAll('#edit-payment-parcels-container input[name*="[amount]"]').forEach(input => {
+    total += parseFloat(input.value) || 0;
+  });
+  const display = document.getElementById('edit-payment-total-display');
+  if (display) display.textContent = `R$ ${total.toFixed(2)}`;
+  const validation    = document.getElementById('edit-payment-validation');
+  const validationMsg = document.getElementById('edit-payment-validation-message');
+  if (!validation || !validationMsg) return;
+  const diff = Math.abs(ORDER_TOTAL - total);
+  if (diff > 0.01) {
+    validation.style.display = 'block';
+    validationMsg.textContent = total > ORDER_TOTAL
+      ? `Valor do pagamento (R$ ${total.toFixed(2)}) é maior que o total (R$ ${ORDER_TOTAL.toFixed(2)})`
+      : `Valor do pagamento (R$ ${total.toFixed(2)}) é menor que o total (R$ ${ORDER_TOTAL.toFixed(2)})`;
+  } else {
+    validation.style.display = 'none';
+  }
+}
+
+// ── CEP ──────────────────────────────────────────────────────────────────────
+function setupEditCepLookup() {
+  const input = document.getElementById('edit-cep-input');
+  if (!input) return;
+  input.addEventListener('blur', function () {
+    const cep = this.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.erro) return;
+        const set = (id, val) => { const el = document.getElementById(id); if (el && !el.value) el.value = val; };
+        set('edit-state-input',        data.uf         || '');
+        set('edit-city-input',         data.localidade || '');
+        set('edit-neighborhood-input', data.bairro     || '');
+        set('edit-street-input',       data.logradouro || '');
+        showEditNotification('Endereço preenchido automaticamente', 'success');
+      });
   });
 }
 
-function addProductToOrder(productId) {
-  fetch(`/order_pdvs/<%= @order_pdv.id %>/add_product`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ 
-      product_id: productId,
-      quantity: 1
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      location.reload();
-    } else {
-      alert(data.message || 'Erro ao adicionar produto');
-    }
-  })
-  .catch(error => {
-    console.error('Erro:', error);
-    alert('Erro ao adicionar produto ao pedido');
+// ── Client Search & Attach ───────────────────────────────────────────────────
+(function () {
+  const searchInput = document.getElementById('edit-client-search-input');
+  const resultsEl   = document.getElementById('edit-client-search-results');
+  if (!searchInput) return;
+
+  let clientTimeout = null;
+
+  searchInput.addEventListener('input', function () {
+    clearTimeout(clientTimeout);
+    const q = this.value.trim();
+    if (q.length < 2) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+    clientTimeout = setTimeout(() => fetchClients(q), 400);
   });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#no-client-section') && resultsEl) resultsEl.style.display = 'none';
+  });
+
+  function fetchClients(q) {
+    fetch(`/clients/search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(data => {
+        resultsEl.innerHTML = '';
+        if (!data.clients || data.clients.length === 0) {
+          resultsEl.innerHTML = `<div class="gh-search-result-item" style="color:var(--gh-muted);font-size:0.8rem;">Nenhum cliente encontrado</div>`;
+          resultsEl.style.display = 'block';
+          return;
+        }
+        data.clients.forEach(c => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'gh-search-result-item';
+          btn.style.cssText = 'width:100%;text-align:left;background:none;border:none;cursor:pointer;';
+          btn.innerHTML = `<div style="font-size:0.875rem;color:var(--gh-text);">${c.display_name}</div><small style="color:var(--gh-muted);">${c.registration || ''} ${c.city ? '· ' + c.city : ''}</small>`;
+          btn.addEventListener('click', () => attachClient(c.id));
+          resultsEl.appendChild(btn);
+        });
+        resultsEl.style.display = 'block';
+      });
+  }
+
+  document.getElementById('toggle-inline-client-btn')?.addEventListener('click', function () {
+    document.getElementById('inline-new-client-form').style.display = 'block';
+    this.style.display = 'none';
+  });
+
+  document.getElementById('close-inline-client-btn')?.addEventListener('click', function () {
+    document.getElementById('inline-new-client-form').style.display = 'none';
+    document.getElementById('toggle-inline-client-btn').style.display = 'inline-flex';
+  });
+
+  document.getElementById('save-inline-client-btn')?.addEventListener('click', function () {
+    const name = document.getElementById('inc-responsible-name').value.trim();
+    if (!name) { showEditNotification('Nome do Responsável é obrigatório.', 'error'); return; }
+    const payload = {
+      client: {
+        responsible_name:       name,
+        business_name:          document.getElementById('inc-business-name').value,
+        registration:           document.getElementById('inc-registration').value,
+        state_registration:     document.getElementById('inc-state-registration').value,
+        municipal_registration: document.getElementById('inc-municipal-registration').value,
+        email:                  document.getElementById('inc-email').value,
+        phone:                  document.getElementById('inc-phone').value,
+      }
+    };
+    fetch('/clients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) attachClient(data.client.id);
+        else showEditNotification('Erro: ' + (data.errors || []).join(', '), 'error');
+      });
+  });
+})();
+
+function attachClient(clientId) {
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/attach_client`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ client_id: clientId })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) { showEditNotification('Cliente vinculado com sucesso!', 'success'); setTimeout(() => window.location.reload(), 800); }
+      else showEditNotification(data.message || 'Erro ao vincular cliente.', 'error');
+    });
+}
+
+function detachClient() {
+  if (!confirm('Desvincular o cliente deste pedido?')) return;
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/attach_client`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ client_id: null })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) { showEditNotification('Cliente desvinculado.', 'success'); setTimeout(() => window.location.reload(), 800); }
+      else showEditNotification(data.message || 'Erro ao desvincular.', 'error');
+    });
+}
+
+// ── Tiny ─────────────────────────────────────────────────────────────────────
+function integrateTiny() {
+  const btn = document.getElementById('btn-integrate-tiny');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/integrate_tiny`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      if (data.success) { showEditNotification(data.message, 'success', 5000); setTimeout(() => window.location.reload(), 1200); }
+      else showEditNotification(data.message || 'Erro ao integrar com Tiny.', 'error', 6000);
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      showEditNotification('Erro de comunicação com o servidor.', 'error');
+    });
+}
+
+function markAsPaid() {
+  if (!confirm('Marcar pedido como PAGO? Isso aprovará o pedido no Tiny.')) return;
+  const btn = document.getElementById('btn-mark-paid');
+  if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); }
+  fetch(`/order_pdvs/<%= @order_pdv.id %>/mark_as_paid`, {
+    method: 'PATCH',
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); }
+      if (data.success) { showEditNotification(data.message, 'success', 5000); setTimeout(() => window.location.reload(), 1200); }
+      else showEditNotification(data.message || 'Erro ao marcar como pago.', 'error', 6000);
+    });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+function showEditNotification(message, type = 'info', duration = 3000) {
+  const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-triangle', warning: 'fas fa-exclamation-triangle', info: 'fas fa-info-circle' };
+  const iconColor = { success: '#3fb950', error: '#f85149', warning: '#d29922', info: '#58a6ff' };
+  const n = document.createElement('div');
+  n.className = `gh-toast gh-toast-${type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'success'}`;
+  n.innerHTML = `<i class="${icons[type] || icons.info}" style="color:${iconColor[type]};flex-shrink:0;margin-top:2px;"></i><span>${message}</span>`;
+  document.body.appendChild(n);
+  setTimeout(() => { if (n.parentNode) n.remove(); }, duration);
 }
 </script>

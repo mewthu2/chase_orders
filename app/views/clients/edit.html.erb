@@ -1,0 +1,11 @@
+<%# app/views/clients/edit.html.erb %>
+<div class="container py-4" style="max-width: 900px;">
+  <div class="mb-4">
+    <%= link_to clients_path, class: "text-decoration-none text-muted small" do %>
+      <i class="bi bi-arrow-left me-1"></i> Voltar para clientes
+    <% end %>
+    <h1 class="h3 fw-bold mt-1 mb-0">Editar Cliente</h1>
+    <small class="text-muted"><%= @client.display_name %></small>
+  </div>
+  <%= render 'form', client: @client %>
+</div>

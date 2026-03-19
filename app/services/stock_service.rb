@@ -1,151 +1,136 @@
 class StockService
-  def self.check_stock(product_id, quantity, store_type)
-    Rails.logger.info "StockService.check_stock called with product_id: #{product_id}, quantity: #{quantity}, store: #{store_type}"
+  ONLINE_STORE_LOCATION_NAME = 'Online Store'.freeze
+
+  def self.check_stock(product_id, quantity)
+    Rails.logger.info "StockService.check_stock | variant_id: #{product_id}, quantity: #{quantity}"
 
     begin
       product = Product.find_by(shopify_variant_id: product_id)
 
       unless product
-        Rails.logger.warn "Product with variant_id #{product_id} not found in local database"
+        Rails.logger.warn "Produto não encontrado na base local: #{product_id}"
         return {
           success: false,
           has_sufficient_stock: false,
           available_quantity: 0,
-          location: get_location_name(store_type),
+          location: ONLINE_STORE_LOCATION_NAME,
           message: 'Produto não encontrado'
         }
       end
 
-      Rails.logger.info "Found product in local database: #{product.sku}"
-
-      check_shopify_stock(product, quantity, store_type)
-
+      check_shopify_stock(product, quantity)
     rescue StandardError => e
-      Rails.logger.error "Error in StockService.check_stock: #{e.message}"
+      Rails.logger.error "Erro em StockService.check_stock: #{e.message}"
       Rails.logger.error e.backtrace.join("\n")
-
       {
         success: false,
         has_sufficient_stock: false,
         available_quantity: 0,
-        location: get_location_name(store_type),
+        location: ONLINE_STORE_LOCATION_NAME,
         message: "Erro ao verificar estoque: #{e.message}"
       }
     end
   end
 
-  def self.check_shopify_stock(product, quantity, store_type)
-    Rails.logger.info "Checking Shopify stock for product #{product.sku} in store #{store_type}"
+  def self.check_shopify_stock(product, quantity)
+    config = ShopifyIntegrationService.get_store_config_static('online')
 
-    begin
-      config = ShopifyIntegrationService.get_store_config_static(store_type)
-      Rails.logger.info "Using location: #{config[:location_name]} (ID: #{config[:location_id]})"
-
-      session = ShopifyIntegrationService.create_shopify_session_static(config[:access_token])
-      client = ShopifyAPI::Clients::Rest::Admin.new(session:)
-
-      unless product.shopify_inventory_item_id.present?
-        Rails.logger.warn "Product #{product.sku} missing shopify_inventory_item_id, fetching from variant"
-
-        variant_response = client.get(path: "variants/#{product.shopify_variant_id}.json")
-        variant = variant_response.body['variant']
-
-        if variant && variant['inventory_item_id']
-          inventory_item_id = variant['inventory_item_id']
-          Rails.logger.info "Found inventory_item_id: #{inventory_item_id} for variant #{product.shopify_variant_id}"
-
-          product.update(shopify_inventory_item_id: inventory_item_id) if product.shopify_inventory_item_id.blank?
-        else
-          Rails.logger.error "Could not find inventory_item_id for variant #{product.shopify_variant_id}"
-          return {
-            success: false,
-            has_sufficient_stock: false,
-            available_quantity: 0,
-            location: config[:location_name],
-            message: 'Não foi possível obter informações de inventário'
-          }
-        end
-      else
-        inventory_item_id = product.shopify_inventory_item_id
-      end
-
-      Rails.logger.info "Checking inventory for item_id: #{inventory_item_id} at location: #{config[:location_id]}"
-
-      inventory_response = client.get(path: 'inventory_levels.json', query: { 
-        inventory_item_ids: inventory_item_id,
-        location_ids: config[:location_id]
-      })
-
-      inventory_levels = inventory_response.body['inventory_levels']
-      Rails.logger.info "Inventory API response: #{inventory_levels.inspect}"
-
-      if inventory_levels&.any?
-        inventory_level = inventory_levels.first
-        available_quantity = inventory_level['available'] || 0
-
-        Rails.logger.info "Stock found for #{product.sku} at #{config[:location_name]}: #{available_quantity}"
-
-        has_sufficient_stock = available_quantity >= quantity.to_i
-
-        {
-          success: true,
-          has_sufficient_stock:,
-          available_quantity:,
-          location: config[:location_name],
-          message: has_sufficient_stock ? 'Estoque disponível' : 'Estoque insuficiente'
-        }
-      else
-        Rails.logger.warn "No inventory levels found for #{product.sku} at location #{config[:location_id]}"
-
-        all_locations_response = client.get(path: 'inventory_levels.json', query: {
-          inventory_item_ids: inventory_item_id
-        })
-
-        all_levels = all_locations_response.body['inventory_levels']
-        Rails.logger.info "All locations inventory for #{product.sku}: #{all_levels.inspect}"
-
-        {
-          success: false,
-          has_sufficient_stock: false,
-          available_quantity: 0,
-          location: config[:location_name],
-          message: 'Produto não disponível nesta localização'
-        }
-      end
-    rescue StandardError => e
-      Rails.logger.error "Error checking Shopify stock: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-
-      {
+    unless config && config[:access_token].present? && config[:location_id].present?
+      Rails.logger.error "Configuração da Online Store incompleta: #{config.inspect}"
+      return {
         success: false,
         has_sufficient_stock: false,
         available_quantity: 0,
-        location: get_location_name(store_type),
-        message: "Erro ao verificar estoque: #{e.message}"
+        location: ONLINE_STORE_LOCATION_NAME,
+        message: 'Configuração da Online Store não encontrada. Verifique as variáveis ONLINE_STORE_TOKEN_APP e LOCATION_ONLINE_STORE.'
       }
     end
-  end
 
-  def self.get_location_name(store_type)
-    case store_type
-    when 'lagoa_seca'
-      'Lagoa Seca'
-    when 'bh_shopping'
-      'BH Shopping'
-    when 'rj'
-      'Barra Shopping (RJ)'
-    when 'eldorado_sp'
-      'Eldorado SP'
-    when 'fortaleza_rio_mar'
-      'Fortaleza Rio Mar'
-    when 'porto_alegre_bourbon'
-      'Porto Alegre Bourbon'
-    when 'shopping_analia_franco'
-      'Shopping Anália Franco'
-    when 'online'
-      'Online Store'
+    location_name = config[:location_name] || ONLINE_STORE_LOCATION_NAME
+    Rails.logger.info "Verificando estoque de #{product.sku} na #{location_name} (location_id: #{config[:location_id]})"
+
+    session = ShopifyIntegrationService.create_shopify_session_static(config[:access_token])
+    client = ShopifyAPI::Clients::Rest::Admin.new(session:)
+
+    inventory_item_id = resolve_inventory_item_id(client, product)
+
+    unless inventory_item_id
+      return {
+        success: false,
+        has_sufficient_stock: false,
+        available_quantity: 0,
+        location: location_name,
+        message: 'Não foi possível obter o inventory_item_id do produto'
+      }
+    end
+
+    Rails.logger.info "inventory_item_id: #{inventory_item_id} | location_id: #{config[:location_id]}"
+
+    inventory_response = client.get(path: 'inventory_levels.json', query: {
+      inventory_item_ids: inventory_item_id,
+      location_ids: config[:location_id]
+    })
+
+    inventory_levels = inventory_response.body['inventory_levels']
+    Rails.logger.info "inventory_levels: #{inventory_levels.inspect}"
+
+    if inventory_levels&.any?
+      available_quantity = inventory_levels.first['available'].to_i
+      has_sufficient_stock = available_quantity >= quantity.to_i
+
+      Rails.logger.info "Estoque de #{product.sku} na #{location_name}: #{available_quantity} (solicitado: #{quantity})"
+
+      {
+        success: true,
+        has_sufficient_stock:,
+        available_quantity:,
+        location: location_name,
+        message: has_sufficient_stock ? 'Estoque disponível' : "Estoque insuficiente. Disponível: #{available_quantity}"
+      }
     else
-      'Loja Desconhecida'
+      Rails.logger.warn "Nenhum nível de estoque encontrado para #{product.sku} na location #{config[:location_id]}"
+      {
+        success: false,
+        has_sufficient_stock: false,
+        available_quantity: 0,
+        location: location_name,
+        message: 'Produto não disponível na Online Store'
+      }
     end
+  rescue StandardError => e
+    Rails.logger.error "Erro ao verificar estoque na Shopify: #{e.message}"
+    Rails.logger.error e.backtrace.join("\n")
+    {
+      success: false,
+      has_sufficient_stock: false,
+      available_quantity: 0,
+      location: ONLINE_STORE_LOCATION_NAME,
+      message: "Erro ao verificar estoque: #{e.message}"
+    }
+  end
+
+  def self.resolve_inventory_item_id(client, product)
+    if product.shopify_inventory_item_id.present?
+      Rails.logger.info "Usando shopify_inventory_item_id já salvo: #{product.shopify_inventory_item_id}"
+      return product.shopify_inventory_item_id
+    end
+
+    Rails.logger.info "Buscando inventory_item_id via API para variant #{product.shopify_variant_id}"
+    variant_response = client.get(path: "variants/#{product.shopify_variant_id}.json")
+    variant = variant_response.body['variant']
+
+    inventory_item_id = variant&.dig('inventory_item_id')
+
+    if inventory_item_id.present?
+      Rails.logger.info "inventory_item_id encontrado: #{inventory_item_id}. Salvando no produto."
+      product.update_column(:shopify_inventory_item_id, inventory_item_id)
+    else
+      Rails.logger.error "inventory_item_id não encontrado para variant #{product.shopify_variant_id}"
+    end
+
+    inventory_item_id
+  rescue StandardError => e
+    Rails.logger.error "Erro ao buscar inventory_item_id: #{e.message}"
+    nil
   end
 end

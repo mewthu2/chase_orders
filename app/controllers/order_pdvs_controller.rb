@@ -1,9 +1,9 @@
 class OrderPdvsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product]
+  before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product, :items, :integrate_tiny, :mark_as_paid, :attach_client]
 
   def index
-    @order_pdvs = OrderPdv.includes(:user)
+    @order_pdvs = OrderPdv.includes(:user, :client)
                           .recent
 
     @order_pdvs = @order_pdvs.paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
@@ -21,7 +21,6 @@ class OrderPdvsController < ApplicationController
 
   def edit
     @items = @order_pdv.order_pdv_items.includes(:product)
-
     @address_parts = parse_address(@order_pdv)
   end
 
@@ -29,10 +28,7 @@ class OrderPdvsController < ApplicationController
     address1 = build_address1(params[:order_pdv])
     address2 = build_address2(params[:order_pdv])
 
-    order_params = order_pdv_params.merge(
-      address1:,
-      address2:
-    )
+    order_params = order_pdv_params.merge(address1:, address2:)
 
     if @order_pdv.update(order_params)
       recalculate_totals
@@ -45,203 +41,271 @@ class OrderPdvsController < ApplicationController
   end
 
   def integrate
-    begin
-      result = ShopifyIntegrationService.new(@order_pdv).integrate
+    result = ShopifyIntegrationService.new(@order_pdv).integrate
 
-      if result[:success]
-        @order_pdv.update!(
-          status: 'integrated',
-          shopify_order_id: result[:order_id],
-          shopify_order_number: result[:order_number],
-          integrated_at: Time.current,
-          integration_error: nil
-        )
+    if result[:success]
+      @order_pdv.update!(
+        status: 'integrated',
+        shopify_order_id: result[:order_id],
+        shopify_order_number: result[:order_number],
+        integrated_at: Time.current,
+        integration_error: nil
+      )
 
-        if request.xhr? || request.format.json?
-          render json: {
-            success: true,
-            message: 'Pedido integrado com sucesso ao Shopify!',
-            order_number: result[:order_number]
-          }
-        else
-          redirect_to @order_pdv, notice: 'Pedido integrado com sucesso ao Shopify!'
-        end
+      if request.xhr? || request.format.json?
+        render json: { success: true, message: 'Pedido integrado com sucesso ao Shopify!', order_number: result[:order_number] }
       else
-        @order_pdv.update!(
-          status: 'error',
-          integration_error: result[:error],
-          integration_attempts: @order_pdv.integration_attempts + 1
-        )
-
-        if request.xhr? || request.format.json?
-          render json: { 
-            success: false, 
-            message: "Erro na integração: #{result[:error]}"
-          }
-        else
-          redirect_to @order_pdv, alert: "Erro na integração: #{result[:error]}"
-        end
+        redirect_to @order_pdv, notice: 'Pedido integrado com sucesso ao Shopify!'
       end
-    rescue StandardError => e
+    else
       @order_pdv.update!(
         status: 'error',
-        integration_error: e.message,
+        integration_error: result[:error],
         integration_attempts: @order_pdv.integration_attempts + 1
       )
 
       if request.xhr? || request.format.json?
-        render json: {
-          success: false,
-          message: "Erro na integração: #{e.message}"
-        }
+        render json: { success: false, message: "Erro na integração: #{result[:error]}" }
       else
-        redirect_to @order_pdv, alert: "Erro na integração: #{e.message}"
+        redirect_to @order_pdv, alert: "Erro na integração: #{result[:error]}"
       end
+    end
+  rescue StandardError => e
+    @order_pdv.update!(
+      status: 'error',
+      integration_error: e.message,
+      integration_attempts: @order_pdv.integration_attempts + 1
+    )
+
+    if request.xhr? || request.format.json?
+      render json: { success: false, message: "Erro na integração: #{e.message}" }
+    else
+      redirect_to @order_pdv, alert: "Erro na integração: #{e.message}"
     end
   end
 
   def search_product
     query = params[:query]
 
-    if query.present?
-      products = Product.where('sku LIKE ? OR shopify_product_name LIKE ?', "%#{query}%", "%#{query}%")                  
-                        .limit(10)
-
-      products_data = []
-
-      begin
-        session = create_shopify_session
-
-        products.each do |product|
-          stock_info = get_product_stock(product, session)
-          products_data << {
-            id: product.id,
-            sku: product.sku,
-            name: product.shopify_product_name,
-            price: product.price.to_f,
-            option1: product.option1,
-            image_url: product.image_url,
-            stock: stock_info[:quantity],
-            stock_status: stock_info[:status],
-            stock_message: stock_info[:message]
-          }
-        end
-      rescue StandardError => e
-        Rails.logger.error "Erro ao buscar estoque: #{e.message}"
-
-        products_data = products.map do |product|
-          {
-            id: product.id,
-            sku: product.sku,
-            name: product.shopify_product_name,
-            price: product.price.to_f,
-            option1: product.option1,
-            image_url: product.image_url,
-            stock: 0,
-            stock_status: 'error',
-            stock_message: 'Erro ao verificar estoque'
-          }
-        end
-      end
-
-      render json: {
-        success: true,
-        products: products_data
-      }
-    else
-      render json: {
-        success: false,
-        message: 'Query não fornecida'
-      }
+    unless query.present?
+      render json: { success: false, message: 'Query não fornecida' }
+      return
     end
+
+    products = Product.where(
+      'LOWER(sku) LIKE :q OR LOWER(shopify_product_name) LIKE :q',
+      q: "%#{query.downcase}%"
+    ).limit(10)
+
+    products_data = []
+
+    begin
+      session = create_shopify_session
+
+      products.each do |product|
+        stock_info = get_product_stock(product, session)
+        products_data << {
+          id: product.id,
+          shopify_variant_id: product.shopify_variant_id,
+          sku: product.sku,
+          name: product.shopify_product_name,
+          price: product.price.to_f,
+          option1: product.option1,
+          image_url: product.image_url,
+          stock: stock_info[:quantity],
+          stock_status: stock_info[:status],
+          stock_message: stock_info[:message]
+        }
+      end
+    rescue StandardError => e
+      Rails.logger.error "Erro ao buscar estoque: #{e.message}"
+
+      products_data = products.map do |product|
+        {
+          id: product.id,
+          shopify_variant_id: product.shopify_variant_id,
+          sku: product.sku,
+          name: product.shopify_product_name,
+          price: product.price.to_f,
+          option1: product.option1,
+          image_url: product.image_url,
+          stock: 0,
+          stock_status: 'error',
+          stock_message: 'Erro ao verificar estoque'
+        }
+      end
+    end
+
+    render json: { success: true, products: products_data }
   end
 
   def add_product
     product_id = params[:product_id]
-    quantity = params[:quantity].to_i
+    quantity   = params[:quantity].to_i
 
-    product = Product.find_by(id: product_id)
+    # Tenta buscar por ID do banco ou por shopify_variant_id
+    product = Product.find_by(id: product_id) ||
+              Product.find_by(shopify_variant_id: product_id)
 
-    if product.nil?
-      render json: {
-        success: false,
-        message: 'Produto não encontrado'
-      }
+    unless product
+      render json: { success: false, message: 'Produto não encontrado' }
       return
     end
 
     existing_item = @order_pdv.order_pdv_items.find_by(product:)
 
     if existing_item
-      existing_item.update!(quantity: existing_item.quantity + quantity)
+      new_qty = existing_item.quantity + quantity
+      existing_item.update_columns(
+        quantity: new_qty,
+        total:    existing_item.price.to_f * new_qty
+      )
     else
       @order_pdv.order_pdv_items.create!(
         product:,
-        sku: product.sku,
+        sku:          product.sku,
         product_name: product.shopify_product_name,
-        price: product.price,
+        price:        product.price,
         quantity:,
-        total: product.price * quantity,
-        option1: product.option1,
-        image_url: product.image_url
+        total:        product.price * quantity,
+        option1:      product.option1,
+        image_url:    product.image_url
       )
     end
 
-    recalculate_totals
+    # update_columns pula validações, incluindo validate_parcels_total
+    recalculate_totals_columns
 
     render json: {
       success: true,
       message: 'Produto adicionado ao pedido',
-      total: @order_pdv.formatted_total
+      total: @order_pdv.reload.formatted_total
     }
+  rescue StandardError => e
+    Rails.logger.error "Erro em add_product: #{e.message}"
+    render json: { success: false, message: e.message }
   end
 
   def remove_product
     item_id = params[:item_id]
-    item = @order_pdv.order_pdv_items.find_by(id: item_id)
+    item    = @order_pdv.order_pdv_items.find_by(id: item_id)
 
-    if item
-      item.destroy
-      recalculate_totals
-      render json: {
-        success: true,
-        message: 'Item removido do pedido',
-        total: @order_pdv.formatted_total
-      }
-    else
-      render json: {
-        success: false,
-        message: 'Item não encontrado'
+    unless item
+      render json: { success: false, message: 'Item não encontrado' }
+      return
+    end
+
+    item.destroy!
+    recalculate_totals_columns
+
+    render json: {
+      success: true,
+      message: 'Item removido do pedido',
+      total: @order_pdv.reload.formatted_total
+    }
+  rescue StandardError => e
+    render json: { success: false, message: e.message }
+  end
+
+  def items
+    items_data = @order_pdv.order_pdv_items.includes(:product).map do |item|
+      {
+        id:           item.id,
+        sku:          item.sku,
+        product_name: item.product_name,
+        quantity:     item.quantity,
+        price:        item.price.to_f,
+        total:        item.total.to_f,
+        image_url:    item.image_url
       }
     end
+
+    render json: {
+      success: true,
+      items:   items_data,
+      total:   @order_pdv.reload.total_price.to_f
+    }
+  end
+
+  def integrate_tiny
+    if @order_pdv.tiny_order_id.present?
+      render json: { success: false, message: "Pedido já integrado no Tiny (##{@order_pdv.tiny_order_id})" }
+      return
+    end
+
+    TinyIntegrationJob.perform_now(@order_pdv.id)
+
+    render json: {
+      success: true,
+      message: 'Integração com Tiny iniciada! O pedido será criado em instantes.'
+    }
+  rescue StandardError => e
+    Rails.logger.error "integrate_tiny error: #{e.message}"
+    render json: { success: false, message: "Erro ao enfileirar integração: #{e.message}" }
+  end
+
+  def mark_as_paid
+    unless @order_pdv.tiny_order_id.present?
+      render json: { success: false, message: 'Pedido não está integrado ao Tiny. Integre primeiro.' }
+      return
+    end
+
+    if @order_pdv.status == 'paid'
+      render json: { success: false, message: 'Pedido já está marcado como pago.' }
+      return
+    end
+
+    TinyApproveJob.perform_now(@order_pdv.id)
+
+    render json: {
+      success: true,
+      message: 'Pedido sendo aprovado no Tiny. O status será atualizado em instantes.'
+    }
+  rescue StandardError => e
+    Rails.logger.error "mark_as_paid error: #{e.message}"
+    render json: { success: false, message: "Erro: #{e.message}" }
+  end
+
+  def attach_client
+    client_id = params[:client_id]
+
+    if client_id.present?
+      client = Client.find_by(id: client_id)
+      unless client
+        render json: { success: false, message: 'Cliente não encontrado.' }
+        return
+      end
+      @order_pdv.update_columns(client_id: client.id)
+    else
+      @order_pdv.update_columns(client_id: nil)
+    end
+
+    render json: { success: true }
+  rescue StandardError => e
+    render json: { success: false, message: e.message }
   end
 
   private
 
   def set_order_pdv
-    @order_pdv = OrderPdv.find(params[:id])
+    @order_pdv = OrderPdv.includes(:client, :order_pdv_items, :order_parcels).find(params[:id])
   end
 
   def order_pdv_params
     params.require(:order_pdv).permit(
+      :client_id,
       :customer_name, :customer_email, :customer_phone, :customer_cpf,
-      :street, :number, :complement, :neighborhood, :city, :state, :zip, 
+      :street, :number, :complement, :neighborhood, :city, :state, :zip,
       :store_type, :payment_method, :discount_amount, :discount_reason, :notes
     )
   end
 
   def build_address1(params)
-    parts = []
-    parts << params[:street] if params[:street].present?
-    parts << params[:number] if params[:number].present?
-    parts.join(', ')
+    [params[:street], params[:number]].select(&:present?).join(', ')
   end
 
   def build_address2(params)
-    parts = []
-    parts << params[:complement] if params[:complement].present?
-    parts << params[:neighborhood] if params[:neighborhood].present?
-    parts.join(', ')
+    [params[:complement], params[:neighborhood]].select(&:present?).join(', ')
   end
 
   def parse_address(order_pdv)
@@ -249,30 +313,40 @@ class OrderPdvsController < ApplicationController
     address2_parts = order_pdv.address2&.split(', ') || []
 
     {
-      street: address1_parts[0] || '',
-      number: address1_parts[1] || '',
-      complement: address2_parts[0] || '',
+      street:       address1_parts[0] || '',
+      number:       address1_parts[1] || '',
+      complement:   address2_parts[0] || '',
       neighborhood: address2_parts[1] || ''
     }
   end
 
   def params_per_page(per_page_param)
     per_page = per_page_param.to_i
-    per_page.positiv? ? per_page : 20
+    per_page.positive? ? per_page : 20
   end
 
-  def recalculate_totals
+  # Usa update_columns para pular todas as validações (inclusive validate_parcels_total)
+  def recalculate_totals_columns
     @order_pdv.order_pdv_items.each do |item|
-      item.update_column(:total, item.price * item.quantity)
+      item.update_column(:total, item.price.to_f * item.quantity)
     end
 
-    subtotal = @order_pdv.order_pdv_items.sum(:total)
-    total_price = subtotal - (@order_pdv.discount_amount || 0)
+    subtotal    = @order_pdv.order_pdv_items.sum(:total)
+    total_price = subtotal - (@order_pdv.discount_amount.to_f)
 
-    @order_pdv.update!(
-      subtotal:,
-      total_price:
-    )
+    @order_pdv.update_columns(subtotal:, total_price:)
+  end
+
+  # Usado apenas no update (via form), onde a validação de parcelas é desejada
+  def recalculate_totals
+    @order_pdv.order_pdv_items.each do |item|
+      item.update_column(:total, item.price.to_f * item.quantity)
+    end
+
+    subtotal    = @order_pdv.order_pdv_items.sum(:total)
+    total_price = subtotal - (@order_pdv.discount_amount.to_f)
+
+    @order_pdv.update_columns(subtotal:, total_price:)
   end
 
   def create_shopify_session
@@ -283,54 +357,32 @@ class OrderPdvsController < ApplicationController
   end
 
   def get_product_stock(product, session)
-    begin
-      query = <<~GRAPHQL
-        query {
-          productVariant(id: "gid://shopify/ProductVariant/#{product.shopify_variant_id}") {
-            id
-            sku
-            inventoryQuantity
-          }
+    query = <<~GRAPHQL
+      query {
+        productVariant(id: "gid://shopify/ProductVariant/#{product.shopify_variant_id}") {
+          id
+          sku
+          inventoryQuantity
         }
-      GRAPHQL
-
-      client = ShopifyAPI::Clients::Graphql::Admin.new(session:)
-      response = client.query(query:)
-      variant = response.body.dig('data', 'productVariant')
-
-      if variant.nil?
-        return {
-          quantity: 0,
-          status: 'error',
-          message: 'Variante não encontrada'
-        }
-      end
-
-      quantity = variant['inventoryQuantity'] || 0
-
-      if quantity > 10
-        status = 'high'
-        message = "Estoque: #{quantity} unidades"
-      elsif quantity.positive?
-        status = 'low'
-        message = "Estoque baixo: #{quantity} unidades"
-      else
-        status = 'out'
-        message = 'Sem estoque (0 unidades)'
-      end
-
-      {
-        quantity:,
-        status:,
-        message:
       }
-    rescue StandardError => e
-      Rails.logger.error "Erro ao buscar estoque do produto #{product.id}: #{e.message}"
-      {
-        quantity: 0,
-        status: 'error',
-        message: 'Erro ao verificar estoque'
-      }
+    GRAPHQL
+
+    client   = ShopifyAPI::Clients::Graphql::Admin.new(session:)
+    response = client.query(query:)
+    variant  = response.body.dig('data', 'productVariant')
+
+    unless variant
+      return { quantity: 0, status: 'error', message: 'Variante não encontrada' }
     end
+
+    quantity = variant['inventoryQuantity'] || 0
+    status   = quantity > 10 ? 'high' : (quantity.positive? ? 'low' : 'out')
+    message  = quantity > 10 ? "Estoque: #{quantity} unidades" :
+               (quantity.positive? ? "Estoque baixo: #{quantity} unidades" : 'Sem estoque (0 unidades)')
+
+    { quantity:, status:, message: }
+  rescue StandardError => e
+    Rails.logger.error "Erro ao buscar estoque do produto #{product.id}: #{e.message}"
+    { quantity: 0, status: 'error', message: 'Erro ao verificar estoque' }
   end
 end

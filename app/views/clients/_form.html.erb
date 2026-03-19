@@ -1,0 +1,295 @@
+<%# app/views/clients/_form.html.erb %>
+<%= form_with model: client, local: true do |f| %>
+
+  <% if client.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% client.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Dados do Responsável ──────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-user me-2"></i>Dados do Responsável
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Nome do Responsável <span class="required">*</span></label>
+          <%= f.text_field :responsible_name,
+              class: "field-input #{client.errors[:responsible_name].any? ? 'field-input--error' : ''}",
+              required: true,
+              placeholder: "Nome completo" %>
+          <% if client.errors[:responsible_name].any? %>
+            <span class="field-error"><%= client.errors[:responsible_name].first %></span>
+          <% end %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Razão Social</label>
+          <%= f.text_field :business_name,
+              class: "field-input",
+              placeholder: "Razão social da empresa" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">CNPJ</label>
+          <%= f.text_field :registration,
+              class: "field-input #{client.errors[:registration].any? ? 'field-input--error' : ''}",
+              placeholder: "00.000.000/0000-00" %>
+          <% if client.errors[:registration].any? %>
+            <span class="field-error"><%= client.errors[:registration].first %></span>
+          <% end %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Inscrição Estadual</label>
+          <%= f.text_field :state_registration, class: "field-input", placeholder: "Inscrição estadual" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Inscrição Municipal</label>
+          <%= f.text_field :municipal_registration, class: "field-input", placeholder: "Inscrição municipal" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">E-mail</label>
+          <%= f.email_field :email, class: "field-input", placeholder: "email@exemplo.com.br" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Telefone</label>
+          <%= f.text_field :phone, class: "field-input", placeholder: "(00) 00000-0000" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Endereço ──────────────────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-map-marker-alt me-2"></i>Endereço
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-2">
+          <label class="field-label">CEP</label>
+          <%= f.text_field :zip, class: "field-input", placeholder: "00000-000", id: "client-cep-input" %>
+        </div>
+        <div class="form-col-7">
+          <label class="field-label">Rua</label>
+          <%= f.text_field :street, class: "field-input", placeholder: "Ex: Rua das Flores", id: "client-street-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Número</label>
+          <%= f.text_field :number, class: "field-input", placeholder: "123" %>
+        </div>
+        <div class="form-col-5">
+          <label class="field-label">Bairro</label>
+          <%= f.text_field :neighbourhood, class: "field-input", placeholder: "Bairro", id: "client-neighbourhood-input" %>
+        </div>
+        <div class="form-col-5">
+          <label class="field-label">Cidade</label>
+          <%= f.text_field :city, class: "field-input", id: "client-city-input" %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">UF</label>
+          <%= f.select :state, [
+            ['AC','AC'],['AL','AL'],['AP','AP'],['AM','AM'],['BA','BA'],
+            ['CE','CE'],['DF','DF'],['ES','ES'],['GO','GO'],['MA','MA'],
+            ['MT','MT'],['MS','MS'],['MG','MG'],['PA','PA'],['PB','PB'],
+            ['PR','PR'],['PE','PE'],['PI','PI'],['RJ','RJ'],['RN','RN'],
+            ['RS','RS'],['RO','RO'],['RR','RR'],['SC','SC'],['SP','SP'],
+            ['SE','SE'],['TO','TO']
+          ], { include_blank: "UF" }, class: "field-input field-select", id: "client-state-input" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Ações ─────────────────────────────────────────────────────────────── %>
+  <div class="form-actions">
+    <%= f.submit client.new_record? ? "Cadastrar Cliente" : "Salvar Alterações",
+        class: "btn-submit",
+        id: "client-submit-btn" %>
+    <%= link_to "Cancelar", clients_path, class: "btn-cancel" %>
+  </div>
+
+<% end %>
+
+<script>
+  document.getElementById('client-cep-input')?.addEventListener('blur', function () {
+    const cep = this.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.erro) return;
+        const s  = document.getElementById('client-street-input');
+        const n  = document.getElementById('client-neighbourhood-input');
+        const c  = document.getElementById('client-city-input');
+        const st = document.getElementById('client-state-input');
+        if (s  && !s.value)  s.value  = data.logradouro || '';
+        if (n  && !n.value)  n.value  = data.bairro     || '';
+        if (c  && !c.value)  c.value  = data.localidade || '';
+        if (st && !st.value && data.uf) {
+          const opt = st.querySelector(`option[value="${data.uf}"]`);
+          if (opt) opt.selected = true;
+        }
+      })
+      .catch(() => {});
+  });
+</script>
+
+<style>
+/* =========================================
+   CLIENT FORM — design system
+   ========================================= */
+
+.client-form-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+  background: #0d1117;
+  max-width: 960px;
+}
+
+/* ---- Header ---- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.page-title    { color: #e6edf3; font-size: 1.4rem; font-weight: 700; margin: 0 0 0.2rem; }
+.page-subtitle { color: #8b949e; font-size: 0.82rem; }
+.header-actions { display: flex; gap: 0.75rem; }
+.btn-back {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #c9d1d9 !important;
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  font-size: 0.84rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.btn-back:hover { border-color: #58a6ff; color: #58a6ff !important; }
+
+/* ---- Erros ---- */
+.form-error-box {
+  background: rgba(248,81,73,0.1);
+  border: 1px solid #f85149;
+  color: #f85149;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+}
+
+/* ---- Seção do formulário ---- */
+.form-section {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.form-section-header {
+  background: #1c2128;
+  border-bottom: 1px solid #21262d;
+  padding: 0.85rem 1.5rem;
+}
+.form-section-title {
+  color: #e6edf3;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+.form-section-body {
+  padding: 1.25rem 1.5rem;
+}
+
+/* ---- Grid ---- */
+.form-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.form-col-2  { flex: 0 0 calc(16.66% - 0.85rem); min-width: 100px; }
+.form-col-3  { flex: 0 0 calc(25% - 0.75rem);    min-width: 100px; }
+.form-col-4  { flex: 0 0 calc(33.33% - 0.68rem); min-width: 140px; }
+.form-col-5  { flex: 0 0 calc(41.66% - 0.6rem);  min-width: 160px; }
+.form-col-6  { flex: 0 0 calc(50% - 0.5rem);     min-width: 180px; }
+.form-col-7  { flex: 0 0 calc(58.33% - 0.42rem); min-width: 180px; }
+@media (max-width: 640px) {
+  .form-col-2,.form-col-3,.form-col-4,
+  .form-col-5,.form-col-6,.form-col-7 { flex: 0 0 100%; }
+}
+
+/* ---- Campos ---- */
+.field-label {
+  display: block;
+  color: #8b949e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.45rem;
+}
+.required { color: #f85149; }
+.field-input {
+  width: 100%;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.88rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: auto;
+}
+.field-input:focus {
+  outline: none;
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 3px rgba(31,111,235,0.15);
+}
+.field-input::placeholder { color: #484f58; }
+.field-input--error { border-color: #f85149 !important; }
+.field-select { cursor: pointer; }
+.field-error  { color: #f85149; font-size: 0.78rem; margin-top: 0.3rem; display: block; }
+
+/* ---- Ações ---- */
+.form-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+.btn-submit {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-submit:hover { background: #2ea043; }
+.btn-cancel {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #8b949e !important;
+  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-cancel:hover { border-color: #f85149; color: #f85149 !important; }
+</style>

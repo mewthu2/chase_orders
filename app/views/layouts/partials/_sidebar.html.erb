@@ -154,6 +154,33 @@
           </div>
         <% end %>
 
+        <%# ── PDV ── %>
+        <div class="nav-item nav-group-collapsible">
+          <div class="nav-group-header-collapsible" onclick="togglePDV()">
+            <div class="nav-group-title">
+              <i class="fas fa-cash-register"></i>
+              <span class="nav-text">PDV</span>
+            </div>
+            <i class="fas fa-chevron-right collapse-icon" id="pdvIcon"></i>
+          </div>
+          <div class="nav-group-dropdown" id="pdvDropdown">
+            <div class="dropdown-content">
+              <%= link_to pos_path, class: "dropdown-link #{'active' if controller_name == 'pos'}" do %>
+                <i class="fas fa-cash-register"></i>
+                <span>Caixa (POS)</span>
+              <% end %>
+              <%= link_to order_pdvs_path, class: "dropdown-link #{'active' if controller_name == 'order_pdvs'}" do %>
+                <i class="fas fa-receipt"></i>
+                <span>Pedidos PDV</span>
+              <% end %>
+              <%= link_to clients_path, class: "dropdown-link #{'active' if controller_name == 'clients'}" do %>
+                <i class="fas fa-building"></i>
+                <span>Clientes PDV</span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -496,22 +523,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener("click", (e) => {
     const dropdowns = [
-      { id: "crmDropdown",           header: '[onclick="toggleCRM()"]',            icon: "crmIcon"           },
-      { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]',        icon: "correiosIcon"      },
-      { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]',        icon: "usuariosIcon"      },
-      { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]',   icon: "plannerOrdersIcon" },
-      { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]',        icon: "produtosIcon"      },
-      { id: "marketingDropdown",     header: '[onclick="toggleMarketing()"]',       icon: "marketingIcon"     },
+      { id: "crmDropdown",           header: '[onclick="toggleCRM()"]'           },
+      { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
+      { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]'       },
+      { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]'  },
+      { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]'       },
+      { id: "marketingDropdown",     header: '[onclick="toggleMarketing()"]'      },
+      { id: "pdvDropdown",           header: '[onclick="togglePDV()"]'            },
     ]
 
-    dropdowns.forEach(({ id, header, icon }) => {
+    dropdowns.forEach(({ id, header }) => {
       const dropdown = document.getElementById(id)
       const headerEl = document.querySelector(header)
-      const iconEl   = document.getElementById(icon)
-      if (dropdown && headerEl && iconEl &&
-          !headerEl.contains(e.target) && !dropdown.contains(e.target)) {
+      if (dropdown && headerEl && !headerEl.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.classList.remove("show")
-        iconEl.classList.remove("rotated")
+        const icon = dropdown.previousElementSibling?.querySelector(".collapse-icon")
+        if (icon) icon.classList.remove("rotated")
       }
     })
   })
@@ -544,4 +571,5 @@ function toggleUsuarios()      { toggleDropdown("usuariosDropdown",       "usuar
 function togglePlannerOrders() { toggleDropdown("plannerOrdersDropdown",  "plannerOrdersIcon",  '[onclick="togglePlannerOrders()"]')  }
 function toggleProdutos()      { toggleDropdown("produtosDropdown",       "produtosIcon",       '[onclick="toggleProdutos()"]')       }
 function toggleMarketing()     { toggleDropdown("marketingDropdown",      "marketingIcon",      '[onclick="toggleMarketing()"]')      }
+function togglePDV()           { toggleDropdown("pdvDropdown",            "pdvIcon",            '[onclick="togglePDV()"]')            }
 </script>

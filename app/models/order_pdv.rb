@@ -1,20 +1,12 @@
 class OrderPdv < ApplicationRecord
   belongs_to :user
+  belongs_to :client, optional: true
   has_many :order_pdv_items, dependent: :destroy
   has_many :order_parcels, dependent: :destroy
   has_many :products, through: :order_pdv_items
 
   accepts_nested_attributes_for :order_parcels, allow_destroy: true, reject_if: :all_blank
 
-  validates :customer_name, presence: true
-  validates :customer_email, presence: true
-  validates :customer_phone, presence: true
-  validates :customer_cpf, presence: true
-  validates :address1, presence: true
-  validates :address2, presence: true
-  validates :city, presence: true
-  validates :state, presence: true
-  validates :zip, presence: true
   validates :store_type, presence: true
   validates :payment_method, presence: true
   validates :subtotal, :total_price, presence: true, numericality: { greater_than: 0 }
@@ -247,6 +239,11 @@ class OrderPdv < ApplicationRecord
     else
       'Status Desconhecido'
     end
+  end
+
+  def recalculate_total!
+    new_subtotal = order_pdv_items.sum { |i| i.price.to_f * i.quantity.to_i }
+    update_columns(subtotal: new_subtotal, total_price: new_subtotal)
   end
 
   private
