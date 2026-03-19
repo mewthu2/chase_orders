@@ -19,7 +19,7 @@ class PosController < ApplicationController
     # Busca produtos com imagem real da Shopify
     products_with_images = ShopifyIntegrationService.search_products(query)
 
-    # Enriquece cada produto com estoque em tempo real
+    # Enriquece cada produto com estoque em tempo real e preço PDV (50%)
     products_with_stock = products_with_images.map do |product_data|
       stock_result   = StockService.check_stock(product_data[:id], 1)
       stock_quantity = stock_result[:available_quantity] || 0
@@ -31,10 +31,17 @@ class PosController < ApplicationController
                          'high'
                        end
 
+      product = Product.find_by(shopify_variant_id: product_data[:id])
+      fetch_and_cache_compare_at_price(product)
+      pdv_price = calculate_pdv_price(product)
+
       product_data.merge(
-        stock:        stock_quantity,
-        stock_status: stock_status,
-        location:     stock_result[:location] || 'Online Store'
+        stock:             stock_quantity,
+        stock_status:      stock_status,
+        location:          stock_result[:location] || 'Online Store',
+        price:             pdv_price,
+        original_price:    product&.price.to_f,
+        compare_at_price:  product&.compare_at_price.to_f
       )
     end
 
@@ -89,7 +96,7 @@ class PosController < ApplicationController
         'product_id' => product_id,
         'sku'        => product.sku,
         'name'       => product.shopify_product_name,
-        'price'      => product.price.to_f,
+        'price'      => calculate_pdv_price(product),
         'quantity'   => quantity,
         'image_url'  => ShopifyIntegrationService.get_product_image_from_shopify(product)
       }
@@ -235,6 +242,43 @@ class PosController < ApplicationController
   end
 
   private
+
+  # Busca o compare_at_price via Shopify API e cacheia na coluna do produto.
+  # Roda apenas se compare_at_price ainda for nil (evita chamadas desnecessárias).
+  def fetch_and_cache_compare_at_price(product)
+    return unless product
+    return if product.respond_to?(:compare_at_price) && !product.compare_at_price.nil?
+
+    config = ShopifyIntegrationService.get_store_config_static('online')
+    return unless config&.dig(:access_token)
+
+    session = ShopifyIntegrationService.create_shopify_session_static(config[:access_token])
+    client  = ShopifyAPI::Clients::Rest::Admin.new(session:)
+
+    response = client.get(path: "variants/#{product.shopify_variant_id}.json")
+    variant  = response.body['variant']
+    return unless variant
+
+    compare_price = variant['compare_at_price'].to_f
+    product.update_column(:compare_at_price, compare_price > 0 ? compare_price : nil)
+    product.reload
+  rescue StandardError => e
+    Rails.logger.warn "Não foi possível buscar compare_at_price para #{product.sku}: #{e.message}"
+  end
+
+  # Se o produto tem compare_at_price > 0, usa ele * 50%.
+  # Caso contrário, usa price * 50%.
+  def calculate_pdv_price(product)
+    return 0.0 unless product
+
+    base = if product.respond_to?(:compare_at_price) && product.compare_at_price.to_f > 0
+             product.compare_at_price.to_f
+           else
+             product.price.to_f
+           end
+
+    (base * 0.5).round(2)
+  end
 
   def calculate_cart_total(cart_items)
     cart_items.sum { |item| item['price'].to_f * item['quantity'].to_i }
