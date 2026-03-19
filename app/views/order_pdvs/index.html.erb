@@ -148,7 +148,7 @@
 </style>
 <% end %>
 
-<div class="container-fluid" style="max-width: 1400px; padding: 24px 16px;">
+<div style="padding: 24px 20px;">
 
   <%# Flash %>
   <% flash.each do |type, msg| %>
@@ -341,10 +341,10 @@
                     <%= link_to edit_order_pdv_path(order), class: "gh-btn gh-btn-sm gh-btn-icon", title: "Editar" do %>
                       <i class="fas fa-pencil-alt" style="font-size: 0.75rem;"></i>
                     <% end %>
-                    <% if order.status != 'paid' %>
+                    <% if order.status != 'paid' && order.respond_to?(:tiny_order_id) && order.tiny_order_id.present? %>
                       <button onclick="markAsPaid(<%= order.id %>, this)"
                               class="gh-btn gh-btn-sm gh-btn-icon"
-                              title="Marcar como Pago"
+                              title="Marcar como Pago (Tiny #<%= order.tiny_order_id %>)"
                               style="color: #3fb950;">
                         <i class="fas fa-check-circle" style="font-size: 0.75rem;"></i>
                       </button>

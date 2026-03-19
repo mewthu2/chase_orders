@@ -209,6 +209,14 @@ class OrderPdvsController < ApplicationController
 
   def items
     items_data = @order_pdv.order_pdv_items.includes(:product).map do |item|
+      image = item.image_url.presence
+
+      # Se não tem imagem salva no item, busca via Shopify e cacheia
+      if image.blank? && item.product.present?
+        image = ShopifyIntegrationService.get_product_image_from_shopify(item.product)
+        item.update_column(:image_url, image) if image.present?
+      end
+
       {
         id:           item.id,
         sku:          item.sku,
@@ -216,7 +224,7 @@ class OrderPdvsController < ApplicationController
         quantity:     item.quantity,
         price:        item.price.to_f,
         total:        item.total.to_f,
-        image_url:    item.image_url
+        image_url:    image
       }
     end
 
@@ -233,7 +241,7 @@ class OrderPdvsController < ApplicationController
       return
     end
 
-    TinyIntegrationJob.perform_now(@order_pdv.id)
+    TinyIntegrationJob.perform_later(@order_pdv.id)
 
     render json: {
       success: true,
@@ -245,22 +253,32 @@ class OrderPdvsController < ApplicationController
   end
 
   def mark_as_paid
-    unless @order_pdv.tiny_order_id.present?
-      render json: { success: false, message: 'Pedido não está integrado ao Tiny. Integre primeiro.' }
-      return
-    end
-
     if @order_pdv.status == 'paid'
       render json: { success: false, message: 'Pedido já está marcado como pago.' }
       return
     end
 
-    TinyApproveJob.perform_now(@order_pdv.id)
+    # Se tem tiny_order_id, aprova no Tiny de forma síncrona
+    if @order_pdv.tiny_order_id.present?
+      service = TinyService.new
+      result  = service.approve_order(@order_pdv.tiny_order_id)
 
-    render json: {
-      success: true,
-      message: 'Pedido sendo aprovado no Tiny. O status será atualizado em instantes.'
-    }
+      unless result[:success]
+        render json: { success: false, message: "Erro ao aprovar no Tiny: #{result[:error]}" }
+        return
+      end
+
+      @order_pdv.update_columns(
+        status:      'paid',
+        tiny_status: 'aprovado',
+        tiny_error:  nil
+      )
+    else
+      # Sem Tiny: marca apenas como pago no sistema
+      @order_pdv.update_columns(status: 'paid')
+    end
+
+    render json: { success: true, message: 'Pedido marcado como pago!' }
   rescue StandardError => e
     Rails.logger.error "mark_as_paid error: #{e.message}"
     render json: { success: false, message: "Erro: #{e.message}" }
