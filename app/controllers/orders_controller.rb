@@ -72,7 +72,7 @@ class OrdersController < ApplicationController
 
       row_data = [
         order.shopify_order_id.to_s,
-        [order.customer&.first_name, order.customer&.last_name].compact.join(''),
+        [order.customer&.first_name, order.customer&.last_name].compact.join(' '),
         order.customer&.email.to_s,
         order.customer&.phone.to_s,
         loc&.name || 'Sem location',
@@ -83,11 +83,13 @@ class OrdersController < ApplicationController
       row_data.each_with_index do |value, col|
         cell = worksheet.add_cell(row_num, col, value)
         cell.change_fill(row_bg)
+
         if col == 4 && loc_color
           cell.change_fill(loc_color[:bg])
           cell.change_font_color(loc_color[:fg])
           cell.change_font_bold(true)
         end
+
         cell.change_horizontal_alignment(col == 0 ? 'center' : 'left')
       end
     end
@@ -99,7 +101,7 @@ class OrdersController < ApplicationController
     workbook.write(file_path.to_s)
 
     send_file file_path,
-              filename:,
+              filename: filename,
               type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
               disposition: 'attachment'
   end
@@ -143,16 +145,17 @@ class OrdersController < ApplicationController
       end
     end
 
-    # 🔎 busca opcional
+    # 🔎 filtro de busca
     if @search_term.present?
       coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) }
     end
 
-    # 🚀 ordenação
-    if params[:sort] == "most_used"
-      all_stats = coupon_counts.sort_by { |_, count| -count }
-    else
+    # 🚀 ORDENAÇÃO (DEFAULT = MAIS USADOS)
+    if params[:sort] == "alphabetical"
       all_stats = coupon_counts.sort_by { |code, _| code }
+    else
+      # 🔥 padrão agora é por uso DESC
+      all_stats = coupon_counts.sort_by { |_, count| -count }
     end
 
     @total_unique_coupons = all_stats.size
@@ -160,7 +163,7 @@ class OrdersController < ApplicationController
     @total_orders_global  = Order.count
     @top_coupon           = all_stats.first
 
-    # 💰 revenue (mesma regra aplicada)
+    # 💰 revenue
     coupon_revenue = Hash.new(0.0)
     base_scope.pluck(:discount_codes, :current_total_price).each do |codes, price|
       Array(codes).each do |code|
@@ -210,7 +213,7 @@ class OrdersController < ApplicationController
     ws        = workbook[0]
     ws.sheet_name = "Uso de Cupons"
 
-    headers = ["#", "Código do Cupom", "Nº de Usos", "% dos Pedidos com Cupom", "% do Total de Pedidos"]
+    headers = ["#", "Código do Cupom", "Nº de Usos"]
 
     headers.each_with_index do |h, col|
       ws.add_cell(0, col, h)
