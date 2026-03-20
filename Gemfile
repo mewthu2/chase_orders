@@ -14,6 +14,9 @@ gem 'mysql2'
 
 gem 'jwt'
 
+gem 'prawn'
+gem 'prawn-table'
+
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
 gem "shopify_api"
 
