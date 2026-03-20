@@ -120,76 +120,50 @@ class OrdersController < ApplicationController
       @search_term = params[:coupon_search].strip.upcase
     end
 
-    coupon_counts = Hash.new(0)
-
-    base_scope.each do |order|
-      Array(order.discount_codes).each do |code|
-        next if code.blank?
-
-        normalized = code.to_s.upcase.strip
-
-        # 🔥 REGRA 1: precisa conter "10"
-        next unless normalized.include?("10")
-
-        # ❌ REMOÇÕES
-        next if normalized == "FRETE GRÁTIS"
-        next if normalized == "TROCA55110JKQ"
-        next if normalized == "MTZLQ97UREB7"
-
-        # ⚠️ DANDYNHA10 (somente exato)
-        if normalized.include?("DANDYNHA10") && normalized != "DANDYNHA10"
-          next
-        end
-
-        coupon_counts[normalized] += 1
-      end
-    end
-
-    # 🔎 filtro de busca
-    if @search_term.present?
-      coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) }
-    end
-
-    # 🚀 ORDENAÇÃO (DEFAULT = MAIS USADOS)
-    if params[:sort] == "alphabetical"
-      all_stats = coupon_counts.sort_by { |code, _| code }
-    else
-      # 🔥 padrão agora é por uso DESC
-      all_stats = coupon_counts.sort_by { |_, count| -count }
-    end
-
-    @total_unique_coupons = all_stats.size
-    @total_with_coupon    = base_scope.count
-    @total_orders_global  = Order.count
-    @top_coupon           = all_stats.first
-
-    # 💰 revenue
+    coupon_counts  = Hash.new(0)
     coupon_revenue = Hash.new(0.0)
+
     base_scope.pluck(:discount_codes, :current_total_price).each do |codes, price|
       Array(codes).each do |code|
         next if code.blank?
 
         normalized = code.to_s.upcase.strip
+        next unless normalized.end_with?("10")
+        next if normalized.start_with?("FRETE")
 
-        next unless normalized.include?("10")
-        next if normalized == "FRETE GRÁTIS"
-        next if normalized == "TROCA55110JKQ"
-        next if normalized == "MTZLQ97UREB7"
-
-        if normalized.include?("DANDYNHA10") && normalized != "DANDYNHA10"
-          next
-        end
-
+        coupon_counts[normalized]  += 1
         coupon_revenue[normalized] += price.to_f
       end
     end
 
     @coupon_revenue = coupon_revenue
 
-    @current_page  = (params[:page] || 1).to_i
-    @per_page      = COUPON_PER_PAGE
-    @total_pages   = (all_stats.size.to_f / @per_page).ceil
-    @current_page  = [[@current_page, 1].max, [@total_pages, 1].max].min
+    # Filtro de busca por texto
+    if @search_term.present?
+      coupon_counts  = coupon_counts.select  { |c, _| c.include?(@search_term) }
+      coupon_revenue = coupon_revenue.select { |c, _| c.include?(@search_term) }
+    end
+
+    # Ordenação
+    all_stats = case params[:sort]
+                when "alphabetical"
+                  coupon_counts.sort_by { |code, _| code }
+                when "highest_revenue"
+                  coupon_counts.sort_by { |code, _| -(coupon_revenue[code] || 0) }
+                else
+                  # default: mais usados
+                  coupon_counts.sort_by { |_, count| -count }
+                end
+
+    @total_unique_coupons = all_stats.size
+    @total_with_coupon    = base_scope.count
+    @total_orders_global  = Order.count
+    @top_coupon           = all_stats.first
+
+    @current_page = (params[:page] || 1).to_i
+    @per_page     = COUPON_PER_PAGE
+    @total_pages  = (all_stats.size.to_f / @per_page).ceil
+    @current_page = [[@current_page, 1].max, [@total_pages, 1].max].min
 
     offset        = (@current_page - 1) * @per_page
     @coupon_stats = all_stats[offset, @per_page] || []
@@ -213,7 +187,7 @@ class OrdersController < ApplicationController
     ws        = workbook[0]
     ws.sheet_name = "Uso de Cupons"
 
-    headers = ["#", "Código do Cupom", "Nº de Usos"]
+    headers = ["#", "Código do Cupom", "Nº de Usos", "Receita Líquida (R$)"]
 
     headers.each_with_index do |h, col|
       ws.add_cell(0, col, h)
@@ -223,6 +197,7 @@ class OrdersController < ApplicationController
       ws.add_cell(i + 1, 0, i + 1)
       ws.add_cell(i + 1, 1, code)
       ws.add_cell(i + 1, 2, count)
+      ws.add_cell(i + 1, 3, @coupon_revenue[code].to_f.round(2))
     end
 
     workbook.write(file_path.to_s)

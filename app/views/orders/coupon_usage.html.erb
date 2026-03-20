@@ -3,6 +3,7 @@
   active_date_from = params[:date_from].presence
   active_date_to   = params[:date_to].presence
   coupon_search    = params[:coupon_search].presence
+  active_sort      = params[:sort].presence || "most_used"
 
   has_filters = active_period.present? || active_date_from.present? ||
                 active_date_to.present? || coupon_search.present?
@@ -13,6 +14,12 @@
     "30" => "Últimos 30 dias",
     "60" => "Últimos 60 dias",
     "90" => "Últimos 90 dias"
+  }
+
+  sort_labels = {
+    "most_used"       => "Mais usados",
+    "highest_revenue" => "Maior receita",
+    "alphabetical"    => "Alfabética"
   }
 %>
 
@@ -285,6 +292,36 @@
   align-self: center;
 }
 
+/* ---- Botões de ordenação ---- */
+.sort-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: center;
+}
+
+.btn-sort {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: 8px;
+  padding: .38rem .85rem;
+  font-size: .82rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+}
+.btn-sort:hover { border-color: #58a6ff; color: #58a6ff; }
+.btn-sort--active {
+  background: #1f6feb !important;
+  border-color: #1f6feb !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
 /* ---- Tabela ---- */
 .table-card {
   background: #161b22;
@@ -326,6 +363,7 @@
 }
 .filter-tag--gray   { background: #30363d; color: #8b949e; }
 .filter-tag--yellow { background: #e3b341; color: #0d1117; }
+.filter-tag--blue   { background: #1f6feb; color: #fff; }
 
 .table-responsive { overflow-x: auto; }
 
@@ -407,7 +445,6 @@
    EXCLUSIVO — Cupons
    ============================================== */
 
-/* Código do cupom */
 .coupon-code-badge {
   background: #0d1117;
   border: 1px solid #30363d;
@@ -423,7 +460,6 @@
   gap: .4rem;
 }
 
-/* Pill de contagem */
 .count-pill {
   border-radius: 20px;
   padding: .25rem .75rem;
@@ -433,7 +469,6 @@
   white-space: nowrap;
 }
 
-/* Share */
 .share-main {
   display: block;
   color: #e6edf3;
@@ -447,7 +482,6 @@
   font-size: .68rem;
 }
 
-/* Barra de distribuição */
 .dist-bar-bg {
   background: #21262d;
   border-radius: 20px;
@@ -467,7 +501,6 @@
   font-size: .68rem;
 }
 
-/* Medalhas */
 .rank-medal {
   display: inline-block;
   padding: .2rem .55rem;
@@ -480,7 +513,6 @@
 .rank-medal--bronze { background: rgba(188,140,255,.14); color: #bc8cff; border: 1px solid rgba(188,140,255,.35); }
 .rank-num           { color: #484f58; font-size: .76rem; font-weight: 600; }
 
-/* me-1 / me-2 / ms-1 utilitários mínimos caso Bootstrap não esteja carregado */
 .me-1 { margin-right: .25rem !important; }
 .me-2 { margin-right: .5rem  !important; }
 .ms-1 { margin-left:  .25rem !important; }
@@ -517,7 +549,8 @@
                     period:        params[:period],
                     date_from:     params[:date_from],
                     date_to:       params[:date_to],
-                    coupon_search: params[:coupon_search]
+                    coupon_search: params[:coupon_search],
+                    sort:          params[:sort]
                   ), class: "btn-export" do %>
         <i class="fas fa-file-excel me-1"></i>Exportar XLSX
       <% end %>
@@ -565,7 +598,14 @@
         </div>
         <div class="summary-body">
           <span class="summary-value summary-value--sm"><%= @top_coupon[0] %></span>
-          <span class="summary-label">Mais usado &mdash; <%= @top_coupon[1] %> uso<%= @top_coupon[1] == 1 ? "" : "s" %></span>
+          <% if active_sort == "highest_revenue" %>
+            <span class="summary-label">
+              Maior receita &mdash;
+              R$ <%= number_with_precision(@coupon_revenue[@top_coupon[0]].to_f, precision: 2, delimiter: '.', separator: ',') %>
+            </span>
+          <% else %>
+            <span class="summary-label">Mais usado &mdash; <%= @top_coupon[1] %> uso<%= @top_coupon[1] == 1 ? "" : "s" %></span>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -585,14 +625,15 @@
           <% is_active = active_period == val && active_date_from.blank? %>
           <%= link_to coupon_usage_orders_path(
                         period:        val,
-                        coupon_search: coupon_search
+                        coupon_search: coupon_search,
+                        sort:          params[:sort]
                       ),
                       class: "btn-period #{is_active ? 'btn-period--active' : ''}" do %>
             <i class="fas fa-history me-1"></i><%= label %>
           <% end %>
         <% end %>
         <% if has_filters %>
-          <%= link_to coupon_usage_orders_path, class: "btn-clear" do %>
+          <%= link_to coupon_usage_orders_path(sort: params[:sort]), class: "btn-clear" do %>
             <i class="fas fa-times me-1"></i>Limpar tudo
           <% end %>
         <% end %>
@@ -601,8 +642,52 @@
 
     <div class="filter-divider"></div>
 
+    <%# Ordenação %>
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-sort me-1"></i>Ordenar por
+      </label>
+      <div class="sort-buttons">
+        <%= link_to coupon_usage_orders_path(
+                      sort:          "most_used",
+                      period:        params[:period],
+                      date_from:     params[:date_from],
+                      date_to:       params[:date_to],
+                      coupon_search: coupon_search
+                    ),
+                    class: "btn-sort #{active_sort == 'most_used' ? 'btn-sort--active' : ''}" do %>
+          <i class="fas fa-sort-amount-down me-1"></i>Mais usados
+        <% end %>
+
+        <%= link_to coupon_usage_orders_path(
+                      sort:          "highest_revenue",
+                      period:        params[:period],
+                      date_from:     params[:date_from],
+                      date_to:       params[:date_to],
+                      coupon_search: coupon_search
+                    ),
+                    class: "btn-sort #{active_sort == 'highest_revenue' ? 'btn-sort--active' : ''}" do %>
+          <i class="fas fa-dollar-sign me-1"></i>Maior receita
+        <% end %>
+
+        <%= link_to coupon_usage_orders_path(
+                      sort:          "alphabetical",
+                      period:        params[:period],
+                      date_from:     params[:date_from],
+                      date_to:       params[:date_to],
+                      coupon_search: coupon_search
+                    ),
+                    class: "btn-sort #{active_sort == 'alphabetical' ? 'btn-sort--active' : ''}" do %>
+          <i class="fas fa-sort-alpha-down me-1"></i>Alfabética
+        <% end %>
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
     <%# Intervalo customizado + busca %>
     <%= form_with url: coupon_usage_orders_path, method: :get, local: true do |f| %>
+      <%= hidden_field_tag :sort, params[:sort] %>
       <div class="filter-section">
         <label class="filter-label">
           <i class="fas fa-calendar-week me-1"></i>Intervalo personalizado &amp; busca por cupom
@@ -624,7 +709,7 @@
             <%= text_field_tag :coupon_search,
                                coupon_search,
                                class: "date-input",
-                               placeholder: "Ex: PROMO10, FRETE…",
+                               placeholder: "Ex: PROMO10, VIP10…",
                                style: "min-width:200px;" %>
           </div>
 
@@ -633,7 +718,7 @@
               <i class="fas fa-filter me-1"></i>Aplicar
             </button>
             <% if active_date_from.present? || active_date_to.present? %>
-              <%= link_to coupon_usage_orders_path(coupon_search: coupon_search),
+              <%= link_to coupon_usage_orders_path(coupon_search: coupon_search, sort: params[:sort]),
                           class: "btn-remove-date" do %>
                 <i class="fas fa-times me-1"></i>Remover datas
               <% end %>
@@ -681,8 +766,15 @@
             <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
           </span>
         <% end %>
-        <span class="filter-tag filter-tag--gray">
-          <i class="fas fa-sort-amount-down me-1"></i>Mais usados primeiro
+        <span class="filter-tag filter-tag--blue">
+          <% case active_sort %>
+          <% when "highest_revenue" %>
+            <i class="fas fa-dollar-sign me-1"></i>Maior receita
+          <% when "alphabetical" %>
+            <i class="fas fa-sort-alpha-down me-1"></i>Alfabética
+          <% else %>
+            <i class="fas fa-sort-amount-down me-1"></i>Mais usados
+          <% end %>
         </span>
       </div>
     </div>
@@ -695,27 +787,40 @@
             <tr>
               <th style="width:52px; text-align:center;">#</th>
               <th>Código do Cupom</th>
-              <th style="width:150px;">Receita Líquida</th>
+              <th style="width:160px;">Receita Líquida</th>
               <th style="width:110px;">Usos</th>
               <th style="width:150px;">Share</th>
-              <th>Distribuição</th>
             </tr>
           </thead>
           <tbody>
             <% global_offset = (@current_page - 1) * @per_page %>
+            <%
+              # Para barra de progresso: referência é o maior valor da ordenação atual
+              ref_value = if active_sort == "highest_revenue"
+                            @coupon_stats.first ? @coupon_revenue[@coupon_stats.first[0]].to_f : 1
+                          else
+                            @coupon_stats.first ? @coupon_stats.first[1].to_f : 1
+                          end
+              ref_value = 1 if ref_value.zero?
+            %>
             <% @coupon_stats.each_with_index do |(code, count), idx| %>
               <%
                 absolute_idx = global_offset + idx
+                revenue      = @coupon_revenue[code].to_f
                 share_pct    = @total_with_coupon > 0 ? ((count.to_f / @total_with_coupon) * 100).round(1) : 0
-                # barra usa o share real — proporcional ao total de pedidos com cupom,
-                # não ao cupom mais usado, para evitar que o primeiro sempre apareça como 100%
-                bar_pct      = share_pct
-                bar_color    = case absolute_idx
-                               when 0 then "#e3b341"
-                               when 1 then "#58a6ff"
-                               when 2 then "#3fb950"
-                               else        "#4d94ff"
-                               end
+
+                bar_pct = if active_sort == "highest_revenue"
+                            ((revenue / ref_value) * 100).round(1)
+                          else
+                            ((count.to_f / ref_value) * 100).round(1)
+                          end
+
+                bar_color = case absolute_idx
+                            when 0 then "#e3b341"
+                            when 1 then "#58a6ff"
+                            when 2 then "#3fb950"
+                            else        "#4d94ff"
+                            end
                 medal = case absolute_idx
                         when 0 then "<span class='rank-medal rank-medal--gold'>1°</span>"
                         when 1 then "<span class='rank-medal rank-medal--silver'>2°</span>"
@@ -732,7 +837,6 @@
                   </span>
                 </td>
                 <td>
-                  <% revenue = @coupon_revenue[code].to_f %>
                   <span style="color:#3fb950; font-weight:600; font-size:.88rem;">
                     R$ <%= number_with_precision(revenue, precision: 2, delimiter: '.', separator: ',') %>
                   </span>
@@ -746,12 +850,6 @@
                 <td>
                   <span class="share-main"><%= share_pct %>%</span>
                   <span class="share-sub">dos c/ cupom</span>
-                </td>
-                <td style="min-width:180px;">
-                  <div class="dist-bar-bg">
-                    <div class="dist-bar-fill" style="width:<%=bar_pct%>%; background:<%=bar_color%>;"></div>
-                  </div>
-                  <span class="dist-bar-label"><%= bar_pct %>% do top</span>
                 </td>
               </tr>
             <% end %>
@@ -779,7 +877,8 @@
                             period:        params[:period],
                             date_from:     params[:date_from],
                             date_to:       params[:date_to],
-                            coupon_search: params[:coupon_search]
+                            coupon_search: params[:coupon_search],
+                            sort:          params[:sort]
                           ), class: "page-btn" do %>
                 <i class="fas fa-chevron-left me-1"></i>Anterior
               <% end %>
@@ -798,7 +897,8 @@
                               period:        params[:period],
                               date_from:     params[:date_from],
                               date_to:       params[:date_to],
-                              coupon_search: params[:coupon_search]
+                              coupon_search: params[:coupon_search],
+                              sort:          params[:sort]
                             ),
                             class: "page-btn" %>
               <% end %>
@@ -810,7 +910,8 @@
                             period:        params[:period],
                             date_from:     params[:date_from],
                             date_to:       params[:date_to],
-                            coupon_search: params[:coupon_search]
+                            coupon_search: params[:coupon_search],
+                            sort:          params[:sort]
                           ), class: "page-btn" do %>
                 Próxima<i class="fas fa-chevron-right ms-1"></i>
               <% end %>
@@ -827,7 +928,7 @@
           <% if has_filters %>
             Nenhum resultado para os filtros aplicados.
           <% else %>
-            Nenhum pedido possui cupons registrados.
+            Nenhum pedido possui cupons terminados em 10 registrados.
           <% end %>
         </p>
         <% if has_filters %>
