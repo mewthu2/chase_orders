@@ -1,21 +1,28 @@
 <%
+  badge_colors = [
+    { bg: "#0D6EFD", fg: "#fff" },
+    { bg: "#198754", fg: "#fff" },
+    { bg: "#DC3545", fg: "#fff" },
+    { bg: "#FFC107", fg: "#000" },
+    { bg: "#0DCAF0", fg: "#000" },
+    { bg: "#6F42C1", fg: "#fff" },
+    { bg: "#FD7E14", fg: "#fff" },
+    { bg: "#20C997", fg: "#000" },
+  ]
+
+  location_index_map = {}
+  @locations.each_with_index { |loc, i| location_index_map[loc.id] = i }
+
   active_period    = params[:period].presence
   active_date_from = params[:date_from].presence
   active_date_to   = params[:date_to].presence
-  active_sort      = params[:sort].presence || "alphabetical"
   period_labels    = { "30" => "Últimos 30 dias", "60" => "Últimos 60 dias", "90" => "Últimos 90 dias" }
 
-  has_filters = active_period.present? ||
+  has_filters = params[:search].present? ||
+                params[:location_id].present? ||
+                active_period.present? ||
                 active_date_from.present? ||
-                active_date_to.present? ||
-                params[:coupon_search].present?
-
-  top5 = @coupon_stats&.first(5) || []
-  top5_max = top5.first&.last.to_f
-  top5_max = 1.0 if top5_max == 0.0
-
-  podium_colors = ["#E3B341", "#8B949E", "#CD7F32", "#58A6FF", "#3FB950"]
-  podium_icons  = ["fa-trophy", "fa-medal", "fa-award", "fa-star", "fa-star"]
+                active_date_to.present?
 %>
 
 <div class="orders-container">
@@ -24,7 +31,7 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="page-title">
-        <i class="fas fa-ticket-alt me-2"></i>Uso de Cupons
+        <i class="fas fa-shopping-cart me-2"></i>Pedidos Shopify
       </h1>
       <small class="page-subtitle">
         <i class="fas fa-clock me-1"></i>
@@ -33,12 +40,9 @@
     </div>
     <div class="header-actions">
       <span class="total-badge">
-        <i class="fas fa-tags me-1"></i><%= @total_unique_coupons %> cupom(ns) únicos
+        <i class="fas fa-list me-1"></i><%= @total_orders %> pedido(s)
       </span>
-      <span class="total-badge" style="background:#238636;">
-        <i class="fas fa-shopping-bag me-1"></i><%= @total_with_coupon %> pedidos com cupom
-      </span>
-      <%= link_to coupon_usage_orders_path(request.query_parameters.merge("format" => "xlsx")),
+      <%= link_to export_orders_path(request.query_parameters.except("page")),
                   class: "btn-export" do %>
         <i class="fas fa-file-excel me-2"></i>Exportar XLSX
       <% end %>
@@ -48,24 +52,24 @@
   <%# ===== PAINEL DE FILTROS ===== %>
   <div class="filters-panel">
 
-    <%# --- Busca por cupom --- %>
+    <%# --- Busca por texto --- %>
     <div class="filter-section">
       <label class="filter-label">
-        <i class="fas fa-search me-1"></i>Buscar cupom
+        <i class="fas fa-search me-1"></i>Buscar pedido
       </label>
-      <%= form_with url: coupon_usage_orders_path, method: :get, local: true do |f| %>
-        <%= hidden_field_tag :period,    params[:period]    if params[:period].present? && !active_date_from.present? %>
-        <%= hidden_field_tag :date_from, params[:date_from] if params[:date_from].present? %>
-        <%= hidden_field_tag :date_to,   params[:date_to]   if params[:date_to].present? %>
-        <%= hidden_field_tag :sort,      params[:sort]      if params[:sort].present? %>
+      <%= form_with url: orders_path, method: :get, local: true do |f| %>
+        <%= hidden_field_tag :location_id, params[:location_id] if params[:location_id].present? %>
+        <%= hidden_field_tag :period,      params[:period]      if params[:period].present? && !active_date_from.present? %>
+        <%= hidden_field_tag :date_from,   params[:date_from]   if params[:date_from].present? %>
+        <%= hidden_field_tag :date_to,     params[:date_to]     if params[:date_to].present? %>
         <div class="search-row">
-          <%= f.text_field :coupon_search,
-                           value: params[:coupon_search],
+          <%= f.text_field :search,
+                           value: params[:search],
                            class: "search-input",
-                           placeholder: "Código do cupom..." %>
+                           placeholder: "N. pedido, nome do cliente ou email..." %>
           <%= f.submit "Buscar", class: "btn-primary-sm" %>
           <% if has_filters %>
-            <%= link_to coupon_usage_orders_path, class: "btn-clear" do %>
+            <%= link_to orders_path, class: "btn-clear" do %>
               <i class="fas fa-times me-1"></i>Limpar tudo
             <% end %>
           <% end %>
@@ -83,10 +87,10 @@
       <div class="period-buttons">
         <% ["30", "60", "90"].each do |days| %>
           <% is_active = active_period == days && !active_date_from.present? %>
-          <%= link_to coupon_usage_orders_path(
-                        period:        days,
-                        coupon_search: params[:coupon_search],
-                        sort:          params[:sort]
+          <%= link_to orders_path(
+                        period:      days,
+                        location_id: params[:location_id],
+                        search:      params[:search]
                       ),
                       class: "btn-period #{is_active ? 'btn-period--active' : ''}" do %>
             <i class="fas fa-history me-1"></i><%= period_labels[days] %>
@@ -102,23 +106,27 @@
       <label class="filter-label">
         <i class="fas fa-calendar-week me-1"></i>Intervalo personalizado
       </label>
-      <%= form_with url: coupon_usage_orders_path, method: :get, local: true do |f| %>
-        <%= hidden_field_tag :coupon_search, params[:coupon_search] if params[:coupon_search].present? %>
-        <%= hidden_field_tag :sort,          params[:sort]          if params[:sort].present? %>
+      <%= form_with url: orders_path, method: :get, local: true do |f| %>
+        <%= hidden_field_tag :location_id, params[:location_id] if params[:location_id].present? %>
+        <%= hidden_field_tag :search,      params[:search]      if params[:search].present? %>
         <div class="date-range-row">
           <div class="date-field-wrap">
             <span class="date-label">De</span>
-            <%= date_field_tag :date_from, params[:date_from], class: "date-input" %>
+            <%= date_field_tag :date_from,
+                               params[:date_from],
+                               class: "date-input" %>
           </div>
           <div class="date-field-wrap">
             <span class="date-label">Até</span>
-            <%= date_field_tag :date_to, params[:date_to], class: "date-input" %>
+            <%= date_field_tag :date_to,
+                               params[:date_to],
+                               class: "date-input" %>
           </div>
           <button type="submit" class="btn-period <%= active_date_from.present? ? 'btn-period--active' : '' %>">
             <i class="fas fa-filter me-1"></i>Aplicar
           </button>
           <% if active_date_from.present? || active_date_to.present? %>
-            <%= link_to coupon_usage_orders_path(coupon_search: params[:coupon_search], sort: params[:sort]),
+            <%= link_to orders_path(location_id: params[:location_id], search: params[:search]),
                         class: "btn-remove-date" do %>
               <i class="fas fa-times me-1"></i>Remover datas
             <% end %>
@@ -133,109 +141,67 @@
       <% end %>
     </div>
 
-    <div class="filter-divider"></div>
-
-    <%# --- Ordenação --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-sort-amount-down me-1"></i>Ordenar por
-      </label>
-      <div class="period-buttons">
-        <%= link_to coupon_usage_orders_path(
-                      sort:          "alphabetical",
-                      period:        params[:period],
-                      date_from:     params[:date_from],
-                      date_to:       params[:date_to],
-                      coupon_search: params[:coupon_search]
-                    ),
-                    class: "btn-period #{active_sort == 'alphabetical' ? 'btn-period--active' : ''}" do %>
-          <i class="fas fa-sort-alpha-down me-1"></i>A → Z
-        <% end %>
-        <%= link_to coupon_usage_orders_path(
-                      sort:          "most_used",
-                      period:        params[:period],
-                      date_from:     params[:date_from],
-                      date_to:       params[:date_to],
-                      coupon_search: params[:coupon_search]
-                    ),
-                    class: "btn-period #{active_sort == 'most_used' ? 'btn-period--active' : ''}" do %>
-          <i class="fas fa-fire me-1"></i>Mais usados
-        <% end %>
-      </div>
-    </div>
-
   </div>
 
-  <%# ===== TOP 5 MAIS VENDIDOS ===== %>
-  <% if top5.any? %>
-    <div class="top5-panel">
-      <div class="top5-header">
-        <span class="top5-title">
-          <i class="fas fa-crown me-2" style="color:#E3B341;"></i>Top 5 Cupons Mais Usados
-        </span>
-        <% if active_period.present? && !active_date_from.present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-history me-1"></i><%= period_labels[active_period] %>
-          </span>
-        <% end %>
-        <% if active_date_from.present? || active_date_to.present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-calendar me-1"></i>
-            <%= active_date_from.present? ? Date.parse(active_date_from).strftime('%d/%m/%Y') : '...' %>
-            &rarr;
-            <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
-          </span>
-        <% end %>
-      </div>
-      <div class="top5-grid">
-        <% top5.each_with_index do |(code, count), i| %>
-          <%
-            color   = podium_colors[i]
-            icon    = podium_icons[i]
-            bar_pct = (count.to_f / top5_max * 100).round(1)
-            revenue = @coupon_revenue[code] || 0.0
-          %>
-          <div class="top5-card" style="--accent: <%= color %>;">
-            <div class="top5-rank">
-              <i class="fas <%= icon %>" style="color:<%= color %>;"></i>
-              <span class="top5-rank-num" style="color:<%= color %>;">#<%= i + 1 %></span>
-            </div>
-            <div class="top5-code"><%= code %></div>
-            <div class="top5-count">
-              <span class="top5-count-num" style="color:<%= color %>;"><%= count %></span>
-              <span class="top5-count-label">uso<%= count == 1 ? '' : 's' %></span>
-            </div>
-            <% if revenue > 0 %>
-              <div class="top5-revenue">
-                <i class="fas fa-dollar-sign me-1" style="color:#3FB950; font-size:0.7rem;"></i>
-                R$ <%= number_with_delimiter(revenue.round(2), delimiter: '.', separator: ',') %>
-              </div>
-            <% end %>
-            <div class="top5-bar-wrap">
-              <div class="top5-bar" style="width:<%= bar_pct %>%; background:<%= color %>;"></div>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  <% end %>
+  <%# ===== FILTRO POR LOCATION ===== %>
+  <div class="location-panel">
+    <span class="filter-label">
+      <i class="fas fa-map-marker-alt me-1"></i>Location:
+    </span>
+
+    <%= link_to orders_path(
+                  search:    params[:search],
+                  period:    params[:period],
+                  date_from: params[:date_from],
+                  date_to:   params[:date_to]
+                ),
+                class: "btn-location #{params[:location_id].blank? ? 'btn-location--all-active' : 'btn-location--all'}" do %>
+      <i class="fas fa-border-all me-1"></i>Todas
+    <% end %>
+
+    <% @locations.each_with_index do |location, i| %>
+      <% color     = badge_colors[i % badge_colors.size]
+         is_active = params[:location_id].to_s == location.id.to_s
+         btn_style = is_active ?
+           "background-color:#{color[:bg]}; color:#{color[:fg]}; border-color:#{color[:bg]}; font-weight:700;" :
+           "background-color:transparent; color:#{color[:bg]}; border-color:#{color[:bg]};"
+      %>
+      <%= link_to orders_path(
+                    location_id: location.id,
+                    search:      params[:search],
+                    period:      params[:period],
+                    date_from:   params[:date_from],
+                    date_to:     params[:date_to]
+                  ),
+                  class: "btn-location",
+                  style: btn_style do %>
+        <i class="fas fa-warehouse me-1"></i><%= location.name %>
+      <% end %>
+    <% end %>
+
+    <% if params[:location_id].present?
+         active_loc   = @locations.find { |l| l.id.to_s == params[:location_id] }
+         active_idx   = location_index_map[active_loc&.id]
+         active_color = badge_colors[active_idx % badge_colors.size] if active_idx
+    %>
+      <span class="location-active-badge"
+            style="background-color:<%= active_color ? active_color[:bg] : '#0DCAF0' %>; color:<%= active_color ? active_color[:fg] : '#000' %>;">
+        <i class="fas fa-filter me-1"></i><%= active_loc&.name %>
+      </span>
+    <% end %>
+  </div>
 
   <%# ===== TABELA ===== %>
   <div class="table-card">
 
     <div class="table-card-header">
       <h5 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Cupons
-        <% if active_sort == "most_used" %>
-          <span class="sort-badge"><i class="fas fa-fire me-1"></i>Mais usados primeiro</span>
-        <% else %>
-          <span class="sort-badge sort-badge--gray"><i class="fas fa-sort-alpha-down me-1"></i>A → Z</span>
-        <% end %>
+        <i class="fas fa-list me-2"></i>Lista de Pedidos
       </h5>
       <div class="active-filters-row">
-        <% if params[:coupon_search].present? %>
+        <% if params[:search].present? %>
           <span class="filter-tag filter-tag--gray">
-            <i class="fas fa-search me-1"></i>"<%= params[:coupon_search] %>"
+            <i class="fas fa-search me-1"></i>"<%= params[:search] %>"
           </span>
         <% end %>
         <% if active_period.present? && !active_date_from.present? %>
@@ -254,56 +220,55 @@
       </div>
     </div>
 
-    <% if @coupon_stats.any? %>
+    <% if @orders.any? %>
       <div class="table-responsive">
         <table class="orders-table">
           <thead>
             <tr>
-              <th style="width:3rem;">#</th>
-              <th>Código do Cupom</th>
-              <th style="text-align:center;">Nº de Usos</th>
-              <th style="text-align:right;">Receita Gerada</th>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>Email</th>
+              <th>Telefone</th>
+              <th>Localização</th>
+              <th>Data Shopify</th>
+              <th>Criado em</th>
             </tr>
           </thead>
           <tbody>
-            <% @coupon_stats.each_with_index do |(code, count), i| %>
+            <% @orders.each do |order| %>
               <%
-                global_rank = (@current_page - 1) * @per_page + i + 1
-                revenue     = @coupon_revenue[code] || 0.0
-                is_top      = global_rank <= 3
-                rank_color  = podium_colors[global_rank - 1] if global_rank <= 5
+                loc       = order.location
+                loc_idx   = loc ? location_index_map[loc.id] : nil
+                loc_color = loc_idx ? badge_colors[loc_idx % badge_colors.size] : nil
               %>
               <tr>
-                <td>
-                  <% if global_rank <= 5 %>
-                    <span class="rank-badge" style="background:<%= podium_colors[global_rank - 1] %>1a; color:<%= podium_colors[global_rank - 1] %>; border-color:<%= podium_colors[global_rank - 1] %>40;">
-                      <i class="fas <%= podium_icons[global_rank - 1] %> me-1" style="font-size:0.65rem;"></i>#<%= global_rank %>
-                    </span>
-                  <% else %>
-                    <span class="text-muted-custom"><%= global_rank %></span>
-                  <% end %>
+                <td class="order-id">#<%= order.shopify_order_id %></td>
+                <td class="text-main">
+                  <%= [order.customer&.first_name, order.customer&.last_name].compact.join(" ").presence || "—" %>
+                </td>
+                <td class="text-muted-custom">
+                  <%= order.customer&.email.presence || "—" %>
+                </td>
+                <td class="text-muted-custom">
+                  <%= order.customer&.phone.presence || "—" %>
                 </td>
                 <td>
-                  <span class="coupon-code <%= is_top ? 'coupon-code--top' : '' %>">
-                    <i class="fas fa-tag me-1" style="font-size:0.7rem; opacity:0.6;"></i><%= code %>
-                  </span>
-                </td>
-                <td style="text-align:center;">
-                  <span class="usage-count">
-                    <% if active_sort == "most_used" && i == 0 && @current_page == 1 %>
-                      <i class="fas fa-fire me-1" style="color:#E3B341; font-size:0.75rem;"></i>
-                    <% end %>
-                    <%= count %>
-                  </span>
-                </td>
-                <td style="text-align:right;">
-                  <% if revenue > 0 %>
-                    <span class="revenue-value">
-                      R$ <%= number_with_delimiter(revenue.round(2), delimiter: '.', separator: ',') %>
+                  <% if loc && loc_color %>
+                    <span class="location-badge"
+                          style="background-color:<%= loc_color[:bg] %>; color:<%= loc_color[:fg] %>;">
+                      <i class="fas fa-warehouse me-1"></i><%= loc.name %>
                     </span>
                   <% else %>
-                    <span class="text-muted-custom">—</span>
+                    <span class="location-badge location-badge--empty">
+                      <i class="fas fa-question me-1"></i>Sem location
+                    </span>
                   <% end %>
+                </td>
+                <td class="text-main">
+                  <%= order.shopify_creation_date&.strftime('%d/%m/%Y %H:%M') || "—" %>
+                </td>
+                <td class="text-muted-custom">
+                  <%= order.created_at.strftime('%d/%m/%Y %H:%M') %>
                 </td>
               </tr>
             <% end %>
@@ -313,11 +278,11 @@
 
     <% else %>
       <div class="empty-state">
-        <i class="fas fa-ticket-alt fa-3x mb-3 d-block"></i>
-        <h5>Nenhum cupom encontrado</h5>
+        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+        <h5>Nenhum pedido encontrado</h5>
         <p>Tente ajustar os filtros aplicados</p>
         <% if has_filters %>
-          <%= link_to coupon_usage_orders_path, class: "btn-clear" do %>
+          <%= link_to orders_path, class: "btn-clear" do %>
             <i class="fas fa-times me-1"></i>Limpar filtros
           <% end %>
         <% end %>
@@ -329,17 +294,17 @@
       <div class="pagination-footer">
         <div class="pagination-info">
           Mostrando
-          <strong><%= [(@current_page - 1) * @per_page + 1, @total_unique_coupons].min %></strong>
+          <strong><%= [(@current_page - 1) * @per_page + 1, @total_orders].min %></strong>
           a
-          <strong><%= [@current_page * @per_page, @total_unique_coupons].min %></strong>
+          <strong><%= [@current_page * @per_page, @total_orders].min %></strong>
           de
-          <strong><%= @total_unique_coupons %></strong>
-          cupons
+          <strong><%= @total_orders %></strong>
+          pedidos
         </div>
 
         <div class="pagination-controls">
           <% if @current_page > 1 %>
-            <%= link_to coupon_usage_orders_path(request.query_parameters.merge("page" => @current_page - 1)),
+            <%= link_to orders_path(request.query_parameters.merge("page" => @current_page - 1)),
                         class: "page-btn" do %>
               <i class="fas fa-chevron-left me-1"></i>Anterior
             <% end %>
@@ -354,13 +319,13 @@
               <span class="page-btn page-btn--active"><%= pnum %></span>
             <% else %>
               <%= link_to pnum,
-                          coupon_usage_orders_path(request.query_parameters.merge("page" => pnum)),
+                          orders_path(request.query_parameters.merge("page" => pnum)),
                           class: "page-btn" %>
             <% end %>
           <% end %>
 
           <% if @current_page < @total_pages %>
-            <%= link_to coupon_usage_orders_path(request.query_parameters.merge("page" => @current_page + 1)),
+            <%= link_to orders_path(request.query_parameters.merge("page" => @current_page + 1)),
                         class: "page-btn" do %>
               Próxima<i class="fas fa-chevron-right ms-1"></i>
             <% end %>
@@ -375,7 +340,7 @@
 
 <style>
 /* =========================================
-   COUPON USAGE — CSS
+   ORDERS — CSS completo
    ========================================= */
 
 .orders-container {
@@ -443,7 +408,7 @@
   color: #fff !important;
 }
 
-/* ---- Filtros ---- */
+/* ---- Painel de filtros ---- */
 .filters-panel {
   background: #161b22;
   border: 1px solid #21262d;
@@ -452,7 +417,9 @@
   margin-bottom: 1rem;
 }
 
-.filter-section { padding: 0.5rem 0; }
+.filter-section {
+  padding: 0.5rem 0;
+}
 
 .filter-divider {
   border-top: 1px solid #21262d;
@@ -469,6 +436,7 @@
   margin-bottom: 0.6rem;
 }
 
+/* Busca */
 .search-row {
   display: flex;
   flex-wrap: wrap;
@@ -494,7 +462,9 @@
   box-shadow: 0 0 0 3px rgba(31,111,235,0.15);
 }
 
-.search-input::placeholder { color: #484f58; }
+.search-input::placeholder {
+  color: #484f58;
+}
 
 .btn-primary-sm {
   background: #1f6feb;
@@ -508,7 +478,9 @@
   transition: background 0.2s;
 }
 
-.btn-primary-sm:hover { background: #388bfd; }
+.btn-primary-sm:hover {
+  background: #388bfd;
+}
 
 .btn-clear {
   background: transparent;
@@ -526,6 +498,7 @@
   color: #e57373 !important;
 }
 
+/* Período rápido */
 .period-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -556,6 +529,7 @@
   font-weight: 700;
 }
 
+/* Intervalo de datas */
 .date-range-row {
   display: flex;
   flex-wrap: wrap;
@@ -601,7 +575,9 @@
   transition: background 0.2s;
 }
 
-.btn-remove-date:hover { background: rgba(229,115,115,0.1); }
+.btn-remove-date:hover {
+  background: rgba(229,115,115,0.1);
+}
 
 .date-range-badge {
   background: #e3b341;
@@ -612,118 +588,59 @@
   font-weight: 600;
 }
 
-/* ---- Top 5 ---- */
-.top5-panel {
+/* ---- Location panel ---- */
+.location-panel {
   background: #161b22;
   border: 1px solid #21262d;
   border-radius: 12px;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem 1.5rem;
   margin-bottom: 1rem;
-}
-
-.top5-header {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.top5-title {
-  color: #e6edf3;
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin-right: auto;
-}
-
-.top5-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.75rem;
-}
-
-.top5-card {
-  background: #0d1117;
-  border: 1px solid #21262d;
-  border-radius: 10px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s, transform 0.15s;
-}
-
-.top5-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-}
-
-.top5-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--accent);
-  border-radius: 10px 10px 0 0;
-}
-
-.top5-rank {
-  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.82rem;
+  gap: 0.5rem;
 }
 
-.top5-rank-num {
-  font-weight: 800;
-  font-size: 0.9rem;
+.location-panel .filter-label {
+  margin: 0;
+  margin-right: 0.25rem;
+  white-space: nowrap;
 }
 
-.top5-code {
+.btn-location {
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  padding: 0.32rem 0.9rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-location--all {
+  background: transparent;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+
+.btn-location--all:hover {
+  border-color: #8b949e;
   color: #e6edf3;
+}
+
+.btn-location--all-active {
+  background: #e6edf3;
+  color: #0d1117;
+  border-color: #e6edf3;
   font-weight: 700;
-  font-size: 0.88rem;
-  word-break: break-all;
-  letter-spacing: 0.03em;
 }
 
-.top5-count {
-  display: flex;
-  align-items: baseline;
-  gap: 0.3rem;
-}
-
-.top5-count-num {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.top5-count-label {
-  color: #8b949e;
-  font-size: 0.75rem;
-}
-
-.top5-revenue {
-  color: #3FB950;
+.location-active-badge {
+  margin-left: auto;
+  border-radius: 20px;
+  padding: 0.32rem 0.9rem;
   font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.top5-bar-wrap {
-  margin-top: 0.35rem;
-  background: #21262d;
-  border-radius: 4px;
-  height: 5px;
-  overflow: hidden;
-}
-
-.top5-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
+  font-weight: 700;
 }
 
 /* ---- Tabela ---- */
@@ -750,23 +667,6 @@
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.sort-badge {
-  background: #e3b341;
-  color: #0d1117;
-  border-radius: 20px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.sort-badge--gray {
-  background: #30363d;
-  color: #8b949e;
 }
 
 .active-filters-row {
@@ -782,15 +682,24 @@
   font-weight: 600;
 }
 
-.filter-tag--gray { background: #30363d; color: #8b949e; }
-.filter-tag--yellow { background: #e3b341; color: #0d1117; }
+.filter-tag--gray {
+  background: #30363d;
+  color: #8b949e;
+}
+
+.filter-tag--yellow {
+  background: #e3b341;
+  color: #0d1117;
+}
 
 .orders-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.orders-table thead tr { background: #1c2128; }
+.orders-table thead tr {
+  background: #1c2128;
+}
 
 .orders-table thead th {
   color: #8b949e;
@@ -808,45 +717,23 @@
   transition: background 0.15s;
 }
 
-.orders-table tbody tr:hover { background: #1c2128; }
+.orders-table tbody tr:hover {
+  background: #1c2128;
+}
 
 .orders-table tbody td {
   padding: 0.75rem 1.25rem;
   vertical-align: middle;
 }
 
-.rank-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid;
-  border-radius: 6px;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.coupon-code {
+.order-id {
   color: #58a6ff;
   font-weight: 700;
-  font-size: 0.88rem;
-  font-family: monospace;
-  letter-spacing: 0.05em;
+  font-size: 0.9rem;
 }
 
-.coupon-code--top {
-  color: #e3b341;
-}
-
-.usage-count {
+.text-main {
   color: #e6edf3;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.revenue-value {
-  color: #3FB950;
-  font-weight: 600;
   font-size: 0.88rem;
 }
 
@@ -855,15 +742,36 @@
   font-size: 0.85rem;
 }
 
-/* ---- Empty ---- */
+.location-badge {
+  border-radius: 20px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.location-badge--empty {
+  background: #30363d;
+  color: #8b949e;
+}
+
+/* ---- Empty state ---- */
 .empty-state {
   text-align: center;
   padding: 3.5rem 1rem;
   color: #484f58;
 }
 
-.empty-state h5 { color: #8b949e; margin-bottom: 0.5rem; }
-.empty-state p { color: #484f58; font-size: 0.88rem; margin-bottom: 1rem; }
+.empty-state h5 {
+  color: #8b949e;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #484f58;
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
 
 /* ---- Paginação ---- */
 .pagination-footer {
@@ -877,8 +785,14 @@
   gap: 1rem;
 }
 
-.pagination-info { color: #8b949e; font-size: 0.82rem; }
-.pagination-info strong { color: #e6edf3; }
+.pagination-info {
+  color: #8b949e;
+  font-size: 0.82rem;
+}
+
+.pagination-info strong {
+  color: #e6edf3;
+}
 
 .pagination-controls {
   display: flex;
@@ -908,10 +822,5 @@
   border-color: #1f6feb;
   color: #fff !important;
   font-weight: 700;
-}
-
-@media (max-width: 640px) {
-  .top5-grid { grid-template-columns: repeat(2, 1fr); }
-  .page-header, .table-card-header { flex-direction: column; align-items: flex-start; }
 }
 </style>
