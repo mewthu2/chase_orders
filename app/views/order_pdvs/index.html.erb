@@ -338,6 +338,9 @@
                     <%= link_to order_pdv_path(order), class: "gh-btn gh-btn-sm gh-btn-icon", title: "Ver" do %>
                       <i class="fas fa-eye" style="font-size: 0.75rem;"></i>
                     <% end %>
+                    <%= link_to generate_pdf_order_pdv_path(order, format: :pdf), class: "gh-btn gh-btn-sm gh-btn-icon", title: "Gerar PDF" do %>
+                      <i class="fas fa-file-pdf" style="font-size: 0.75rem; color: #da3633;"></i>
+                    <% end %>
                     <%= link_to edit_order_pdv_path(order), class: "gh-btn gh-btn-sm gh-btn-icon", title: "Editar" do %>
                       <i class="fas fa-pencil-alt" style="font-size: 0.75rem;"></i>
                     <% end %>

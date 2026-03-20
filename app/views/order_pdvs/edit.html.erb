@@ -273,6 +273,10 @@
       </div>
 
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <%= link_to generate_pdf_order_pdv_path(@order_pdv, format: :pdf), class: "gh-btn gh-btn-sm", title: "Gerar PDF" do %>
+          <i class="fas fa-file-pdf" style="color: #da3633;"></i> PDF
+        <% end %>
+
         <span class="gh-badge gh-badge-green" id="total-badge">
           <i class="fas fa-dollar-sign"></i> <span id="total-badge-text"><%= @order_pdv.formatted_total %></span>
         </span>
@@ -481,7 +485,7 @@
 
     <%# Coluna esquerda: formulário %>
     <div class="col-lg-8">
-      <%= form_with model: @order_pdv, local: true do |f| %>
+      <%= form_with model: @order_pdv, local: true, html: { novalidate: true } do |f| %>
 
         <%# Endereço %>
         <div class="gh-card">
@@ -491,31 +495,31 @@
           <div class="gh-card-body">
             <div class="row g-3">
               <div class="col-md-4">
-                <label class="gh-label">CEP *</label>
-                <%= f.text_field :zip, class: "gh-input", placeholder: "00000-000", id: "edit-cep-input", required: true %>
+                <label class="gh-label">CEP</label>
+                <%= f.text_field :zip, class: "gh-input", placeholder: "00000-000", id: "edit-cep-input" %>
               </div>
               <div class="col-md-8">
-                <label class="gh-label">Cidade *</label>
-                <%= f.text_field :city, class: "gh-input", id: "edit-city-input", required: true %>
+                <label class="gh-label">Cidade</label>
+                <%= f.text_field :city, class: "gh-input", id: "edit-city-input" %>
               </div>
               <div class="col-md-2">
-                <label class="gh-label">UF *</label>
-                <%= f.text_field :state, class: "gh-input", placeholder: "SP", maxlength: 2, id: "edit-state-input", required: true %>
+                <label class="gh-label">UF</label>
+                <%= f.text_field :state, class: "gh-input", placeholder: "SP", maxlength: 2, id: "edit-state-input" %>
               </div>
               <div class="col-md-10">
-                <label class="gh-label">Bairro *</label>
+                <label class="gh-label">Bairro</label>
                 <input type="text" name="order_pdv[neighborhood]" value="<%= @address_parts[:neighborhood] %>"
-                       id="edit-neighborhood-input" required class="gh-input">
+                       id="edit-neighborhood-input" class="gh-input">
               </div>
               <div class="col-md-9">
-                <label class="gh-label">Rua *</label>
+                <label class="gh-label">Rua</label>
                 <input type="text" name="order_pdv[street]" value="<%= @address_parts[:street] %>"
-                       id="edit-street-input" required class="gh-input" placeholder="Ex: Rua das Flores">
+                       id="edit-street-input" class="gh-input" placeholder="Ex: Rua das Flores">
               </div>
               <div class="col-md-3">
-                <label class="gh-label">Número *</label>
+                <label class="gh-label">Número</label>
                 <input type="text" name="order_pdv[number]" value="<%= @address_parts[:number] %>"
-                       required class="gh-input" placeholder="123">
+                       class="gh-input" placeholder="123">
               </div>
               <div class="col-12">
                 <label class="gh-label">Complemento</label>
@@ -698,7 +702,7 @@
 
 <%# ── JavaScript ──────────────────────────────────────────────────────────────── %>
 <script>
-// ── Globals ─────────────────────────────────────────────────────────────────
+// ─�� Globals ───────────────────���─────────────────────────────────────────────
 let editSearchTimeout  = null;
 let editParcelCounter  = <%= @order_pdv.order_parcels.count %>;
 const ORDER_PDV_ID     = <%= @order_pdv.id %>;
@@ -856,7 +860,7 @@ function refreshOrderItems() {
     });
 }
 
-// ── Pagamento ────────────────────────────────────────────────────────────────
+// ── Pagamento ──────────────────────────────────────���─────────────────────────
 function addEditPaymentParcel() {
   const container = document.getElementById('edit-payment-parcels-container');
   if (!container) return;
@@ -932,7 +936,7 @@ function updateEditPaymentTotal() {
   }
 }
 
-// ── CEP ──────────────────────────────────────────────────────────────────────
+// ── CEP ──���───────────────────────────────────────────────────────────────────
 function setupEditCepLookup() {
   const input = document.getElementById('edit-cep-input');
   if (!input) return;

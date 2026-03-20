@@ -1,6 +1,6 @@
 class OrderPdvsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product, :items, :integrate_tiny, :mark_as_paid, :attach_client]
+  before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product, :items, :integrate_tiny, :mark_as_paid, :attach_client, :generate_pdf]
 
   def index
     @order_pdvs = OrderPdv.includes(:user, :client)
@@ -233,6 +233,22 @@ class OrderPdvsController < ApplicationController
       items:   items_data,
       total:   @order_pdv.reload.total_price.to_f
     }
+  end
+
+  def generate_pdf
+    @items    = @order_pdv.order_pdv_items.includes(:product)
+    @parcelas = @order_pdv.order_parcels rescue []
+    filename  = "pedido_#{@order_pdv.id}_#{Date.today.strftime('%Y%m%d')}"
+
+    respond_to do |format|
+      format.pdf do
+        render pdf:         filename,
+               layout:      'pdf',
+               disposition: 'attachment',
+               page_size:   'A4',
+               margin:      { top: 10, bottom: 10, left: 10, right: 10 }
+      end
+    end
   end
 
   def integrate_tiny

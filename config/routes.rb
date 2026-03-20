@@ -15,6 +15,7 @@ Rails.application.routes.draw do
 
   resources :order_pdvs do
     member do
+      get    :generate_pdf
       post   :integrate
       post   :integrate_tiny
       patch  :mark_as_paid

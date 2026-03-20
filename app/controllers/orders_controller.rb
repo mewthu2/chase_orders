@@ -108,43 +108,79 @@ class OrdersController < ApplicationController
     base_scope = Order.where.not(discount_codes: nil).where.not(discount_codes: [])
 
     if params[:period].present?
-      days       = params[:period].to_i
-      base_scope = base_scope.where('orders.created_at >= ?', days.days.ago.beginning_of_day)
+      base_scope = base_scope.where('orders.created_at >= ?', params[:period].to_i.days.ago.beginning_of_day)
     end
 
     base_scope = base_scope.where('orders.created_at >= ?', Date.parse(params[:date_from]).beginning_of_day) if params[:date_from].present?
-
     base_scope = base_scope.where('orders.created_at <= ?', Date.parse(params[:date_to]).end_of_day) if params[:date_to].present?
 
     if params[:coupon_search].present?
-      term = params[:coupon_search].strip.upcase
-      @search_term = term
+      @search_term = params[:coupon_search].strip.upcase
     end
 
     coupon_counts = Hash.new(0)
+
     base_scope.each do |order|
       Array(order.discount_codes).each do |code|
         next if code.blank?
-        coupon_counts[code.to_s.upcase.strip] += 1
+
+        normalized = code.to_s.upcase.strip
+
+        # 🔥 REGRA 1: precisa conter "10"
+        next unless normalized.include?("10")
+
+        # ❌ REMOÇÕES
+        next if normalized == "FRETE GRÁTIS"
+        next if normalized == "TROCA55110JKQ"
+        next if normalized == "MTZLQ97UREB7"
+
+        # ⚠️ DANDYNHA10 (somente exato)
+        if normalized.include?("DANDYNHA10") && normalized != "DANDYNHA10"
+          next
+        end
+
+        coupon_counts[normalized] += 1
       end
     end
 
-    coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) } if @search_term.present?
+    # 🔎 busca opcional
+    if @search_term.present?
+      coupon_counts = coupon_counts.select { |code, _| code.include?(@search_term) }
+    end
 
-    all_stats = coupon_counts.sort_by { |_, count| -count }
+    # 🚀 ordenação
+    if params[:sort] == "most_used"
+      all_stats = coupon_counts.sort_by { |_, count| -count }
+    else
+      all_stats = coupon_counts.sort_by { |code, _| code }
+    end
 
     @total_unique_coupons = all_stats.size
     @total_with_coupon    = base_scope.count
     @total_orders_global  = Order.count
     @top_coupon           = all_stats.first
 
+    # 💰 revenue (mesma regra aplicada)
     coupon_revenue = Hash.new(0.0)
     base_scope.pluck(:discount_codes, :current_total_price).each do |codes, price|
       Array(codes).each do |code|
         next if code.blank?
-        coupon_revenue[code.to_s.upcase.strip] += price.to_f
+
+        normalized = code.to_s.upcase.strip
+
+        next unless normalized.include?("10")
+        next if normalized == "FRETE GRÁTIS"
+        next if normalized == "TROCA55110JKQ"
+        next if normalized == "MTZLQ97UREB7"
+
+        if normalized.include?("DANDYNHA10") && normalized != "DANDYNHA10"
+          next
+        end
+
+        coupon_revenue[normalized] += price.to_f
       end
     end
+
     @coupon_revenue = coupon_revenue
 
     @current_page  = (params[:page] || 1).to_i
@@ -152,10 +188,9 @@ class OrdersController < ApplicationController
     @total_pages   = (all_stats.size.to_f / @per_page).ceil
     @current_page  = [[@current_page, 1].max, [@total_pages, 1].max].min
 
-    offset         = (@current_page - 1) * @per_page
-    @coupon_stats  = all_stats[offset, @per_page] || []
+    offset        = (@current_page - 1) * @per_page
+    @coupon_stats = all_stats[offset, @per_page] || []
 
-    # Exportação XLSX
     if request.format.xlsx? || params[:format] == "xlsx"
       send_coupon_usage_xlsx(all_stats)
       return
@@ -175,64 +210,23 @@ class OrdersController < ApplicationController
     ws        = workbook[0]
     ws.sheet_name = "Uso de Cupons"
 
-    header_bg = "1A73E8"
-    header_fg = "FFFFFF"
-    alt_bg    = "EEF4FF"
-
     headers = ["#", "Código do Cupom", "Nº de Usos", "% dos Pedidos com Cupom", "% do Total de Pedidos"]
 
-    # Escreve linha de cabeçalho
     headers.each_with_index do |h, col|
       ws.add_cell(0, col, h)
     end
 
-    # Aplica estilos no cabeçalho após gravar todos os valores
-    headers.each_with_index do |_, col|
-      cell = ws[0][col]
-      next unless cell
-      cell.change_font_bold(true)
-      cell.change_font_color(header_fg)
-      cell.change_fill(header_bg)
-      cell.change_horizontal_alignment("center")
-    end
-
-    [8, 30, 16, 28, 28].each_with_index { |w, i| ws.change_column_width(i, w) }
-
-    total_with_coupon = all_stats.sum { |_, c| c }
-    total_orders      = Order.count
-
     all_stats.each_with_index do |(code, count), i|
-      row_num    = i + 1
-      row_bg     = i.odd? ? alt_bg : "FFFFFF"
-      share_pct  = total_with_coupon > 0 ? ((count.to_f / total_with_coupon) * 100).round(2) : 0
-      global_pct = total_orders      > 0 ? ((count.to_f / total_orders)      * 100).round(2) : 0
-
-      values = [(i + 1).to_s, code.to_s, count.to_s, "#{share_pct}%", "#{global_pct}%"]
-
-      # Grava valores
-      values.each_with_index do |val, col|
-        ws.add_cell(row_num, col, val)
-      end
-
-      # Aplica estilos após gravar
-      values.each_with_index do |_, col|
-        cell = ws[row_num][col]
-        next unless cell
-        cell.change_fill(row_bg)
-        cell.change_horizontal_alignment(col == 0 ? "center" : "left")
-      end
+      ws.add_cell(i + 1, 0, i + 1)
+      ws.add_cell(i + 1, 1, code)
+      ws.add_cell(i + 1, 2, count)
     end
-
-    # Rodapé
-    footer_row = all_stats.size + 2
-    ws.add_cell(footer_row, 0, "Total de cupons únicos: #{all_stats.size}")
-    ws[footer_row][0]&.change_font_bold(true)
 
     workbook.write(file_path.to_s)
 
     send_file file_path,
-              filename:    filename,
-              type:        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              filename: filename,
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
               disposition: "attachment"
   end
 

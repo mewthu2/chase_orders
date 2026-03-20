@@ -1,0 +1,344 @@
+<style>
+  /* ── Reset ─────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #1a1a2e; background: #fff; }
+
+  /* ── Wrapper ────────────────────────────────────────────────────────── */
+  .wrapper { padding: 28px 32px; max-width: 780px; margin: 0 auto; }
+
+  /* ── Header ─────────────────────────────────────────────────────────── */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 2px solid #1a1a2e; margin-bottom: 22px; }
+  .header-brand { }
+  .header-brand .brand-name { font-size: 22px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }
+  .header-brand .brand-sub  { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .header-doc { text-align: right; }
+  .header-doc .doc-title { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+  .header-doc .doc-num   { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .header-doc .doc-date  { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+
+  /* ── Status badge ───────────────────────────────────────────────────── */
+  .status-row { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .badge-pending    { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+  .badge-integrated { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+  .badge-paid       { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
+  .badge-error      { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+  .badge-incomplete { background: #fef9c3; color: #854d0e; border: 1px solid #eab308; }
+  .badge-tiny       { background: #dbeafe; color: #1e40af; border: 1px solid #3b82f6; }
+
+  /* ── Info grid ──────────────────────────────────────────────────────── */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .info-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; background: #f9fafb; }
+  .info-box .box-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #6b7280; margin-bottom: 8px; }
+  .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .info-label { color: #6b7280; font-size: 10px; }
+  .info-value { font-weight: 600; font-size: 10px; color: #1a1a2e; }
+
+  /* ── Itens ──────────────────────────────────────────────────────────── */
+  .section-title { font-size: 12px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+  table.items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  table.items-table thead tr { background: #1a1a2e; }
+  table.items-table thead th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; color: #ffffff; letter-spacing: 0.3px; }
+  table.items-table thead th.right { text-align: right; }
+  table.items-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+  table.items-table tbody tr:nth-child(even) { background: #f9fafb; }
+  table.items-table tbody td { padding: 8px 10px; font-size: 10px; color: #374151; vertical-align: middle; }
+  table.items-table tbody td.right { text-align: right; font-weight: 600; }
+  table.items-table tbody td.sku { font-family: monospace; font-size: 9px; color: #9ca3af; }
+
+  /* ── Totais ─────────────────────────────────────────────────────────── */
+  .totals-section { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+  .totals-box { width: 260px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .totals-row { display: flex; justify-content: space-between; padding: 7px 14px; font-size: 11px; border-bottom: 1px solid #f3f4f6; }
+  .totals-row .t-label { color: #6b7280; }
+  .totals-row .t-value { font-weight: 600; color: #1a1a2e; }
+  .totals-row.total-final { background: #1a1a2e; }
+  .totals-row.total-final .t-label { color: #e5e7eb; font-weight: 700; font-size: 12px; }
+  .totals-row.total-final .t-value { color: #ffffff; font-weight: 800; font-size: 13px; }
+
+  /* ── Pagamentos ─────────────────────────────────────────────────────── */
+  .payment-section { margin-bottom: 22px; }
+  table.payment-table { width: 100%; border-collapse: collapse; }
+  table.payment-table th { text-align: left; font-size: 10px; font-weight: 600; color: #6b7280; padding: 5px 8px; border-bottom: 1px solid #e5e7eb; }
+  table.payment-table td { padding: 6px 8px; font-size: 10px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+  table.payment-table td.right { text-align: right; font-weight: 600; }
+
+  /* ── Notas ──────────────────────────────────────────────────────────── */
+  .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 10px; color: #78350f; }
+  .notes-box strong { display: block; margin-bottom: 3px; font-size: 10px; }
+
+  /* ── Assinatura ─────────────────────────────────────────────────────── */
+  .signature-section { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .signature-box { text-align: center; }
+  .signature-line { border-top: 1px solid #374151; margin-bottom: 6px; }
+  .signature-label { font-size: 10px; color: #6b7280; }
+  .signature-name  { font-size: 11px; font-weight: 600; color: #1a1a2e; margin-top: 2px; }
+
+  /* ── Footer ─────────────────────────────────────────────────────────── */
+  .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; }
+
+  /* ── Cliente ────────────────────────────────────────────────────────── */
+  .client-section { margin-bottom: 20px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px 14px; }
+  .client-section .box-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #0369a1; margin-bottom: 8px; }
+</style>
+
+<div class="wrapper">
+
+  <%# ── Header ──────────────────────────────────────────────────────────── %>
+  <div class="header">
+    <div class="header-brand">
+      <div class="brand-name">Chase Orders</div>
+      <div class="brand-sub">Proposta / Pedido para Aprovação</div>
+    </div>
+    <div class="header-doc">
+      <div class="doc-title">PEDIDO #<%= @order_pdv.id %></div>
+      <% if @order_pdv.tiny_order_id.present? %>
+        <div class="doc-num">Tiny: #<%= @order_pdv.tiny_order_id %></div>
+      <% end %>
+      <div class="doc-date">Emitido em <%= I18n.l(Date.today, format: :long) %></div>
+      <div class="doc-date">Pedido criado em <%= I18n.l(@order_pdv.created_at.to_date, format: :long) %></div>
+    </div>
+  </div>
+
+  <%# ── Status badges ───────────────────────────────────────────────────── %>
+  <div class="status-row">
+    <%
+      badge_class = case @order_pdv.status
+      when 'integrated'  then 'badge-integrated'
+      when 'paid'        then 'badge-paid'
+      when 'error'       then 'badge-error'
+      when 'incomplete'  then 'badge-incomplete'
+      else 'badge-pending'
+      end
+      badge_text = case @order_pdv.status
+      when 'integrated'  then 'Integrado'
+      when 'paid'        then 'Pago'
+      when 'error'       then 'Erro'
+      when 'incomplete'  then 'Incompleto'
+      else 'Pendente'
+      end
+    %>
+    <span class="badge <%= badge_class %>"><%= badge_text %></span>
+    <% if @order_pdv.tiny_order_id.present? %>
+      <span class="badge badge-tiny">Tiny #<%= @order_pdv.tiny_order_id %></span>
+    <% end %>
+  </div>
+
+  <%# ── Cliente ──────────────────────────────────────────────────────────── %>
+  <% if @order_pdv.respond_to?(:client) && @order_pdv.client.present? %>
+    <div class="client-section">
+      <div class="box-title">Cliente / Empresa</div>
+      <div class="info-row">
+        <span class="info-label">Responsável</span>
+        <span class="info-value"><%= @order_pdv.client.responsible_name %></span>
+      </div>
+      <% if @order_pdv.client.business_name.present? %>
+        <div class="info-row">
+          <span class="info-label">Razão Social</span>
+          <span class="info-value"><%= @order_pdv.client.business_name %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.client.registration.present? %>
+        <div class="info-row">
+          <span class="info-label">CNPJ</span>
+          <span class="info-value"><%= @order_pdv.client.cnpj_formatted %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.client.email.present? %>
+        <div class="info-row">
+          <span class="info-label">E-mail</span>
+          <span class="info-value"><%= @order_pdv.client.email %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.client.phone.present? %>
+        <div class="info-row">
+          <span class="info-label">Telefone</span>
+          <span class="info-value"><%= @order_pdv.client.phone %></span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── Info: pedido + endereço ──────────────────────────────────────────── %>
+  <div class="info-grid">
+    <div class="info-box">
+      <div class="box-title">Dados do Pedido</div>
+      <% if @order_pdv.customer_name.present? %>
+        <div class="info-row">
+          <span class="info-label">Cliente</span>
+          <span class="info-value"><%= @order_pdv.customer_name %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.customer_phone.present? %>
+        <div class="info-row">
+          <span class="info-label">Telefone</span>
+          <span class="info-value"><%= @order_pdv.customer_phone %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.customer_email.present? %>
+        <div class="info-row">
+          <span class="info-label">E-mail</span>
+          <span class="info-value"><%= @order_pdv.customer_email %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.customer_cpf.present? %>
+        <div class="info-row">
+          <span class="info-label">CPF</span>
+          <span class="info-value"><%= @order_pdv.customer_cpf %></span>
+        </div>
+      <% end %>
+      <div class="info-row">
+        <span class="info-label">Forma Pgto.</span>
+        <span class="info-value"><%= @order_pdv.payment_method&.humanize || '—' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Tipo de Loja</span>
+        <span class="info-value"><%= @order_pdv.store_type&.humanize %></span>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="box-title">Endereço de Entrega</div>
+      <% if @order_pdv.address1.present? %>
+        <div class="info-row">
+          <span class="info-label">Endereço</span>
+          <span class="info-value"><%= @order_pdv.address1 %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.address2.present? %>
+        <div class="info-row">
+          <span class="info-label">Complemento</span>
+          <span class="info-value"><%= @order_pdv.address2 %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.city.present? %>
+        <div class="info-row">
+          <span class="info-label">Cidade / UF</span>
+          <span class="info-value"><%= @order_pdv.city %> / <%= @order_pdv.state %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.zip.present? %>
+        <div class="info-row">
+          <span class="info-label">CEP</span>
+          <span class="info-value"><%= @order_pdv.zip %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Itens do Pedido ──────────────────────────────────────────────────── %>
+  <div class="section-title">Itens do Pedido</div>
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Produto</th>
+        <th>SKU</th>
+        <th class="right">Qtd.</th>
+        <th class="right">Preço Unit.</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @items.each_with_index do |item, i| %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td><strong><%= item.product_name %></strong></td>
+          <td class="sku"><%= item.sku %></td>
+          <td class="right"><%= item.quantity %></td>
+          <td class="right">R$ <%= number_with_precision(item.price, precision: 2, delimiter: '.', separator: ',') %></td>
+          <td class="right">R$ <%= number_with_precision(item.total, precision: 2, delimiter: '.', separator: ',') %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <%# ── Totais ───────────────────────────────────────────────────────────── %>
+  <div class="totals-section">
+    <div class="totals-box">
+      <div class="totals-row">
+        <span class="t-label">Subtotal</span>
+        <span class="t-value">R$ <%= number_with_precision(@order_pdv.subtotal, precision: 2, delimiter: '.', separator: ',') %></span>
+      </div>
+      <% if @order_pdv.discount_amount.to_f > 0 %>
+        <div class="totals-row">
+          <span class="t-label">Desconto</span>
+          <span class="t-value" style="color: #dc2626;">- R$ <%= number_with_precision(@order_pdv.discount_amount, precision: 2, delimiter: '.', separator: ',') %></span>
+        </div>
+      <% end %>
+      <% if @order_pdv.coupon_discount_amount.to_f > 0 %>
+        <div class="totals-row">
+          <span class="t-label">Cupom (<%= @order_pdv.coupon_code %>)</span>
+          <span class="t-value" style="color: #dc2626;">- R$ <%= number_with_precision(@order_pdv.coupon_discount_amount, precision: 2, delimiter: '.', separator: ',') %></span>
+        </div>
+      <% end %>
+      <div class="totals-row total-final">
+        <span class="t-label">TOTAL</span>
+        <span class="t-value">R$ <%= number_with_precision(@order_pdv.total_price, precision: 2, delimiter: '.', separator: ',') %></span>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Formas de Pagamento ──────────────────────────────────────────────── %>
+  <% if @parcelas.any? %>
+    <div class="payment-section">
+      <div class="section-title">Formas de Pagamento</div>
+      <table class="payment-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Método</th>
+            <th>Observação</th>
+            <th class="right">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @parcelas.each_with_index do |p, i| %>
+            <tr>
+              <td><%= i + 1 %></td>
+              <td><%= p.payment_method&.humanize %></td>
+              <td><%= p.notes %></td>
+              <td class="right">R$ <%= number_with_precision(p.amount, precision: 2, delimiter: '.', separator: ',') %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <%# ── Observações ──────────────────────────────────────────────────────── %>
+  <% if @order_pdv.order_note.present? || @order_pdv.notes.present? %>
+    <div class="notes-box">
+      <strong>Observações:</strong>
+      <%= @order_pdv.order_note.presence || @order_pdv.notes %>
+    </div>
+  <% end %>
+
+  <%# ── Assinatura ───────────────────────────────────────────────────────── %>
+  <div class="signature-section">
+    <div class="signature-box">
+      <div style="height: 40px;"></div>
+      <div class="signature-line"></div>
+      <div class="signature-label">Assinatura do Cliente</div>
+      <div class="signature-name">
+        <%= @order_pdv.client&.responsible_name || @order_pdv.customer_name || '________________________________' %>
+      </div>
+    </div>
+    <div class="signature-box">
+      <div style="height: 40px;"></div>
+      <div class="signature-line"></div>
+      <div class="signature-label">Responsável pela Venda</div>
+      <div class="signature-name"><%= @order_pdv.user&.name || @order_pdv.user&.email || '________________________________' %></div>
+    </div>
+  </div>
+
+  <%# ── Footer ──────────────────────────────────────────────────────────── %>
+  <div class="footer">
+    <span>Pedido #<%= @order_pdv.id %> — Chase Orders</span>
+    <span>Gerado em <%= DateTime.now.strftime('%d/%m/%Y às %H:%M') %></span>
+  </div>
+
+</div>

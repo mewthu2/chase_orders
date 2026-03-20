@@ -6,6 +6,9 @@ ruby "3.2.2"
 # This gem supports operating on xlsx files (Open XML format). While it is capable of properly parsing the entire OOXML structure
 gem 'rubyXL'
 
+gem 'wicked_pdf'
+gem 'wkhtmltopdf-binary'
+
 # Use mysql as the database for Active Record
 gem 'mysql2'
 

@@ -1,416 +1,690 @@
 <% content_for :title, "Pedido PDV ##{@order_pdv.id}" %>
 
-<div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black shadow">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <div>
-            <h4 class="text-white mb-1">
-              <i class="fas fa-receipt me-2"></i>Pedido PDV #<%= @order_pdv.id %>
-            </h4>
-            <small class="text-muted">
-              <i class="fas fa-calendar me-1"></i>
-              Criado em <%= @order_pdv.created_at.strftime('%d/%m/%Y às %H:%M') %> por <%= @order_pdv.user.name %>
-            </small>
-          </div>
-          <div class="d-flex gap-2">
-            <% 
-              status_badge_class = case @order_pdv.status
-              when 'integrated' then 'bg-success'
-              when 'error' then 'bg-danger'
-              else 'bg-warning text-dark'
-              end
-            %>
-            <span class="badge <%= status_badge_class %> px-3 py-2">
-              <i class="fas fa-info-circle me-1"></i><%= @order_pdv.integration_status_text %>
-            </span>
-            <span class="badge bg-info text-dark px-3 py-2">
-              <i class="fas fa-dollar-sign me-1"></i><%= @order_pdv.formatted_total %>
-            </span>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-3">
-              <div class="text-center">
-                <div class="h4 text-success mb-1"><%= @order_pdv.formatted_total %></div>
-                <small class="text-muted">Valor Total</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="text-center">
-                <div class="h5 text-info mb-1"><%= @items.count %> itens</div>
-                <small class="text-muted">Produtos</small>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="text-center">
-                <% 
-                  store_badge_class = case @order_pdv.store_type
-                  when 'lagoa_seca' then 'bg-warning text-dark'
-                  when 'bh_shopping' then 'bg-success'
-                  when 'rj' then 'bg-primary'
-                  when 'online' then 'bg-info text-dark'
-                  else 'bg-secondary'
-                  end
-                %>
-                <span class="badge <%= store_badge_class %> mb-1"><%= @order_pdv.store_type.humanize %></span>
-                <div><small class="text-muted">Loja</small></div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="text-center">
-                <div class="h5 text-secondary mb-1"><%= @order_pdv.user.name %></div>
-                <small class="text-muted">Vendedor</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-lg-8">
-      <div class="card bg-black shadow mb-4">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-shopping-bag me-2"></i>Itens do Pedido (<%= @items.count %>)
-          </h5>
-        </div>
-        <div class="card-body">
-          <% @items.each do |item| %>
-            <div class="card bg-dark mb-3">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center gap-3">
-                  <% if item.image_url.present? %>
-                    <img src="<%= item.image_url %>" alt="<%= item.product_name %>" 
-                         class="rounded" style="width: 60px; height: 60px; object-fit: cover;">
-                  <% else %>
-                    <div class="bg-secondary rounded d-flex align-items-center justify-content-center" 
-                         style="width: 60px; height: 60px;">
-                      <i class="fas fa-image text-muted"></i>
-                    </div>
-                  <% end %>
-
-                  <div class="flex-grow-1">
-                    <h6 class="text-white mb-1"><%= item.sku %></h6>
-                    <p class="text-muted mb-1"><%= item.product_name %></p>
-                    <% if item.option1.present? %>
-                      <span class="badge bg-secondary"><%= item.option1 %></span>
-                    <% end %>
-                  </div>
-
-                  <div class="text-end">
-                    <div class="text-success fw-bold h5 mb-1"><%= item.formatted_total %></div>
-                    <small class="text-muted">
-                      <%= item.quantity %>x <%= item.formatted_price %>
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-          
-          <div class="card bg-black border border-success">
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-white">Subtotal:</span>
-                    <span class="text-white"><%= @order_pdv.formatted_subtotal %></span>
-                  </div>
-                  <% if @order_pdv.discount_amount > 0 %>
-                    <div class="d-flex justify-content-between mb-2 text-warning">
-                      <span>Desconto:</span>
-                      <span>-<%= @order_pdv.formatted_discount %></span>
-                    </div>
-                  <% end %>
-                  <div class="d-flex justify-content-between fw-bold border-top pt-2">
-                    <span class="text-white h5">Total:</span>
-                    <span class="text-success h4"><%= @order_pdv.formatted_total %></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card bg-black shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-user me-2"></i>Dados do Cliente
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label text-muted">Nome:</label>
-                <div class="text-white"><%= @order_pdv.customer_name %></div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label text-muted">Email:</label>
-                <div class="text-white"><%= @order_pdv.customer_email %></div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label text-muted">Telefone:</label>
-                <div class="text-white"><%= @order_pdv.customer_phone %></div>
-              </div>
-              <div class="mb-3">
-                <label class="form-label text-muted">CPF:</label>
-                <div class="text-white"><%= @order_pdv.customer_cpf %></div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label class="form-label text-muted">Endereço:</label>
-                <address class="text-white mb-0">
-                  <%= @order_pdv.address1 %><br>
-                  <%= @order_pdv.address2 %><br>
-                  <%= @order_pdv.city %> - <%= @order_pdv.state %><br>
-                  CEP: <%= @order_pdv.zip %>
-                </address>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-4">
-      <div class="card bg-black shadow mb-4">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-sync me-2"></i>Status da Integração
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="text-center mb-3">
-            <span class="badge <%= status_badge_class %> px-4 py-2">
-              <%= @order_pdv.integration_status_text %>
-            </span>
-          </div>
-          
-          <% if @order_pdv.integrated? %>
-            <div class="alert alert-success bg-dark">
-              <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong>Integrado com sucesso!</strong>
-              </div>
-              <small class="text-muted">
-                Pedido Shopify: <strong><%= @order_pdv.shopify_order_number %></strong><br>
-                ID: <%= @order_pdv.shopify_order_id %><br>
-                Em: <%= @order_pdv.integrated_at.strftime('%d/%m/%Y %H:%M') %>
-              </small>
-            </div>
-          <% elsif @order_pdv.error? %>
-            <div class="alert alert-danger bg-dark">
-              <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>Erro na integração</strong>
-              </div>
-              <small class="text-muted"><%= @order_pdv.integration_error %></small>
-            </div>
-            <p class="text-muted">
-              <small>Tentativas: <%= @order_pdv.integration_attempts %></small>
-            </p>
-          <% else %>
-            <div class="alert alert-warning bg-dark">
-              <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-hourglass-half me-2"></i>
-                <strong>Aguardando integração</strong>
-              </div>
-              <small class="text-muted">Este pedido ainda não foi enviado para o Shopify.</small>
-            </div>
-          <% end %>
-          
-          <div class="d-grid gap-2">
-            <% if @order_pdv.can_retry_integration? %>
-              <button onclick="integrateOrder(<%= @order_pdv.id %>)" 
-                      class="btn btn-success"
-                      id="integrate-btn">
-                <i class="fas fa-sync me-2"></i>
-                <%= @order_pdv.error? ? 'Tentar Novamente' : 'Integrar Agora' %>
-              </button>
-            <% end %>
-            
-            <%= link_to edit_order_pdv_path(@order_pdv), class: "btn btn-warning" do %>
-              <i class="fas fa-edit me-2"></i>Editar Dados
-            <% end %>
-            
-            <% if @order_pdv.integrated? && @order_pdv.shopify_order_id.present? %>
-              <a href="https://chasebrasil.myshopify.com/admin/orders/<%= @order_pdv.shopify_order_id %>" 
-                 target="_blank" 
-                 class="btn btn-info">
-                <i class="fas fa-external-link-alt me-2"></i>Ver no Shopify
-              </a>
-            <% end %>
-            
-            <%= link_to order_pdvs_path, class: "btn btn-outline-secondary" do %>
-              <i class="fas fa-arrow-left me-2"></i>Voltar à Lista
-            <% end %>
-          </div>
-        </div>
-      </div>
-
-      <div class="card bg-black shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-info-circle me-2"></i>Detalhes da Venda
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label text-muted">Loja:</label>
-            <div>
-              <% 
-                store_badge_class = case @order_pdv.store_type
-                when 'lagoa_seca' then 'bg-warning text-dark'
-                when 'bh_shopping' then 'bg-success'
-                when 'rj' then 'bg-primary'
-                when 'online' then 'bg-info text-dark'
-                else 'bg-secondary'
-                end
-              %>
-              <span class="badge <%= store_badge_class %>"><%= @order_pdv.store_type == 'online' ? 'Online Store' : @order_pdv.store_type.humanize %></span>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label text-muted">Pagamento:</label>
-            <div class="text-white">
-              <%= @order_pdv&.payment_method&.humanize %>
-              
-              <% if @order_pdv&.has_multi_payments? %>
-                <div class="mt-2">
-                  <strong class="text-info">Parcelas:</strong>
-                  <div class="ms-3">
-                    <% @order_pdv.formatted_multi_payments.each_with_index do |payment, index| %>
-                      <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary">
-                        <span class="text-white">
-                          <%= index + 1 %>. <%= payment[:method].humanize %>
-                          <small class="text-muted">(<%= payment[:date] %>)</small>
-                        </span>
-                        <span class="text-success fw-bold"><%= payment[:amount] %></span>
-                      </div>
-                    <% end %>
-                  </div>
-                </div>
-              <% end %>
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="form-label text-muted">Frete:</label>
-            <div class="text-white">SEDEX</div>
-          </div>
-          
-          <% if @order_pdv.discount_amount > 0 %>
-            <div class="mb-3">
-              <label class="form-label text-muted">Desconto:</label>
-              <div class="text-warning"><%= @order_pdv.formatted_discount %></div>
-              <% if @order_pdv.discount_reason.present? %>
-                <small class="text-muted">Motivo: <%= @order_pdv.discount_reason %></small>
-              <% end %>
-            </div>
-          <% end %>
-          
-          <% if @order_pdv.notes.present? %>
-            <div class="mb-3">
-              <label class="form-label text-muted">Observações:</label>
-              <div class="text-white"><%= simple_format(@order_pdv.notes) %></div>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
+<style>
+  :root {
+    --gh-bg:        #0d1117;
+    --gh-surface:   #161b22;
+    --gh-border:    #21262d;
+    --gh-border-hi: #30363d;
+    --gh-text:      #e6edf3;
+    --gh-muted:     #8b949e;
+    --gh-blue:      #1f6feb;
+    --gh-green:     #238636;
+    --gh-red:       #da3633;
+    --gh-yellow:    #d29922;
+  }
 
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
+  body { background-color: var(--gh-bg) !important; color: var(--gh-text); }
 
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
-    }
+  .gh-card {
+    background: var(--gh-surface);
+    border: 1px solid var(--gh-border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+  .gh-card-header {
+    border-bottom: 1px solid var(--gh-border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .gh-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gh-text);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .gh-card-title i { color: var(--gh-muted); font-size: 0.8rem; }
+  .gh-card-body { padding: 16px; }
 
-    .bg-black {
-      background-color: #121212 !important;
-    }
+  /* Buttons */
+  .gh-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 6px; font-size: 0.8125rem;
+    font-weight: 500; border: 1px solid var(--gh-border-hi);
+    background: var(--gh-surface); color: var(--gh-text);
+    cursor: pointer; text-decoration: none; transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .gh-btn:hover { background: var(--gh-border); color: var(--gh-text); border-color: var(--gh-muted); }
+  .gh-btn-blue   { background: var(--gh-blue);   border-color: var(--gh-blue);   color: #fff; }
+  .gh-btn-blue:hover { background: #1a5fd0; border-color: #1a5fd0; color: #fff; }
+  .gh-btn-green  { background: var(--gh-green);  border-color: var(--gh-green);  color: #fff; }
+  .gh-btn-green:hover { background: #1e7430; border-color: #1e7430; color: #fff; }
+  .gh-btn-yellow { background: var(--gh-yellow); border-color: var(--gh-yellow); color: #0d1117; }
+  .gh-btn-yellow:hover { background: #b5841a; border-color: #b5841a; color: #0d1117; }
+  .gh-btn-sm { padding: 4px 10px; font-size: 0.75rem; }
 
-    .form-label {
-      font-weight: 600;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-    }
+  /* Badges */
+  .gh-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+  }
+  .gh-badge-green  { background: rgba(35,134,54,0.2);   color: #3fb950; border: 1px solid rgba(35,134,54,0.5); }
+  .gh-badge-red    { background: rgba(218,54,51,0.2);   color: #f85149; border: 1px solid rgba(218,54,51,0.5); }
+  .gh-badge-yellow { background: rgba(210,153,34,0.2);  color: #d29922; border: 1px solid rgba(210,153,34,0.5); }
+  .gh-badge-blue   { background: rgba(31,111,235,0.2);  color: #58a6ff; border: 1px solid rgba(31,111,235,0.5); }
+  .gh-badge-muted  { background: rgba(139,148,158,0.15); color: #8b949e; border: 1px solid rgba(139,148,158,0.3); }
+  .gh-badge-paid   { background: rgba(35,134,54,0.25);  color: #3fb950; border: 1px solid rgba(35,134,54,0.6); }
 
-    .alert {
-      border-radius: 8px;
-      border-width: 1px;
-    }
+  /* Info rows */
+  .info-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 8px 0; border-bottom: 1px solid var(--gh-border);
+    font-size: 0.8125rem;
+  }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-label { color: var(--gh-muted); min-width: 110px; flex-shrink: 0; }
+  .info-value { color: var(--gh-text); text-align: right; }
 
-    .badge {
-      font-size: 0.75rem;
-      padding: 6px 12px;
-    }
+  /* Stat cards */
+  .stat-card {
+    background: var(--gh-bg);
+    border: 1px solid var(--gh-border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    text-align: center;
+    flex: 1;
+  }
+  .stat-card .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--gh-text); }
+  .stat-card .stat-label { font-size: 0.72rem; color: var(--gh-muted); margin-top: 2px; }
 
-    .btn {
-      transition: all 0.3s ease;
-    }
+  /* Item row */
+  .item-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--gh-border);
+  }
+  .item-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .item-thumb {
+    width: 60px; height: 68px; border-radius: 6px;
+    overflow: hidden; flex-shrink: 0;
+    background: var(--gh-border);
+    border: 1px solid var(--gh-border-hi);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
-    .btn:hover {
-      transform: translateY(-2px);
-    }
+  /* Callout */
+  .gh-callout {
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+    margin-bottom: 20px;
+    font-size: 0.8125rem;
+  }
+  .gh-callout-yellow {
+    background: rgba(210,153,34,0.1);
+    border: 1px solid rgba(210,153,34,0.4);
+    border-left: 4px solid var(--gh-yellow);
+  }
+  .gh-callout-blue {
+    background: rgba(31,111,235,0.08);
+    border: 1px solid rgba(31,111,235,0.3);
+    border-left: 4px solid var(--gh-blue);
+  }
+  .gh-callout i { margin-top: 1px; flex-shrink: 0; }
 
-    address {
-      font-style: normal;
-      line-height: 1.5;
-    }
-  </style>
+  /* Totals */
+  .total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 0.8125rem;
+  }
+  .total-row.final {
+    border-top: 1px solid var(--gh-border-hi);
+    margin-top: 8px; padding-top: 10px;
+    font-size: 1rem; font-weight: 700;
+  }
+
+  /* Parcel table */
+  .parcel-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid var(--gh-border); font-size: 0.8rem;
+  }
+  .parcel-row:last-child { border-bottom: none; }
+</style>
 <% end %>
 
+<div style="padding: 24px 20px;">
+
+  <%# ── Callout: Pedido Incompleto ──────────────────────────────────────────── %>
+  <% if @order_pdv.status == 'incomplete' %>
+    <div class="gh-callout gh-callout-yellow">
+      <i class="fas fa-exclamation-triangle" style="color: var(--gh-yellow); font-size: 1rem;"></i>
+      <div>
+        <div style="font-weight: 600; color: var(--gh-yellow); margin-bottom: 4px;">Pedido incompleto</div>
+        <div style="color: var(--gh-muted); line-height: 1.5;">
+          Este pedido foi salvo sem forma de pagamento ou endereço. Para finalizar, concluir a venda ou adicionar mais produtos,
+          <strong><%= link_to "acesse a edição do pedido", edit_order_pdv_path(@order_pdv), style: "color: var(--gh-yellow);" %></strong>.
+          Pedidos incompletos não podem ser integrados ao Tiny.
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Callout: Tiny integrado ─────────────────────────────────────────────── %>
+  <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.present? %>
+    <div class="gh-callout gh-callout-blue">
+      <i class="fas fa-plug" style="color: var(--gh-blue); font-size: 1rem;"></i>
+      <div>
+        <div style="font-weight: 600; color: #58a6ff; margin-bottom: 4px;">Integrado ao Tiny</div>
+        <div style="color: var(--gh-muted);">
+          Pedido Tiny: <strong style="color: var(--gh-text);">#<%= @order_pdv.tiny_order_id %></strong>
+          <% if @order_pdv.respond_to?(:tiny_status) && @order_pdv.tiny_status.present? %>
+            &mdash; Status: <strong style="color: var(--gh-text);"><%= @order_pdv.tiny_status.humanize %></strong>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Header ──────────────────────────────────────────────────────────────── %>
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+        <h1 style="font-size: 1.15rem; font-weight: 700; margin: 0; color: var(--gh-text);">
+          Pedido PDV <span style="color: var(--gh-muted);">#<%= @order_pdv.id %></span>
+        </h1>
+        <%
+          badge_class = case @order_pdv.status
+          when 'integrated'  then 'gh-badge-green'
+          when 'error'       then 'gh-badge-red'
+          when 'paid'        then 'gh-badge-paid'
+          when 'incomplete'  then 'gh-badge-yellow'
+          else                    'gh-badge-muted'
+          end
+          badge_icon = case @order_pdv.status
+          when 'integrated'  then 'check-circle'
+          when 'error'       then 'times-circle'
+          when 'paid'        then 'check-double'
+          when 'incomplete'  then 'exclamation-circle'
+          else                    'clock'
+          end
+          badge_text = case @order_pdv.status
+          when 'incomplete' then 'Incompleto'
+          when 'paid'       then 'Pago'
+          else @order_pdv.respond_to?(:integration_status_text) ? @order_pdv.integration_status_text : @order_pdv.status.humanize
+          end
+        %>
+        <span class="gh-badge <%= badge_class %>">
+          <i class="fas fa-<%= badge_icon %>"></i><%= badge_text %>
+        </span>
+      </div>
+      <div style="font-size: 0.78rem; color: var(--gh-muted);">
+        <i class="fas fa-calendar-alt" style="margin-right: 4px;"></i>
+        Criado em <%= @order_pdv.created_at.strftime('%d/%m/%Y às %H:%M') %>
+        por <strong style="color: var(--gh-text);"><%= @order_pdv.user&.name %></strong>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <%= link_to order_pdvs_path, class: "gh-btn gh-btn-sm" do %>
+        <i class="fas fa-arrow-left"></i> Voltar
+      <% end %>
+      <%= link_to edit_order_pdv_path(@order_pdv), class: "gh-btn gh-btn-sm gh-btn-yellow" do %>
+        <i class="fas fa-pencil-alt"></i> Editar
+      <% end %>
+      <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.blank? && @order_pdv.status != 'incomplete' %>
+        <button class="gh-btn gh-btn-sm gh-btn-blue" id="btn-integrate-tiny" onclick="integrateTiny()">
+          <i class="fas fa-plug"></i> Integrar Tiny
+        </button>
+      <% end %>
+      <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.present? && @order_pdv.status != 'paid' %>
+        <button class="gh-btn gh-btn-sm gh-btn-green" id="btn-mark-paid" onclick="markAsPaid()">
+          <i class="fas fa-check-circle"></i> Marcar como Pago
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ── Stats ───────────────────────────────────────────────────────────────── %>
+  <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div class="stat-card">
+      <div class="stat-value" style="color: #3fb950;"><%= @order_pdv.formatted_total %></div>
+      <div class="stat-label">Total do Pedido</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= @items.count %></div>
+      <div class="stat-label">Produtos</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="color: #58a6ff;"><%= @order_pdv.payment_method&.humanize || '—' %></div>
+      <div class="stat-label">Pagamento</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value"><%= @order_pdv.user&.name&.split(' ')&.first %></div>
+      <div class="stat-label">Vendedor</div>
+    </div>
+  </div>
+
+  <%# ── Layout 2 colunas ────────────────────────────────────────────────────── %>
+  <div style="display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start;">
+
+    <%# ── Coluna esquerda ───────────────────────────────────────────────────── %>
+    <div>
+
+      <%# Itens do pedido %>
+      <div class="gh-card">
+        <div class="gh-card-header">
+          <span class="gh-card-title">
+            <i class="fas fa-shopping-bag"></i>
+            Itens do Pedido
+          </span>
+          <span class="gh-badge gh-badge-muted"><%= @items.count %> produtos</span>
+        </div>
+        <div class="gh-card-body">
+          <% @items.each do |item| %>
+            <% item_image = item.image_url.presence || (item.respond_to?(:product) && item.product.present? ? ShopifyIntegrationService.get_product_image_from_shopify(item.product) : nil) rescue nil %>
+            <div class="item-row">
+              <div class="item-thumb">
+                <% if item_image.present? %>
+                  <img src="<%= item_image %>" alt="<%= item.product_name %>">
+                <% else %>
+                  <i class="fas fa-image" style="color: var(--gh-muted); font-size: 1rem;"></i>
+                <% end %>
+              </div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 0.8125rem; font-weight: 600; color: var(--gh-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  <%= item.product_name %>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--gh-muted); margin-top: 2px;">
+                  SKU: <%= item.sku %>
+                </div>
+              </div>
+              <div style="text-align: right; flex-shrink: 0;">
+                <div style="font-size: 0.875rem; font-weight: 700; color: #3fb950;"><%= item.formatted_total %></div>
+                <div style="font-size: 0.72rem; color: var(--gh-muted); margin-top: 2px;">
+                  <%= item.quantity %>x <%= item.formatted_price %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <%# Totais %>
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--gh-border);">
+            <div class="total-row">
+              <span style="color: var(--gh-muted);">Subtotal</span>
+              <span style="color: var(--gh-text);"><%= @order_pdv.formatted_subtotal %></span>
+            </div>
+            <% if @order_pdv.discount_amount.to_f > 0 %>
+              <div class="total-row">
+                <span style="color: var(--gh-muted);">Desconto
+                  <% if @order_pdv.discount_reason.present? %>
+                    <small style="font-size:0.7rem;">(<%=  @order_pdv.discount_reason %>)</small>
+                  <% end %>
+                </span>
+                <span style="color: var(--gh-yellow);">- <%= @order_pdv.formatted_discount %></span>
+              </div>
+            <% end %>
+            <div class="total-row final">
+              <span style="color: var(--gh-text);">Total</span>
+              <span style="color: #3fb950; font-size: 1.1rem;"><%= @order_pdv.formatted_total %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <%# Dados do cliente %>
+      <div class="gh-card">
+        <div class="gh-card-header">
+          <span class="gh-card-title">
+            <i class="fas fa-user"></i>
+            Dados do Cliente
+          </span>
+        </div>
+        <div class="gh-card-body">
+          <% if @order_pdv.respond_to?(:client) && @order_pdv.client.present? %>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 180px;">
+                <div class="info-row">
+                  <span class="info-label">Responsável</span>
+                  <span class="info-value"><%= @order_pdv.client.responsible_name %></span>
+                </div>
+                <% if @order_pdv.client.business_name.present? %>
+                  <div class="info-row">
+                    <span class="info-label">Razão Social</span>
+                    <span class="info-value"><%= @order_pdv.client.business_name %></span>
+                  </div>
+                <% end %>
+                <% if @order_pdv.client.registration.present? %>
+                  <div class="info-row">
+                    <span class="info-label">CNPJ</span>
+                    <span class="info-value" style="font-family: monospace;"><%= @order_pdv.client.cnpj_formatted %></span>
+                  </div>
+                <% end %>
+                <% if @order_pdv.client.phone.present? %>
+                  <div class="info-row">
+                    <span class="info-label">Telefone</span>
+                    <span class="info-value"><%= @order_pdv.client.phone %></span>
+                  </div>
+                <% end %>
+                <% if @order_pdv.client.email.present? %>
+                  <div class="info-row">
+                    <span class="info-label">E-mail</span>
+                    <span class="info-value"><%= @order_pdv.client.email %></span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% else %>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px;">
+              <div>
+                <div class="info-row">
+                  <span class="info-label">Nome</span>
+                  <span class="info-value"><%= @order_pdv.customer_name.presence || '—' %></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">E-mail</span>
+                  <span class="info-value"><%= @order_pdv.customer_email.presence || '—' %></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Telefone</span>
+                  <span class="info-value"><%= @order_pdv.customer_phone.presence || '—' %></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CPF</span>
+                  <span class="info-value"><%= @order_pdv.customer_cpf.presence || '—' %></span>
+                </div>
+              </div>
+              <div>
+                <div class="info-row">
+                  <span class="info-label">Endereço</span>
+                  <span class="info-value"><%= @order_pdv.address1.presence || '—' %></span>
+                </div>
+                <% if @order_pdv.address2.present? %>
+                  <div class="info-row">
+                    <span class="info-label">Complemento</span>
+                    <span class="info-value"><%= @order_pdv.address2 %></span>
+                  </div>
+                <% end %>
+                <div class="info-row">
+                  <span class="info-label">Cidade / UF</span>
+                  <span class="info-value"><%= [@order_pdv.city, @order_pdv.state].select(&:present?).join(' / ').presence || '—' %></span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">CEP</span>
+                  <span class="info-value"><%= @order_pdv.zip.presence || '—' %></span>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Notas %>
+      <% if @order_pdv.order_note.present? || @order_pdv.notes.present? %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title"><i class="fas fa-sticky-note"></i> Observações</span>
+          </div>
+          <div class="gh-card-body" style="font-size: 0.8125rem; color: var(--gh-muted); line-height: 1.6;">
+            <% if @order_pdv.order_note.present? %>
+              <div style="margin-bottom: 8px;"><strong style="color: var(--gh-text);">Nota do pedido:</strong> <%= @order_pdv.order_note %></div>
+            <% end %>
+            <% if @order_pdv.notes.present? %>
+              <div><strong style="color: var(--gh-text);">Observações:</strong> <%= simple_format(@order_pdv.notes) %></div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+
+    <%# ── Coluna direita ─────────────────────────────────────────────────────── %>
+    <div>
+
+      <%# Ações rápidas %>
+      <div class="gh-card">
+        <div class="gh-card-header">
+          <span class="gh-card-title"><i class="fas fa-bolt"></i> Ações</span>
+        </div>
+        <div class="gh-card-body" style="display: flex; flex-direction: column; gap: 8px;">
+
+          <%= link_to edit_order_pdv_path(@order_pdv), class: "gh-btn", style: "justify-content: center;" do %>
+            <i class="fas fa-pencil-alt"></i> Editar pedido
+          <% end %>
+
+          <% if @order_pdv.status == 'incomplete' %>
+            <%= link_to edit_order_pdv_path(@order_pdv), class: "gh-btn gh-btn-yellow", style: "justify-content: center;" do %>
+              <i class="fas fa-cart-plus"></i> Concluir / Adicionar produtos
+            <% end %>
+          <% end %>
+
+          <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.blank? && @order_pdv.status != 'incomplete' %>
+            <button class="gh-btn gh-btn-blue" id="btn-integrate-tiny-side" onclick="integrateTiny()" style="justify-content: center;">
+              <i class="fas fa-plug"></i> Integrar ao Tiny
+            </button>
+          <% end %>
+
+          <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.present? && @order_pdv.status != 'paid' %>
+            <button class="gh-btn gh-btn-green" id="btn-mark-paid-side" onclick="markAsPaid()" style="justify-content: center;">
+              <i class="fas fa-check-circle"></i> Marcar como Pago
+            </button>
+          <% end %>
+
+          <% if @order_pdv.respond_to?(:can_retry_integration?) && @order_pdv.can_retry_integration? %>
+            <button class="gh-btn" id="btn-integrate-shopify" onclick="integrateShopify()" style="justify-content: center;">
+              <i class="fas fa-sync"></i> Integrar Shopify
+            </button>
+          <% end %>
+
+          <hr style="border-color: var(--gh-border); margin: 4px 0;">
+
+          <%= link_to order_pdvs_path, class: "gh-btn", style: "justify-content: center;" do %>
+            <i class="fas fa-arrow-left"></i> Voltar à lista
+          <% end %>
+        </div>
+      </div>
+
+      <%# Detalhes da venda %>
+      <div class="gh-card">
+        <div class="gh-card-header">
+          <span class="gh-card-title"><i class="fas fa-info-circle"></i> Detalhes</span>
+        </div>
+        <div class="gh-card-body">
+          <div class="info-row">
+            <span class="info-label">Status</span>
+            <span class="info-value">
+              <span class="gh-badge <%= badge_class %>">
+                <i class="fas fa-<%= badge_icon %>"></i><%= badge_text %>
+              </span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Loja</span>
+            <span class="info-value">
+              <% store_label = @order_pdv.store_type == 'online' ? 'Online Store' : @order_pdv.store_type&.humanize %>
+              <span class="gh-badge gh-badge-muted"><%= store_label %></span>
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Pagamento</span>
+            <span class="info-value"><%= @order_pdv.payment_method&.humanize || '—' %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vendedor</span>
+            <span class="info-value"><%= @order_pdv.user&.name %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Criado em</span>
+            <span class="info-value"><%= @order_pdv.created_at.strftime('%d/%m/%Y %H:%M') %></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Atualizado</span>
+            <span class="info-value"><%= @order_pdv.updated_at.strftime('%d/%m/%Y %H:%M') %></span>
+          </div>
+          <% if @order_pdv.respond_to?(:tiny_order_id) && @order_pdv.tiny_order_id.present? %>
+            <div class="info-row">
+              <span class="info-label">Tiny ID</span>
+              <span class="info-value" style="font-family: monospace;">#<%= @order_pdv.tiny_order_id %></span>
+            </div>
+          <% end %>
+          <% if @order_pdv.respond_to?(:tiny_status) && @order_pdv.tiny_status.present? %>
+            <div class="info-row">
+              <span class="info-label">Status Tiny</span>
+              <span class="info-value"><%= @order_pdv.tiny_status.humanize %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Parcelas %>
+      <% if @order_pdv.order_parcels.present? && @order_pdv.order_parcels.any? %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title"><i class="fas fa-money-bill-wave"></i> Parcelas</span>
+            <span class="gh-badge gh-badge-muted"><%= @order_pdv.order_parcels.count %></span>
+          </div>
+          <div class="gh-card-body">
+            <% @order_pdv.order_parcels.each_with_index do |parcel, i| %>
+              <div class="parcel-row">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="color: var(--gh-muted); font-size: 0.72rem; min-width: 18px;">#<%= i + 1 %></span>
+                  <span style="color: var(--gh-text);">
+                    <%= parcel.payment_method&.humanize %>
+                  </span>
+                  <% if parcel.notes.present? %>
+                    <span style="color: var(--gh-muted); font-size: 0.72rem;">(<%= parcel.notes %>)</span>
+                  <% end %>
+                </div>
+                <span style="font-weight: 700; color: #3fb950;">
+                  R$ <%= sprintf('%.2f', parcel.amount).gsub('.', ',') %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Shopify %>
+      <% if @order_pdv.integrated? && @order_pdv.shopify_order_id.present? %>
+        <div class="gh-card">
+          <div class="gh-card-header">
+            <span class="gh-card-title"><i class="fas fa-store"></i> Shopify</span>
+            <span class="gh-badge gh-badge-green"><i class="fas fa-check"></i> Integrado</span>
+          </div>
+          <div class="gh-card-body">
+            <div class="info-row">
+              <span class="info-label">Pedido</span>
+              <span class="info-value"><%= @order_pdv.shopify_order_number %></span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">ID</span>
+              <span class="info-value" style="font-family: monospace;"><%= @order_pdv.shopify_order_id %></span>
+            </div>
+            <div class="info-row" style="border-bottom: none;">
+              <span class="info-label">Integrado em</span>
+              <span class="info-value"><%= @order_pdv.integrated_at&.strftime('%d/%m/%Y %H:%M') %></span>
+            </div>
+            <div style="margin-top: 12px;">
+              <a href="https://chasebrasil.myshopify.com/admin/orders/<%= @order_pdv.shopify_order_id %>"
+                 target="_blank" class="gh-btn gh-btn-sm gh-btn-blue" style="width: 100%; justify-content: center;">
+                <i class="fas fa-external-link-alt"></i> Ver no Shopify
+              </a>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+
+</div>
+
+<%# Toast container %>
+<div id="show-toast-container" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;"></div>
+
 <script>
-function integrateOrder(orderId) {
-  if (!confirm('Confirma a integração deste pedido com o Shopify?')) return;
-  
-  const button = document.getElementById('integrate-btn');
-  const originalContent = button.innerHTML;
-  
-  button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Integrando...';
-  button.disabled = true;
-  
-  fetch(`/order_pdvs/${orderId}/integrate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    }
-  })
-  .then(response => {
-    if (response.ok) {
-      location.reload();
-    } else {
-      throw new Error('Erro na integração');
-    }
-  })
-  .catch(error => {
-    console.error('Erro:', error);
-    alert('Erro ao integrar pedido. Tente novamente.');
-    
-    button.innerHTML = originalContent;
-    button.disabled = false;
+function showToast(message, type = 'success') {
+  const color = type === 'success' ? '#238636' : '#da3633';
+  const icon  = type === 'success' ? 'check-circle' : 'times-circle';
+  const el    = document.createElement('div');
+  el.innerHTML = `<i class="fas fa-${icon}" style="margin-right:8px;"></i>${message}`;
+  Object.assign(el.style, {
+    background: '#161b22',
+    border: `1px solid ${color}`,
+    borderLeft: `4px solid ${color}`,
+    color: '#e6edf3',
+    padding: '11px 16px',
+    borderRadius: '6px',
+    fontSize: '0.8125rem',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    maxWidth: '340px',
+    animation: 'fadeIn 0.2s ease'
   });
+  document.getElementById('show-toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+function integrateTiny() {
+  ['btn-integrate-tiny', 'btn-integrate-tiny-side'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Integrando...'; }
+  });
+
+  fetch('<%= integrate_tiny_order_pdv_path(@order_pdv) %>', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(data.message || 'Erro ao integrar.', 'error');
+        ['btn-integrate-tiny', 'btn-integrate-tiny-side'].forEach(id => {
+          const b = document.getElementById(id);
+          if (b) { b.disabled = false; b.innerHTML = '<i class="fas fa-plug"></i> Integrar ao Tiny'; }
+        });
+      }
+    });
+}
+
+function markAsPaid() {
+  if (!confirm('Marcar este pedido como PAGO e aprovar no Tiny?')) return;
+  ['btn-mark-paid', 'btn-mark-paid-side'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...'; }
+  });
+
+  fetch('<%= mark_as_paid_order_pdv_path(@order_pdv) %>', {
+    method: 'PATCH',
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(data.message || 'Erro.', 'error');
+        ['btn-mark-paid', 'btn-mark-paid-side'].forEach(id => {
+          const b = document.getElementById(id);
+          if (b) { b.disabled = false; b.innerHTML = '<i class="fas fa-check-circle"></i> Marcar como Pago'; }
+        });
+      }
+    });
+}
+
+function integrateShopify() {
+  if (!confirm('Confirma a integração com o Shopify?')) return;
+  const btn = document.getElementById('btn-integrate-shopify');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Integrando...'; }
+
+  fetch('<%= integrate_order_pdv_path(@order_pdv) %>', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
+  })
+    .then(r => { if (r.ok) location.reload(); else throw new Error(); })
+    .catch(() => {
+      showToast('Erro ao integrar com Shopify.', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync"></i> Integrar Shopify'; }
+    });
 }
 </script>
