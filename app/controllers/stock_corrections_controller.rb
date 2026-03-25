@@ -337,14 +337,18 @@ class StockCorrectionsController < ApplicationController
   end
 
   def fetch_real_time_stock_for_items(items)
+    location = @stock_correction&.location
+
     items.each do |item|
       next unless item&.product
 
       if item.product.shopify_variant_id.present?
-        real_stock = fetch_shopify_stock(item.product, @stock_correction.location)
+        real_stock = fetch_shopify_stock(item.product, location)
+
+        fallback_stock = stock_for_location(item.product, location)
 
         item.define_singleton_method(:real_stock) do
-          real_stock || stock_for_location(item.product, @stock_correction.location)
+          real_stock || fallback_stock
         end
 
         item.define_singleton_method(:stock_source) do
@@ -357,7 +361,7 @@ class StockCorrectionsController < ApplicationController
           end
         end
       else
-        current_stock = stock_for_location(item.product, @stock_correction.location)
+        current_stock = stock_for_location(item.product, location)
 
         item.define_singleton_method(:real_stock) { current_stock }
         item.define_singleton_method(:stock_source) { 'no_shopify_id' }
