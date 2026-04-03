@@ -325,7 +325,7 @@ class StockCorrectionsController < ApplicationController
   def fetch_shopify_stock(product, location)
     return nil unless product.shopify_variant_id.present?
 
-    stock_result = StockService.check_stock(product.shopify_variant_id, 1, location)
+    stock_result = StockService.check_stock(product.shopify_variant_id, location)
 
     if stock_result.is_a?(Hash)
       stock_result[:available_quantity] || stock_result['available_quantity'] || 0
