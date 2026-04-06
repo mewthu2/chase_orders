@@ -24,7 +24,7 @@ class CreateNoteTiny2Job < ActiveJob::Base
       attempt.update(tiny_order_id: order[:pedido][:id])
 
       begin
-        selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY3_PRODUCTION'), order[:pedido][:id])
+        selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), order[:pedido][:id])
       rescue StandardError => e
         attempt.update(error: e, status: :error)
       end
