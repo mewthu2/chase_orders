@@ -27,7 +27,7 @@ module Tiny::Invoices
 
   def invoice_emition(invoice_id)
     HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
-                 query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                 query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
                           formato: 'string',
                           id: invoice_id })
   end
