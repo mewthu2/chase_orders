@@ -20,14 +20,14 @@ module Tiny::Invoices
 
   def obtain_xml(invoice_id)
     HTTParty.get(ENV.fetch('OBTER_XML_NOTA_FISCAL'),
-                 query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
+                 query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                           formato: 'string',
                           id: invoice_id })
   end
 
   def invoice_emition(invoice_id)
     HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
-                 query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
+                 query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
                           formato: 'string',
                           id: invoice_id })
   end
