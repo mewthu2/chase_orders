@@ -81,26 +81,37 @@
                   <i class="fas fa-route"></i>
                   <span>Acompanhamento</span>
                 <% end %>
+
                 <%= link_to order_correios_create_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}" do %>
                   <i class="fas fa-plus-circle"></i>
                   <span>Criação de Pedidos</span>
                 <% end %>
+
+                <%= link_to order_correios_stock_errors_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_stock_errors_dashboard_index_path)}" do %>
+                  <i class="fas fa-box-open"></i>
+                  <span>Produtos Sem Estoque</span>
+                <% end %>
+
                 <%= link_to invoice_emition_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}" do %>
                   <i class="fas fa-file-invoice"></i>
                   <span>Emissão de Notas</span>
                 <% end %>
+
                 <%= link_to send_xml_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_dashboard_index_path)}" do %>
                   <i class="fas fa-file-code"></i>
                   <span>Enviar XML</span>
                 <% end %>
+
                 <%= link_to push_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_dashboard_index_path)}" do %>
                   <i class="fas fa-shipping-fast"></i>
                   <span>Rastreamento</span>
                 <% end %>
+
                 <%= link_to api_correios_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_dashboard_index_path)}" do %>
                   <i class="fas fa-cogs"></i>
                   <span>API Correios</span>
                 <% end %>
+
                 <%= link_to stock_syncs_path, class: "dropdown-link #{'active' if controller_name == 'stock_syncs'}" do %>
                   <i class="fas fa-sync-alt"></i>
                   <span>Sincronização Estoque</span>
@@ -483,13 +494,23 @@ document.addEventListener("DOMContentLoaded", () => {
     carousel.style.cursor = "grabbing"
   })
 
-  carousel.addEventListener("mouseleave", () => { isDown = false; carousel.style.cursor = "grab" })
-  carousel.addEventListener("mouseup",    () => { isDown = false; carousel.style.cursor = "grab" })
+  carousel.addEventListener("mouseleave", () => {
+    isDown = false
+    carousel.style.cursor = "grab"
+  })
+
+  carousel.addEventListener("mouseup", () => {
+    isDown = false
+    carousel.style.cursor = "grab"
+  })
 
   carousel.addEventListener("mousemove", (e) => {
     if (!isDown) return
+
     e.preventDefault()
+
     const x = e.pageX - carousel.offsetLeft
+
     carousel.scrollLeft = scrollLeft - (x - startX) * 2
   })
 
@@ -507,9 +528,12 @@ document.addEventListener("DOMContentLoaded", () => {
     dropdowns.forEach(({ id, header }) => {
       const dropdown = document.getElementById(id)
       const headerEl = document.querySelector(header)
+
       if (dropdown && headerEl && !headerEl.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.classList.remove("show")
+
         const icon = dropdown.previousElementSibling?.querySelector(".collapse-icon")
+
         if (icon) icon.classList.remove("rotated")
       }
     })
@@ -518,12 +542,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function toggleDropdown(dropdownId, iconId, buttonSelector) {
   const dropdown = document.getElementById(dropdownId)
-  const icon     = document.getElementById(iconId)
-  const button   = document.querySelector(buttonSelector)
+  const icon = document.getElementById(iconId)
+  const button = document.querySelector(buttonSelector)
 
   document.querySelectorAll(".nav-group-dropdown.show").forEach((d) => {
     if (d !== dropdown) d.classList.remove("show")
   })
+
   document.querySelectorAll(".collapse-icon.rotated").forEach((i) => {
     if (i !== icon) i.classList.remove("rotated")
   })
@@ -537,11 +562,31 @@ function toggleDropdown(dropdownId, iconId, buttonSelector) {
   icon.classList.toggle("rotated")
 }
 
-function toggleCRM()           { toggleDropdown("crmDropdown",           "crmIcon",           '[onclick="toggleCRM()"]')           }
-function toggleCorreios()      { toggleDropdown("correiosDropdown",       "correiosIcon",       '[onclick="toggleCorreios()"]')       }
-function toggleUsuarios()      { toggleDropdown("usuariosDropdown",       "usuariosIcon",       '[onclick="toggleUsuarios()"]')       }
-function togglePlannerOrders() { toggleDropdown("plannerOrdersDropdown",  "plannerOrdersIcon",  '[onclick="togglePlannerOrders()"]')  }
-function toggleProdutos()      { toggleDropdown("produtosDropdown",       "produtosIcon",       '[onclick="toggleProdutos()"]')       }
-function toggleMarketing()     { toggleDropdown("marketingDropdown",      "marketingIcon",      '[onclick="toggleMarketing()"]')      }
-function togglePDV()           { toggleDropdown("pdvDropdown",            "pdvIcon",            '[onclick="togglePDV()"]')            }
+function toggleCRM() {
+  toggleDropdown("crmDropdown", "crmIcon", '[onclick="toggleCRM()"]')
+}
+
+function toggleCorreios() {
+  toggleDropdown("correiosDropdown", "correiosIcon", '[onclick="toggleCorreios()"]')
+}
+
+function toggleUsuarios() {
+  toggleDropdown("usuariosDropdown", "usuariosIcon", '[onclick="toggleUsuarios()"]')
+}
+
+function togglePlannerOrders() {
+  toggleDropdown("plannerOrdersDropdown", "plannerOrdersIcon", '[onclick="togglePlannerOrders()"]')
+}
+
+function toggleProdutos() {
+  toggleDropdown("produtosDropdown", "produtosIcon", '[onclick="toggleProdutos()"]')
+}
+
+function toggleMarketing() {
+  toggleDropdown("marketingDropdown", "marketingIcon", '[onclick="toggleMarketing()"]')
+}
+
+function togglePDV() {
+  toggleDropdown("pdvDropdown", "pdvIcon", '[onclick="togglePDV()"]')
+}
 </script>
