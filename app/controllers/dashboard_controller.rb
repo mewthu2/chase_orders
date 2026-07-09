@@ -139,6 +139,119 @@ class DashboardController < ApplicationController
     }
   end
 
+  def order_correios_stock_errors
+    @orders_response = Tiny::Orders.get_orders_response(
+      '',
+      'preparando_envio',
+      ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+      '',
+      4.weeks.ago.strftime('%d/%m/%Y')
+    )
+
+    @orders = @orders_response&.dig('pedidos') || []
+
+    successfully_processed_ids = Attempt.where(
+      kinds: :create_correios_order,
+      status: :success,
+      created_at: 1.month.ago..Time.current
+    ).pluck(:tiny_order_id).map(&:to_s)
+
+    @pending_orders = @orders.reject do |order_data|
+      order_id = order_data['pedido']['id'].to_s
+      successfully_processed_ids.include?(order_id)
+    end
+
+    @orders_by_id = @pending_orders.index_by do |order_data|
+      order_data['pedido']['id'].to_s
+    end
+
+    pending_order_ids = @pending_orders.map do |order_data|
+      order_data['pedido']['id'].to_s
+    end
+
+    stock_error_message = 'Produto(s) informado(s) não existe(m) no estoque:'
+
+    stock_error_attempts = Attempt.where(
+      kinds: :create_correios_order,
+      tiny_order_id: pending_order_ids,
+      created_at: 1.month.ago..Time.current
+    )
+    .where.not(message: [nil, ''])
+    .where(
+      'message LIKE ?',
+      "#{ActiveRecord::Base.sanitize_sql_like(stock_error_message)}%"
+    )
+    .order(updated_at: :desc)
+
+    unique_items_by_order_and_product = {}
+
+    stock_error_attempts.each do |attempt|
+      attempt_params = attempt.params.to_s
+
+      tiny_order_id = attempt.tiny_order_id.to_s.presence ||
+                      extract_attempt_param(attempt_params, :pedido_id) ||
+                      extract_attempt_param(attempt_params, :invoice)
+
+      next if tiny_order_id.blank?
+
+      order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
+
+      missing_product_codes = extract_missing_stock_product_codes(
+        attempt.message,
+        stock_error_message
+      )
+
+      missing_product_codes.each do |product_code|
+        quantity = extract_item_quantity_from_attempt_params(
+          attempt_params,
+          product_code
+        )
+
+        unique_key = "#{tiny_order_id}-#{product_code}"
+
+        next if unique_items_by_order_and_product.key?(unique_key)
+
+        unique_items_by_order_and_product[unique_key] = {
+          attempt_id: attempt.id,
+          tiny_order_id: tiny_order_id,
+          tiny_order_number: order_data&.dig('numero'),
+          id_nota_fiscal: attempt.id_nota_fiscal.presence || extract_attempt_param(attempt_params, :invoice),
+          numero_ecommerce: extract_attempt_param(attempt_params, :numero_ecommerce),
+          customer_name: extract_attempt_param(attempt_params, :nome) || order_data&.dig('nome'),
+          data_pedido: extract_attempt_param(attempt_params, :data_pedido) || order_data&.dig('data_pedido'),
+          valor: extract_attempt_param(attempt_params, :valor) || order_data&.dig('valor'),
+          product_code: product_code,
+          quantity: quantity,
+          status: attempt.status,
+          message: attempt.message,
+          created_at: attempt.created_at,
+          updated_at: attempt.updated_at
+        }
+      end
+    end
+
+    @missing_stock_items = unique_items_by_order_and_product.values
+
+    @missing_stock_summary = @missing_stock_items
+      .group_by { |item| item[:product_code] }
+      .map do |product_code, items|
+        {
+          product_code: product_code,
+          orders_count: items.map { |item| item[:tiny_order_id] }.uniq.count,
+          attempts_count: items.count,
+          total_quantity: items.sum { |item| item[:quantity].to_s.tr(',', '.').to_f }
+        }
+      end
+      .sort_by { |item| -item[:total_quantity] }
+
+    @stats = {
+      total_attempts: stock_error_attempts.count,
+      total_items: @missing_stock_items.count,
+      total_products: @missing_stock_summary.count,
+      total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
+    }
+  end
+
   def order_correios_tracking
     @filter_params = {
       status: params[:status],
@@ -207,6 +320,27 @@ class DashboardController < ApplicationController
   end
 
   private
+
+  def extract_missing_stock_product_codes(message, stock_error_message)
+    message.to_s
+          .split(stock_error_message, 2)
+          .last
+          .to_s
+          .split(/[,\s]+/)
+          .map { |code| code.gsub(/[^\w\-.]/, '') }
+          .reject(&:blank?)
+          .uniq
+  end
+
+  def extract_attempt_param(attempt_params, key)
+    attempt_params.to_s.match(/:#{Regexp.escape(key.to_s)}=>"([^"]*)"/)&.captures&.first
+  end
+
+  def extract_item_quantity_from_attempt_params(attempt_params, product_code)
+    item_match = attempt_params.to_s.scan(/\{[^{}]*:codigo=>"#{Regexp.escape(product_code)}"[^{}]*\}/).first
+
+    item_match&.match(/:quantidade=>"([^"]*)"/)&.captures&.first || '0'
+  end
 
   def prepare_tracking_data_optimized(filters = {})
     base_conditions = []

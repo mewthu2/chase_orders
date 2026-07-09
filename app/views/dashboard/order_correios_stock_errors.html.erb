@@ -1,0 +1,352 @@
+<div class="container-fluid py-4">
+  <% title 'Produtos Sem Estoque no Correios' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+
+          <a href="<%= order_correios_create_dashboard_index_path %>" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle me-1"></i> Criação no Correios
+          </a>
+        </div>
+
+        <div>
+          <span class="badge bg-danger fs-6">
+            <i class="fas fa-box-open me-1"></i>
+            <%= @stats[:total_products] %> produto(s) sem estoque
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-danger border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-exclamation-triangle fa-2x me-3 text-danger"></i>
+      <div>
+        <h5 class="mb-1">Produtos informados que não existem no estoque do Correios</h5>
+        <p class="mb-0">
+          Foram encontrados
+          <strong><%= @stats[:total_attempts] %> attempt(s)</strong>,
+          <strong><%= @stats[:total_orders] %> pedido(s)</strong> e
+          <strong><%= @stats[:total_items] %> item(ns)</strong>
+          com erro de estoque na criação do pedido no Correios.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm mb-4">
+    <div class="card-header bg-secondary">
+      <h5 class="text-white mb-0">
+        <i class="fas fa-cubes me-2"></i>Resumo por Produto
+      </h5>
+    </div>
+
+    <div class="card-body">
+      <% if @missing_stock_summary.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="summaryTable">
+            <thead>
+              <tr>
+                <th class="text-center">Produto</th>
+                <th class="text-center">Quantidade Necessária</th>
+                <th class="text-center">Pedidos Afetados</th>
+                <th class="text-center">Attempts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @missing_stock_summary.each do |item| %>
+                <tr>
+                  <td class="text-center">
+                    <span class="badge bg-danger fs-6">
+                      <%= item[:product_code] %>
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class="fw-bold text-warning">
+                      <%= number_with_precision(item[:total_quantity], precision: item[:total_quantity] % 1 == 0 ? 0 : 2, delimiter: '.', separator: ',') %>
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <%= item[:orders_count] %>
+                  </td>
+                  <td class="text-center">
+                    <%= item[:attempts_count] %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-4">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Nenhum produto sem estoque encontrado</h5>
+          <p class="text-muted mb-0">Não existem attempts com erro de produto inexistente no estoque.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <h5 class="text-white mb-0">
+        <i class="fas fa-list me-2"></i>Pedidos com Produto Sem Estoque
+      </h5>
+    </div>
+
+    <div class="card-body">
+      <% if @missing_stock_items.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="stockErrorsTable">
+            <thead>
+              <tr>
+                <th class="text-center">Ações</th>
+                <th class="text-center">Produto</th>
+                <th class="text-center">Qtd. Necessária</th>
+                <th class="text-center">Pedido Tiny</th>
+                <th class="text-center">Nota Fiscal Tiny</th>
+                <th class="text-center">Pedido Ecommerce</th>
+                <th class="text-center">Cliente</th>
+                <th class="text-center">Data Pedido</th>
+                <th class="text-center">Valor</th>
+                <th class="text-center">Attempt</th>
+                <th class="text-center">Última Atualização</th>
+                <th class="text-center">Mensagem</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <% @missing_stock_items.each do |item| %>
+                <tr>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <% if item[:tiny_order_id].present? %>
+                        <%= link_to verify_attempts_attempts_path(tiny_order_id: item[:tiny_order_id]),
+                            class: 'btn btn-sm btn-outline-info',
+                            method: :post,
+                            target: '_blank',
+                            title: 'Verificar tentativas' do %>
+                          <i class="fas fa-paperclip"></i>
+                        <% end %>
+
+                        <button class="btn btn-sm btn-outline-info"
+                                onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= item[:tiny_order_id] %>', '_blank');"
+                                title="Ver pedido no Tiny">
+                          <i class="fas fa-external-link-alt"></i>
+                        </button>
+                      <% end %>
+                    </div>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="badge bg-danger fs-6">
+                      <%= item[:product_code] %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="fw-bold text-warning">
+                      <%= item[:quantity] %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <% if item[:tiny_order_number].present? %>
+                        <span class="fw-bold text-white">#<%= item[:tiny_order_number] %></span>
+                      <% end %>
+
+                      <small class="text-muted">
+                        ID: <%= item[:tiny_order_id].presence || '-' %>
+                      </small>
+                    </div>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="text-white">
+                      <%= item[:id_nota_fiscal].presence || '-' %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="text-white">
+                      <%= item[:numero_ecommerce].presence || '-' %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="text-white" title="<%= item[:customer_name] %>">
+                      <%= truncate(item[:customer_name].to_s, length: 25) %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="text-white">
+                      <%= item[:data_pedido].presence || '-' %>
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <% if item[:valor].present? %>
+                      <span class="badge bg-success fs-6">
+                        R$ <%= number_with_precision(item[:valor].to_f, precision: 2, delimiter: '.', separator: ',') %>
+                      </span>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="fw-bold text-white">#<%= item[:attempt_id] %></span>
+                      <span class="badge bg-warning text-dark mt-1">
+                        <%= item[:status] %>
+                      </span>
+                    </div>
+                  </td>
+
+                  <td class="text-center">
+                    <small class="text-muted">
+                      <%= item[:updated_at].strftime('%d/%m/%Y %H:%M') %>
+                    </small>
+                  </td>
+
+                  <td class="text-center">
+                    <span class="text-danger small" title="<%= item[:message] %>">
+                      <%= truncate(item[:message], length: 55) %>
+                    </span>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Nenhum pedido com erro de estoque</h5>
+          <p class="text-muted">Não há pedidos pendentes com produto inexistente no estoque do Correios.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .table-responsive {
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .table th {
+      background-color: #1a1a1a;
+      border-color: #343a40;
+      font-weight: 600;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
+
+    .table td {
+      border-color: #343a40;
+      vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+    }
+
+    .fs-6 {
+      font-size: 0.875rem !important;
+    }
+
+    .alert-danger {
+      background-color: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      color: #dc3545;
+    }
+  </style>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      function initializeDataTable(tableId, options = {}) {
+        const table = document.getElementById(tableId);
+
+        if (table && !$.fn.DataTable.isDataTable('#' + tableId)) {
+          $('#' + tableId).DataTable({
+            responsive: true,
+            pageLength: 25,
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            },
+            columnDefs: [
+              { className: "text-center", targets: "_all" }
+            ],
+            ...options
+          });
+        }
+      }
+
+      if (document.getElementById('summaryTable')) {
+        initializeDataTable('summaryTable', {
+          order: [[1, 'desc']],
+          columnDefs: [
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      if (document.getElementById('stockErrorsTable')) {
+        initializeDataTable('stockErrorsTable', {
+          order: [[10, 'desc']],
+          columnDefs: [
+            { orderable: false, targets: [0] },
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      setInterval(function() {
+        if (document.visibilityState === 'visible') {
+          location.reload();
+        }
+      }, 60000);
+    });
+  </script>
+<% end %>

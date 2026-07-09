@@ -42,6 +42,7 @@ Rails.application.routes.draw do
       get :ranking_sellers
       get :order_correios_tracking
       get :order_correios_create
+      get :order_correios_stock_errors
       get :send_xml
       get :push_tracking
       get :invoice_emition
