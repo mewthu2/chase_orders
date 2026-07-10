@@ -4,14 +4,23 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <a href="<%= root_path %>" class="btn btn-dark me-2">
-            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+        <div class="d-flex flex-wrap gap-2">
+          <a href="<%= root_path %>" class="btn btn-dark">
+            <i class="fas fa-tachometer-alt me-1"></i>
+            Dashboard
           </a>
 
-          <a href="<%= order_correios_create_dashboard_index_path %>" class="btn btn-primary me-2">
-            <i class="fas fa-plus-circle me-1"></i> Criação no Correios
+          <a href="<%= order_correios_create_dashboard_index_path %>" class="btn btn-primary">
+            <i class="fas fa-plus-circle me-1"></i>
+            Criação no Correios
           </a>
+
+          <%= link_to order_correios_stock_errors_dashboard_index_path(format: :csv),
+              class: 'btn btn-success',
+              data: { turbo: false } do %>
+            <i class="fas fa-file-csv me-1"></i>
+            Baixar planilha
+          <% end %>
         </div>
 
         <div>
@@ -27,8 +36,12 @@
   <div class="alert alert-danger border-0 mb-4">
     <div class="d-flex align-items-center">
       <i class="fas fa-exclamation-triangle fa-2x me-3 text-danger"></i>
+
       <div>
-        <h5 class="mb-1">Produtos informados que não existem no estoque do Correios</h5>
+        <h5 class="mb-1">
+          Produtos informados que não existem no estoque do Correios
+        </h5>
+
         <p class="mb-0">
           Foram encontrados
           <strong><%= @stats[:total_attempts] %> attempt(s)</strong>,
@@ -43,7 +56,8 @@
   <div class="card bg-dark border border-secondary shadow-sm mb-4">
     <div class="card-header bg-secondary">
       <h5 class="text-white mb-0">
-        <i class="fas fa-cubes me-2"></i>Resumo por Produto
+        <i class="fas fa-cubes me-2"></i>
+        Resumo por Produto
       </h5>
     </div>
 
@@ -59,6 +73,7 @@
                 <th class="text-center">Attempts</th>
               </tr>
             </thead>
+
             <tbody>
               <% @missing_stock_summary.each do |item| %>
                 <tr>
@@ -67,14 +82,22 @@
                       <%= item[:product_code] %>
                     </span>
                   </td>
+
                   <td class="text-center">
                     <span class="fw-bold text-warning">
-                      <%= number_with_precision(item[:total_quantity], precision: item[:total_quantity] % 1 == 0 ? 0 : 2, delimiter: '.', separator: ',') %>
+                      <%= number_with_precision(
+                        item[:total_quantity],
+                        precision: item[:total_quantity] % 1 == 0 ? 0 : 2,
+                        delimiter: '.',
+                        separator: ','
+                      ) %>
                     </span>
                   </td>
+
                   <td class="text-center">
                     <%= item[:orders_count] %>
                   </td>
+
                   <td class="text-center">
                     <%= item[:attempts_count] %>
                   </td>
@@ -86,8 +109,14 @@
       <% else %>
         <div class="text-center py-4">
           <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-          <h5 class="text-white">Nenhum produto sem estoque encontrado</h5>
-          <p class="text-muted mb-0">Não existem attempts com erro de produto inexistente no estoque.</p>
+
+          <h5 class="text-white">
+            Nenhum produto sem estoque encontrado
+          </h5>
+
+          <p class="text-muted mb-0">
+            Não existem attempts com erro de produto inexistente no estoque.
+          </p>
         </div>
       <% end %>
     </div>
@@ -96,7 +125,8 @@
   <div class="card bg-dark border border-secondary shadow-sm">
     <div class="card-header bg-secondary">
       <h5 class="text-white mb-0">
-        <i class="fas fa-list me-2"></i>Pedidos com Produto Sem Estoque
+        <i class="fas fa-list me-2"></i>
+        Pedidos com Produto Sem Estoque
       </h5>
     </div>
 
@@ -127,7 +157,9 @@
                   <td class="text-center">
                     <div class="d-flex flex-column align-items-center gap-1">
                       <% if item[:tiny_order_id].present? %>
-                        <%= link_to verify_attempts_attempts_path(tiny_order_id: item[:tiny_order_id]),
+                        <%= link_to verify_attempts_attempts_path(
+                              tiny_order_id: item[:tiny_order_id]
+                            ),
                             class: 'btn btn-sm btn-outline-info',
                             method: :post,
                             target: '_blank',
@@ -135,9 +167,12 @@
                           <i class="fas fa-paperclip"></i>
                         <% end %>
 
-                        <button class="btn btn-sm btn-outline-info"
-                                onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= item[:tiny_order_id] %>', '_blank');"
-                                title="Ver pedido no Tiny">
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-info"
+                          onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= item[:tiny_order_id] %>', '_blank');"
+                          title="Ver pedido no Tiny"
+                        >
                           <i class="fas fa-external-link-alt"></i>
                         </button>
                       <% end %>
@@ -159,7 +194,9 @@
                   <td class="text-center">
                     <div class="d-flex flex-column align-items-center">
                       <% if item[:tiny_order_number].present? %>
-                        <span class="fw-bold text-white">#<%= item[:tiny_order_number] %></span>
+                        <span class="fw-bold text-white">
+                          #<%= item[:tiny_order_number] %>
+                        </span>
                       <% end %>
 
                       <small class="text-muted">
@@ -181,7 +218,10 @@
                   </td>
 
                   <td class="text-center">
-                    <span class="text-white" title="<%= item[:customer_name] %>">
+                    <span
+                      class="text-white"
+                      title="<%= item[:customer_name] %>"
+                    >
                       <%= truncate(item[:customer_name].to_s, length: 25) %>
                     </span>
                   </td>
@@ -195,7 +235,13 @@
                   <td class="text-center">
                     <% if item[:valor].present? %>
                       <span class="badge bg-success fs-6">
-                        R$ <%= number_with_precision(item[:valor].to_f, precision: 2, delimiter: '.', separator: ',') %>
+                        R$
+                        <%= number_with_precision(
+                          item[:valor].to_f,
+                          precision: 2,
+                          delimiter: '.',
+                          separator: ','
+                        ) %>
                       </span>
                     <% else %>
                       <span class="text-muted">-</span>
@@ -204,7 +250,10 @@
 
                   <td class="text-center">
                     <div class="d-flex flex-column align-items-center">
-                      <span class="fw-bold text-white">#<%= item[:attempt_id] %></span>
+                      <span class="fw-bold text-white">
+                        #<%= item[:attempt_id] %>
+                      </span>
+
                       <span class="badge bg-warning text-dark mt-1">
                         <%= item[:status] %>
                       </span>
@@ -218,7 +267,10 @@
                   </td>
 
                   <td class="text-center">
-                    <span class="text-danger small" title="<%= item[:message] %>">
+                    <span
+                      class="text-danger small"
+                      title="<%= item[:message] %>"
+                    >
                       <%= truncate(item[:message], length: 55) %>
                     </span>
                   </td>
@@ -230,8 +282,14 @@
       <% else %>
         <div class="text-center py-5">
           <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-          <h5 class="text-white">Nenhum pedido com erro de estoque</h5>
-          <p class="text-muted">Não há pedidos pendentes com produto inexistente no estoque do Correios.</p>
+
+          <h5 class="text-white">
+            Nenhum pedido com erro de estoque
+          </h5>
+
+          <p class="text-muted">
+            Não há pedidos pendentes com produto inexistente no estoque do Correios.
+          </p>
         </div>
       <% end %>
     </div>
@@ -294,6 +352,14 @@
       border: 1px solid rgba(220, 53, 69, 0.3);
       color: #dc3545;
     }
+
+    @media (max-width: 767.98px) {
+      .row.mb-4 .d-flex.justify-content-between {
+        align-items: flex-start !important;
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
   </style>
 <% end %>
 
@@ -311,7 +377,10 @@
               url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
             },
             columnDefs: [
-              { className: "text-center", targets: "_all" }
+              {
+                className: 'text-center',
+                targets: '_all'
+              }
             ],
             ...options
           });
@@ -322,7 +391,10 @@
         initializeDataTable('summaryTable', {
           order: [[1, 'desc']],
           columnDefs: [
-            { className: "text-center", targets: "_all" }
+            {
+              className: 'text-center',
+              targets: '_all'
+            }
           ]
         });
       }
@@ -331,14 +403,23 @@
         initializeDataTable('stockErrorsTable', {
           order: [[10, 'desc']],
           columnDefs: [
-            { orderable: false, targets: [0] },
-            { className: "text-center", targets: "_all" }
+            {
+              orderable: false,
+              targets: [0]
+            },
+            {
+              className: 'text-center',
+              targets: '_all'
+            }
           ]
         });
       }
 
-      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-      tooltipTriggerList.map(function (tooltipTriggerEl) {
+      const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[title]')
+      );
+
+      tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
 

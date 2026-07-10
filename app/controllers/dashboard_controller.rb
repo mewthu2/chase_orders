@@ -3,6 +3,8 @@ class DashboardController < ApplicationController
   before_action :admin_only!
   protect_from_forgery except: :modal_test
 
+  require 'csv'
+
   def teste_embalagem; end
 
   def push_tracking
@@ -250,6 +252,19 @@ class DashboardController < ApplicationController
       total_products: @missing_stock_summary.count,
       total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
     }
+
+    respond_to do |format|
+      format.html
+
+      format.csv do
+        send_data(
+          generate_order_correios_stock_errors_csv(@missing_stock_items),
+          filename: "produtos_sem_estoque_correios_#{Time.current.strftime('%Y-%m-%d_%H-%M-%S')}.csv",
+          type: 'text/csv; charset=utf-8',
+          disposition: 'attachment'
+        )
+      end
+    end
   end
 
   def order_correios_tracking
@@ -321,15 +336,91 @@ class DashboardController < ApplicationController
 
   private
 
+  def generate_order_correios_stock_errors_csv(items)
+    csv_data = CSV.generate(
+      col_sep: ';',
+      force_quotes: true,
+      encoding: 'UTF-8'
+    ) do |csv|
+      csv << [
+        'Produto',
+        'Quantidade necessária',
+        'Número do pedido Tiny',
+        'ID do pedido Tiny',
+        'Nota fiscal Tiny',
+        'Pedido ecommerce',
+        'Cliente',
+        'Data do pedido',
+        'Valor',
+        'Attempt',
+        'Status',
+        'Última atualização',
+        'Mensagem'
+      ]
+
+      items.each do |item|
+        csv << [
+          sanitize_csv_value(item[:product_code]),
+          format_csv_number(item[:quantity]),
+          sanitize_csv_value(item[:tiny_order_number]),
+          sanitize_csv_value(item[:tiny_order_id]),
+          sanitize_csv_value(item[:id_nota_fiscal]),
+          sanitize_csv_value(item[:numero_ecommerce]),
+          sanitize_csv_value(item[:customer_name]),
+          format_csv_date(item[:data_pedido]),
+          format_csv_money(item[:valor]),
+          sanitize_csv_value(item[:attempt_id]),
+          sanitize_csv_value(item[:status]),
+          format_csv_datetime(item[:updated_at]),
+          sanitize_csv_value(item[:message])
+        ]
+      end
+    end
+
+    "\uFEFF#{csv_data}"
+  end
+
+  def sanitize_csv_value(value)
+    text = value.to_s
+
+    return text unless text.match?(/\A[=+\-@]/)
+
+    "'#{text}"
+  end
+
+  def format_csv_number(value)
+    return '' if value.blank?
+
+    value.to_s.tr('.', ',')
+  end
+
+  def format_csv_money(value)
+    return '' if value.blank?
+
+    format('%.2f', value.to_f).tr('.', ',')
+  end
+
+  def format_csv_date(value)
+    return '' if value.blank?
+
+    value.respond_to?(:strftime) ? value.strftime('%d/%m/%Y') : value.to_s
+  end
+
+  def format_csv_datetime(value)
+    return '' if value.blank?
+
+    value.respond_to?(:strftime) ? value.strftime('%d/%m/%Y %H:%M') : value.to_s
+  end
+
   def extract_missing_stock_product_codes(message, stock_error_message)
     message.to_s
-          .split(stock_error_message, 2)
-          .last
-          .to_s
-          .split(/[,\s]+/)
-          .map { |code| code.gsub(/[^\w\-.]/, '') }
-          .reject(&:blank?)
-          .uniq
+           .split(stock_error_message, 2)
+           .last
+           .to_s
+           .split(/[,\s]+/)
+           .map { |code| code.gsub(/[^\w\-.]/, '') }
+           .reject(&:blank?)
+           .uniq
   end
 
   def extract_attempt_param(attempt_params, key)
