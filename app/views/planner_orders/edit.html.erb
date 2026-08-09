@@ -1,75 +1,81 @@
 <% content_for :title, "Editar Marcadores - #{@planner_order.reference}" %>
 
-<div class="container-fluid py-4">
-  <div class="row mb-3">
-    <div class="col-12">
-      <%= link_to planner_order_path(@planner_order), class: 'btn btn-outline-light btn-sm' do %>
+<div class="client-form-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-tags me-2"></i>Editar Marcadores do Pedido
+      </h1>
+      <p class="page-subtitle">Pedido: <%= @planner_order.reference %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to planner_order_path(@planner_order), class: "btn-back" do %>
         <i class="fas fa-arrow-left me-1"></i>Voltar
       <% end %>
     </div>
   </div>
 
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <div class="card bg-black border border-warning shadow">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-tags me-2"></i>Editar Marcadores do Pedido
-          </h5>
-          <small class="text-light">Pedido: <%= @planner_order.reference %></small>
-        </div>
-        
-        <div class="card-body">
-          <% if flash[:alert] %>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              <%= flash[:alert] %>
-              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-          <% end %>
+  <% if flash[:alert] %>
+    <div class="flash-msg flash-msg--danger">
+      <i class="fas fa-exclamation-triangle me-2"></i><%= flash[:alert] %>
+    </div>
+  <% end %>
 
-          <%= form_with model: @planner_order, url: planner_order_path(@planner_order), method: :patch, local: true do |form| %>
-            <div class="mb-4">
-              <label class="form-label text-white">
-                <i class="fas fa-tag me-2"></i>Marcadores / Tags
-              </label>
-              <%= form.text_area :tags, 
-                class: 'form-control bg-dark text-white border-secondary',
-                rows: 4,
-                placeholder: 'Ex: pedido 455, urgente, cliente VIP' %>
-              <div class="form-text text-info">
-                <i class="fas fa-info-circle me-1"></i>
-                Adicione marcadores separados por vírgula. Eles aparecerão nas observações da nota fiscal.
-              </div>
-            </div>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h3 class="form-section-title">
+        <i class="fas fa-tag me-2"></i>Marcadores / Tags
+      </h3>
+    </div>
+    <div class="form-section-body">
+      <%= form_with model: @planner_order, url: planner_order_path(@planner_order), method: :patch, local: true do |form| %>
+        <label class="field-label">Marcadores / Tags</label>
+        <%= form.text_area :tags,
+          class: "field-input",
+          rows: 4,
+          placeholder: "Ex: pedido 455, urgente, cliente VIP" %>
+        <p class="page-subtitle mt-2 mb-3">
+          <i class="fas fa-info-circle me-1"></i>
+          Adicione marcadores separados por vírgula. Eles aparecerão nas observações da nota fiscal.
+        </p>
 
-            <div class="d-flex gap-2">
-              <%= form.submit 'Salvar Marcadores', class: 'btn btn-warning flex-fill' %>
-              <%= link_to 'Cancelar', planner_order_path(@planner_order), class: 'btn btn-secondary' %>
-            </div>
-          <% end %>
+        <div class="form-actions">
+          <%= form.submit "Salvar Marcadores", class: "btn-submit" %>
+          <%= link_to "Cancelar", planner_order_path(@planner_order), class: "btn-cancel" %>
         </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ===== EXEMPLOS ===== %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h3 class="form-section-title">
+        <i class="fas fa-lightbulb me-2"></i>Exemplos de Marcadores
+      </h3>
+    </div>
+    <div class="form-section-body">
+      <p class="page-subtitle mb-3">Você pode adicionar marcadores como:</p>
+
+      <div class="info-row">
+        <span class="info-key"><code>pedido 455</code></span>
+        <span class="info-val">Número do pedido específico</span>
       </div>
-
-      <!-- Card de Exemplo -->
-      <div class="card bg-dark border border-info mt-4">
-        <div class="card-header bg-info text-dark">
-          <h6 class="mb-0">
-            <i class="fas fa-lightbulb me-2"></i>Exemplos de Marcadores
-          </h6>
-        </div>
-        <div class="card-body">
-          <p class="text-light mb-2">
-            <small>Você pode adicionar marcadores como:</small>
-          </p>
-          <ul class="text-light mb-0">
-            <li><code class="text-success">pedido 455</code> - Número do pedido específico</li>
-            <li><code class="text-success">urgente</code> - Pedido prioritário</li>
-            <li><code class="text-success">cliente VIP</code> - Cliente especial</li>
-            <li><code class="text-success">entrega expressa</code> - Tipo de entrega</li>
-          </ul>
-        </div>
+      <div class="info-row">
+        <span class="info-key"><code>urgente</code></span>
+        <span class="info-val">Pedido prioritário</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key"><code>cliente VIP</code></span>
+        <span class="info-val">Cliente especial</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key"><code>entrega expressa</code></span>
+        <span class="info-val">Tipo de entrega</span>
       </div>
     </div>
   </div>
+
 </div>

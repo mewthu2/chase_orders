@@ -1,0 +1,155 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/users/index.html.erb, show.html.erb, new.html.erb, edit.html.erb,
+// _form.html.erb, _self_edit_form.erb
+// Restyled to match the "dark GitHub-style" polished system already shared
+// by orders/customers/clients (see admin/_components.scss and
+// admin/pages/_clients.scss). Only page-specific pieces live here.
+
+// ---- Generic list-page container (orders-container/customers-container/
+// clients-container already cover this in admin/_components.scss, out of
+// scope for this file, so it's duplicated here under its own name) ----
+.users-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+}
+.user-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+
+// ---- Pills (index + show): profiles, status, admin/location access ----
+.profile-pill,
+.status-pill,
+.admin-crown-pill,
+.location-chip {
+  display: inline-block;
+  border-radius: $radius-pill;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-pill--1 { background: $accent-yellow; color: $bg-canvas; } // Admin
+.profile-pill--2 { background: $accent-blue; color: #fff; }
+.profile-pill--5 { background: #8957e5; color: #fff; } // purple
+.profile-pill--6 { background: $accent-green; color: #fff; }
+.profile-pill--default,
+.profile-pill--empty { background: $border-muted; color: $text-muted; }
+
+.status-pill--active {
+  background: rgba(63, 185, 80, 0.15);
+  color: $accent-green-light;
+  border: 1px solid $accent-green;
+}
+.status-pill--inactive {
+  background: rgba(248, 81, 73, 0.12);
+  color: $accent-red-light;
+  border: 1px solid $accent-red-light;
+}
+
+.admin-crown-pill { background: $accent-yellow; color: $bg-canvas; }
+
+.location-chip { background: $accent-blue; color: #fff; padding: 0.2rem 0.6rem; font-size: 0.72rem; }
+.location-chip--more { background: $border-muted; color: $text-muted; }
+.location-chip-group { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+
+// action-btn / action-btn--edit / action-btn--danger base + hover colors
+// live in admin/pages/_clients.scss; add the missing "view" hover variant
+// here so users/index can reuse the same .action-btn family.
+.action-btn--view:hover { border-color: $accent-blue-light; color: $accent-blue-light; background: rgba(88, 166, 255, 0.08); }
+
+// ---- Form info hint box (blue variant of .form-error-box, see _clients.scss) ----
+.form-hint-box {
+  background: rgba(31, 111, 235, 0.08);
+  border: 1px solid $accent-blue;
+  color: $text-secondary;
+  border-radius: 10px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.form-hint-box i { color: $accent-blue-light; margin-top: 0.15rem; }
+.form-hint-box strong { color: $text-primary; }
+
+// app/views/users/_form.html.erb
+.profile-checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.profile-checkbox:checked {
+  background-color: #4299e1;
+  border-color: #4299e1;
+}
+
+// ---- Location access grid (Controle de Acesso por Location) ----
+// These classes existed in the markup before the CSS consolidation but had
+// no matching styles anywhere (no <style> block defined them either), so
+// this is a fresh, from-scratch treatment matching the polished look.
+.location-card {
+  background: $bg-canvas;
+  border: 1px solid $border-muted;
+  border-radius: $radius-md;
+  padding: 0.85rem 1rem;
+  height: 100%;
+  transition: border-color 0.2s, background 0.2s;
+}
+.location-card:hover { border-color: $accent-blue-light; }
+.location-card:has(.location-checkbox:checked) {
+  border-color: $accent-blue;
+  background: rgba(31, 111, 235, 0.08);
+}
+
+.location-header { display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; }
+.location-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: $radius-sm;
+  background: $bg-elevated;
+  border: 1px solid $border-muted;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $accent-blue-light;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.location-info { flex: 1; min-width: 0; }
+.location-name { color: $text-primary; font-size: 0.88rem; font-weight: 600; margin: 0 0 0.15rem; }
+.location-key { color: $text-muted; font-size: 0.74rem; }
+.shopify-id { color: $accent-green-light; font-size: 0.74rem; display: block; margin-top: 0.1rem; }
+
+.check-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid $border-muted;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.location-card:has(.location-checkbox:checked) .check-indicator {
+  background: $accent-blue;
+  border-color: $accent-blue;
+  color: #fff;
+}

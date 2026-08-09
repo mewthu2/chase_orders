@@ -1,23 +1,17 @@
 <div class="container-fluid py-4">
   <!-- Header -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap">
-          <div>
-            <h4 class="text-white mb-1">
-              <i class="fas fa-box me-2"></i>Simulador de Embalagem
-            </h4>
-            <small class="text-white-50">
-              <i class="fas fa-info-circle me-1"></i>
-              Calcule quantas caixas P (500) e G (1000) você precisa
-            </small>
-          </div>
-          <button onclick="resetAll()" class="btn btn-outline-danger">
-            <i class="fas fa-redo me-1"></i>Limpar Tudo
-          </button>
-        </div>
-      </div>
+  <div class="page-header mb-4">
+    <div>
+      <h1 class="page-title"><i class="fas fa-box me-2"></i>Simulador de Embalagem</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-info-circle me-1"></i>
+        Calcule quantas caixas P (500) e G (1000) você precisa
+      </p>
+    </div>
+    <div class="header-actions">
+      <button onclick="resetAll()" class="btn btn-outline-danger">
+        <i class="fas fa-redo me-1"></i>Limpar Tudo
+      </button>
     </div>
   </div>
 
@@ -62,168 +56,75 @@
   </div>
 
   <!-- Products List -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-tshirt me-2"></i>Produtos Disponíveis
-          </h5>
-        </div>
-        
-        <div class="card-body bg-black">
-          <!-- Category: Volume 100 -->
-          <div class="category-header">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-tag me-2"></i>Volume 100 - Cabem 5 na P / 10 na G
-            </h6>
-          </div>
-          <div class="row g-2 mb-4" id="products100"></div>
+  <div class="table-card mb-4">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-tshirt me-2"></i>Produtos Disponíveis
+      </h2>
+    </div>
 
-          <!-- Category: Volume 200 (Cabe na P) -->
-          <div class="category-header">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-tag me-2"></i>Volume 200 - Cabem 2 na P / 5 na G
-            </h6>
-          </div>
-          <div class="row g-2 mb-4" id="products200P"></div>
-
-          <!-- Category: Volume 200 (Só G) -->
-          <div class="category-header">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-tag me-2"></i>Volume 200 - Apenas Caixa G (5 unidades)
-            </h6>
-          </div>
-          <div class="row g-2" id="products200G"></div>
-        </div>
+    <div class="card-body bg-black">
+      <!-- Category: Volume 100 -->
+      <div class="category-header">
+        <h6 class="text-white mb-0">
+          <i class="fas fa-tag me-2"></i>Volume 100 - Cabem 5 na P / 10 na G
+        </h6>
       </div>
+      <div class="row g-2 mb-4" id="products100"></div>
+
+      <!-- Category: Volume 200 (Cabe na P) -->
+      <div class="category-header">
+        <h6 class="text-white mb-0">
+          <i class="fas fa-tag me-2"></i>Volume 200 - Cabem 2 na P / 5 na G
+        </h6>
+      </div>
+      <div class="row g-2 mb-4" id="products200P"></div>
+
+      <!-- Category: Volume 200 (Só G) -->
+      <div class="category-header">
+        <h6 class="text-white mb-0">
+          <i class="fas fa-tag me-2"></i>Volume 200 - Apenas Caixa G (5 unidades)
+        </h6>
+      </div>
+      <div class="row g-2" id="products200G"></div>
     </div>
   </div>
 
   <!-- Detailed Results -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-calculator me-2"></i>Detalhamento das Caixas
-          </h5>
-        </div>
-        <div class="card-body bg-black">
-          <div id="boxDetails" class="text-white-50 text-center py-4">
-            <i class="fas fa-box-open fa-3x mb-3"></i>
-            <p>Adicione produtos para ver o detalhamento das caixas</p>
-          </div>
-        </div>
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-calculator me-2"></i>Detalhamento das Caixas
+      </h2>
+    </div>
+    <div class="card-body bg-black">
+      <div id="boxDetails" class="text-white-50 text-center py-4">
+        <i class="fas fa-box-open fa-3x mb-3"></i>
+        <p>Adicione produtos para ver o detalhamento das caixas</p>
       </div>
     </div>
   </div>
 </div>
 
-<style>
-  .bg-black {
-    background-color: #121212 !important;
-  }
-
-  .card {
-    border-radius: 8px;
-  }
-
-  .shadow-lg {
-    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-  }
-
-  .form-control {
-    background-color: #343a40;
-    border-color: #495057;
-    color: #fff;
-    text-align: center;
-    font-weight: 600;
-  }
-
-  .form-control:focus {
-    background-color: #495057;
-    border-color: #6c757d;
-    color: #fff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-  }
-
-  .product-item {
-    transition: all 0.2s ease;
-  }
-
-  .product-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-  }
-
-  .btn-quantity {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    border-radius: 6px;
-  }
-
-  .quantity-input {
-    width: 70px;
-    height: 36px;
-    padding: 0.25rem;
-    border-radius: 6px;
-  }
-
-  .category-header {
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .stat-card {
-    transition: transform 0.2s ease;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-2px);
-  }
-
-  .badge {
-    font-weight: 500;
-    padding: 0.5rem 0.75rem;
-  }
-
-  @media (max-width: 768px) {
-    .quantity-input {
-      width: 60px;
-    }
-    
-    .btn-quantity {
-      width: 32px;
-      height: 32px;
-    }
-  }
-</style>
 
 <script>
   const products = {
     volume100: [
-      'Tailor Tank', 'Tailor Top All Day', 'Regata See', 'Regata Essential', 
-      'Tank Stripe All', 'Tailor Ballet', 'Tailor T', 'Soho T-shirt', 
-      'Low Key Polo', 'T-Shirt Básica', 'Wide Reverse Shirt', 'Polo Court', 
-      'Cropped Essential', 'Baby Look', 'Skirt Court', 'Skirt Pliesse', 
+      'Tailor Tank', 'Tailor Top All Day', 'Regata See', 'Regata Essential',
+      'Tank Stripe All', 'Tailor Ballet', 'Tailor T', 'Soho T-shirt',
+      'Low Key Polo', 'T-Shirt Básica', 'Wide Reverse Shirt', 'Polo Court',
+      'Cropped Essential', 'Baby Look', 'Skirt Court', 'Skirt Pliesse',
       'Low Key Shorts', 'Chaser Shorts'
     ],
     volume200P: [
-      'Camisa New Linho', 'Kimono Light Tricot', 'SweatShirt Boyfriend', 
-      'Kimono Linho', 'Low Key Cardigan', 'Wide Pants', 'Wide Leg Light', 
+      'Camisa New Linho', 'Kimono Light Tricot', 'SweatShirt Boyfriend',
+      'Kimono Linho', 'Low Key Cardigan', 'Wide Pants', 'Wide Leg Light',
       'Wide Leg Linho', 'High Waist'
     ],
     volume200G: [
-      'Calça moletom', 'Blusa Moletom Gentle', 'Calça moletom Straight', 
-      'Calça moletom jogger', 'Wide Leg Boucle', 'Long Sleeve Cropped Boucle', 
-      'Pullover Mock Neck', 'Blusa moletom the hood', 'Cropped Over Moletom', 
+      'Calça moletom', 'Blusa Moletom Gentle', 'Calça moletom Straight',
+      'Calça moletom jogger', 'Wide Leg Boucle', 'Long Sleeve Cropped Boucle',
+      'Pullover Mock Neck', 'Blusa moletom the hood', 'Cropped Over Moletom',
       'Calça Moletom Straight Flare'
     ]
   };
@@ -241,7 +142,7 @@
     container.innerHTML = productList.map(product => {
       const id = product.replace(/\s+/g, '_');
       quantities[id] = { name: product, volume, quantity: 0, onlyG: containerId === 'products200G' };
-      
+
       return `
         <div class="col-md-6 col-lg-4">
           <div class="card bg-dark border-secondary product-item">
@@ -258,10 +159,10 @@
                   <button class="btn btn-outline-danger btn-quantity" onclick="changeQuantity('${id}', -1)">
                     <i class="fas fa-minus"></i>
                   </button>
-                  <input type="number" 
-                          class="form-control quantity-input" 
-                          id="qty_${id}" 
-                          value="0" 
+                  <input type="number"
+                          class="form-control quantity-input"
+                          id="qty_${id}"
+                          value="0"
                           min="0"
                           onchange="setQuantity('${id}', this.value)">
                   <button class="btn btn-outline-success btn-quantity" onclick="changeQuantity('${id}', 1)">
@@ -296,18 +197,18 @@
     let boxesG = 0;
     let totalItems = 0;
     let totalVolume = 0;
-    
+
     const boxDetails = [];
-    
+
     // Separate products by type
     const productsP = [];
     const productsG = [];
-    
+
     Object.values(quantities).forEach(item => {
       if (item.quantity > 0) {
         totalItems += item.quantity;
         totalVolume += item.quantity * item.volume;
-        
+
         if (item.onlyG) {
           productsG.push(item);
         } else {
@@ -315,12 +216,12 @@
         }
       }
     });
-    
+
     productsP.forEach(item => {
       const itemsPerBoxP = Math.floor(500 / item.volume); // 5 para vol 100, 2 para vol 200
       const itemsPerBoxG = Math.floor(1000 / item.volume); // 10 para vol 100, 5 para vol 200
       let remainingQty = item.quantity;
-      
+
       // Se quantidade <= 5, usa caixas P normalmente
       if (remainingQty <= itemsPerBoxP) {
         boxesP += 1;
@@ -339,7 +240,7 @@
           });
           remainingQty -= itemsPerBoxG;
         }
-        
+
         // Para o resto: se <= 5, usa P; se > 5, usa G
         if (remainingQty <= itemsPerBoxP) {
           boxesP += 1;
@@ -356,13 +257,13 @@
         }
       }
     });
-    
+
     // Process products that only fit in G boxes
     productsG.forEach(item => {
       const itemsPerBoxG = Math.floor(1000 / item.volume);
       const fullBoxes = Math.floor(item.quantity / itemsPerBoxG);
       const remaining = item.quantity % itemsPerBoxG;
-      
+
       for (let i = 0; i < fullBoxes; i++) {
         boxesG += 1;
         boxDetails.push({
@@ -370,7 +271,7 @@
           content: `${itemsPerBoxG} ${item.name}`
         });
       }
-      
+
       if (remaining > 0) {
         boxesG += 1;
         boxDetails.push({
@@ -379,13 +280,13 @@
         });
       }
     });
-    
+
     // Update stats
     document.getElementById('totalBoxesP').textContent = boxesP;
     document.getElementById('totalBoxesG').textContent = boxesG;
     document.getElementById('totalItems').textContent = totalItems;
     document.getElementById('totalVolume').textContent = totalVolume;
-    
+
     // Update box details
     const detailsContainer = document.getElementById('boxDetails');
     if (boxDetails.length > 0) {

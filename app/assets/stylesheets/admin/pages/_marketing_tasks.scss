@@ -1,0 +1,22 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/marketing_tasks/{index,show,my_tasks,dashboard}.html.erb
+// page-header / filters-panel / table-card / orders-table / info-section /
+// info-row / summary-grid / order-block / empty-state are already covered
+// by admin/_components.scss and admin/pages/_orders.scss (summary-*).
+//
+// The only things genuinely unique to these views are a generic padded
+// content area for table-card / order-block sections that hold something
+// other than a <table> (action buttons, notes, mobile task cards), and the
+// whitespace handling for freeform note text.
+
+.panel-body-pad {
+  padding: $panel-padding;
+}
+
+.task-notes-content {
+  white-space: pre-wrap;
+}

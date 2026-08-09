@@ -1,0 +1,25 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/products/_form.html.erb
+
+body.products {
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.product-image-container {
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #495057;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+.product-image { max-height: 100%; max-width: 100%; object-fit: contain; }
+.placeholder-image { height: 100%; width: 100%; padding: 20px; }

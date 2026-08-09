@@ -1,0 +1,19 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/attempts/{index,verify_attempts}.html.erb
+// Scoped under body.attempts.* since these tweak generic Bootstrap
+// classes (.card, .badge) and shouldn't spread to every other page.
+
+body.attempts.verify_attempts {
+  .card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+  }
+  .badge { font-size: 0.75rem; }
+}

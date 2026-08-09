@@ -1,0 +1,535 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// Global dark-theme reskin for the plain-Bootstrap admin views.
+// Consolidated from the near-identical <style> blocks that used to be
+// copy-pasted into discounts/index, users/index, stock_syncs/index,
+// stock_corrections/index and others.
+
+body {
+  background-color: $bg-canvas;
+  color: $text-primary;
+}
+
+.bg-black {
+  background-color: $bg-canvas !important;
+}
+
+.bg-purple {
+  background-color: #9333ea !important;
+}
+
+.text-white {
+  color: $text-primary !important;
+}
+
+.text-white-50 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.text-muted {
+  color: $text-muted !important;
+}
+
+.card {
+  border-radius: $radius-md;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.card-header h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.border-5 { border-width: 5px !important; }
+.border-secondary { border-color: #495057 !important; }
+
+.form-text { font-size: 0.75rem; opacity: 0.7; }
+
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: #343a40;
+  opacity: 0.8;
+}
+
+.modal-backdrop { z-index: 1055; }
+
+.table-dark th { font-weight: 600; color: #e9ecef; }
+.table-dark td { color: #ced4da; }
+
+.badge.bg-success { background-color: #198754 !important; color: #fff !important; font-weight: 500; letter-spacing: 0.5px; }
+.badge.bg-danger { background-color: #dc3545 !important; color: #fff !important; font-weight: 500; letter-spacing: 0.5px; }
+
+.btn-outline-success { color: #198754; border-color: #198754; background-color: transparent; }
+.btn-outline-success:hover { color: #fff; background-color: #198754; }
+
+// Printing a dark-themed admin page onto paper is unreadable — force a
+// plain light layout for anything the user actually prints.
+@media print {
+  .btn, .no-print { display: none !important; }
+  body { background-color: #fff !important; color: #212529 !important; }
+  .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+  .card-header, .card-body, .table { background-color: #fff !important; color: #212529 !important; }
+  .table td, .table th { border-color: #ddd !important; }
+  .badge { background-color: #f8f9fa !important; color: #212529 !important; border: 1px solid #ddd !important; }
+  .border-secondary { border-color: #ddd !important; }
+  .text-white { color: #212529 !important; }
+}
+
+.btn {
+  border-radius: $radius-sm;
+  font-weight: 500;
+}
+
+.shadow-lg {
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
+}
+
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: #fff !important;
+}
+
+.alert {
+  border-radius: $radius-sm;
+}
+
+.alert .text-white {
+  color: #fff !important;
+}
+
+.table-dark {
+  --bs-table-bg: transparent;
+}
+
+.table-dark td {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.form-check-input {
+  background-color: $bg-canvas;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.form-check-input:checked {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.progress {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: $radius-sm;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-info:hover,
+.btn-outline-success:hover {
+  color: #fff !important;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+.table-responsive {
+  border-radius: $radius-sm;
+  overflow: hidden;
+}
+
+.table th {
+  background-color: $bg-elevated;
+  border-color: $border-muted;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.table td {
+  border-color: $border-muted;
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-group .btn {
+  margin-right: 2px;
+  margin-bottom: 5px;
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.modal-content {
+  border: 1px solid $border-muted;
+}
+
+// Bootstrap pagination, restyled to match the dark theme. Both the plain
+// `.pagination` and the `.pagination-dark` variant some views opted into
+// resolve to the same look now.
+.pagination .page-link,
+.pagination-dark .page-link {
+  background-color: $bg-elevated;
+  border-color: $border-muted;
+  color: $text-primary;
+}
+.pagination .page-link:hover,
+.pagination-dark .page-link:hover {
+  background-color: $border-muted;
+  border-color: $text-muted;
+  color: #fff;
+}
+.pagination .page-item.active .page-link,
+.pagination-dark .page-item.active .page-link {
+  background-color: $accent-blue;
+  border-color: $accent-blue;
+  color: #fff;
+}
+.pagination .page-item.disabled .page-link,
+.pagination-dark .page-item.disabled .page-link {
+  background-color: $bg-canvas;
+  border-color: $border-muted;
+  color: $text-faint;
+}
+
+.form-select,
+.form-control {
+  color-scheme: dark;
+}
+
+.form-control,
+.form-select {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #495057;
+  border-color: #6c757d;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.form-select option {
+  background-color: $bg-elevated;
+  color: $text-primary;
+}
+
+.alert-info {
+  background-color: rgba(13, 202, 240, 0.1);
+  border: 1px solid rgba(13, 202, 240, 0.3);
+  color: #0dcaf0;
+}
+.alert-success {
+  background-color: rgba(25, 135, 84, 0.1);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  color: #198754;
+}
+.alert-warning {
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+}
+.alert-danger {
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+}
+.alert-primary {
+  background-color: rgba(13, 110, 253, 0.1);
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  color: #0d6efd;
+}
+
+.fs-6 { font-size: 0.875rem !important; }
+
+.input-group .btn { border-left: none; }
+
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.border-info { border-color: #0dcaf0 !important; }
+.bg-info { background-color: #0dcaf0 !important; }
+.text-warning { color: #ffc107 !important; }
+
+.fa-spin {
+  animation: adminSpin 1.5s linear infinite;
+}
+
+.font-monospace {
+  font-family: 'Courier New', monospace;
+}
+
+pre {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+}
+
+.btn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+// Segmented button group (replaces the two slightly-different treatments
+// that used to live in attempts/index vs stock_corrections/index).
+.btn-group .btn {
+  border-radius: 0;
+}
+.btn-group .btn:first-child {
+  border-top-left-radius: $radius-sm;
+  border-bottom-left-radius: $radius-sm;
+}
+.btn-group .btn:last-child {
+  border-top-right-radius: $radius-sm;
+  border-bottom-right-radius: $radius-sm;
+}
+@media (max-width: 768px) {
+  .btn-group { flex-direction: column; }
+  .btn-group .btn { border-radius: $radius-sm !important; margin-bottom: 2px; }
+}
+
+.invalid-feedback {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  color: #dc3545;
+}
+.was-validated .form-control:invalid,
+.was-validated .form-select:invalid {
+  border-color: #dc3545;
+}
+.was-validated .form-control:valid,
+.was-validated .form-select:valid {
+  border-color: #198754;
+}
+
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+}
+
+// jquery.dataTables.css (loaded via the sprockets `require` at the top of
+// admin.scss) ships a light theme by default — white row backgrounds, gray
+// hover, white pagination buttons — regardless of any classes on the
+// <table> itself. Tables initialized via $(...).DataTable() (attempts,
+// most of the dashboard tools) need it overridden explicitly.
+table.dataTable {
+  background-color: transparent !important;
+  color: $text-primary;
+  border-collapse: collapse !important;
+}
+table.dataTable thead th,
+table.dataTable thead td {
+  color: $text-muted;
+  background-color: $bg-elevated;
+  border-bottom: 1px solid $border-default !important;
+}
+table.dataTable tbody tr,
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.display tbody tr.odd,
+table.dataTable.stripe tbody tr.even,
+table.dataTable.display tbody tr.even {
+  background-color: transparent !important;
+  color: $text-primary;
+}
+table.dataTable tbody th,
+table.dataTable tbody td {
+  color: $text-primary;
+}
+table.dataTable.row-border tbody th,
+table.dataTable.row-border tbody td,
+table.dataTable.cell-border tbody th,
+table.dataTable.cell-border tbody td,
+table.dataTable.display tbody th,
+table.dataTable.display tbody td {
+  border-top: 1px solid $border-default !important;
+}
+table.dataTable.hover tbody tr:hover,
+table.dataTable.display tbody tr:hover,
+table.dataTable.hover tbody tr:hover > *,
+table.dataTable.display tbody tr:hover > * {
+  background-color: $bg-elevated !important;
+  box-shadow: none !important;
+}
+
+.dataTables_wrapper {
+  color: $text-primary;
+}
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_processing {
+  color: $text-muted !important;
+}
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  background-color: $bg-canvas;
+  border: 1px solid $border-muted;
+  color: $text-primary;
+  border-radius: $radius-sm;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: $text-secondary !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  color: #fff !important;
+  background: $accent-blue !important;
+  border-color: $accent-blue !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  color: #fff !important;
+  background: $border-muted !important;
+  border-color: $border-muted !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+  color: $text-faint !important;
+  background: transparent !important;
+}
+
+.table-fixed {
+  table-layout: fixed;
+  width: 100%;
+}
+.table-fixed th,
+.table-fixed td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+@media (max-width: 768px) {
+  .table-responsive { font-size: 0.875rem; }
+}
+
+.form-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.form-control {
+  border-left: none;
+}
+
+.form-control::placeholder {
+  color: #adb5bd;
+  opacity: 1;
+}
+
+.form-control:focus {
+  background-color: #343a40;
+  border-color: #495057;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control:focus + .input-group-text {
+  border-color: #495057;
+}
+
+.input-group-text {
+  border-right: none;
+}
+
+// Shared "please wait" overlay used by several admin forms
+// (previously duplicated verbatim in discounts/index, discounts/logs, etc.)
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: adminFadeIn 0.3s ease-in-out;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.loading-content {
+  text-align: center;
+  background: rgba(33, 37, 41, 0.95);
+  padding: 3rem 2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: adminSlideUp 0.4s ease-out;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2rem;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: adminSpin 1.2s linear infinite;
+}
+
+.spinner-ring:nth-child(1) { animation-delay: 0s; border-top-color: #007bff; }
+.spinner-ring:nth-child(2) { animation-delay: -0.3s; border-top-color: #28a745; width: 90%; height: 90%; top: 5%; left: 5%; }
+.spinner-ring:nth-child(3) { animation-delay: -0.6s; border-top-color: #ffc107; width: 80%; height: 80%; top: 10%; left: 10%; }
+.spinner-ring:nth-child(4) { animation-delay: -0.9s; border-top-color: #dc3545; width: 70%; height: 70%; top: 15%; left: 15%; }
+
+.loading-text h4 { font-weight: 600; margin-bottom: 0.5rem; }
+.loading-text p { font-size: 0.9rem; opacity: 0.8; }
+
+@keyframes adminSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes adminFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes adminSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}

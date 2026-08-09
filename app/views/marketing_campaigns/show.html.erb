@@ -1,88 +1,89 @@
-<div class="container-fluid py-4">
-  <% title @campaign.name %>
-  <%= render 'layouts/partials/messages' %>
+<% title @campaign.name %>
+<%= render 'layouts/partials/messages' %>
 
-  <!-- Header da Campanha -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="text-white mb-1">
-              <i class="fas fa-bullhorn me-2"></i><%= @campaign.name %>
-            </h5>
-            <small class="text-white-50"><%= @campaign.objective %></small>
-          </div>
-          <div class="d-flex gap-2">
-            <%# Removed admin namespace from paths %>
-            <%= link_to edit_marketing_campaign_path(@campaign), class: "btn btn-warning" do %>
-              <i class="fas fa-edit me-1"></i>Editar
-            <% end %>
-            <%= link_to marketing_campaigns_path, class: "btn btn-secondary" do %>
-              <i class="fas fa-arrow-left me-1"></i>Voltar
-            <% end %>
-          </div>
-        </div>
-      </div>
+<div class="orders-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-bullhorn me-2"></i><%= @campaign.name %>
+      </h1>
+      <small class="page-subtitle"><%= @campaign.objective %></small>
+    </div>
+    <div class="header-actions">
+      <%# Removed admin namespace from paths %>
+      <%= link_to edit_marketing_campaign_path(@campaign), class: "btn-primary-sm" do %>
+        <i class="fas fa-edit me-1"></i>Editar
+      <% end %>
+      <%= link_to marketing_campaigns_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
     </div>
   </div>
 
-
-  <div class="row">
-    <!-- Agentes da Campanha -->
-    <div class="col-md-6 mb-4">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-users me-2"></i>Agentes de Marketing
-          </h6>
-          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAgentModal">
-            <i class="fas fa-plus me-1"></i>Adicionar
-          </button>
-        </div>
-        <div class="card-body bg-black p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0">
-              <thead class="bg-dark">
-                <tr>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Nome</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Tasks</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Conversões</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @campaign.campaign_users.includes(:user).each do |campaign_user| %>
-                  <tr class="border-secondary">
-                    <td class="px-4 py-3 text-white">
-                      <i class="fas fa-user-circle me-2"></i><%= campaign_user.user.name %>
-                    </td>
-                    <td class="px-4 py-3 text-white">
-                      <%= campaign_user.user.marketing_tasks.where(campaign: @campaign).count %>
-                    </td>
-                    <td class="px-4 py-3 text-white">
-                      <%= campaign_user.user.marketing_tasks.where(campaign: @campaign).converted.count %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%# Removed admin namespace from path %>
-                      <%= button_to campaign_user_path(@campaign, campaign_user),
-                          method: :delete,
-                          class: "btn btn-sm btn-outline-danger",
-                          form_class: "d-inline-block",
-                          data: { "turbo-confirm": "Remover este agente da campanha?" } do %>
-                        <i class="fas fa-trash"></i>
-                      <% end %>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+  <%# ===== AGENTES DA CAMPANHA ===== %>
+  <% campaign_users = @campaign.campaign_users.includes(:user) %>
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-users me-2"></i>Agentes de Marketing
+      </h2>
+      <button type="button" class="btn-primary-sm" data-bs-toggle="modal" data-bs-target="#addAgentModal">
+        <i class="fas fa-plus me-1"></i>Adicionar
+      </button>
     </div>
 
+    <% if campaign_users.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Tasks</th>
+              <th>Conversões</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% campaign_users.each do |campaign_user| %>
+              <tr>
+                <td class="text-main">
+                  <i class="fas fa-user-circle me-2"></i><%= campaign_user.user.name %>
+                </td>
+                <td class="text-main">
+                  <%= campaign_user.user.marketing_tasks.where(campaign: @campaign).count %>
+                </td>
+                <td class="text-main">
+                  <%= campaign_user.user.marketing_tasks.where(campaign: @campaign).converted.count %>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%# Removed admin namespace from path %>
+                    <%= button_to campaign_user_path(@campaign, campaign_user),
+                        method: :delete,
+                        class: "action-btn action-btn--danger",
+                        form_class: "d-inline-block",
+                        title: "Remover",
+                        data: { "turbo-confirm": "Remover este agente da campanha?" } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-users fa-3x mb-3 d-block"></i>
+        <h5>Nenhum agente atribuído</h5>
+        <p>Adicione agentes de marketing para começar a distribuir tarefas</p>
+      </div>
+    <% end %>
   </div>
+
 </div>
 
 <!-- Modal Adicionar Agente -->
@@ -97,16 +98,16 @@
       <%= form_with url: campaign_users_path(@campaign), method: :post, local: true do |f| %>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label text-white">Selecione o Agente</label>
-            <%= f.select :user_id, 
+            <label class="field-label">Selecione o Agente</label>
+            <%= f.select :user_id,
                 User.marketing_agents.map { |u| [u.name, u.id] },
                 { prompt: 'Selecione...' },
-                class: "form-select bg-black text-white border-secondary" %>
+                class: "field-input field-select" %>
           </div>
         </div>
         <div class="modal-footer border-secondary">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <%= f.submit "Adicionar", class: "btn btn-primary" %>
+          <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancelar</button>
+          <%= f.submit "Adicionar", class: "btn-submit" %>
         </div>
       <% end %>
     </div>
@@ -114,51 +115,4 @@
 </div>
 
 <% content_for :styles do %>
-<style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
-
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.card {
-  border-radius: 8px;
-}
-
-.btn {
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.shadow-lg {
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-}
-
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-dark td {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.badge {
-  font-weight: 500;
-}
-
-.form-select:focus,
-.form-control:focus {
-  background-color: #343a40;
-  border-color: #495057;
-  color: #fff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-</style>
 <% end %>

@@ -30,7 +30,7 @@
     <%= yield :styles %>
   </head>
 
-  <body style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>); background-repeat: repeat;">
+  <body class="<%= "#{controller_name} #{action_name}" %>" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>); background-repeat: repeat;">
     <div style="min-height: 200vh;" class="d-flex flex-column">
       <% if current_user.present? %>
         <%= render 'layouts/partials/sidebar' %>

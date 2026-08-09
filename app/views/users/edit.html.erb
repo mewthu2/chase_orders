@@ -1,5 +1,27 @@
-<% if current_user.admin? %>
-  <%= render 'form' %>
-<% else %>
-  <%= render 'self_edit_form' %>
-<% end %>
+<% content_for :title, current_user.admin? ? "Editar Usuário" : "Editar Meu Perfil" %>
+
+<div class="users-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-user-edit me-2"></i>
+        <%= current_user.admin? ? "Editar Usuário" : "Editar Meu Perfil" %>
+      </h1>
+      <p class="page-subtitle"><%= @user.name %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to (current_user.admin? ? users_path : root_path), class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
+    </div>
+  </div>
+
+  <% if current_user.admin? %>
+    <%= render 'form' %>
+  <% else %>
+    <%= render 'self_edit_form' %>
+  <% end %>
+
+</div>

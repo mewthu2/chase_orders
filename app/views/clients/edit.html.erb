@@ -1,11 +1,22 @@
-<%# app/views/clients/edit.html.erb %>
-<div class="container py-4" style="max-width: 900px;">
-  <div class="mb-4">
-    <%= link_to clients_path, class: "text-decoration-none text-muted small" do %>
-      <i class="bi bi-arrow-left me-1"></i> Voltar para clientes
-    <% end %>
-    <h1 class="h3 fw-bold mt-1 mb-0">Editar Cliente</h1>
-    <small class="text-muted"><%= @client.display_name %></small>
+<% content_for :title, "Editar Cliente" %>
+
+<div class="client-form-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-user-edit me-2"></i>Editar Cliente
+      </h1>
+      <p class="page-subtitle"><%= @client.display_name %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to clients_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
+    </div>
   </div>
+
   <%= render 'form', client: @client %>
+
 </div>

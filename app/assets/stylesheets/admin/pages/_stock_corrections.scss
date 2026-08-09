@@ -1,0 +1,139 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/stock_corrections/{index,edit,show,new}.html.erb
+
+.stock-corrections-container { padding: 1.5rem; min-height: 100vh; }
+
+.panel-body { padding: 1.25rem 1.5rem; }
+
+// ---- KPI grid (index — accuracy by location) ----
+.kpi-grid { display: flex; flex-wrap: wrap; gap: 1rem; }
+.kpi-tile {
+  flex: 1 1 130px;
+  background: $bg-elevated;
+  border: 1px solid $border-default;
+  border-radius: $radius-md;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+.kpi-tile-icon { color: $accent-blue-light; font-size: 1.1rem; margin-bottom: 0.4rem; display: block; }
+.kpi-tile-name { color: $text-primary; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.4rem; }
+.kpi-tile-value { font-size: 1.15rem; font-weight: 700; }
+.kpi-tile-value--good { color: $accent-green-light; }
+.kpi-tile-value--warn { color: $accent-yellow; }
+.kpi-tile-value--bad { color: $accent-red-light; }
+.kpi-tile-meta { color: $text-muted; font-size: 0.74rem; margin-top: 0.2rem; }
+
+// ---- filter form (index) ----
+.filter-fields-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+.filter-field-group { display: flex; flex-direction: column; gap: 0.4rem; min-width: 180px; }
+
+// ---- read-only detail header (edit/show top info card) ----
+.detail-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.detail-item { min-width: 140px; }
+.detail-item--grow { flex: 1; min-width: 220px; }
+.detail-label { display: block; color: $text-muted; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+.detail-value { color: $text-secondary; font-size: 0.88rem; margin: 0; }
+
+// ---- stat tiles (edit/show totals) ----
+.stats-grid { display: flex; flex-wrap: wrap; gap: 1rem; }
+.stat-tile {
+  flex: 1 1 160px;
+  background: $bg-elevated;
+  border: 1px solid $border-default;
+  border-radius: $radius-md;
+  padding: 1rem;
+  text-align: center;
+}
+.stat-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
+.stat-value--info { color: $accent-blue-light; }
+.stat-value--warn { color: $accent-yellow; }
+.stat-value--primary { color: $accent-blue-light; }
+.stat-label { color: $text-muted; font-size: 0.78rem; }
+
+// ---- table-card danger variant (Shopify sync errors panel) ----
+.table-card--danger { border-color: rgba(248, 81, 73, 0.4); }
+.table-card--danger .table-card-header { border-bottom-color: rgba(248, 81, 73, 0.4); cursor: pointer; }
+.table-card-title--danger { color: $accent-red-light; }
+.table-card-footer {
+  background: $bg-elevated;
+  border-top: 1px solid $border-default;
+  padding: 0.6rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+// ---- search/found product panel (edit — "Produto Encontrado") ----
+.table-card--info { border-color: rgba(88, 166, 255, 0.4); }
+.table-card--info .table-card-header { background: $accent-blue; border-bottom-color: $accent-blue; }
+.table-card--info .table-card-title { color: #fff; }
+
+// ---- inline warning/info banners (search errors, help tips) ----
+.inline-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: $radius-lg;
+  padding: 0.9rem 1.25rem;
+  font-size: 0.88rem;
+}
+.inline-alert--warning { background: rgba(227, 179, 65, 0.12); border: 1px solid $accent-yellow; color: $text-secondary; }
+.inline-alert--warning i { color: $accent-yellow; flex-shrink: 0; }
+
+// "new" — help card explaining the correction reasons
+.help-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: $radius-md;
+  background: rgba(45, 55, 72, 0.3);
+  border: 1px solid #2d3748;
+  transition: all 0.3s ease;
+}
+.help-item:hover {
+  background: rgba(66, 153, 225, 0.1);
+  border-color: #4299e1;
+}
+.help-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.help-content h6 { margin: 0; font-weight: 600; }
+
+body.stock_corrections.new {
+  @media (max-width: 768px) {
+    .help-item { flex-direction: column; text-align: center; gap: 0.5rem; }
+    .d-flex.justify-content-end { flex-direction: column; gap: 0.5rem; }
+    .btn { width: 100%; }
+  }
+}
+
+// "edit"/"show" — fixed-width item table, column widths differ per view
+body.stock_corrections.edit .table-fixed {
+  @media (max-width: 1200px) {
+    th:nth-child(1), td:nth-child(1) { width: 200px !important; }
+    th:nth-child(4), td:nth-child(4) { width: 150px !important; }
+  }
+  td:nth-child(1), td:nth-child(4) { white-space: normal; word-wrap: break-word; }
+}
+body.stock_corrections.show .table-fixed {
+  @media (max-width: 1200px) {
+    th:nth-child(1), td:nth-child(1) { width: 250px !important; }
+    th:nth-child(4), td:nth-child(4) { width: 180px !important; }
+  }
+  td:nth-child(1), td:nth-child(4) { white-space: normal; word-wrap: break-word; }
+}

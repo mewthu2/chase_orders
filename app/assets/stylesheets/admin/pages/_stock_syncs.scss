@@ -1,0 +1,165 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/stock_syncs/index.html.erb — day/hour picker widgets.
+
+.stock-syncs-container { padding: 1.5rem; min-height: 100vh; }
+
+// ---- "in progress" banner ----
+.sync-running-banner {
+  background: $bg-surface;
+  border: 1px solid $accent-yellow;
+  border-radius: $radius-lg;
+  padding: $panel-padding;
+  margin-bottom: 1rem;
+}
+.sync-running-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sync-running-title { color: $text-primary; font-size: 0.95rem; font-weight: 700; }
+.sync-running-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.sync-timer-badge {
+  background: $bg-elevated;
+  color: $accent-yellow;
+  border: 1px solid $border-muted;
+  border-radius: $radius-pill;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.sync-running-body { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem; }
+.sync-running-info { display: flex; align-items: center; gap: 1rem; }
+.sync-running-type { color: $text-primary; font-size: 0.9rem; font-weight: 600; margin: 0 0 0.3rem; }
+.sync-running-meta { color: $text-muted; font-size: 0.82rem; margin: 0; }
+.sync-running-progress { min-width: 220px; }
+.sync-progress-track { background: $bg-canvas; border: 1px solid $border-muted; border-radius: $radius-pill; height: 8px; overflow: hidden; margin-bottom: 0.4rem; }
+.sync-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(45deg, $accent-yellow, $accent-yellow 10px, $accent-yellow-alt 10px, $accent-yellow-alt 20px);
+  background-size: 28px 28px;
+  animation: syncProgressStripes 1s linear infinite;
+}
+@keyframes syncProgressStripes { from { background-position: 0 0; } to { background-position: 28px 0; } }
+.sync-running-caption { color: $text-muted; font-size: 0.78rem; }
+
+// ---- generic alert boxes (status card) ----
+.sync-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  border-radius: $radius-lg;
+  padding: 1rem 1.25rem;
+}
+.sync-alert-icon { font-size: 1.3rem; flex-shrink: 0; }
+.sync-alert-title { color: $text-primary; font-weight: 700; display: block; margin-bottom: 0.25rem; }
+.sync-alert-text { color: $text-muted; font-size: 0.85rem; margin: 0; }
+.sync-alert-text strong { color: $text-primary; }
+.sync-alert--success { background: rgba(35, 134, 54, 0.12); border: 1px solid $accent-green; }
+.sync-alert--success .sync-alert-icon { color: $accent-green-light; }
+.sync-alert--warning { background: rgba(227, 179, 65, 0.12); border: 1px solid $accent-yellow; }
+.sync-alert--warning .sync-alert-icon { color: $accent-yellow; }
+
+// ---- generic panel body / nested sub-panel (config card) ----
+.panel-body { padding: 1.25rem 1.5rem; }
+
+.sync-subpanel {
+  background: $bg-canvas;
+  border: 1px solid $border-muted;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+.sync-subpanel-header { background: $bg-elevated; border-bottom: 1px solid $border-default; padding: 0.7rem 1.1rem; }
+.sync-subpanel-title { color: $text-primary; font-size: 0.85rem; font-weight: 600; margin: 0; }
+.sync-subpanel-body { padding: 1rem 1.1rem; }
+
+// ---- stats grid (success/failed/processing/rate) ----
+.stats-grid { display: flex; flex-wrap: wrap; gap: 1rem; }
+.stat-tile {
+  flex: 1 1 160px;
+  background: $bg-elevated;
+  border: 1px solid $border-default;
+  border-radius: $radius-md;
+  padding: 1rem;
+  text-align: center;
+}
+.stat-value { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.3rem; }
+.stat-value--green { color: $accent-green-light; }
+.stat-value--red { color: $accent-red-light; }
+.stat-value--yellow { color: $accent-yellow; }
+.stat-value--blue { color: $accent-blue-light; }
+.stat-label { color: $text-muted; font-size: 0.78rem; }
+
+.sync-message-cell { max-width: 300px; }
+
+// disabled state for the "Executar Agora" button while a sync is running
+.btn-primary-sm:disabled,
+.btn-primary-sm.disabled { opacity: 0.5; cursor: not-allowed; }
+
+.day-checkbox-label,
+.hour-checkbox-label {
+  display: block;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: $radius-sm;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.day-checkbox-label { padding: 0.75rem; }
+.hour-checkbox-label { padding: 0.5rem; text-align: center; }
+
+.day-checkbox-label:hover,
+.hour-checkbox-label:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.day-checkbox-label.active,
+.hour-checkbox-label.active {
+  background: rgba(0, 123, 255, 0.2);
+  border-color: #007bff;
+}
+
+.day-checkbox,
+.hour-checkbox {
+  display: none;
+}
+
+.day-checkbox-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+}
+
+.hour-checkbox-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.85rem;
+}
+.hour-checkbox-label.active .hour-checkbox-content {
+  font-weight: 600;
+}
+
+.check-icon {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.day-checkbox-label.active .check-icon {
+  opacity: 1;
+  color: #28a745;
+}
+
+body.stock_syncs.index .table-dark td {
+  border-color: rgba(255, 255, 255, 0.1);
+}

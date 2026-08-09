@@ -1,0 +1,36 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/logs/index.html.erb
+
+.logs-table {
+  --bs-table-bg: #121212;
+  --bs-table-striped-bg: #1a1a1a;
+  --bs-table-hover-bg: #242424;
+  border-color: $border-muted;
+}
+.logs-table th { font-weight: 600; padding: 12px; vertical-align: middle; }
+.logs-table td { padding: 12px; vertical-align: middle; }
+.log-row { transition: background-color 0.2s ease; }
+
+.transition-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.transition-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important; }
+
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { background-color: #2c3034; }
+.sortable.asc .fa-sort:before { content: "\f0de"; }
+.sortable.desc .fa-sort:before { content: "\f0dd"; }
+
+body.logs.index {
+  pre {
+    font-size: 0.85rem;
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #000 !important;
+    border: 1px solid $border-muted;
+  }
+}
+
+#logDetailsModal { z-index: 1060; }

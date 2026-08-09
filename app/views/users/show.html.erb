@@ -1,112 +1,87 @@
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-user me-2"></i>Detalhes do Usuário
-          </h5>
-        </div>
-        <div class="card-body bg-black">
-          <div class="row g-4">
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Nome</label>
-              <p class="text-white"><%= @user.name %></p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Email</label>
-              <p class="text-white"><%= @user.email %></p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Telefone</label>
-              <p class="text-white"><%= @user.phone.present? ? @user.phone : '-' %></p>
-            </div>
-            <!-- Updated to show multiple profiles -->
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Perfis</label>
-              <p class="text-white">
-                <% if @user.profiles.any? %>
-                  <% @user.profiles.each do |profile| %>
-                    <span class="badge bg-primary text-white px-3 py-2 me-2">
-                      <%= profile.name %>
-                    </span>
-                  <% end %>
-                <% else %>
-                  <span class="text-muted">Sem perfil atribuído</span>
-                <% end %>
-              </p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Status</label>
-              <p class="text-white">
-                <span class="badge <%= @user.active? ? 'bg-success' : 'bg-danger' %> text-white px-3 py-2">
-                  <%= @user.active? ? 'Ativo' : 'Inativo' %>
-                </span>
-              </p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label text-white fw-bold">Locations Permitidas</label>
-              <div class="d-flex flex-wrap gap-2">
-                <% if @user.admin? %>
-                  <span class="badge bg-warning text-dark px-2 py-1">
-                    <i class="fas fa-crown me-1"></i>Todas (Admin)
-                  </span>
-                <% elsif @user.allowed_location_keys.any? %>
-                  <% @user.allowed_location_keys.each do |key| %>
-                    <span class="badge bg-primary text-white px-2 py-1">
-                      <%= User.location_name(key) %>
-                    </span>
-                  <% end %>
-                <% else %>
-                  <span class="text-muted">Nenhuma</span>
-                <% end %>
-              </div>
-            </div>
-          </div>
+<% content_for :title, "Detalhes do Usuário" %>
 
-          <div class="row mt-5">
-            <div class="col-12 d-flex justify-content-between">
-              <%= link_to users_path, class: 'btn btn-secondary btn-lg' do %>
-                <i class="fas fa-arrow-left me-2"></i> Voltar para Lista
-              <% end %>
-              
-              <!-- Updated to use admin? method -->
-              <% if current_user.admin? || @user == current_user %>
-                <%= link_to edit_user_path(@user), class: 'btn btn-warning btn-lg' do %>
-                  <i class="fas fa-edit me-2"></i> Editar
-                <% end %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-      </div>
+<div class="users-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-user me-2"></i>Detalhes do Usuário
+      </h1>
+      <p class="page-subtitle"><%= @user.name %></p>
+    </div>
+    <div class="header-actions">
+      <% if current_user.admin? || @user == current_user %>
+        <%= link_to edit_user_path(@user), class: "btn-export" do %>
+          <i class="fas fa-edit me-2"></i>Editar
+        <% end %>
+      <% end %>
+      <%= link_to users_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
     </div>
   </div>
+
+  <%# ===== DETALHES ===== %>
+  <div class="info-grid">
+    <div class="info-section">
+      <h6 class="info-section-title"><i class="fas fa-id-card me-2"></i>Dados Pessoais</h6>
+      <div class="info-row">
+        <span class="info-key">Nome</span>
+        <span class="info-val"><%= @user.name %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Email</span>
+        <span class="info-val"><%= @user.email %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Telefone</span>
+        <span class="info-val"><%= @user.phone.present? ? @user.phone : '-' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Status</span>
+        <span class="info-val">
+          <span class="status-pill <%= @user.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+            <%= @user.active? ? 'Ativo' : 'Inativo' %>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h6 class="info-section-title"><i class="fas fa-id-badge me-2"></i>Perfis</h6>
+      <% if @user.profiles.any? %>
+        <div class="location-chip-group">
+          <% @user.profiles.each do |profile| %>
+            <% profile_class = [1, 2, 5, 6].include?(profile.id) ? "profile-pill--#{profile.id}" : "profile-pill--default" %>
+            <span class="profile-pill <%= profile_class %>">
+              <%= profile.name %>
+            </span>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="text-muted-custom">Sem perfil atribuído</span>
+      <% end %>
+    </div>
+
+    <div class="info-section info-section--full">
+      <h6 class="info-section-title"><i class="fas fa-map-marker-alt me-2"></i>Locations Permitidas</h6>
+      <% if @user.admin? %>
+        <span class="admin-crown-pill">
+          <i class="fas fa-crown me-1"></i>Todas (Admin)
+        </span>
+      <% elsif @user.allowed_location_keys.any? %>
+        <div class="location-chip-group">
+          <% @user.allowed_location_keys.each do |key| %>
+            <span class="location-chip">
+              <%= User.location_name(key) %>
+            </span>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="text-muted-custom">Nenhuma</span>
+      <% end %>
+    </div>
+  </div>
+
 </div>
-
-<% content_for :styles do %>
-<style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
-
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.card {
-  border-radius: 0.5rem;
-}
-
-.form-label {
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.btn-lg {
-  padding: 0.75rem 2rem;
-  font-size: 1.1rem;
-}
-</style>
-<% end %>

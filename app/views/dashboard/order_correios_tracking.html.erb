@@ -2,24 +2,27 @@
   <% title 'Acompanhamento de Pedidos no Correios' %>
   <%= render 'layouts/partials/messages' %>
 
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <a href="<%= root_path %>" class="btn btn-dark me-2">
-            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-          </a>
-          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
-            <i class="fas fa-filter me-1"></i> Filtros
-          </button>
-          <button class="btn btn-warning ms-2" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
-            <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
-          </button>
-          <button class="btn btn-danger ms-2" type="button" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
-            <i class="fas fa-trash me-1"></i> Excluir pedido da fila
-          </button>
-        </div>
-      </div>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Correios</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Criação no Correios &rarr; Emissão de Nota &rarr; Envio XML &rarr; Rastreamento &rarr; Processamento Completo
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="<%= root_path %>" class="btn btn-dark">
+        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+      </a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+        <i class="fas fa-filter me-1"></i> Filtros
+      </button>
+      <button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
+        <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
+      </button>
+      <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+        <i class="fas fa-trash me-1"></i> Excluir pedido da fila
+      </button>
     </div>
   </div>
 
@@ -77,7 +80,7 @@
               <label class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
               <input type="number" name="tiny_order_id" class="form-control bg-dark text-white border-danger" required>
             </div>
-            <div class="alert border-0" style="background: rgba(255,255,255,0.12); color: #ffffff;">
+            <div class="alert border-0 bg-white bg-opacity-10 text-white">
               <strong>ATENÇÃO:</strong> Esta ação irá excluir todos os attempts relacionados a este pedido. Esta ação é irreversível.
             </div>
           </div>
@@ -93,88 +96,53 @@
   </div>
 
   <div class="collapse mb-4" id="filtersCollapse">
-    <div class="card bg-black border border-dark shadow">
-      <div class="card-header bg-dark">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-filter me-2"></i>Filtros
-        </h5>
-      </div>
-      <div class="card-body">
-        <form action="<%= order_correios_tracking_dashboard_index_path %>" method="get">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="status" class="form-label text-white">Status</label>
-              <select name="status" id="status" class="form-select bg-dark text-white border-secondary">
-                <option value="" <%= 'selected' if @filter_params[:status].blank? %>>Todos</option>
-                <option value="invoice_emition" <%= 'selected' if @filter_params[:status] == 'invoice_emition' %>>Aguardando Emissão de Nota</option>
-                <option value="send_xml" <%= 'selected' if @filter_params[:status] == 'send_xml' %>>Aguardando Envio XML</option>
-                <option value="push_tracking" <%= 'selected' if @filter_params[:status] == 'push_tracking' %>>Aguardando Rastreamento</option>
-                <option value="completed" <%= 'selected' if @filter_params[:status] == 'completed' %>>Processamento Completo</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label for="period" class="form-label text-white">Período</label>
-              <select name="period" id="period" class="form-select bg-dark text-white border-secondary">
-                <option value="" <%= 'selected' if @filter_params[:period].blank? %>>Todo o período</option>
-                <option value="today" <%= 'selected' if @filter_params[:period] == 'today' %>>Hoje</option>
-                <option value="7" <%= 'selected' if @filter_params[:period] == '7' %>>Últimos 7 dias</option>
-                <option value="30" <%= 'selected' if @filter_params[:period] == '30' %>>Últimos 30 dias</option>
-                <option value="90" <%= 'selected' if @filter_params[:period] == '90' %>>Últimos 90 dias</option>
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label for="order_id" class="form-label text-white">ID do Pedido</label>
-              <input type="text" name="order_id" id="order_id" class="form-control bg-dark text-white border-secondary" placeholder="Ex: 123456" value="<%= @filter_params[:order_id] %>">
-            </div>
+    <div class="filters-panel">
+      <form action="<%= order_correios_tracking_dashboard_index_path %>" method="get">
+        <div class="filter-section">
+          <label class="filter-label" for="status"><i class="fas fa-info-circle me-1"></i>Status</label>
+          <div class="search-row">
+            <select name="status" id="status" class="search-input">
+              <option value="" <%= 'selected' if @filter_params[:status].blank? %>>Todos</option>
+              <option value="invoice_emition" <%= 'selected' if @filter_params[:status] == 'invoice_emition' %>>Aguardando Emissão de Nota</option>
+              <option value="send_xml" <%= 'selected' if @filter_params[:status] == 'send_xml' %>>Aguardando Envio XML</option>
+              <option value="push_tracking" <%= 'selected' if @filter_params[:status] == 'push_tracking' %>>Aguardando Rastreamento</option>
+              <option value="completed" <%= 'selected' if @filter_params[:status] == 'completed' %>>Processamento Completo</option>
+            </select>
           </div>
-          <div class="mt-3 text-end">
-            <button type="submit" class="btn btn-primary">
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="period"><i class="fas fa-calendar-alt me-1"></i>Período</label>
+          <div class="search-row">
+            <select name="period" id="period" class="search-input">
+              <option value="" <%= 'selected' if @filter_params[:period].blank? %>>Todo o período</option>
+              <option value="today" <%= 'selected' if @filter_params[:period] == 'today' %>>Hoje</option>
+              <option value="7" <%= 'selected' if @filter_params[:period] == '7' %>>Últimos 7 dias</option>
+              <option value="30" <%= 'selected' if @filter_params[:period] == '30' %>>Últimos 30 dias</option>
+              <option value="90" <%= 'selected' if @filter_params[:period] == '90' %>>Últimos 90 dias</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="order_id"><i class="fas fa-search me-1"></i>ID do Pedido</label>
+          <div class="search-row">
+            <input type="text" name="order_id" id="order_id" class="search-input" placeholder="Ex: 123456" value="<%= @filter_params[:order_id] %>">
+            <button type="submit" class="btn-primary-sm">
               <i class="fas fa-search me-1"></i> Aplicar Filtros
             </button>
-            <a href="<%= order_correios_tracking_dashboard_index_path %>" class="btn btn-secondary ms-2">
+            <a href="<%= order_correios_tracking_dashboard_index_path %>" class="btn-clear">
               <i class="fas fa-times me-1"></i> Limpar Filtros
             </a>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </div>
-
-  <% if @filter_params.values.any?(&:present?) %>
-    <div class="alert alert-primary border-0 mb-4">
-      <div class="d-flex align-items-center">
-        <i class="fas fa-filter fa-2x me-3 text-primary"></i>
-        <div>
-          <h6 class="mb-1">Filtros Aplicados:</h6>
-          <div class="d-flex flex-wrap gap-2">
-            <% if @filter_params[:status].present? %>
-              <span class="badge bg-info">
-                Status: <%= case @filter_params[:status]
-                           when 'invoice_emition' then 'Aguardando Emissão de Nota'
-                           when 'send_xml' then 'Aguardando Envio XML'
-                           when 'push_tracking' then 'Aguardando Rastreamento'
-                           when 'completed' then 'Processamento Completo'
-                           end %>
-              </span>
-            <% end %>
-            <% if @filter_params[:period].present? %>
-              <span class="badge bg-info">
-                Período: <%= case @filter_params[:period]
-                            when 'today' then 'Hoje'
-                            when '7' then 'Últimos 7 dias'
-                            when '30' then 'Últimos 30 dias'
-                            when '90' then 'Últimos 90 dias'
-                            end %>
-              </span>
-            <% end %>
-            <% if @filter_params[:order_id].present? %>
-              <span class="badge bg-info">ID: <%= @filter_params[:order_id] %></span>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-  <% end %>
 
   <div class="alert alert-info border-0 mb-4">
     <div class="d-flex align-items-center">
@@ -186,107 +154,117 @@
     </div>
   </div>
 
-  <div class="card bg-dark border border-secondary shadow-sm">
-    <div class="card-header bg-secondary">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Fluxo
-        </h5>
-        <div>
-          <span class="badge bg-info me-2">
-            <i class="fas fa-route"></i> Fluxo de Processamento
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Fluxo
+      </h2>
+      <div class="active-filters-row">
+        <span class="filter-tag filter-tag--blue">
+          <i class="fas fa-list me-1"></i><%= @tracking_summary.count %> Pedidos<% if @filter_params.values.any?(&:present?) %> (Filtrados)<% end %>
+        </span>
+        <% if @filter_params[:status].present? %>
+          <span class="filter-tag filter-tag--gray">
+            Status: <%= case @filter_params[:status]
+                       when 'invoice_emition' then 'Aguardando Emissão de Nota'
+                       when 'send_xml' then 'Aguardando Envio XML'
+                       when 'push_tracking' then 'Aguardando Rastreamento'
+                       when 'completed' then 'Processamento Completo'
+                       end %>
           </span>
-          <span class="badge bg-primary">
-            <%= @tracking_summary.count %> Pedidos
-            <% if @filter_params.values.any?(&:present?) %>
-              (Filtrados)
-            <% end %>
+        <% end %>
+        <% if @filter_params[:period].present? %>
+          <span class="filter-tag filter-tag--gray">
+            Período: <%= case @filter_params[:period]
+                        when 'today' then 'Hoje'
+                        when '7' then 'Últimos 7 dias'
+                        when '30' then 'Últimos 30 dias'
+                        when '90' then 'Últimos 90 dias'
+                        end %>
           </span>
-        </div>
+        <% end %>
+        <% if @filter_params[:order_id].present? %>
+          <span class="filter-tag filter-tag--gray">ID: <%= @filter_params[:order_id] %></span>
+        <% end %>
       </div>
     </div>
-    <div class="card-body">
-      <% if @tracking_summary.any? %>
-        <div class="table-responsive">
-          <table class="table table-dark table-hover" id="trackingTable">
-            <thead>
+
+    <% if @tracking_summary.any? %>
+      <div class="table-responsive">
+        <table class="orders-table" id="trackingTable">
+          <thead>
+            <tr>
+              <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
+              <th class="text-center">ID Pedido Tiny</th>
+              <th class="text-center">Emissão de Nota</th>
+              <th class="text-center">Envio XML</th>
+              <th class="text-center">Rastreamento</th>
+              <th class="text-center">Status Atual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @tracking_summary.each do |order_id, status| %>
               <tr>
-                <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
-                <th class="text-center">ID Pedido Tiny</th>
-                <th class="text-center">Emissão de Nota</th>
-                <th class="text-center">Envio XML</th>
-                <th class="text-center">Rastreamento</th>
-                <th class="text-center">Status Atual</th>
+                <td class="text-center">
+                  <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), class: 'btn btn-sm btn-outline-info', method: :post, target: '_blank' do %>
+                    <i class="fas fa-paperclip"></i>
+                  <% end %>
+                </td>
+                <td class="text-center fw-bold text-white"><%= order_id %></td>
+                <td class="text-center">
+                  <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
+                    <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= status[:send_xml] ? 'bg-info text-dark' : 'bg-success' %>">
+                    <%= status[:send_xml] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= status[:push_tracking] ? 'bg-primary' : 'bg-success' %>">
+                    <%= status[:push_tracking] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% if status[:push_tracking] %>
+                    <span class="badge bg-primary fs-6">Aguardando Rastreamento</span>
+                  <% elsif status[:send_xml] %>
+                    <span class="badge bg-info fs-6">Aguardando Envio XML</span>
+                  <% elsif status[:invoice_emition] %>
+                    <span class="badge bg-warning fs-6">Aguardando Emissão de Nota</span>
+                  <% else %>
+                    <span class="badge bg-success fs-6">Processamento Completo</span>
+                  <% end %>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              <% @tracking_summary.each do |order_id, status| %>
-                <tr>
-                  <td class="text-center">
-                    <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), class: 'btn btn-sm btn-outline-info', method: :post, target: '_blank' do %>
-                      <i class="fas fa-paperclip"></i>
-                    <% end %>
-                  </td>
-                  <td class="text-center fw-bold text-white"><%= order_id %></td>
-                  <td class="text-center">
-                    <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
-                      <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge <%= status[:send_xml] ? 'bg-info text-dark' : 'bg-success' %>">
-                      <%= status[:send_xml] ? 'Na Fila' : 'Concluído' %>
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge <%= status[:push_tracking] ? 'bg-primary' : 'bg-success' %>">
-                      <%= status[:push_tracking] ? 'Na Fila' : 'Concluído' %>
-                    </span>
-                  </td>
-                  <td class="text-center">
-                    <% if status[:push_tracking] %>
-                      <span class="badge bg-primary fs-6">Aguardando Rastreamento</span>
-                    <% elsif status[:send_xml] %>
-                      <span class="badge bg-info fs-6">Aguardando Envio XML</span>
-                    <% elsif status[:invoice_emition] %>
-                      <span class="badge bg-warning fs-6">Aguardando Emissão de Nota</span>
-                    <% else %>
-                      <span class="badge bg-success fs-6">Processamento Completo</span>
-                    <% end %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <div class="text-center py-5">
-          <i class="fas fa-search fa-3x text-muted mb-3"></i>
-          <h5 class="text-white">
-            <% if @filter_params.values.any?(&:present?) %>
-              Nenhum pedido encontrado com os filtros aplicados
-            <% else %>
-              Nenhum pedido em acompanhamento
             <% end %>
-          </h5>
-          <p class="text-muted">
-            <% if @filter_params.values.any?(&:present?) %>
-              Tente ajustar os filtros ou limpar para ver todos os pedidos.
-            <% else %>
-              Todos os pedidos foram processados completamente.
-            <% end %>
-          </p>
-        </div>
-      <% end %>
-    </div>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+        <h5>
+          <% if @filter_params.values.any?(&:present?) %>
+            Nenhum pedido encontrado com os filtros aplicados
+          <% else %>
+            Nenhum pedido em acompanhamento
+          <% end %>
+        </h5>
+        <p>
+          <% if @filter_params.values.any?(&:present?) %>
+            Tente ajustar os filtros ou limpar para ver todos os pedidos.
+          <% else %>
+            Todos os pedidos foram processados completamente.
+          <% end %>
+        </p>
+      </div>
+    <% end %>
   </div>
 </div>
 
 <% content_for :styles do %>
-<style>
-  body { background-color:#121212;color:#f8f9fa }
-  .bg-black { background-color:#121212!important }
-</style>
 <% end %>
 
 <% content_for :scripts do %>

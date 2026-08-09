@@ -1,0 +1,16 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// app/views/discounts/index.html.erb
+
+.recent-search-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.recent-search-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-color: #495057 !important;
+}

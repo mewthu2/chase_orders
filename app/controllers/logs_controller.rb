@@ -81,7 +81,7 @@ class LogsController < ApplicationController
   end
 
   def admin_only!
-    return unless current_user&.admin?
+    return if current_user&.admin?
     redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
   end
 end

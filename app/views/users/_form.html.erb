@@ -1,240 +1,227 @@
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-user-<%= @user.new_record? ? 'plus' : 'edit' %> me-2"></i>
-            <%= @user.new_record? ? 'Novo Usuário' : 'Editar Usuário' %>
-          </h5>
+<%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
+  <% if @user.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @user.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%# ── Informações Básicas ──────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-user me-2"></i>Informações Básicas
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name,
+              class: "field-input #{'field-input--error' if @user.errors[:name].any?}",
+              required: true %>
+          <% if @user.errors[:name].any? %>
+            <span class="field-error"><%= @user.errors[:name].first %></span>
+          <% end %>
         </div>
-        <div class="card-body bg-black">
-          <%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
-            <% if @user.errors.any? %>
-              <div class="alert alert-danger">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Erros encontrados:</h6>
-                <ul class="mb-0">
-                  <% @user.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
+        <div class="form-col-4">
+          <label class="field-label">Email <span class="required">*</span></label>
+          <%= form.email_field :email,
+              class: "field-input #{'field-input--error' if @user.errors[:email].any?}",
+              required: true %>
+          <% if @user.errors[:email].any? %>
+            <span class="field-error"><%= @user.errors[:email].first %></span>
+          <% end %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Telefone</label>
+          <%= form.text_field :phone, class: "field-input", placeholder: "(00) 00000-0000" %>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            <!-- Informações Básicas -->
-            <div class="row g-4">
-              <div class="col-md-4">
-                <label class="form-label text-white fw-bold">Nome *</label>
-                <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
-                <div class="invalid-feedback">
-                  Por favor, informe o nome.
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label text-white fw-bold">Email *</label>
-                <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
-                <div class="invalid-feedback">
-                  Por favor, informe um email válido.
-                </div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label text-white fw-bold">Telefone</label>
-                <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
-              </div>
-            </div>
-
-            <!-- Segurança e Acesso -->
-            <div class="row g-4 mt-3">
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Senha <%= @user.new_record? ? '*' : '' %></label>
-                <%= form.password_field :password, 
-                                        class: 'form-control bg-dark text-white border-secondary', 
-                                        required: @user.new_record?, 
-                                        autocomplete: 'new-password' %>
-                <div class="invalid-feedback">
-                  Por favor, informe a senha.
-                </div>
-                <% unless @user.new_record? %>
-                  <small class="text-white">Deixe em branco para manter a senha atual</small>
-                <% end %>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Confirmar Senha</label>
-                <%= form.password_field :password_confirmation, 
-                                        class: 'form-control bg-dark text-white border-secondary', 
-                                        autocomplete: 'new-password' %>
-                <div class="invalid-feedback">
-                  As senhas não coincidem.
-                </div>
-              </div>
-            </div>
-
-            <!-- Updated to use checkboxes for multiple profiles -->
-            <div class="row g-4 mt-3">
-              <div class="col-12">
-                <label class="form-label text-white fw-bold">Perfis do Usuário *</label>
-                <div class="card bg-dark border border-secondary p-3">
-                  <div class="row g-3">
-                    <% Profile.all.each do |profile| %>
-                      <div class="col-md-4">
-                        <div class="form-check">
-                          <%= check_box_tag 'user[profile_ids][]', 
-                                            profile.id, 
-                                            @user.profile_ids.include?(profile.id),
-                                            { 
-                                              class: 'form-check-input profile-checkbox',
-                                              id: "profile_#{profile.id}"
-                                            } %>
-                          <label class="form-check-label text-white" for="profile_<%= profile.id %>">
-                            <%= profile.name %>
-                          </label>
-                        </div>
-                      </div>
-                    <% end %>
-                  </div>
-                  <small class="text-white mt-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Selecione um ou mais perfis para o usuário
-                  </small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status da Conta -->
-            <div class="row g-4 mt-3">
-              <div class="col-md-6">
-                <div class="form-check form-switch">
-                  <%= form.check_box :active, 
-                                      class: 'form-check-input', 
-                                      role: 'switch', 
-                                      checked: @user.new_record? ? true : @user.active? %>
-                  <label class="form-check-label text-white fw-bold">
-                    Usuário Ativo
-                  </label>
-                  <small class="d-block text-white">Controle se o usuário pode fazer login no sistema</small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Controle de Acesso por Location -->
-            <div class="mt-4" id="locationsSection">
-              <div class="card bg-dark border border-secondary">
-                <div class="card-header bg-secondary">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <h6 class="text-white mb-0">
-                      <i class="fas fa-map-marker-alt me-2"></i>Controle de Acesso por Location
-                    </h6>
-                    <span class="badge bg-info text-white" id="selectedCount">0 selecionadas</span>
-                  </div>
-                </div>
-                <div class="card-body bg-dark">
-                  <div class="alert alert-info bg-dark bg-opacity-15 border-info mb-3">
-                    <div class="d-flex align-items-start">
-                      <i class="fas fa-info-circle text-info me-2 mt-1"></i>
-                      <div>
-                        <strong class="text-white">Importante:</strong>
-                        <p class="mb-0 text-white" id="locationHelpText">
-                          Selecione as locations que este usuário poderá acessar. Administradores têm acesso automático a todas as locations.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div id="locationsContent">
-                    <!-- Controles de Seleção -->
-                    <div class="d-flex gap-2 mb-4 flex-wrap" id="locationControls">
-                      <button type="button" class="btn btn-outline-success btn-sm" id="selectAllLocations">
-                        <i class="fas fa-check-double me-1"></i>Selecionar Todas
-                      </button>
-                      <button type="button" class="btn btn-outline-danger btn-sm" id="deselectAllLocations">
-                        <i class="fas fa-times me-1"></i>Desmarcar Todas
-                      </button>
-                    </div>
-
-                    <!-- Grid de Locations -->
-                    <div class="row g-3">
-                      <% User::AVAILABLE_LOCATIONS.each do |key, data| %>
-                        <div class="col-md-6 col-xl-4">
-                          <div class="location-card">
-                            <div class="form-check">
-                              <%= check_box_tag "user[allowed_location_keys][]", 
-                                                key, 
-                                                @user.allowed_location_keys.include?(key),
-                                                { 
-                                                  class: 'form-check-input location-checkbox',
-                                                  id: "location_#{key}"
-                                                } %>
-                              <label class="form-check-label w-100" for="location_<%= key %>">
-                                <div class="location-header">
-                                  <div class="location-icon">
-                                    <i class="fas fa-store"></i>
-                                  </div>
-                                  <div class="location-info">
-                                    <h6 class="location-name text-white mb-1"><%= data[:name] %></h6>
-                                    <small class="location-key text-white">
-                                      <i class="fas fa-key me-1"></i><%= key %>
-                                    </small>
-                                    <br>
-                                    <small class="shopify-id text-success">
-                                      <i class="fab fa-shopify me-1"></i>ID: <%= data[:shopify_id] %>
-                                    </small>
-                                  </div>
-                                  <div class="check-indicator">
-                                    <i class="fas fa-check"></i>
-                                  </div>
-                                </div>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      <% end %>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top border-secondary">
-                      <small class="text-white d-flex align-items-center">
-                        <i class="fas fa-lightbulb me-2 text-warning"></i>
-                        O usuário só poderá acessar as locations selecionadas no controle de estoque.
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="row mt-5">
-              <div class="col-12 d-flex justify-content-between">
-                <%= link_to users_path, class: 'btn btn-secondary btn-lg' do %>
-                  <i class="fas fa-arrow-left me-2"></i> Voltar para Lista
-                <% end %>
-                
-                <button type="submit" class="btn btn-success btn-lg">
-                  <i class="fas fa-save me-2"></i>
-                  <%= @user.new_record? ? 'Criar Usuário' : 'Salvar Alterações' %>
-                </button>
-              </div>
-            </div>
+  <%# ── Segurança e Acesso ───────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-lock me-2"></i>Segurança e Acesso
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">
+            Senha <% if @user.new_record? %><span class="required">*</span><% end %>
+          </label>
+          <%= form.password_field :password,
+              class: "field-input #{'field-input--error' if @user.errors[:password].any?}",
+              required: @user.new_record?,
+              autocomplete: 'new-password' %>
+          <% if @user.errors[:password].any? %>
+            <span class="field-error"><%= @user.errors[:password].first %></span>
+          <% elsif !@user.new_record? %>
+            <span class="text-muted-custom d-block mt-1">Deixe em branco para manter a senha atual</span>
+          <% end %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Confirmar Senha</label>
+          <%= form.password_field :password_confirmation,
+              class: "field-input #{'field-input--error' if @user.errors[:password_confirmation].any?}",
+              autocomplete: 'new-password' %>
+          <% if @user.errors[:password_confirmation].any? %>
+            <span class="field-error"><%= @user.errors[:password_confirmation].first %></span>
           <% end %>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<% content_for :styles do %>
-<style>
+  <%# ── Perfis do Usuário ────────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-id-badge me-2"></i>Perfis do Usuário <span class="required">*</span>
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <% Profile.all.each do |profile| %>
+          <div class="form-col-4">
+            <div class="form-check">
+              <%= check_box_tag 'user[profile_ids][]',
+                                profile.id,
+                                @user.profile_ids.include?(profile.id),
+                                {
+                                  class: 'form-check-input profile-checkbox',
+                                  id: "profile_#{profile.id}"
+                                } %>
+              <label class="form-check-label text-main" for="profile_<%= profile.id %>">
+                <%= profile.name %>
+              </label>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <span class="text-muted-custom d-block mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        Selecione um ou mais perfis para o usuário
+      </span>
+    </div>
+  </div>
 
-/* Added styles for profile checkboxes */
-.profile-checkbox {
-  width: 1.25rem;
-  height: 1.25rem;
-}
+  <%# ── Status da Conta ──────────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title">
+        <i class="fas fa-toggle-on me-2"></i>Status da Conta
+      </h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-check form-switch">
+        <%= form.check_box :active,
+                            class: 'form-check-input',
+                            role: 'switch',
+                            checked: @user.new_record? ? true : @user.active? %>
+        <label class="form-check-label text-main fw-bold">
+          Usuário Ativo
+        </label>
+      </div>
+      <span class="text-muted-custom d-block mt-1">Controle se o usuário pode fazer login no sistema</span>
+    </div>
+  </div>
 
-.profile-checkbox:checked {
-  background-color: #4299e1;
-  border-color: #4299e1;
-}
+  <%# ── Controle de Acesso por Location ──────────────────────────────────── %>
+  <div id="locationsSection">
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="form-section-title mb-0">
+            <i class="fas fa-map-marker-alt me-2"></i>Controle de Acesso por Location
+          </h5>
+          <span class="total-badge" id="selectedCount">0 selecionadas</span>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="form-hint-box">
+          <i class="fas fa-info-circle"></i>
+          <div>
+            <strong>Importante:</strong>
+            <p class="mb-0" id="locationHelpText">
+              Selecione as locations que este usuário poderá acessar. Administradores têm acesso automático a todas as locations.
+            </p>
+          </div>
+        </div>
 
-</style>
+        <div id="locationsContent">
+          <%# Controles de Seleção %>
+          <div class="d-flex gap-2 mb-4 flex-wrap" id="locationControls">
+            <button type="button" class="btn btn-outline-success btn-sm" id="selectAllLocations">
+              <i class="fas fa-check-double me-1"></i>Selecionar Todas
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="deselectAllLocations">
+              <i class="fas fa-times me-1"></i>Desmarcar Todas
+            </button>
+          </div>
+
+          <%# Grid de Locations %>
+          <div class="row g-3">
+            <% User::AVAILABLE_LOCATIONS.each do |key, data| %>
+              <div class="col-md-6 col-xl-4">
+                <div class="location-card">
+                  <div class="form-check">
+                    <%= check_box_tag "user[allowed_location_keys][]",
+                                      key,
+                                      @user.allowed_location_keys.include?(key),
+                                      {
+                                        class: 'form-check-input location-checkbox',
+                                        id: "location_#{key}"
+                                      } %>
+                    <label class="form-check-label w-100" for="location_<%= key %>">
+                      <div class="location-header">
+                        <div class="location-icon">
+                          <i class="fas fa-store"></i>
+                        </div>
+                        <div class="location-info">
+                          <h6 class="location-name"><%= data[:name] %></h6>
+                          <span class="location-key">
+                            <i class="fas fa-key me-1"></i><%= key %>
+                          </span>
+                          <span class="shopify-id">
+                            <i class="fab fa-shopify me-1"></i>ID: <%= data[:shopify_id] %>
+                          </span>
+                        </div>
+                        <div class="check-indicator">
+                          <i class="fas fa-check"></i>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="mt-4 pt-3 border-top border-secondary">
+            <span class="text-muted-custom d-flex align-items-center">
+              <i class="fas fa-lightbulb me-2 text-warning"></i>
+              O usuário só poderá acessar as locations selecionadas no controle de estoque.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Ações ─────────────────────────────────────────────────────────────── %>
+  <div class="form-actions">
+    <%= form.submit (@user.new_record? ? 'Criar Usuário' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", users_path, class: "btn-cancel" %>
+  </div>
 <% end %>
 
 <% content_for :scripts do %>
@@ -243,22 +230,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const profileCheckboxes = document.querySelectorAll('.profile-checkbox');
   const adminProfileCheckbox = document.getElementById('profile_1');
-  
+
   function toggleLocationsSection() {
     if (!locationsSection) return;
-    
+
     const isAdmin = adminProfileCheckbox && adminProfileCheckbox.checked;
-    
+
     if (isAdmin) {
       locationControls.style.display = 'none';
       locationCheckboxes.forEach(checkbox => {
         checkbox.closest('.col-md-6').style.display = 'none';
       });
-      
+
       if (locationHelpText) {
         locationHelpText.textContent = 'Administradores têm acesso automático a todas as locations.';
       }
-      
+
       if (selectedCounter) {
         selectedCounter.textContent = 'Todas (Admin)';
         selectedCounter.className = 'badge bg-warning text-dark';
@@ -268,11 +255,11 @@ document.addEventListener('DOMContentLoaded', function() {
       locationCheckboxes.forEach(checkbox => {
         checkbox.closest('.col-md-6').style.display = 'block';
       });
-      
+
       if (locationHelpText) {
         locationHelpText.textContent = 'Selecione as locations que este usuário poderá acessar. Se nenhuma for selecionada, o usuário não terá acesso ao controle de estoque.';
       }
-      
+
       updateSelectedCount();
     }
   }

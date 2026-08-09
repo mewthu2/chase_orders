@@ -1,151 +1,110 @@
-<div class="container-fluid py-4">
-  <% title 'Dashboard - Marketing' %>
-  <%= render 'layouts/partials/messages' %>
+<% title 'Dashboard - Marketing' %>
+<%= render 'layouts/partials/messages' %>
 
+<div class="orders-container">
 
-  <!-- Minhas Campanhas -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-bullhorn me-2"></i>Minhas Campanhas Ativas
-          </h6>
-        </div>
-        <div class="card-body bg-black p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0">
-              <thead class="bg-dark">
-                <tr>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Campanha</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Minhas Tasks</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Pendentes</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Convertidas</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Taxa</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @my_campaigns.each do |campaign| %>
-                  <% my_campaign_tasks = @my_tasks.where(campaign: campaign) %>
-                  <tr class="border-secondary">
-                    <td class="px-4 py-3 text-white"><%= campaign.name %></td>
-                    <td class="px-4 py-3 text-white"><%= my_campaign_tasks.count %></td>
-                    <td class="px-4 py-3 text-warning"><%= my_campaign_tasks.pending.count %></td>
-                    <td class="px-4 py-3 text-success"><%= my_campaign_tasks.converted.count %></td>
-                    <td class="px-4 py-3">
-                      <span class="badge bg-info">
-                        <%= my_campaign_tasks.any? ? (my_campaign_tasks.converted.count.to_f / my_campaign_tasks.count * 100).round(1) : 0 %>%
-                      </span>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <i class="fas fa-bullhorn me-2"></i>Dashboard - Marketing
+      </h1>
+      <p class="page-subtitle">Visão geral das suas campanhas e tarefas</p>
     </div>
   </div>
 
-  <!-- Tasks Recentes -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-tasks me-2"></i>Minhas Tasks Recentes
-          </h6>
-          <%# Removed marketing namespace from path %>
-          <%= link_to marketing_tasks_path, class: "btn btn-sm btn-primary" do %>
-            <i class="fas fa-list me-1"></i>Ver Todas
+  <%# ===== MINHAS CAMPANHAS ATIVAS ===== %>
+  <div class="table-card mb-4">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-bullhorn me-2"></i>Minhas Campanhas Ativas
+      </h2>
+    </div>
+    <div class="table-responsive">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Campanha</th>
+            <th>Minhas Tasks</th>
+            <th>Pendentes</th>
+            <th>Convertidas</th>
+            <th>Taxa</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @my_campaigns.each do |campaign| %>
+            <% my_campaign_tasks = @my_tasks.where(campaign: campaign) %>
+            <tr>
+              <td class="text-main"><%= campaign.name %></td>
+              <td class="text-main"><%= my_campaign_tasks.count %></td>
+              <td class="text-muted-custom"><%= my_campaign_tasks.pending.count %></td>
+              <td class="text-muted-custom"><%= my_campaign_tasks.converted.count %></td>
+              <td>
+                <span class="badge bg-info">
+                  <%= my_campaign_tasks.any? ? (my_campaign_tasks.converted.count.to_f / my_campaign_tasks.count * 100).round(1) : 0 %>%
+                </span>
+              </td>
+            </tr>
           <% end %>
-        </div>
-        <div class="card-body bg-black p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0">
-              <thead class="bg-dark">
-                <tr>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Cliente</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Campanha</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Status</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Criada em</th>
-                  <th class="px-4 py-3 text-white-50 small fw-bold">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @recent_tasks.each do |task| %>
-                  <tr class="border-secondary">
-                    <td class="px-4 py-3 text-white">
-                      <i class="fas fa-user me-2"></i><%= task.lead_name %>
-                    </td>
-                    <td class="px-4 py-3 text-white-50"><%= task.campaign.name %></td>
-                    <td class="px-4 py-3">
-                      <span class="badge <%= case task.status
-                        when 'pending' then 'bg-warning text-dark'
-                        when 'in_progress' then 'bg-info'
-                        when 'completed' then 'bg-success'
-                        end %>">
-                        <%= task.status.humanize %>
-                      </span>
-                    </td>
-                    <td class="px-4 py-3 text-white-50">
-                      <%= task.created_at.strftime('%d/%m/%Y %H:%M') %>
-                    </td>
-                    <td class="px-4 py-3">
-                      <%# Removed marketing namespace from path %>
-                      <%= link_to marketing_task_path(task), class: "btn btn-sm btn-outline-primary" do %>
-                        <i class="fas fa-eye me-1"></i>Ver
-                      <% end %>
-                    </td>
-                  </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%# ===== TASKS RECENTES ===== %>
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-tasks me-2"></i>Minhas Tasks Recentes
+      </h2>
+      <%# Removed marketing namespace from path %>
+      <%= link_to marketing_tasks_path, class: "btn-primary-sm" do %>
+        <i class="fas fa-list me-1"></i>Ver Todas
+      <% end %>
+    </div>
+    <div class="table-responsive">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Campanha</th>
+            <th>Status</th>
+            <th>Criada em</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @recent_tasks.each do |task| %>
+            <tr>
+              <td class="text-main">
+                <i class="fas fa-user me-2"></i><%= task.lead_name %>
+              </td>
+              <td class="text-muted-custom"><%= task.campaign.name %></td>
+              <td>
+                <span class="badge <%= case task.status
+                  when 'pending' then 'bg-warning text-dark'
+                  when 'in_progress' then 'bg-info'
+                  when 'completed' then 'bg-success'
+                  end %>">
+                  <%= task.status.humanize %>
+                </span>
+              </td>
+              <td class="text-muted-custom">
+                <%= task.created_at.strftime('%d/%m/%Y %H:%M') %>
+              </td>
+              <td>
+                <%# Removed marketing namespace from path %>
+                <%= link_to marketing_task_path(task), class: "btn-view-customer" do %>
+                  <i class="fas fa-eye me-1"></i>Ver
                 <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
 
 <% content_for :styles do %>
-<style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
-
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.card {
-  border-radius: 8px;
-}
-
-.btn {
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.shadow-lg {
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-}
-
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-dark td {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.badge {
-  font-weight: 500;
-}
-</style>
 <% end %>

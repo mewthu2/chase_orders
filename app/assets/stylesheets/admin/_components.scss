@@ -1,0 +1,585 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// Shared "bespoke dark panel" component system.
+// Consolidated from the near-identical <style> blocks duplicated across
+// orders/index, customers/index (and reused by other list/detail views).
+
+.orders-container,
+.customers-container,
+.clients-container {
+  padding: 1.5rem;
+  min-height: 100vh;
+}
+
+// ---- Page header ----
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: $bg-surface;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  padding: $panel-padding;
+  margin-bottom: 1rem;
+}
+
+.page-title { color: $text-primary; font-size: 1.4rem; font-weight: 700; margin: 0 0 0.2rem; }
+.page-subtitle { color: $text-muted; font-size: 0.8rem; }
+.header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+.total-badge {
+  background: $accent-blue;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: $radius-pill;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.btn-export {
+  background: $accent-green;
+  color: #fff !important;
+  border: none;
+  padding: 0.45rem 1.1rem;
+  border-radius: $radius-md;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-export:hover { background: $accent-green-hover; color: #fff !important; }
+
+// ---- Filters panel ----
+.filters-panel {
+  background: $bg-surface;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  padding: $panel-padding;
+  margin-bottom: 1rem;
+}
+
+.filter-section { padding: 0.5rem 0; }
+.filter-divider { border-top: 1px solid $border-default; margin: 0.75rem 0; }
+
+.filter-label {
+  display: block;
+  color: $text-muted;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.6rem;
+}
+
+.search-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.search-input {
+  flex: 1;
+  min-width: 220px;
+  background: $bg-canvas;
+  border: 1px solid $border-muted;
+  color: $text-primary;
+  border-radius: $radius-md;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.88rem;
+  transition: border-color 0.2s;
+}
+.search-input:focus { outline: none; border-color: $accent-blue; box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15); }
+.search-input::placeholder { color: #484f58; }
+
+.btn-primary-sm {
+  background: $accent-blue;
+  color: #fff;
+  border: none;
+  border-radius: $radius-md;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-primary-sm:hover { background: $accent-blue-hover; }
+
+.btn-clear {
+  background: transparent;
+  border: 1px solid $border-muted;
+  color: $text-muted !important;
+  border-radius: $radius-md;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.84rem;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-clear:hover { border-color: $accent-red-soft; color: $accent-red-soft !important; }
+
+.period-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.btn-period {
+  background: transparent;
+  border: 1px solid $border-muted;
+  color: $text-secondary;
+  border-radius: $radius-pill;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-period:hover { border-color: $text-muted; color: $text-primary; }
+
+.btn-period--active {
+  background: $accent-yellow !important;
+  border-color: $accent-yellow !important;
+  color: $bg-canvas !important;
+  font-weight: 700;
+}
+
+.btn-period--active-white {
+  background: $text-primary !important;
+  color: $bg-canvas !important;
+  border-color: $text-primary !important;
+  font-weight: 700;
+}
+
+// ---- Date range ----
+.date-range-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.date-field-wrap { display: flex; align-items: center; gap: 0.4rem; }
+.date-label { color: $text-muted; font-size: 0.8rem; white-space: nowrap; }
+
+.date-input {
+  background: $bg-canvas;
+  border: 1px solid $border-muted;
+  color: $text-primary;
+  border-radius: $radius-md;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.84rem;
+  transition: border-color 0.2s;
+}
+.date-input:focus { outline: none; border-color: $accent-blue; }
+
+.btn-remove-date {
+  background: transparent;
+  border: 1px solid $accent-red-soft;
+  color: $accent-red-soft !important;
+  border-radius: $radius-md;
+  padding: 0.38rem 0.8rem;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-remove-date:hover { background: rgba(229, 115, 115, 0.1); }
+
+.date-range-badge {
+  background: $accent-yellow;
+  color: $bg-canvas;
+  border-radius: $radius-pill;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+// ---- Location panel ----
+.location-panel {
+  background: $bg-surface;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.location-panel .filter-label { margin: 0; margin-right: 0.25rem; white-space: nowrap; }
+
+.btn-location {
+  border: 1px solid $border-muted;
+  border-radius: $radius-pill;
+  padding: 0.32rem 0.9rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-location--all { background: transparent; color: $text-secondary; border-color: $border-muted; }
+.btn-location--all:hover { border-color: $text-muted; color: $text-primary; }
+.btn-location--all-active { background: $text-primary; color: $bg-canvas; border-color: $text-primary; font-weight: 700; }
+
+.location-active-badge {
+  margin-left: auto;
+  border-radius: $radius-pill;
+  padding: 0.32rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+// ---- Table card ----
+.table-card {
+  background: $bg-surface;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.table-card-header {
+  background: $bg-elevated;
+  border-bottom: 1px solid $border-default;
+  padding: 0.9rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.table-card-title { color: $text-primary; font-size: 1rem; font-weight: 600; margin: 0; }
+
+.active-filters-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.filter-tag { border-radius: $radius-pill; padding: 0.25rem 0.75rem; font-size: 0.76rem; font-weight: 600; }
+.filter-tag--gray { background: $border-muted; color: $text-muted; }
+.filter-tag--yellow { background: $accent-yellow; color: $bg-canvas; }
+.filter-tag--blue { background: $accent-blue; color: #fff; }
+
+.orders-table,
+.clients-table { width: 100%; border-collapse: collapse; }
+.orders-table thead tr,
+.clients-table thead tr { background: $bg-elevated; }
+.orders-table thead th,
+.clients-table thead th {
+  color: $text-muted;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid $border-default;
+  white-space: nowrap;
+}
+.orders-table tbody tr,
+.clients-table tbody tr { border-bottom: 1px solid $border-default; transition: background 0.15s; }
+.orders-table tbody tr:hover,
+.clients-table tbody tr:hover { background: $bg-elevated; }
+.orders-table tbody td,
+.clients-table tbody td { padding: 0.75rem 1.25rem; vertical-align: middle; }
+.clients-table tbody tr:last-child { border-bottom: none; }
+
+.order-id { color: $accent-blue-light; font-weight: 700; font-size: 0.9rem; }
+.text-main { color: $text-primary; font-size: 0.88rem; }
+.text-muted-custom { color: $text-muted; font-size: 0.85rem; }
+
+.location-badge { border-radius: $radius-pill; padding: 0.28rem 0.75rem; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
+.location-badge--empty { background: $border-muted; color: $text-muted; }
+
+.customer-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+
+.customer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: $accent-blue;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.currency-badge {
+  background: $border-default;
+  color: $text-muted;
+  border-radius: $radius-sm;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.btn-view-customer {
+  background: transparent;
+  border: 1px solid $border-muted;
+  color: $accent-blue-light;
+  border-radius: $radius-md;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-view-customer:hover { background: rgba(88, 166, 255, 0.1); border-color: $accent-blue-light; }
+
+// ---- Empty state ----
+.empty-state { text-align: center; padding: 3.5rem 1rem; color: #484f58; }
+.empty-state h5, .empty-state h6 { color: $text-muted; margin-bottom: 0.5rem; }
+.empty-state p { color: #484f58; font-size: 0.88rem; margin-bottom: 1rem; }
+
+// ---- Pagination ----
+.pagination-footer {
+  background: $bg-elevated;
+  border-top: 1px solid $border-default;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.pagination-info { color: $text-muted; font-size: 0.82rem; }
+.pagination-info strong { color: $text-primary; }
+.pagination-controls { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.page-btn {
+  background: transparent;
+  border: 1px solid $border-muted;
+  color: $text-secondary !important;
+  border-radius: $radius-md;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-block;
+}
+.page-btn:hover { border-color: $accent-blue-light; color: $accent-blue-light !important; }
+.page-btn--active { background: $accent-blue; border-color: $accent-blue; color: #fff !important; font-weight: 700; }
+
+// ---- Generic modal (customer detail, and reusable elsewhere) ----
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: adminModalFadeIn 0.2s ease;
+}
+
+@keyframes adminModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes adminModalSlideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes adminSpinnerSpin { to { transform: rotate(360deg); } }
+
+.modal-box {
+  background: $bg-surface;
+  border: 1px solid $border-muted;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: adminModalSlideUp 0.22s ease;
+}
+
+.modal-header {
+  background: $bg-elevated;
+  border-bottom: 1px solid $border-default;
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.modal-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: $accent-blue;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+
+.modal-title { color: $text-primary; font-size: 1.1rem; font-weight: 700; margin: 0 0 0.15rem; }
+.modal-subtitle { color: $text-muted; font-size: 0.8rem; }
+
+.modal-close {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid $border-muted;
+  color: $text-muted;
+  border-radius: $radius-md;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.modal-close:hover { border-color: $accent-red-soft; color: $accent-red-soft; }
+
+.modal-tabs { display: flex; border-bottom: 1px solid $border-default; background: $bg-elevated; padding: 0 1.5rem; flex-shrink: 0; }
+
+.modal-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: $text-muted;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.modal-tab:hover { color: $text-primary; }
+.modal-tab--active { color: $accent-blue-light; border-bottom-color: $accent-blue; }
+
+.orders-count-badge {
+  background: $border-default;
+  color: $text-muted;
+  border-radius: $radius-pill;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.2rem;
+}
+
+.modal-body { overflow-y: auto; flex: 1; padding: 1.5rem; }
+
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: $text-muted;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid $border-default;
+  border-top-color: $accent-blue;
+  border-radius: 50%;
+  animation: adminSpinnerSpin 0.7s linear infinite;
+}
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+
+.info-section { background: $bg-elevated; border: 1px solid $border-default; border-radius: 10px; padding: 1rem 1.25rem; }
+.info-section--full { grid-column: 1 / -1; }
+
+.info-section-title {
+  color: $text-muted;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid $border-default;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.info-row:last-child { border-bottom: none; }
+.info-key { color: $text-muted; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
+.info-val { color: $text-primary; font-size: 0.84rem; text-align: right; word-break: break-all; }
+.info-val--mono { font-family: monospace; font-size: 0.78rem; color: $text-muted; }
+
+// ---- Order line-item blocks (customer detail modal) ----
+.orders-blocks { display: flex; flex-direction: column; gap: 0.85rem; }
+
+.order-block { background: $bg-elevated; border: 1px solid $border-default; border-radius: 10px; overflow: hidden; }
+
+.order-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: $border-default;
+  border-bottom: 1px solid $border-muted;
+}
+
+.order-block-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.order-block-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.order-block-id { color: $accent-blue-light; font-weight: 700; font-size: 0.9rem; }
+.order-meta-info { color: $text-muted; font-size: 0.76rem; }
+
+.order-block-total {
+  color: $accent-green-light;
+  font-weight: 700;
+  font-size: 0.88rem;
+  background: rgba(63, 185, 80, 0.1);
+  border: 1px solid rgba(63, 185, 80, 0.25);
+  border-radius: $radius-pill;
+  padding: 0.2rem 0.65rem;
+}
+
+.order-items-list { display: flex; flex-direction: column; }
+
+.order-item-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s;
+}
+.order-item-card:last-child { border-bottom: none; }
+.order-item-card:hover { background: rgba(255, 255, 255, 0.02); }
+.order-item-card--canceled { opacity: 0.45; }
+
+.item-img { width: 52px; height: 52px; border-radius: $radius-md; object-fit: cover; flex-shrink: 0; border: 1px solid $border-muted; background: $bg-canvas; }
+.item-img-placeholder {
+  width: 52px; height: 52px; border-radius: $radius-md;
+  background: $border-default; border: 1px solid $border-muted;
+  display: flex; align-items: center; justify-content: center;
+  color: #484f58; font-size: 1.3rem; flex-shrink: 0;
+}
+
+.order-item-info { flex: 1; min-width: 0; }
+.order-item-name { color: $text-primary; font-size: 0.84rem; font-weight: 600; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+
+.item-canceled-badge {
+  background: rgba(248, 81, 73, 0.15);
+  color: $accent-red-light;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.order-item-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.item-meta-tag { background: $border-default; color: $text-muted; border: 1px solid $border-muted; border-radius: 4px; padding: 0.15rem 0.5rem; font-size: 0.72rem; font-family: monospace; }
+
+.order-item-qty { text-align: center; flex-shrink: 0; min-width: 48px; }
+.qty-value { color: $text-primary; font-weight: 700; font-size: 0.95rem; }
+.qty-unit { color: $text-muted; font-size: 0.7rem; }
+
+.order-item-total { color: $text-primary; font-weight: 700; font-size: 0.88rem; flex-shrink: 0; min-width: 90px; text-align: right; }

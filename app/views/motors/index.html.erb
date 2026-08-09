@@ -3,6 +3,23 @@
 
   <%= render 'layouts/partials/messages' %>
 
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <i class="fas fa-cogs me-2"></i>Motores
+      </h1>
+      <p class="page-subtitle">
+        <i class="fas fa-list me-1"></i>Execuções de jobs e motores em background
+      </p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge">
+        <i class="fas fa-list me-1"></i><%= @motors.total_entries %> motor(es)
+      </span>
+    </div>
+  </div>
+
   <!-- Painel de Estatísticas -->
   <div class="row mb-4">
     <div class="col-md-3">
@@ -21,7 +38,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="col-md-3">
       <div class="card bg-black border border-success h-100 shadow">
         <div class="card-body">
@@ -38,7 +55,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="col-md-3">
       <div class="card bg-black border border-warning h-100 shadow">
         <div class="card-body">
@@ -55,7 +72,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="col-md-3">
       <div class="card bg-black border border-info h-100 shadow">
         <div class="card-body">
@@ -74,232 +91,169 @@
     </div>
   </div>
 
-  <!-- Formulário de Pesquisa -->
+  <%# ===== PAINEL DE FILTROS ===== %>
   <%= form_tag(motors_path, method: 'get') do %>
-    <div class="card bg-black border border-dark shadow-sm mb-4">
-      <div class="card-header bg-dark">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-search me-2"></i>Pesquisa avançada
-        </h5>
-      </div>
-      <div class="card-body bg-black">
-        <div class="row g-3">
-          <div class="col-md-8">
-            <label for="search" class="form-label text-white">Procurar</label>
-            <div class="input-group">
-              <span class="input-group-text bg-dark border-secondary text-white">
-                <i class="fas fa-search"></i>
-              </span>
-              <%= text_field_tag :search, params[:search], class: 'form-control bg-dark text-white border-secondary', placeholder: 'Pesquise por job name ou tipo de motor' %>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label text-white">Status</label>
-            <div class="d-flex gap-3">
-              <div class="form-check">
-                <%= radio_button_tag :status, 'all', params[:status].nil? || params[:status] == 'all', class: 'form-check-input', id: 'status_all' %>
-                <label class="form-check-label text-white" for="status_all">Todos</label>
-              </div>
-              <div class="form-check">
-                <%= radio_button_tag :status, 'completed', params[:status] == 'completed', class: 'form-check-input', id: 'status_completed' %>
-                <label class="form-check-label text-white" for="status_completed">Concluídos</label>
-              </div>
-              <div class="form-check">
-                <%= radio_button_tag :status, 'running', params[:status] == 'running', class: 'form-check-input', id: 'status_running' %>
-                <label class="form-check-label text-white" for="status_running">Em Progresso</label>
-              </div>
-            </div>
-          </div>
+    <div class="filters-panel">
+      <div class="filter-section">
+        <label class="filter-label">
+          <i class="fas fa-search me-1"></i>Procurar
+        </label>
+        <div class="search-row">
+          <%= text_field_tag :search, params[:search], class: 'search-input', placeholder: 'Pesquise por job name ou tipo de motor' %>
+          <%= button_tag class: 'btn-primary-sm' do %>
+            <i class="fa fa-search me-1"></i> Pesquisar
+          <% end %>
+          <%= link_to motors_path, class: 'btn-clear' do %>
+            <i class="fas fa-undo me-1"></i> Limpar filtros
+          <% end %>
         </div>
       </div>
-      <div class="card-footer bg-black border-top border-dark d-flex justify-content-between">
-        <%= link_to motors_path, class: 'btn btn-secondary' do %>
-          <i class="fas fa-undo me-1"></i> Limpar filtros
-        <% end %>
-        <%= button_tag class: 'btn btn-light', name: '' do %>
-          <i class="fa fa-search me-1"></i> Pesquisar
-        <% end %>
+
+      <div class="filter-divider"></div>
+
+      <div class="filter-section">
+        <label class="filter-label">Status</label>
+        <div class="d-flex gap-3">
+          <div class="form-check">
+            <%= radio_button_tag :status, 'all', params[:status].nil? || params[:status] == 'all', class: 'form-check-input', id: 'status_all' %>
+            <label class="form-check-label text-main" for="status_all">Todos</label>
+          </div>
+          <div class="form-check">
+            <%= radio_button_tag :status, 'completed', params[:status] == 'completed', class: 'form-check-input', id: 'status_completed' %>
+            <label class="form-check-label text-main" for="status_completed">Concluídos</label>
+          </div>
+          <div class="form-check">
+            <%= radio_button_tag :status, 'running', params[:status] == 'running', class: 'form-check-input', id: 'status_running' %>
+            <label class="form-check-label text-main" for="status_running">Em Progresso</label>
+          </div>
+        </div>
       </div>
     </div>
   <% end %>
 
   <!-- Tabela de Motores -->
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow">
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle mb-0" id="motors-table">
-              <thead class="bg-dark">
-                <tr>
-                  <th width="60" class="text-center text-white">Status</th>
-                  <th class="text-white">Job Name</th>
-                  <th class="text-white">Start Time</th>
-                  <th class="text-white">End Time</th>
-                  <th class="text-white">Running Time (s)</th>
-                  <th class="text-center text-white">Link</th>
-                  <th class="text-center text-white">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @motors.each do |motor| %>
-                  <% 
-                    # Define a classe de borda baseada no status
-                    border_class = motor.end_time.nil? ? 'border-warning' : 'border-success'
-                    
-                    # Define o ícone baseado no status
-                    status_icon = motor.end_time.nil? ? 
-                      '<i class="fa fa-spinner fa-spin text-warning"></i>' : 
-                      '<i class="fa-solid fa-check text-success"></i>'
-                    
-                    # Define a classe do badge baseada no status
-                    badge_class = motor.end_time.nil? ? 'bg-warning text-dark' : 'bg-success'
-                    badge_text = motor.end_time.nil? ? 'Em Progresso' : 'Concluído'
-                  %>
-                  <tr class="border-start <%= border_class %> border-5">
-                    <td class="text-center">
-                      <span class="badge <%= badge_class %>">
-                        <%= status_icon.html_safe %> <%= badge_text %>
-                      </span>
-                    </td>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <i class="fas fa-cog me-2 text-primary"></i>
-                        <span><%= motor.job_name %></span>
-                      </div>
-                    </td>
-                    <td>
-                      <i class="far fa-calendar-alt me-1 text-info"></i>
-                      <%= motor.start_time.strftime('%d/%m/%Y %H:%M') %>
-                    </td>
-                    <td>
-                      <% if motor.end_time %>
-                        <i class="far fa-calendar-check me-1 text-success"></i>
-                        <%= motor.end_time.strftime('%d/%m/%Y %H:%M') %>
-                      <% else %>
-                        <span class="badge bg-warning text-dark">
-                          <i class="fas fa-spinner fa-spin me-1"></i> Em progresso
-                        </span>
-                      <% end %>
-                    </td>
-                    <td>
-                      <% if motor.end_time %>
-                        <span class="badge bg-dark">
-                          <i class="far fa-clock me-1"></i> <%= motor.formatted_running_time %>
-                        </span>
-                      <% else %>
-                        <span class="badge bg-dark">
-                          <i class="fas fa-spinner fa-spin me-1"></i> Calculando...
-                        </span>
-                      <% end %>
-                    </td>
-                    <td class="text-center">
-                      <% if motor.link.present? %>
-                        <%= link_to motor.link, target: '_blank', class: 'btn btn-sm btn-info', title: 'Baixar CSV' do %>
-                          <i class="fas fa-download me-1"></i> Baixar CSV
-                        <% end %>
-                      <% else %>
-                        <span class='badge bg-secondary'>
-                          <i class="fas fa-unlink me-1"></i> Sem link
-                        </span>
-                      <% end %>
-                    </td>
-                    <td class="text-center">
-                      <% if motor.link.present? %>
-                        <button class="btn btn-sm btn-light" onclick="copyToClipboard('<%= motor.link %>')" data-bs-toggle="tooltip" title="Copiar link para área de transferência">
-                          <i class="fa fa-copy me-1"></i> Copiar Link
-                        </button>
-                      <% else %>
-                        <button class="btn btn-sm btn-secondary" disabled>
-                          <i class="fa fa-copy me-1"></i> Copiar Link
-                        </button>
-                      <% end %>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-              <tfoot class="bg-dark">
-                <tr>
-                  <td colspan="7" class="text-center py-3 text-white">
-                    <%= page_entries_info @motors %>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+  <div class="table-card">
+
+    <div class="table-card-header">
+      <h5 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Lista de Motores
+      </h5>
+    </div>
+
+    <% if @motors.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th width="60" class="text-center">Status</th>
+              <th>Job Name</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Running Time (s)</th>
+              <th class="text-center">Link</th>
+              <th class="text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @motors.each do |motor| %>
+              <%
+                # Define a classe de borda baseada no status
+                border_class = motor.end_time.nil? ? 'border-warning' : 'border-success'
+
+                # Define o ícone baseado no status
+                status_icon = motor.end_time.nil? ?
+                  '<i class="fa fa-spinner fa-spin text-warning"></i>' :
+                  '<i class="fa-solid fa-check text-success"></i>'
+
+                # Define a classe do badge baseada no status
+                badge_class = motor.end_time.nil? ? 'bg-warning text-dark' : 'bg-success'
+                badge_text = motor.end_time.nil? ? 'Em Progresso' : 'Concluído'
+              %>
+              <tr class="border-start <%= border_class %> border-5">
+                <td class="text-center">
+                  <span class="badge <%= badge_class %>">
+                    <%= status_icon.html_safe %> <%= badge_text %>
+                  </span>
+                </td>
+                <td class="text-main">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-cog me-2 text-primary"></i>
+                    <span><%= motor.job_name %></span>
+                  </div>
+                </td>
+                <td class="text-main">
+                  <i class="far fa-calendar-alt me-1 text-info"></i>
+                  <%= motor.start_time.strftime('%d/%m/%Y %H:%M') %>
+                </td>
+                <td class="text-main">
+                  <% if motor.end_time %>
+                    <i class="far fa-calendar-check me-1 text-success"></i>
+                    <%= motor.end_time.strftime('%d/%m/%Y %H:%M') %>
+                  <% else %>
+                    <span class="badge bg-warning text-dark">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Em progresso
+                    </span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if motor.end_time %>
+                    <span class="badge bg-dark">
+                      <i class="far fa-clock me-1"></i> <%= motor.formatted_running_time %>
+                    </span>
+                  <% else %>
+                    <span class="badge bg-dark">
+                      <i class="fas fa-spinner fa-spin me-1"></i> Calculando...
+                    </span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <% if motor.link.present? %>
+                    <%= link_to motor.link, target: '_blank', class: 'btn btn-sm btn-info', title: 'Baixar CSV' do %>
+                      <i class="fas fa-download me-1"></i> Baixar CSV
+                    <% end %>
+                  <% else %>
+                    <span class='badge bg-secondary'>
+                      <i class="fas fa-unlink me-1"></i> Sem link
+                    </span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <% if motor.link.present? %>
+                    <button class="btn btn-sm btn-light" onclick="copyToClipboard('<%= motor.link %>')" data-bs-toggle="tooltip" title="Copiar link para área de transferência">
+                      <i class="fa fa-copy me-1"></i> Copiar Link
+                    </button>
+                  <% else %>
+                    <button class="btn btn-sm btn-secondary" disabled>
+                      <i class="fa fa-copy me-1"></i> Copiar Link
+                    </button>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-cogs fa-3x mb-3 d-block"></i>
+        <h5>Nenhum motor encontrado</h5>
+        <p>Tente ajustar os filtros aplicados</p>
+      </div>
+    <% end %>
+
+    <div class="pagination-footer">
+      <div class="pagination-info">
+        <%= page_entries_info @motors %>
+      </div>
+      <div class="pagination-controls">
+        <%= will_paginate @motors, list_classes: %w[pagination pagination-sm], inner_window: 1, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
       </div>
     </div>
-  </div>
 
-  <div class="row mt-4">
-    <div class="col-12 d-flex justify-content-center">
-      <%= will_paginate @motors, list_classes: %w[pagination pagination-sm], inner_window: 1, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
-    </div>
   </div>
 </div>
 
 <% content_for :styles do %>
-  <style>
-    body {
-      background-color: #121212;
-      color: #f8f9fa;
-    }
-    
-    .pagination .page-link {
-      background-color: #212529;
-      border-color: #343a40;
-      color: #f8f9fa;
-    }
-    
-    .pagination .page-item.active .page-link {
-      background-color: #f8f9fa;
-      border-color: #f8f9fa;
-      color: #212529;
-    }
-    
-    .form-select option {
-      background-color: #212529;
-      color: #f8f9fa;
-    }
-    
-    .table-dark {
-      --bs-table-bg: #121212;
-      --bs-table-striped-bg: #1a1a1a;
-      --bs-table-hover-bg: #242424;
-      border-color: #343a40;
-    }
-    
-    .bg-black {
-      background-color: #121212 !important;
-    }
-
-    .border-5 {
-      border-width: 5px !important;
-    }
-    
-    .fa-spin {
-      animation: fa-spin 1.5s infinite linear;
-    }
-    
-    @keyframes fa-spin {
-      0% {
-        transform: rotate(0deg);
-      }
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-    
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
-    }
-  </style>
 <% end %>
 
 <% content_for :scripts do %>
@@ -324,7 +278,7 @@
             </div>
           `;
           document.body.appendChild(toast);
-          
+
           setTimeout(() => {
             toast.remove();
           }, 3000);
@@ -334,7 +288,7 @@
           alert("Erro ao copiar o link. Por favor, tente novamente.");
         });
     }
-    
+
     document.addEventListener('DOMContentLoaded', function() {
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

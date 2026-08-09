@@ -1,0 +1,45 @@
+// Shared design tokens for the admin panel.
+// Extracted from the "GitHub dark" palette that most views had already
+// converged on independently — this file makes that convergence explicit.
+
+// Backgrounds
+$bg-canvas:        #0d1117; // page background, inputs
+$bg-surface:        #161b22; // cards, panels, modals
+$bg-elevated:       #1c2128; // card headers, table headers, footers
+
+// Borders
+$border-default:    #21262d;
+$border-muted:       #30363d;
+
+// Text
+$text-primary:       #e6edf3;
+$text-secondary:     #c9d1d9;
+$text-muted:         #8b949e;
+$text-faint:         #6e7681;
+
+// Accents
+$accent-blue:        #1f6feb;
+$accent-blue-hover:  #388bfd;
+$accent-blue-light:  #58a6ff;
+$accent-blue-lighter: #79c0ff;
+
+$accent-green:       #238636;
+$accent-green-hover: #2ea043;
+$accent-green-light: #3fb950;
+
+$accent-yellow:      #e3b341;
+$accent-yellow-alt:  #d29922;
+
+$accent-red:         #da3633;
+$accent-red-hover:   #b91c1c;
+$accent-red-light:   #f85149;
+$accent-red-soft:    #e57373;
+
+// Radii
+$radius-sm: 6px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-pill: 20px;
+
+// Spacing panel used by page-header / filters-panel / table-card family
+$panel-padding: 1.25rem 1.5rem;

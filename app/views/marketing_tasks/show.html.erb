@@ -1,285 +1,236 @@
-<div class="container-fluid py-4">
-  <% title "Task ##{@task.id}" %>
-  <%= render 'layouts/partials/messages' %>
+<% title "Task ##{@task.id}" %>
+<%= render 'layouts/partials/messages' %>
 
-  <!-- Header da Task -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="text-white mb-1">
-              <i class="fas fa-tasks me-2"></i>Task #<%= @task.id %>
-            </h5>
-            <!-- Fixed campaign reference from @task.campaign to @task.marketing_campaign -->
-            <small class="text-white-50"><%= @task.marketing_campaign.name %></small>
-          </div>
-          <%= link_to marketing_tasks_path, class: "btn btn-secondary" do %>
-            <i class="fas fa-arrow-left me-1"></i>Voltar
-          <% end %>
-        </div>
-      </div>
+<div class="orders-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">
+        <i class="fas fa-tasks me-2"></i>Task #<%= @task.id %>
+      </h1>
+      <!-- Fixed campaign reference from @task.campaign to @task.marketing_campaign -->
+      <p class="page-subtitle"><%= @task.marketing_campaign.name %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to marketing_tasks_path, class: "btn-clear" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
     </div>
   </div>
 
-  <!-- Informações do Cliente -->
-  <div class="row mb-4">
-    <div class="col-md-6">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-user me-2"></i>Informações do Cliente
-          </h6>
-        </div>
-        <div class="card-body bg-black">
-          <table class="table table-dark table-borderless mb-0">
-            <tbody>
-              <tr>
-                <td class="text-white-50" style="width: 40%;">Nome:</td>
-                <td class="text-white"><%= @lead_data.dig('customer', 'name') || 'N/A' %></td>
-              </tr>
-              <tr>
-                <td class="text-white-50">Email:</td>
-                <!-- Get email from customer_data or root level -->
-                <td class="text-white"><%= @lead_data.dig('customer_data', 'email') || @lead_data['email'] || 'N/A' %></td>
-              </tr>
-              <tr>
-                <td class="text-white-50">Telefone:</td>
-                <!-- Get phone from billing_address, shipping_address, or root level -->
-                <td class="text-white">
-                  <%= @lead_data.dig('billing_address', 'phone') || @lead_data.dig('shipping_address', 'phone') || @lead_data['phone'] || 'N/A' %>
-                </td>
-              </tr>
-              <tr>
-                <td class="text-white-50">Checkout ID:</td>
-                <td class="text-white"><%= @lead_data['checkout_id'] || 'N/A' %></td>
-              </tr>
-              <tr>
-                <td class="text-white-50">Data Abandono:</td>
-                <td class="text-white">
-                  <%= @lead_data['created_at'] ? Time.parse(@lead_data['created_at']).strftime('%d/%m/%Y %H:%M') : 'N/A' %>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <% if @lead_data['abandoned_checkout_url'].present? %>
-            <div class="mt-3">
-              <%= link_to @lead_data['abandoned_checkout_url'], target: '_blank', class: 'btn btn-sm btn-outline-info w-100' do %>
-                <i class="fas fa-external-link-alt me-2"></i>Ver Carrinho na Shopify
-              <% end %>
-            </div>
+  <%# ===== INFORMAÇÕES DO CLIENTE / RESUMO FINANCEIRO ===== %>
+  <div class="info-grid mb-4">
+    <div class="info-section">
+      <div class="info-section-title">
+        <i class="fas fa-user me-2"></i>Informações do Cliente
+      </div>
+      <div class="info-row">
+        <span class="info-key">Nome</span>
+        <span class="info-val"><%= @lead_data.dig('customer', 'name') || 'N/A' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Email</span>
+        <!-- Get email from customer_data or root level -->
+        <span class="info-val"><%= @lead_data.dig('customer_data', 'email') || @lead_data['email'] || 'N/A' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Telefone</span>
+        <!-- Get phone from billing_address, shipping_address, or root level -->
+        <span class="info-val">
+          <%= @lead_data.dig('billing_address', 'phone') || @lead_data.dig('shipping_address', 'phone') || @lead_data['phone'] || 'N/A' %>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Checkout ID</span>
+        <span class="info-val info-val--mono"><%= @lead_data['checkout_id'] || 'N/A' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Data Abandono</span>
+        <span class="info-val">
+          <%= @lead_data['created_at'] ? Time.parse(@lead_data['created_at']).strftime('%d/%m/%Y %H:%M') : 'N/A' %>
+        </span>
+      </div>
+      <% if @lead_data['abandoned_checkout_url'].present? %>
+        <div class="mt-3">
+          <%= link_to @lead_data['abandoned_checkout_url'], target: '_blank', class: 'btn btn-sm btn-outline-info w-100' do %>
+            <i class="fas fa-external-link-alt me-2"></i>Ver Carrinho na Shopify
           <% end %>
         </div>
-      </div>
+      <% end %>
     </div>
 
-    <div class="col-md-6">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-dollar-sign me-2"></i>Resumo Financeiro
-          </h6>
+    <div class="info-section">
+      <div class="info-section-title">
+        <i class="fas fa-dollar-sign me-2"></i>Resumo Financeiro
+      </div>
+      <div class="info-row">
+        <span class="info-key">Valor Total</span>
+        <span class="info-val">
+          <strong class="text-success">
+            <%= @lead_data['currency'] || 'BRL' %> <%= number_to_currency(@lead_data['total_price'].to_f, unit: '') %>
+          </strong>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Moeda</span>
+        <span class="info-val"><%= @lead_data['currency'] || 'BRL' %></span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Status</span>
+        <span class="info-val">
+          <% if @task.converted? %>
+            <span class="badge bg-success">Convertida</span>
+          <% elsif @task.in_progress? %>
+            <span class="badge bg-info">Em Progresso</span>
+          <!-- Removed not_converted? method that doesn't exist, using completed && !converted logic -->
+          <% elsif @task.completed? && !@task.converted? %>
+            <span class="badge bg-danger">Não Convertida</span>
+          <% else %>
+            <span class="badge bg-warning text-dark">Pendente</span>
+          <% end %>
+        </span>
+      </div>
+      <% if @task.order_number.present? %>
+        <div class="info-row">
+          <span class="info-key">Pedido</span>
+          <span class="info-val"><strong><%= @task.order_number %></strong></span>
         </div>
-        <div class="card-body bg-black">
-          <table class="table table-dark table-borderless mb-0">
-            <tbody>
+      <% end %>
+    </div>
+  </div>
+
+  <%# ===== AÇÕES ===== %>
+  <div class="table-card mb-4">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-bolt me-2"></i>Ações
+      </h2>
+    </div>
+    <div class="panel-body-pad">
+      <% if @task.pending? %>
+        <%= button_to start_work_marketing_task_path(@task), method: :post, class: "btn btn-info" do %>
+          <i class="fas fa-play me-2"></i>Iniciar Trabalho
+        <% end %>
+      <% end %>
+
+      <% unless @task.converted? %>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
+          <i class="fas fa-check-circle me-2"></i>Marcar como Convertida
+        </button>
+        <%= button_to mark_not_converted_marketing_task_path(@task), method: :post, class: "btn btn-danger" do %>
+          <i class="fas fa-times-circle me-2"></i>Não Converteu
+        <% end %>
+      <% end %>
+
+      <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#noteModal">
+        <i class="fas fa-sticky-note me-2"></i>Adicionar Nota
+      </button>
+    </div>
+  </div>
+
+  <%# ===== ENDEREÇOS ===== %>
+  <% if @lead_data['billing_address'].present? || @lead_data['shipping_address'].present? %>
+    <div class="info-grid mb-4">
+      <% if @lead_data['billing_address'].present? %>
+        <div class="info-section">
+          <div class="info-section-title">
+            <i class="fas fa-file-invoice me-2"></i>Endereço de Cobrança
+          </div>
+          <% billing = @lead_data['billing_address'] %>
+          <p class="text-main mb-1"><%= billing['address1'] %></p>
+          <% if billing['address2'].present? %>
+            <p class="text-main mb-1"><%= billing['address2'] %></p>
+          <% end %>
+          <p class="text-main mb-1">
+            <%= billing['city'] %>, <%= billing['province'] %> - <%= billing['zip'] %>
+          </p>
+          <p class="text-main mb-0"><%= billing['country'] %></p>
+        </div>
+      <% end %>
+
+      <% if @lead_data['shipping_address'].present? %>
+        <div class="info-section">
+          <div class="info-section-title">
+            <i class="fas fa-shipping-fast me-2"></i>Endereço de Entrega
+          </div>
+          <% shipping = @lead_data['shipping_address'] %>
+          <p class="text-main mb-1"><%= shipping['address1'] %></p>
+          <% if shipping['address2'].present? %>
+            <p class="text-main mb-1"><%= shipping['address2'] %></p>
+          <% end %>
+          <p class="text-main mb-1">
+            <%= shipping['city'] %>, <%= shipping['province'] %> - <%= shipping['zip'] %>
+          </p>
+          <p class="text-main mb-0"><%= shipping['country'] %></p>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ===== ITENS DO CARRINHO ===== %>
+  <% if @lead_data['line_items'].present? %>
+    <div class="table-card mb-4">
+      <div class="table-card-header">
+        <h2 class="table-card-title">
+          <i class="fas fa-shopping-cart me-2"></i>Itens do Carrinho
+        </h2>
+      </div>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Variante</th>
+              <th>Quantidade</th>
+              <th>Preço Unit.</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @lead_data['line_items'].each do |item| %>
               <tr>
-                <td class="text-white-50" style="width: 40%;">Valor Total:</td>
-                <td class="text-white">
-                  <strong class="text-success">
-                    <%= @lead_data['currency'] || 'BRL' %> <%= number_to_currency(@lead_data['total_price'].to_f, unit: '') %>
+                <td class="text-main"><%= item['title'] %></td>
+                <td class="text-muted-custom"><%= item['variant_title'] || '-' %></td>
+                <td class="text-main"><%= item['quantity'] %></td>
+                <td class="text-main">
+                  <%= @lead_data['currency'] || 'BRL' %> <%= number_to_currency(item['price'].to_f, unit: '') %>
+                </td>
+                <td class="text-main">
+                  <strong>
+                    <%= @lead_data['currency'] || 'BRL' %>
+                    <%= number_to_currency((item['price'].to_f * item['quantity'].to_i), unit: '') %>
                   </strong>
                 </td>
               </tr>
-              <tr>
-                <td class="text-white-50">Moeda:</td>
-                <td class="text-white"><%= @lead_data['currency'] || 'BRL' %></td>
-              </tr>
-              <tr>
-                <td class="text-white-50">Status:</td>
-                <td>
-                  <% if @task.converted? %>
-                    <span class="badge bg-success">Convertida</span>
-                  <% elsif @task.in_progress? %>
-                    <span class="badge bg-info">Em Progresso</span>
-                  <!-- Removed not_converted? method that doesn't exist, using completed && !converted logic -->
-                  <% elsif @task.completed? && !@task.converted? %>
-                    <span class="badge bg-danger">Não Convertida</span>
-                  <% else %>
-                    <span class="badge bg-warning text-dark">Pendente</span>
-                  <% end %>
-                </td>
-              </tr>
-              <% if @task.order_number.present? %>
-                <tr>
-                  <td class="text-white-50">Pedido:</td>
-                  <td class="text-white"><strong><%= @task.order_number %></strong></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Ações -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h6 class="text-white mb-0">
-            <i class="fas fa-bolt me-2"></i>Ações
-          </h6>
-        </div>
-        <div class="card-body bg-black">
-          <div class="d-flex gap-3 flex-wrap">
-            <% if @task.pending? %>
-              <%= button_to start_work_marketing_task_path(@task), method: :post, class: "btn btn-info" do %>
-                <i class="fas fa-play me-2"></i>Iniciar Trabalho
-              <% end %>
             <% end %>
-
-            <% unless @task.converted? %>
-              <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
-                <i class="fas fa-check-circle me-2"></i>Marcar como Convertida
-              </button>
-              <%= button_to mark_not_converted_marketing_task_path(@task), method: :post, class: "btn btn-danger" do %>
-                <i class="fas fa-times-circle me-2"></i>Não Converteu
-              <% end %>
-            <% end %>
-
-            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#noteModal">
-              <i class="fas fa-sticky-note me-2"></i>Adicionar Nota
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Endereços -->
-  <div class="row mb-4">
-    <% if @lead_data['billing_address'].present? %>
-      <div class="col-md-6">
-        <div class="card bg-black border border-dark shadow-lg">
-          <div class="card-header bg-dark">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-file-invoice me-2"></i>Endereço de Cobrança
-            </h6>
-          </div>
-          <div class="card-body bg-black">
-            <% billing = @lead_data['billing_address'] %>
-            <p class="text-white mb-1"><%= billing['address1'] %></p>
-            <% if billing['address2'].present? %>
-              <p class="text-white mb-1"><%= billing['address2'] %></p>
-            <% end %>
-            <p class="text-white mb-1">
-              <%= billing['city'] %>, <%= billing['province'] %> - <%= billing['zip'] %>
-            </p>
-            <p class="text-white mb-0"><%= billing['country'] %></p>
-          </div>
-        </div>
-      </div>
-    <% end %>
-
-    <% if @lead_data['shipping_address'].present? %>
-      <div class="col-md-6">
-        <div class="card bg-black border border-dark shadow-lg">
-          <div class="card-header bg-dark">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-shipping-fast me-2"></i>Endereço de Entrega
-            </h6>
-          </div>
-          <div class="card-body bg-black">
-            <% shipping = @lead_data['shipping_address'] %>
-            <p class="text-white mb-1"><%= shipping['address1'] %></p>
-            <% if shipping['address2'].present? %>
-              <p class="text-white mb-1"><%= shipping['address2'] %></p>
-            <% end %>
-            <p class="text-white mb-1">
-              <%= shipping['city'] %>, <%= shipping['province'] %> - <%= shipping['zip'] %>
-            </p>
-            <p class="text-white mb-0"><%= shipping['country'] %></p>
-          </div>
-        </div>
-      </div>
-    <% end %>
-  </div>
-
-  <!-- Itens do Carrinho -->
-  <% if @lead_data['line_items'].present? %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card bg-black border border-dark shadow-lg">
-          <div class="card-header bg-dark">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-shopping-cart me-2"></i>Itens do Carrinho
-            </h6>
-          </div>
-          <div class="card-body bg-black p-0">
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0">
-                <thead>
-                  <tr>
-                    <th class="text-white-50">Produto</th>
-                    <th class="text-white-50">Variante</th>
-                    <th class="text-white-50 text-center">Quantidade</th>
-                    <th class="text-white-50 text-end">Preço Unit.</th>
-                    <th class="text-white-50 text-end">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @lead_data['line_items'].each do |item| %>
-                    <tr>
-                      <td class="text-white"><%= item['title'] %></td>
-                      <td class="text-white-50"><%= item['variant_title'] || '-' %></td>
-                      <td class="text-white text-center"><%= item['quantity'] %></td>
-                      <td class="text-white text-end">
-                        <%= @lead_data['currency'] || 'BRL' %> <%= number_to_currency(item['price'].to_f, unit: '') %>
-                      </td>
-                      <td class="text-white text-end">
-                        <strong>
-                          <%= @lead_data['currency'] || 'BRL' %> 
-                          <%= number_to_currency((item['price'].to_f * item['quantity'].to_i), unit: '') %>
-                        </strong>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-                <tfoot>
-                  <tr class="border-top border-secondary">
-                    <td colspan="4" class="text-white text-end"><strong>Total:</strong></td>
-                    <td class="text-white text-end">
-                      <strong class="text-success fs-5">
-                        <%= @lead_data['currency'] || 'BRL' %> 
-                        <%= number_to_currency(@lead_data['total_price'].to_f, unit: '') %>
-                      </strong>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        </div>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="text-main text-end"><strong>Total:</strong></td>
+              <td class="text-main">
+                <strong class="text-success fs-5">
+                  <%= @lead_data['currency'] || 'BRL' %>
+                  <%= number_to_currency(@lead_data['total_price'].to_f, unit: '') %>
+                </strong>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   <% end %>
 
-  <!-- Notas -->
+  <%# ===== NOTAS ===== %>
   <% if @task.notes.present? %>
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="card bg-black border border-dark shadow-lg">
-          <div class="card-header bg-dark">
-            <h6 class="text-white mb-0">
-              <i class="fas fa-sticky-note me-2"></i>Notas
-            </h6>
-          </div>
-          <div class="card-body bg-black">
-            <div class="text-white" style="white-space: pre-wrap;"><%= @task.notes %></div>
-          </div>
-        </div>
+    <div class="table-card mb-4">
+      <div class="table-card-header">
+        <h2 class="table-card-title">
+          <i class="fas fa-sticky-note me-2"></i>Notas
+        </h2>
+      </div>
+      <div class="panel-body-pad">
+        <div class="text-main task-notes-content"><%= @task.notes %></div>
       </div>
     </div>
   <% end %>
@@ -335,51 +286,4 @@
 </div>
 
 <% content_for :styles do %>
-<style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
-
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.card {
-  border-radius: 8px;
-}
-
-.btn {
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.shadow-lg {
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-}
-
-.table-dark {
-  --bs-table-bg: transparent;
-}
-
-.table-dark td {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.badge {
-  font-weight: 500;
-}
-
-.form-control:focus,
-.form-select:focus {
-  background-color: #343a40;
-  border-color: #495057;
-  color: #fff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-</style>
 <% end %>

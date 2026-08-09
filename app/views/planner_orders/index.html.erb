@@ -1,146 +1,242 @@
+<%
+  status_labels = { "draft" => "Rascunho", "saved" => "Salvo", "transmitted" => "Transmitido", "error" => "Erro" }
+  has_filters   = params[:search].present? || params[:status].present?
+%>
+
 <% content_for :title, "Pedidos do Planejador" %>
 
-<div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-success shadow">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-box me-2"></i>Pedidos do Planejador
-          </h5>
-          <%= link_to new_planner_order_path, class: "btn btn-success" do %>
-            <i class="fas fa-plus me-1"></i>Novo Pedido
-          <% end %>
-        </div>
-        
-        <div class="card-body">
-          <!-- Filtros -->
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <%= form_with url: planner_orders_path, method: :get, local: true, class: "d-flex gap-2" do %>
-                <input type="text" name="search" placeholder="Buscar por referência..." 
-                       value="<%= params[:search] %>"
-                       class="form-control bg-dark text-white border-secondary">
-                <button type="submit" class="btn btn-primary">
-                  <i class="fas fa-search"></i>
-                </button>
-              <% end %>
-            </div>
-            <div class="col-md-3">
-              <%= form_with url: planner_orders_path, method: :get, local: true do %>
-                <select name="status" class="form-select bg-dark text-white border-secondary" onchange="this.form.submit()">
-                  <option value="">Todos os Status</option>
-                  <option value="draft" <%= 'selected' if params[:status] == 'draft' %>>Rascunho</option>
-                  <option value="saved" <%= 'selected' if params[:status] == 'saved' %>>Salvo</option>
-                  <option value="transmitted" <%= 'selected' if params[:status] == 'transmitted' %>>Transmitido</option>
-                  <option value="error" <%= 'selected' if params[:status] == 'error' %>>Erro</option>
-                </select>
-              <% end %>
-            </div>
-          </div>
+<div class="orders-container">
 
-          <!-- Tabela de Pedidos -->
-          <div class="table-responsive">
-            <table class="table table-dark table-hover">
-              <thead>
-                <tr>
-                  <th>
-                    <%= link_to planner_orders_path(sort: 'reference', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-white text-decoration-none' do %>
-                      Referência <i class="fas fa-sort"></i>
-                    <% end %>
-                  </th>
-                  <th>Status</th>
-                  <th>Nota Tiny</th>
-                  <th>Total de Itens</th>
-                  <th>
-                    <%= link_to planner_orders_path(sort: 'created_at', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-white text-decoration-none' do %>
-                      Data <i class="fas fa-sort"></i>
-                    <% end %>
-                  </th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% if @planner_orders.any? %>
-                  <% @planner_orders.each do |order| %>
-                    <tr>
-                      <td>
-                        <%= link_to order.reference, planner_order_path(order), class: 'text-info text-decoration-none' %>
-                      </td>
-                      <td>
-                        <% case order.status %>
-                        <% when 'draft' %>
-                          <span class="badge bg-secondary">Rascunho</span>
-                        <% when 'saved' %>
-                          <span class="badge bg-primary">Salvo</span>
-                        <% when 'transmitted' %>
-                          <span class="badge bg-success">Transmitido</span>
-                        <% when 'error' %>
-                          <span class="badge bg-danger">Erro</span>
-                        <% end %>
-                      </td>
-                      <td>
-                        <% if order.tiny_note_number.present? %>
-                          <span class="badge bg-info text-dark">
-                            <i class="fas fa-file-invoice me-1"></i>#<%= order.tiny_note_number %>
-                          </span>
-                        <% else %>
-                          <span class="text-secondary">-</span>
-                        <% end %>
-                      </td>
-                      <td><%= order.total_items %> itens</td>
-                      <td><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-                      <td>
-                        <div class="d-flex gap-1">
-                          <%= link_to planner_order_path(order), class: 'btn btn-sm btn-outline-info', title: 'Ver detalhes' do %>
-                            <i class="fas fa-eye"></i>
-                          <% end %>
-                          
-                          <% if order.saved? %>
-                            <%= button_to transmit_planner_order_path(order), 
-                              method: :post,
-                              data: { confirm: 'Tem certeza que deseja transmitir este pedido para o Tiny?' },
-                              class: 'btn btn-sm btn-success',
-                              title: 'Transmitir para Tiny' do %>
-                              <i class="fas fa-paper-plane"></i>
-                            <% end %>
-                          <% end %>
-                          
-                          <% if order.error? || (order.transmitted? && order.tiny_note_number.blank?) %>
-                            <%= button_to transmit_planner_order_path(order), 
-                              method: :post,
-                              data: { confirm: 'Deseja tentar retransmitir este pedido?' },
-                              class: 'btn btn-sm btn-warning',
-                              title: 'Retransmitir' do %>
-                              <i class="fas fa-redo"></i>
-                            <% end %>
-                          <% end %>
-                          
-                          <%= link_to export_xlsx_planner_order_path(order), 
-                            class: 'btn btn-sm btn-outline-secondary',
-                            title: 'Exportar CSV Correios' do %>
-                            <i class="fas fa-file-csv"></i>
-                          <% end %>
-                        </div>
-                      </td>
-                    </tr>
-                  <% end %>
-                <% else %>
-                  <tr>
-                    <td colspan="6" class="text-center text-light">
-                      <div class="py-4">
-                        <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
-                        <p>Nenhum pedido encontrado</p>
-                        <%= link_to 'Criar Primeiro Pedido', new_planner_order_path, class: 'btn btn-success' %>
-                      </div>
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-box me-2"></i>Pedidos do Planejador
+      </h1>
+      <small class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
+      </small>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge">
+        <i class="fas fa-list me-1"></i><%= @total_planner_orders %> pedido(s)
+      </span>
+      <%= link_to new_planner_order_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Novo Pedido
+      <% end %>
     </div>
   </div>
+
+  <%# ===== PAINEL DE FILTROS ===== %>
+  <div class="filters-panel">
+
+    <%# --- Busca por referência --- %>
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-search me-1"></i>Buscar por referência
+      </label>
+      <%= form_with url: planner_orders_path, method: :get, local: true do %>
+        <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+        <div class="search-row">
+          <%= text_field_tag :search, params[:search], class: "search-input", placeholder: "Buscar por referência..." %>
+          <button type="submit" class="btn-primary-sm">Buscar</button>
+          <% if has_filters %>
+            <%= link_to planner_orders_path, class: "btn-clear" do %>
+              <i class="fas fa-times me-1"></i>Limpar tudo
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <%# --- Status --- %>
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-filter me-1"></i>Status
+      </label>
+      <%= form_with url: planner_orders_path, method: :get, local: true do %>
+        <%= hidden_field_tag :search, params[:search] if params[:search].present? %>
+        <div class="search-row">
+          <select name="status" class="search-input" onchange="this.form.submit()">
+            <option value="">Todos os Status</option>
+            <option value="draft" <%= 'selected' if params[:status] == 'draft' %>>Rascunho</option>
+            <option value="saved" <%= 'selected' if params[:status] == 'saved' %>>Salvo</option>
+            <option value="transmitted" <%= 'selected' if params[:status] == 'transmitted' %>>Transmitido</option>
+            <option value="error" <%= 'selected' if params[:status] == 'error' %>>Erro</option>
+          </select>
+        </div>
+      <% end %>
+    </div>
+
+  </div>
+
+  <%# ===== TABELA ===== %>
+  <div class="table-card">
+
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Lista de Pedidos
+      </h2>
+      <div class="active-filters-row">
+        <% if params[:search].present? %>
+          <span class="filter-tag filter-tag--gray">
+            <i class="fas fa-search me-1"></i>"<%= params[:search] %>"
+          </span>
+        <% end %>
+        <% if params[:status].present? %>
+          <span class="filter-tag filter-tag--yellow">
+            <i class="fas fa-filter me-1"></i><%= status_labels[params[:status]] %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @planner_orders.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>
+                <%= link_to planner_orders_path(sort: 'reference', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-decoration-none' do %>
+                  Referência <i class="fas fa-sort"></i>
+                <% end %>
+              </th>
+              <th>Status</th>
+              <th>Nota Tiny</th>
+              <th>Total de Itens</th>
+              <th>
+                <%= link_to planner_orders_path(sort: 'created_at', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-decoration-none' do %>
+                  Data <i class="fas fa-sort"></i>
+                <% end %>
+              </th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @planner_orders.each do |order| %>
+              <tr>
+                <td class="order-id">
+                  <%= link_to order.reference, planner_order_path(order), class: 'text-decoration-none' %>
+                </td>
+                <td>
+                  <% case order.status %>
+                  <% when 'draft' %>
+                    <span class="badge bg-secondary">Rascunho</span>
+                  <% when 'saved' %>
+                    <span class="badge bg-primary">Salvo</span>
+                  <% when 'transmitted' %>
+                    <span class="badge bg-success">Transmitido</span>
+                  <% when 'error' %>
+                    <span class="badge bg-danger">Erro</span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if order.tiny_note_number.present? %>
+                    <span class="badge bg-info text-dark">
+                      <i class="fas fa-file-invoice me-1"></i>#<%= order.tiny_note_number %>
+                    </span>
+                  <% else %>
+                    <span class="text-muted-custom">-</span>
+                  <% end %>
+                </td>
+                <td class="text-main"><%= order.total_items %> itens</td>
+                <td class="text-muted-custom"><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to planner_order_path(order), class: 'action-btn action-btn--edit', title: 'Ver detalhes' do %>
+                      <i class="fas fa-eye"></i>
+                    <% end %>
+
+                    <% if order.saved? %>
+                      <%= button_to transmit_planner_order_path(order),
+                        method: :post,
+                        data: { confirm: 'Tem certeza que deseja transmitir este pedido para o Tiny?' },
+                        class: 'action-btn action-btn--success',
+                        title: 'Transmitir para Tiny' do %>
+                        <i class="fas fa-paper-plane"></i>
+                      <% end %>
+                    <% end %>
+
+                    <% if order.error? || (order.transmitted? && order.tiny_note_number.blank?) %>
+                      <%= button_to transmit_planner_order_path(order),
+                        method: :post,
+                        data: { confirm: 'Deseja tentar retransmitir este pedido?' },
+                        class: 'action-btn action-btn--warning',
+                        title: 'Retransmitir' do %>
+                        <i class="fas fa-redo"></i>
+                      <% end %>
+                    <% end %>
+
+                    <%= link_to export_xlsx_planner_order_path(order),
+                      class: 'action-btn',
+                      title: 'Exportar CSV Correios' do %>
+                      <i class="fas fa-file-csv"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+        <h5>Nenhum pedido encontrado</h5>
+        <p>Comece criando o primeiro pedido do planejador</p>
+        <%= link_to 'Criar Primeiro Pedido', new_planner_order_path, class: 'btn-export' %>
+      </div>
+    <% end %>
+
+    <%# PAGINAÇÃO %>
+    <% if @total_pages > 1 %>
+      <div class="pagination-footer">
+        <div class="pagination-info">
+          Mostrando
+          <strong><%= [(@current_page - 1) * @per_page + 1, @total_planner_orders].min %></strong>
+          a
+          <strong><%= [@current_page * @per_page, @total_planner_orders].min %></strong>
+          de
+          <strong><%= @total_planner_orders %></strong>
+          pedidos
+        </div>
+
+        <div class="pagination-controls">
+          <% if @current_page > 1 %>
+            <%= link_to planner_orders_path(request.query_parameters.merge("page" => @current_page - 1)),
+                        class: "page-btn" do %>
+              <i class="fas fa-chevron-left me-1"></i>Anterior
+            <% end %>
+          <% end %>
+
+          <% window  = 2
+             p_start = [@current_page - window, 1].max
+             p_end   = [@current_page + window, @total_pages].min %>
+
+          <% (p_start..p_end).each do |pnum| %>
+            <% if pnum == @current_page %>
+              <span class="page-btn page-btn--active"><%= pnum %></span>
+            <% else %>
+              <%= link_to pnum,
+                          planner_orders_path(request.query_parameters.merge("page" => pnum)),
+                          class: "page-btn" %>
+            <% end %>
+          <% end %>
+
+          <% if @current_page < @total_pages %>
+            <%= link_to planner_orders_path(request.query_parameters.merge("page" => @current_page + 1)),
+                        class: "page-btn" do %>
+              Próxima<i class="fas fa-chevron-right ms-1"></i>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+  </div>
+
 </div>

@@ -23,5 +23,23 @@
  @import '@fortawesome/fontawesome-free/scss/brands';
  @import '@fortawesome/fontawesome-free/scss/solid';
 
- 
- 
+ // Shared admin design system (was previously copy-pasted as inline
+ // <style> blocks across dozens of views — see app/assets/stylesheets/admin/).
+ @import 'admin/variables';
+ @import 'admin/base';
+ @import 'admin/components';
+ @import 'admin/layout';
+ @import 'admin/pages/pos';
+ @import 'admin/pages/stock_syncs';
+ @import 'admin/pages/stock_corrections';
+ @import 'admin/pages/users';
+ @import 'admin/pages/discounts';
+ @import 'admin/pages/attempts';
+ @import 'admin/pages/dashboard';
+ @import 'admin/pages/order_pdvs';
+ @import 'admin/pages/clients';
+ @import 'admin/pages/products';
+ @import 'admin/pages/logs';
+ @import 'admin/pages/devise';
+ @import 'admin/pages/orders';
+ @import 'admin/pages/marketing_tasks';

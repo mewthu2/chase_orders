@@ -9,10 +9,10 @@ class ApplicationController < ActionController::Base
   private
 
   def admin_only!
-    redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.' if current_user&.admin?
+    redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.' unless current_user&.admin?
   end
 
   def admin_or_manager!
-    redirect_to root_path, alert: 'Acesso negado.' if current_user&.admin? || current_user&.manager?
+    redirect_to root_path, alert: 'Acesso negado.' unless current_user&.admin? || current_user&.manager?
   end
 end

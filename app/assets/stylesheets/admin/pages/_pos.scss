@@ -1,0 +1,119 @@
+// This app's config/assets.rb precompiles every *.scss file individually
+// (not just admin.scss), so each partial must import its own dependencies
+// to compile standalone instead of relying on admin.scss's import order.
+@import 'admin/variables';
+
+// POS terminal (app/views/pos/index.html.erb) — self-contained "pos-*"
+// component namespace, not currently reused elsewhere.
+
+.pos-search-wrap { position: relative; }
+.pos-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: $text-muted; font-size: 15px; pointer-events: none; }
+.pos-search-input { width: 100%; background: $bg-canvas; border: 1px solid $border-muted; border-radius: $radius-md; color: $text-primary; padding: 12px 14px 12px 42px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+.pos-search-input::placeholder { color: $text-muted; }
+.pos-search-input:focus { border-color: $accent-blue; box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15); }
+
+.pos-product-item { background: $bg-canvas; border: 1px solid $border-default; border-radius: $radius-md; padding: 14px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 14px; transition: border-color 0.2s, background 0.2s; }
+.pos-product-item:hover { border-color: $border-muted; background: $bg-surface; }
+.pos-product-thumb { width: 64px; height: 80px; border-radius: $radius-sm; overflow: hidden; background: $border-default; border: 1px solid $border-muted; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pos-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pos-product-sku { color: $accent-green-light; font-weight: 700; font-size: 0.85rem; margin-bottom: 2px; }
+.pos-product-name { color: $text-primary; font-size: 0.82rem; margin-bottom: 6px; line-height: 1.3; }
+.pos-product-price { color: $accent-blue-lighter; font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+.pos-product-option { background: rgba(31, 111, 235, 0.15); color: $accent-blue-lighter; border: 1px solid rgba(31, 111, 235, 0.3); border-radius: 12px; padding: 2px 8px; font-size: 0.7rem; font-weight: 600; margin-right: 4px; display: inline-block; }
+.pos-add-btn { background: $accent-green; color: #fff; border: none; border-radius: $radius-sm; padding: 8px 14px; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.pos-add-btn:hover:not(:disabled) { background: $accent-green-hover; }
+.pos-add-btn:disabled { background: $border-default; color: $text-muted; cursor: not-allowed; }
+
+.pos-stock-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: $radius-pill; padding: 3px 10px; font-size: 0.72rem; font-weight: 600; border: 1px solid; text-transform: uppercase; letter-spacing: 0.4px; }
+.pos-stock-high { background: rgba(35, 134, 54, 0.15); color: $accent-green-light; border-color: rgba(35, 134, 54, 0.4); }
+.pos-stock-low { background: rgba(210, 153, 34, 0.15); color: $accent-yellow-alt; border-color: rgba(210, 153, 34, 0.4); }
+.pos-stock-out { background: rgba(218, 54, 51, 0.15); color: $accent-red-light; border-color: rgba(218, 54, 51, 0.4); }
+.pos-stock-qty { color: $text-muted; font-size: 0.78rem; }
+
+.pos-cart-item { background: $bg-canvas; border: 1px solid $border-default; border-radius: $radius-md; margin-bottom: 8px; transition: border-color 0.15s; }
+.pos-cart-item:hover { border-color: $border-muted; }
+.pos-cart-item-inner { display: flex; align-items: flex-start; gap: 10px; padding: 10px; }
+.pos-cart-thumb { width: 44px; height: 54px; border-radius: 5px; overflow: hidden; background: $border-default; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid $border-muted; }
+.pos-cart-img { width: 100%; height: 100%; object-fit: cover; }
+.pos-cart-details { flex: 1; min-width: 0; }
+.pos-cart-sku { color: $accent-green-light; font-weight: 700; font-size: 0.78rem; margin-bottom: 1px; }
+.pos-cart-name { color: $text-primary; font-size: 0.75rem; margin-bottom: 7px; line-height: 1.2; }
+.pos-cart-controls { display: flex; justify-content: space-between; align-items: center; }
+.pos-qty-controls { display: flex; align-items: center; gap: 6px; }
+.pos-qty-btn { width: 22px; height: 22px; border-radius: 4px; border: 1px solid $border-muted; background: $border-default; color: $text-primary; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.65rem; transition: background 0.15s; }
+.pos-qty-minus:hover { background: $accent-red; border-color: $accent-red; }
+.pos-qty-plus:hover { background: $accent-green; border-color: $accent-green; }
+.pos-qty-num { background: rgba(31, 111, 235, 0.15); border: 1px solid rgba(31, 111, 235, 0.3); border-radius: 4px; padding: 1px 8px; color: $text-primary; font-size: 0.78rem; font-weight: 600; min-width: 28px; text-align: center; }
+.pos-item-total { color: $accent-blue-lighter; font-weight: 700; font-size: 0.82rem; }
+.pos-item-unit { color: $text-muted; font-size: 0.68rem; }
+.pos-remove-btn { width: 24px; height: 24px; background: $accent-red; border: none; border-radius: 4px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; transition: background 0.15s; }
+.pos-remove-btn:hover { background: $accent-red-hover; }
+
+.pos-cart-summary { background: $bg-canvas; border: 1px solid $border-default; border-radius: $radius-md; padding: 14px; margin-top: 12px; }
+.pos-summary-row { display: flex; justify-content: space-between; align-items: center; color: $text-muted; font-size: 0.85rem; margin-bottom: 6px; }
+.pos-total-row { border-top: 1px solid $border-default; padding-top: 10px; margin-top: 10px; font-weight: 700; font-size: 1rem; color: $text-primary; }
+.pos-total-row span:last-child { color: $accent-blue-lighter; font-size: 1.05rem; }
+.pos-checkout-btn { width: 100%; background: $accent-green; color: #fff; border: none; padding: 11px; border-radius: $radius-md; font-weight: 600; font-size: 0.95rem; margin-top: 12px; cursor: pointer; transition: background 0.2s; }
+.pos-checkout-btn:hover { background: $accent-green-hover; }
+
+.pos-empty-cart { text-align: center; padding: 40px 20px; }
+.pos-empty-icon { font-size: 2.5rem; color: $border-muted; display: block; margin-bottom: 12px; }
+.pos-empty-title { color: $text-muted; font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+.pos-empty-sub { color: $text-faint; font-size: 0.8rem; }
+
+.pos-modal { background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-lg; }
+.pos-modal-header { background: $bg-surface; border-bottom: 1px solid $border-default; padding: 16px 20px; }
+.pos-modal-footer { background: $bg-surface; border-top: 1px solid $border-default; padding: 14px 20px; }
+.pos-modal-card { background: $bg-canvas; border: 1px solid $border-default; border-radius: $radius-md; overflow: hidden; }
+.pos-modal-card-header { padding: 10px 14px; border-bottom: 1px solid $border-default; display: flex; align-items: center; gap: 8px; color: $text-primary; font-size: 0.85rem; font-weight: 600; background: $bg-surface; }
+.pos-modal-card-body { padding: 14px; }
+
+.pos-input { background: $bg-canvas; border: 1px solid $border-muted; border-radius: $radius-sm; color: $text-primary; padding: 8px 12px; font-size: 0.85rem; width: 100%; outline: none; transition: border-color 0.15s; }
+.pos-input::placeholder { color: $text-faint; }
+.pos-input:focus { border-color: $accent-blue; box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.12); }
+.pos-input-group { position: relative; }
+.pos-input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: $text-muted; font-size: 13px; pointer-events: none; }
+.pos-input-with-icon { padding-left: 36px; }
+.pos-label { color: $text-muted; font-size: 0.78rem; margin-bottom: 4px; display: block; }
+
+.pos-btn { border-radius: $radius-sm; padding: 8px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
+.pos-btn-green { background: $accent-green; color: #fff; border-color: $accent-green; }
+.pos-btn-green:hover { background: $accent-green-hover; }
+.pos-btn-ghost { background: transparent; color: $text-muted; border-color: $border-muted; }
+.pos-btn-ghost:hover { background: $border-default; color: $text-primary; }
+.pos-link-btn { background: transparent; border: none; color: $accent-blue; font-size: 0.8rem; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 5px; }
+.pos-link-btn:hover { color: $accent-blue-lighter; }
+.pos-icon-btn { width: 28px; height: 28px; border-radius: $radius-sm; border: 1px solid; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.pos-icon-btn-danger { border-color: rgba(218, 54, 51, 0.5); color: $accent-red-light; }
+.pos-icon-btn-danger:hover { background: rgba(218, 54, 51, 0.15); }
+
+.payment-parcel-item { background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-md; padding: 12px; margin-bottom: 8px; }
+.payment-parcel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.payment-parcel-number { background: rgba(31, 111, 235, 0.15); color: $accent-blue; padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.pos-dropdown { border: 1px solid $border-default; border-radius: $radius-md; background: $bg-surface; overflow: hidden; max-height: 200px; overflow-y: auto; }
+.pos-dropdown-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid $border-default; transition: background 0.15s; }
+.pos-dropdown-item:last-child { border-bottom: none; }
+.pos-dropdown-item:hover { background: $border-default; }
+.pos-client-selected { background: $bg-canvas; border: 1px solid rgba(35, 134, 54, 0.4); border-radius: $radius-md; padding: 10px 12px; }
+
+.pos-alert { border-radius: $radius-sm; padding: 8px 12px; font-size: 0.8rem; display: flex; align-items: center; gap: 8px; }
+.pos-alert-danger { background: rgba(218, 54, 51, 0.12); border: 1px solid rgba(218, 54, 51, 0.3); color: $accent-red-light; }
+.pos-alert-warning { background: rgba(210, 153, 34, 0.12); border: 1px solid rgba(210, 153, 34, 0.3); color: $accent-yellow-alt; }
+.pos-alert-success { background: rgba(35, 134, 54, 0.12); border: 1px solid rgba(35, 134, 54, 0.3); color: $accent-green-light; }
+
+.btn-loading { position: relative; color: transparent !important; pointer-events: none; }
+.btn-loading::after { content: ""; position: absolute; width: 14px; height: 14px; top: 50%; left: 50%; margin: -7px 0 0 -7px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: posSpin 1s linear infinite; }
+@keyframes posSpin { to { transform: rotate(360deg); } }
+
+.pos-fade-in { animation: posFade 0.3s ease; }
+@keyframes posFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 992px) { [style*="position:sticky"] { position: relative !important; top: auto !important; } }
+@media (max-width: 768px) {
+  .pos-product-item { flex-wrap: wrap; }
+  .pos-product-thumb { width: 80px; height: 100px; }
+  .pos-cart-item-inner { flex-wrap: wrap; }
+}
+
+select.pos-input { background-color: $bg-canvas !important; }
+select.pos-input option { background: $bg-surface; color: $text-primary; }

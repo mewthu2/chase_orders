@@ -1,146 +1,103 @@
-<div class="container-fluid py-4">
-  <% title 'Nova Campanha' %>
-  <%= render 'layouts/partials/messages' %>
+<% title 'Nova Campanha' %>
+<%= render 'layouts/partials/messages' %>
 
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-plus-circle me-2"></i>Criar Nova Campanha
-          </h5>
-        </div>
-        <div class="card-body bg-black">
-          <%= form_with model: @campaign, local: true do |f| %>
-            <div class="row g-3">
-              <div class="col-12">
-                <label class="form-label text-white">Nome da Campanha</label>
-                <%= f.text_field :name, class: "form-control bg-black text-white border-secondary", placeholder: "Ex: Recuperação de Carrinho Abandonado Q1" %>
-              </div>
+<div class="client-form-container">
 
-              <div class="col-12">
-                <label class="form-label text-white">Objetivo</label>
-                <%= f.text_area :objective, rows: 3, class: "form-control bg-black text-white border-secondary", placeholder: "Descreva o objetivo desta campanha..." %>
-              </div>
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-plus-circle me-2"></i>Nova Campanha
+      </h1>
+      <p class="page-subtitle">Crie uma nova campanha de marketing</p>
+    </div>
+    <div class="header-actions">
+      <%= link_to marketing_campaigns_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
+    </div>
+  </div>
 
-              <div class="col-md-6">
-                <label class="form-label text-white">Data de Início</label>
-                <%= f.date_field :start_date, class: "form-control bg-black text-white border-secondary" %>
-              </div>
+  <%= form_with model: @campaign, local: true do |f| %>
 
-              <div class="col-md-6">
-                <label class="form-label text-white">Data de Fim</label>
-                <%= f.date_field :end_date, class: "form-control bg-black text-white border-secondary" %>
-              </div>
+    <div class="form-section">
+      <div class="form-section-header">
+        <h3 class="form-section-title">
+          <i class="fas fa-bullhorn me-2"></i>Dados da Campanha
+        </h3>
+      </div>
+      <div class="form-section-body">
+        <div class="form-grid">
+          <div class="form-col-12">
+            <label class="field-label">Nome da Campanha <span class="required">*</span></label>
+            <%= f.text_field :name, class: "field-input", placeholder: "Ex: Recuperação de Carrinho Abandonado Q1" %>
+          </div>
 
-              <div class="col-12">
-                <label class="form-label text-white">Buscar Carrinhos Abandonados A Partir De</label>
-                <%= f.date_field :sync_from_date, class: "form-control bg-black text-white border-secondary" %>
-                <small class="text-white-50">
-                  Data a partir da qual o sistema buscará carrinhos abandonados na Shopify. 
-                  Se não informado, usará a data de início da campanha.
-                </small>
-              </div>
+          <div class="form-col-12">
+            <label class="field-label">Objetivo <span class="required">*</span></label>
+            <%= f.text_area :objective, rows: 3, class: "field-input", placeholder: "Descreva o objetivo desta campanha..." %>
+          </div>
 
-              <%# Added min_days_abandoned field %>
-              <div class="col-md-6">
-                <label class="form-label text-white">Dias Mínimos de Abandono</label>
-                <%= f.number_field :min_days_abandoned, class: "form-control bg-black text-white border-secondary", placeholder: "Ex: 3", min: 0, value: 0 %>
-                <small class="text-white-50">
-                  Apenas distribuir tarefas para carrinhos abandonados há X dias ou mais. 
-                  Use 0 para distribuir imediatamente.
-                </small>
-              </div>
+          <div class="form-col-6">
+            <label class="field-label">Data de Início <span class="required">*</span></label>
+            <%= f.date_field :start_date, class: "field-input" %>
+          </div>
 
-              <div class="col-md-6">
-                <label class="form-label text-white">Leads por Semana (por usuário)</label>
-                <%= f.number_field :users_per_week, class: "form-control bg-black text-white border-secondary", placeholder: "Ex: 100" %>
-                <small class="text-white-50">Quantos leads cada agente receberá por semana</small>
-              </div>
+          <div class="form-col-6">
+            <label class="field-label">Data de Fim <span class="required">*</span></label>
+            <%= f.date_field :end_date, class: "field-input" %>
+          </div>
 
-              <div class="col-md-6">
-                <label class="form-label text-white">Tipo de Campanha</label>
-                <%= f.select :campaign_type, 
-                    [['Abandono de Carrinho', 'abandoned_cart']], 
-                    { prompt: 'Selecione...' },
-                    class: "form-select bg-black text-white border-secondary" %>
-              </div>
+          <div class="form-col-12">
+            <label class="field-label">Buscar Carrinhos Abandonados A Partir De</label>
+            <%= f.date_field :sync_from_date, class: "field-input" %>
+            <span class="field-error text-muted-custom">
+              Data a partir da qual o sistema buscará carrinhos abandonados na Shopify.
+              Se não informado, usará a data de início da campanha.
+            </span>
+          </div>
 
-              <div class="col-12">
-                <div class="form-check">
-                  <%= f.check_box :active, class: "form-check-input bg-black border-secondary" %>
-                  <%= f.label :active, "Ativar campanha imediatamente", class: "form-check-label text-white" %>
-                </div>
-              </div>
+          <%# Added min_days_abandoned field %>
+          <div class="form-col-6">
+            <label class="field-label">Dias Mínimos de Abandono</label>
+            <%= f.number_field :min_days_abandoned, class: "field-input", placeholder: "Ex: 3", min: 0, value: 0 %>
+            <span class="field-error text-muted-custom">
+              Apenas distribuir tarefas para carrinhos abandonados há X dias ou mais.
+              Use 0 para distribuir imediatamente.
+            </span>
+          </div>
+
+          <div class="form-col-6">
+            <label class="field-label">Leads por Semana (por usuário) <span class="required">*</span></label>
+            <%= f.number_field :users_per_week, class: "field-input", placeholder: "Ex: 100" %>
+            <span class="field-error text-muted-custom">Quantos leads cada agente receberá por semana</span>
+          </div>
+
+          <div class="form-col-6">
+            <label class="field-label">Tipo de Campanha <span class="required">*</span></label>
+            <%= f.select :campaign_type,
+                [['Abandono de Carrinho', 'abandoned_cart']],
+                { prompt: 'Selecione...' },
+                class: "field-input field-select" %>
+          </div>
+
+          <div class="form-col-12">
+            <div class="form-check">
+              <%= f.check_box :active, class: "form-check-input" %>
+              <%= f.label :active, "Ativar campanha imediatamente", class: "form-check-label text-main" %>
             </div>
-
-            <div class="d-flex gap-3 justify-content-end mt-4">
-              <%= link_to "Cancelar", marketing_campaigns_path, class: "btn btn-secondary" %>
-              <%= f.submit "Criar Campanha", class: "btn btn-primary" %>
-            </div>
-          <% end %>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+
+    <div class="form-actions">
+      <%= f.submit "Criar Campanha", class: "btn-submit" %>
+      <%= link_to "Cancelar", marketing_campaigns_path, class: "btn-cancel" %>
+    </div>
+  <% end %>
+
 </div>
 
 <% content_for :styles do %>
-<style>
-body {
-  background-color: #121212;
-  color: #f8f9fa;
-}
-
-.bg-black {
-  background-color: #121212 !important;
-}
-
-.text-white-50 {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-
-.card {
-  border-radius: 8px;
-}
-
-.btn {
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-.shadow-lg {
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5) !important;
-}
-
-.form-control,
-.form-select {
-  background-color: #121212;
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.form-control:focus,
-.form-select:focus {
-  background-color: #343a40;
-  border-color: #495057;
-  color: #fff;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.form-control::placeholder {
-  color: #adb5bd;
-  opacity: 1;
-}
-
-.form-check-input {
-  background-color: #121212;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.form-check-input:checked {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-}
-</style>
 <% end %>

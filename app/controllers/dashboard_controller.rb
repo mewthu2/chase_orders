@@ -759,7 +759,7 @@ class DashboardController < ApplicationController
 
   def admin_only!
     unless current_user&.admin?
-      redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
+      redirect_to dashboard_index_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
     end
   end
 end

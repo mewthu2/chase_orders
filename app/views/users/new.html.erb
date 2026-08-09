@@ -1,1 +1,22 @@
-<%= render 'form' %>
+<% content_for :title, "Novo Usuário" %>
+
+<div class="users-container">
+
+  <%# ===== HEADER ===== %>
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-user-plus me-2"></i>Novo Usuário
+      </h1>
+      <p class="page-subtitle">Cadastre um novo usuário do sistema</p>
+    </div>
+    <div class="header-actions">
+      <%= link_to users_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left me-1"></i>Voltar
+      <% end %>
+    </div>
+  </div>
+
+  <%= render 'form' %>
+
+</div>
