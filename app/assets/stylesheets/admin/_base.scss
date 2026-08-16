@@ -67,7 +67,9 @@ body {
   opacity: 0.8;
 }
 
-.modal-backdrop { z-index: 1055; }
+// Above .top-navigation / .modal-overlay (both z-index 1050), but still
+// below Bootstrap's own .modal (1055) so modal content stays clickable.
+.modal-backdrop { z-index: 1051; }
 
 .table-dark th { font-weight: 600; color: #e9ecef; }
 .table-dark td { color: #ced4da; }
