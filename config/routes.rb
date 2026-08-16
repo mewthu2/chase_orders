@@ -40,6 +40,7 @@ Rails.application.routes.draw do
   resources :dashboard, only: [:index] do
     collection do
       get :ranking_sellers
+      get :correios_pipeline
       get :order_correios_tracking
       get :order_correios_create
       get :order_correios_stock_errors

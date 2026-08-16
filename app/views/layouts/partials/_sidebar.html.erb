@@ -77,6 +77,11 @@
             </div>
             <div class="nav-group-dropdown" id="correiosDropdown">
               <div class="dropdown-content">
+                <%= link_to correios_pipeline_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(correios_pipeline_dashboard_index_path)}" do %>
+                  <i class="fas fa-stream"></i>
+                  <span>Funil de Pedidos</span>
+                <% end %>
+
                 <%= link_to order_correios_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}" do %>
                   <i class="fas fa-route"></i>
                   <span>Acompanhamento</span>

@@ -1,0 +1,204 @@
+<div class="container-fluid py-4">
+  <% title 'Funil de Pedidos no Correios' %>
+  <%= render 'layouts/partials/messages' %>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-stream me-2"></i>Funil de Pedidos no Correios</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Criação do Pedido &rarr; Emissão de Nota &rarr; Envio XML &rarr; Rastreamento &rarr; Concluído
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="<%= order_correios_create_dashboard_index_path %>" class="btn btn-dark" title="Pedidos que ainda não entraram no funil (falha na criação no Correios)">
+        <i class="fas fa-plus-circle me-1"></i> Criação de Pedidos
+      </a>
+      <% %w[today 7 30 90].each do |p| %>
+        <a href="<%= correios_pipeline_dashboard_index_path(period: p) %>"
+           class="btn btn-sm <%= @period == p ? 'btn-primary' : 'btn-outline-light' %>">
+          <%= { 'today' => 'Hoje', '7' => '7 dias', '30' => '30 dias', '90' => '90 dias' }[p] %>
+        </a>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="alert alert-info border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
+      <div>
+        <h5 class="mb-1">Como ler esse painel</h5>
+        <p class="mb-0">
+          Os cards mostram quantos pedidos estão em cada etapa agora. A tabela abaixo lista só os que
+          precisam de atenção: sem nenhuma tentativa na próxima etapa há mais de 6h, ou com erro na
+          última tentativa. Pedidos que ainda nem entraram no funil (falha ao criar no Correios) ficam
+          na tela <strong>Criação de Pedidos</strong>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="pipelineLoading" class="table-card text-center py-5">
+    <div class="spinner-border text-info" role="status"></div>
+    <p class="mt-3 mb-0 text-muted">Calculando o funil... isso pode levar até 30 segundos.</p>
+  </div>
+
+  <div id="pipelineError" class="alert alert-danger border-0" style="display:none;"></div>
+
+  <div id="pipelineContent" style="display:none;">
+    <div class="row g-3 mb-4" id="pipelineFunnel"></div>
+
+    <div class="table-card">
+      <div class="table-card-header">
+        <h2 class="table-card-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>Pedidos que precisam de atenção
+        </h2>
+        <span class="filter-tag filter-tag--blue" id="pipelineAttentionCount">0 pedidos</span>
+      </div>
+
+      <div id="pipelineAttentionTableWrap" class="table-responsive"></div>
+
+      <div id="pipelineAttentionEmpty" class="empty-state" style="display:none;">
+        <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+        <h5>Nenhum pedido travado no período</h5>
+        <p>Todos os pedidos criados nesse período estão fluindo normalmente ou já concluídos.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const STATUS_URL = <%= raw correios_pipeline_dashboard_index_path(period: @period, format: :json).to_json %>;
+  const POLL_INTERVAL_MS = 3000;
+
+  const FUNNEL_STAGES = [
+    { key: 'invoice', label: 'Aguardando Nota', icon: 'fa-file-invoice', color: 'warning' },
+    { key: 'xml', label: 'Aguardando XML', icon: 'fa-file-code', color: 'info' },
+    { key: 'tracking', label: 'Aguardando Rastreio', icon: 'fa-shipping-fast', color: 'primary' },
+    { key: 'completed', label: 'Concluído', icon: 'fa-check-circle', color: 'success' }
+  ];
+
+  const STAGE_LABEL = { invoice: 'Aguardando Nota', xml: 'Aguardando XML', tracking: 'Aguardando Rastreio' };
+  const REASON_LABEL = { error: 'Erro', idle: 'Parado' };
+  const NEXT_KIND_LABEL = { invoice: 'emission_invoice', xml: 'send_xml', tracking: 'get_tracking' };
+
+  function renderFunnel(counts, attentionCounts) {
+    const wrap = document.getElementById('pipelineFunnel');
+    wrap.innerHTML = FUNNEL_STAGES.map(function (stage) {
+      const count = counts[stage.key] || 0;
+      const stuck = attentionCounts[stage.key] || 0;
+      const stuckBadge = stuck > 0
+        ? `<span class="badge bg-danger ms-2"><i class="fas fa-exclamation-triangle me-1"></i>${stuck} travado(s)</span>`
+        : '';
+
+      return `
+        <div class="col-6 col-lg-3">
+          <div class="table-card text-center py-4">
+            <i class="fas ${stage.icon} fa-2x mb-2 text-${stage.color}"></i>
+            <h2 class="mb-0">${count}</h2>
+            <div class="text-muted-custom">${stage.label}</div>
+            ${stuckBadge}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderAttentionTable(attention) {
+    const wrap = document.getElementById('pipelineAttentionTableWrap');
+    const empty = document.getElementById('pipelineAttentionEmpty');
+    document.getElementById('pipelineAttentionCount').textContent = attention.length + ' pedido(s)';
+
+    if (!attention.length) {
+      wrap.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const rows = attention.map(function (row) {
+      const reasonBadge = row.reason === 'error'
+        ? '<span class="badge bg-danger">Erro</span>'
+        : '<span class="badge bg-warning text-dark">Parado</span>';
+
+      const actionCell = row.attempt_id
+        ? `<a href="/attempts/reprocess?attempt_id=${row.attempt_id}"
+              class="btn btn-sm btn-outline-warning"
+              onclick="return confirm('Reprocessar a etapa ${NEXT_KIND_LABEL[row.current_stage]} do pedido ${row.tiny_order_id}?')">
+             <i class="fas fa-redo me-1"></i>Reprocessar
+           </a>`
+        : '<span class="text-muted-custom small">Aguardando próxima varredura automática</span>';
+
+      return `
+        <tr>
+          <td class="text-center">
+            <a href="/attempts/verify_attempts?tiny_order_id=${row.tiny_order_id}" target="_blank" class="btn btn-sm btn-outline-info" title="Ver histórico">
+              <i class="fas fa-paperclip"></i>
+            </a>
+          </td>
+          <td class="text-center fw-bold text-white">${row.tiny_order_id}</td>
+          <td class="text-center">${STAGE_LABEL[row.current_stage]}</td>
+          <td class="text-center">${reasonBadge}</td>
+          <td class="text-start" style="max-width:360px; white-space:normal;">${row.message || '—'}</td>
+          <td class="text-center text-muted-custom">${row.last_activity_at}</td>
+          <td class="text-center">${actionCell}</td>
+        </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
+            <th class="text-center">Pedido</th>
+            <th class="text-center">Etapa Atual</th>
+            <th class="text-center">Motivo</th>
+            <th class="text-start">Última Mensagem</th>
+            <th class="text-center">Última Atividade</th>
+            <th class="text-center">Ação</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  function poll() {
+    fetch(STATUS_URL, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.status === 'processing') {
+          setTimeout(poll, POLL_INTERVAL_MS);
+          return;
+        }
+
+        document.getElementById('pipelineLoading').style.display = 'none';
+
+        if (data.status === 'error') {
+          document.getElementById('pipelineError').style.display = 'block';
+          document.getElementById('pipelineError').textContent = 'Erro ao calcular o funil: ' + data.error;
+          return;
+        }
+
+        document.getElementById('pipelineContent').style.display = 'block';
+        renderFunnel(data.counts, countAttentionByStage(data.attention));
+        renderAttentionTable(data.attention);
+      })
+      .catch(function () {
+        document.getElementById('pipelineLoading').style.display = 'none';
+        document.getElementById('pipelineError').style.display = 'block';
+        document.getElementById('pipelineError').textContent = 'Erro de conexão ao calcular o funil.';
+      });
+  }
+
+  function countAttentionByStage(attention) {
+    return attention.reduce(function (acc, row) {
+      acc[row.current_stage] = (acc[row.current_stage] || 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  poll();
+});
+</script>
+<% end %>

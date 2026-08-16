@@ -277,6 +277,15 @@ class DashboardController < ApplicationController
     prepare_tracking_data_optimized(@filter_params)
   end
 
+  def correios_pipeline
+    @period = params[:period].presence || '30'
+
+    respond_to do |format|
+      format.html
+      format.json { render json: pipeline_status_payload(@period) }
+    end
+  end
+
   def update_invoice_id
     tiny_order_id = params[:tiny_order_id]
     id_nota_fiscal = params[:id_nota_fiscal]
@@ -477,7 +486,7 @@ class DashboardController < ApplicationController
         AND NOT EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = 1 AND a.status = 2
+            AND a.kinds = 2 AND a.status = 2
         )
       ),
       xml_pending AS (
@@ -488,12 +497,12 @@ class DashboardController < ApplicationController
         AND EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = 1 AND a.status = 2
+            AND a.kinds = 2 AND a.status = 2
         )
         AND NOT EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = 2 AND a.status = 2
+            AND a.kinds = 1 AND a.status = 2
         )
       ),
       tracking_pending AS (
@@ -504,7 +513,7 @@ class DashboardController < ApplicationController
         AND EXISTS (
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = 2 AND a.status = 2
+            AND a.kinds = 1 AND a.status = 2
         )
         AND NOT EXISTS (
           SELECT 1 FROM attempts a
@@ -570,6 +579,25 @@ class DashboardController < ApplicationController
       push_tracking: tracking_count,
       total_tracking: @tracking_summary.count
     }
+  end
+
+  def pipeline_status_payload(period)
+    raw = $redis.get(FetchCorreiosPipelineReportJob.result_key(period))
+
+    if raw
+      result = JSON.parse(raw, symbolize_names: true)
+      return { status: 'error', error: result[:error] } if result[:error]
+
+      return result.merge(status: 'done')
+    end
+
+    processing_key = FetchCorreiosPipelineReportJob.processing_key(period)
+    acquired_lock = $redis.set(processing_key, '1', nx: true, ex: FetchCorreiosPipelineReportJob::PROCESSING_TTL)
+    FetchCorreiosPipelineReportJob.perform_later(period) if acquired_lock
+
+    { status: 'processing' }
+  rescue Redis::BaseError => e
+    { status: 'error', error: e.message }
   end
 
   def ranking_sellers
