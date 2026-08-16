@@ -162,7 +162,8 @@
 
                 <td>
                   <button class="btn-view-customer"
-                          data-customer-url="<%= customer_path(customer, format: :json) %>">
+                          data-customer-url="<%= customer_path(customer, format: :json) %>"
+                          data-coupons-url="<%= coupons_customer_path(customer, format: :json) %>">
                     <i class="fas fa-eye me-1"></i>Ver
                   </button>
                 </td>
@@ -251,6 +252,10 @@
         <i class="fas fa-shopping-cart me-1"></i>Pedidos
         <span class="orders-count-badge" id="ordersCountBadge">0</span>
       </button>
+      <button class="modal-tab" data-tab="coupons">
+        <i class="fas fa-ticket-alt me-1"></i>Cupons
+        <span class="orders-count-badge" id="couponsCountBadge">0</span>
+      </button>
     </div>
 
     <div class="modal-body">
@@ -308,6 +313,23 @@
         </div>
       </div>
 
+      <%# Tab: Cupons %>
+      <div id="tabCoupons" class="tab-pane" style="display:none;">
+        <div id="couponsLoading" class="modal-loading" style="display:none;">
+          <div class="spinner"></div>
+          <span>Buscando cupons na Shopify... isso pode levar até 30 segundos.</span>
+        </div>
+        <div id="couponsTableWrap"></div>
+        <div id="couponsEmpty" class="empty-state" style="display:none;">
+          <i class="fas fa-ticket-alt fa-2x mb-2 d-block"></i>
+          <h6>Nenhum cupom elegível encontrado para este cliente</h6>
+        </div>
+        <div id="couponsError" class="empty-state" style="display:none;">
+          <i class="fas fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+          <h6>Erro ao buscar cupons na Shopify</h6>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -334,22 +356,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const modal      = document.getElementById('customerModal');
   const modalClose = document.getElementById('modalClose');
-  let activeTab    = 'info';
+  let activeTab       = 'info';
+  let couponsUrl      = null;
+  let couponsCache    = null;
+  let couponsPollToken = 0;
 
   function openModal()  { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-  function closeModal() { modal.style.display = 'none';  document.body.style.overflow = ''; }
+  function closeModal() { modal.style.display = 'none';  document.body.style.overflow = ''; couponsPollToken += 1; }
 
   modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  function showTabPane(tab) {
+    document.getElementById('tabInfo').style.display    = tab === 'info'    ? 'block' : 'none';
+    document.getElementById('tabOrders').style.display   = tab === 'orders'  ? 'block' : 'none';
+    document.getElementById('tabCoupons').style.display  = tab === 'coupons' ? 'block' : 'none';
+  }
 
   document.querySelectorAll('.modal-tab').forEach(function (tab) {
     tab.addEventListener('click', function () {
       document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('modal-tab--active'));
       tab.classList.add('modal-tab--active');
       activeTab = tab.dataset.tab;
-      document.getElementById('tabInfo').style.display   = activeTab === 'info'   ? 'block' : 'none';
-      document.getElementById('tabOrders').style.display = activeTab === 'orders' ? 'block' : 'none';
+      showTabPane(activeTab);
+
+      if (activeTab === 'coupons' && couponsCache === null) {
+        loadCoupons();
+      }
     });
   });
 
@@ -471,21 +505,114 @@ document.addEventListener('DOMContentLoaded', function () {
     wrap.innerHTML = `<div class="orders-blocks">${rows}</div>`;
   }
 
+  function fmtDiscountValue(coupon) {
+    if (coupon.discount_type === 'percentage') return `${fmt(coupon.discount_value)}%`;
+    if (coupon.discount_value === null || coupon.discount_value === undefined) return '—';
+    return Number(coupon.discount_value).toLocaleString('pt-BR', { style: 'currency', currency: coupon.currency_code || 'BRL' });
+  }
+
+  function populateCoupons(coupons) {
+    document.getElementById('couponsCountBadge').textContent = coupons.length;
+    const wrap  = document.getElementById('couponsTableWrap');
+    const empty = document.getElementById('couponsEmpty');
+
+    if (!coupons.length) {
+      wrap.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+
+    const rows = coupons.map(function (c) {
+      return `
+        <div class="order-block">
+          <div class="order-block-header">
+            <div class="order-block-left">
+              <span class="order-block-id">${fmt(c.code)}</span>
+              <span class="location-badge location-badge--empty">${fmt(c.eligibility_reason)}</span>
+            </div>
+            <div class="order-block-right">
+              <span class="order-meta-info"><i class="fas fa-calendar" style="margin-right:4px;"></i>${fmtDate(c.starts_at)} — ${c.ends_at ? fmtDate(c.ends_at) : 'sem prazo'}</span>
+              <span class="order-block-total">${fmtDiscountValue(c)}</span>
+            </div>
+          </div>
+          <div style="padding:0.65rem 1rem; color:#8b949e; font-size:0.82rem;">
+            ${fmt(c.title)}${c.summary ? ` — ${c.summary}` : ''}
+            <span style="margin-left:0.5rem;">Status: ${fmt(c.status)}</span>
+            ${c.usage_limit ? `<span style="margin-left:0.5rem;">Uso: ${c.usage_count || 0}/${c.usage_limit}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    wrap.innerHTML = `<div class="orders-blocks">${rows}</div>`;
+  }
+
+  const COUPONS_POLL_INTERVAL_MS = 3000;
+
+  function loadCoupons() {
+    if (!couponsUrl) return;
+
+    couponsPollToken += 1;
+    const token = couponsPollToken;
+
+    document.getElementById('couponsLoading').style.display = 'flex';
+    document.getElementById('couponsTableWrap').innerHTML   = '';
+    document.getElementById('couponsEmpty').style.display   = 'none';
+    document.getElementById('couponsError').style.display   = 'none';
+
+    pollCoupons(couponsUrl, token);
+  }
+
+  function pollCoupons(url, token) {
+    if (token !== couponsPollToken) return; // modal fechou ou trocou de cliente enquanto aguardava
+
+    fetch(url, {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (token !== couponsPollToken) return;
+
+        if (data.status === 'processing') {
+          setTimeout(function () { pollCoupons(url, token); }, COUPONS_POLL_INTERVAL_MS);
+          return;
+        }
+
+        document.getElementById('couponsLoading').style.display = 'none';
+
+        if (data.status === 'error') {
+          document.getElementById('couponsError').style.display = 'block';
+          return;
+        }
+
+        couponsCache = data.coupons || [];
+        populateCoupons(couponsCache);
+      })
+      .catch(function () {
+        if (token !== couponsPollToken) return;
+        document.getElementById('couponsLoading').style.display = 'none';
+        document.getElementById('couponsError').style.display   = 'block';
+      });
+  }
+
   function showLoading() {
     document.getElementById('loadingState').style.display = 'flex';
-    document.getElementById('tabInfo').style.display      = 'none';
-    document.getElementById('tabOrders').style.display    = 'none';
+    showTabPane(null);
   }
 
   function hideLoading() {
     document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('tabInfo').style.display      = activeTab === 'info'   ? 'block' : 'none';
-    document.getElementById('tabOrders').style.display    = activeTab === 'orders' ? 'block' : 'none';
+    showTabPane(activeTab);
   }
 
   document.querySelectorAll('.btn-view-customer').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      activeTab = 'info';
+      activeTab        = 'info';
+      couponsUrl       = btn.dataset.couponsUrl;
+      couponsCache     = null;
+      couponsPollToken += 1; // invalida qualquer polling de cupons ainda em andamento de outro cliente
+      document.getElementById('couponsCountBadge').textContent = '0';
       document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('modal-tab--active'));
       document.querySelector('[data-tab="info"]').classList.add('modal-tab--active');
 

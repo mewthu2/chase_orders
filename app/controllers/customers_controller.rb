@@ -3,14 +3,14 @@ class CustomersController < ApplicationController
   before_action :require_admin!
 
   LOCATION_COLORS = [
-    { bg: "#0D6EFD", fg: "#fff" },
-    { bg: "#198754", fg: "#fff" },
-    { bg: "#DC3545", fg: "#fff" },
-    { bg: "#FFC107", fg: "#000" },
-    { bg: "#0DCAF0", fg: "#000" },
-    { bg: "#6F42C1", fg: "#fff" },
-    { bg: "#FD7E14", fg: "#fff" },
-    { bg: "#20C997", fg: "#000" },
+    { bg: '#0D6EFD', fg: '#fff' },
+    { bg: '#198754', fg: '#fff' },
+    { bg: '#DC3545', fg: '#fff' },
+    { bg: '#FFC107', fg: '#000' },
+    { bg: '#0DCAF0', fg: '#000' },
+    { bg: '#6F42C1', fg: '#fff' },
+    { bg: '#FD7E14', fg: '#fff' },
+    { bg: '#20C997', fg: '#000' },
   ].freeze
 
   def index
@@ -67,7 +67,34 @@ class CustomersController < ApplicationController
     end
   end
 
+  def coupons
+    @customer = Customer.find(params[:id])
+
+    respond_to do |format|
+      format.json { render json: coupons_status_payload(@customer) }
+    end
+  end
+
   private
+
+  def coupons_status_payload(customer)
+    raw = $redis.get(FetchCustomerCouponsJob.result_key(customer.id))
+
+    if raw
+      result = JSON.parse(raw, symbolize_names: true)
+      return { status: 'error', error: result[:error] } if result[:error]
+
+      return { status: 'done', coupons: result[:coupons] }
+    end
+
+    processing_key = FetchCustomerCouponsJob.processing_key(customer.id)
+    acquired_lock = $redis.set(processing_key, '1', nx: true, ex: FetchCustomerCouponsJob::PROCESSING_TTL)
+    FetchCustomerCouponsJob.perform_later(customer.id) if acquired_lock
+
+    { status: 'processing' }
+  rescue Redis::BaseError => e
+    { status: 'error', error: e.message }
+  end
 
   def build_query
     query = Customer.order(created_at: :desc)
@@ -75,8 +102,8 @@ class CustomersController < ApplicationController
     if params[:search].present?
       term  = "%#{params[:search]}%"
       query = query.where(
-        "first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?",
-        term, term, term, term
+        "first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? OR CONCAT_WS(' ', first_name, last_name) LIKE ?",
+        term, term, term, term, term
       )
     end
 

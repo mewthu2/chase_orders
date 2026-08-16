@@ -70,7 +70,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :customers, only: [:index, :show]
+  resources :customers, only: [:index, :show] do
+    member do
+      get :coupons
+    end
+  end
   
   resources :stock_corrections do
     member do
