@@ -43,10 +43,21 @@ Rails.application.routes.draw do
       get :correios_pipeline
       get :order_correios_tracking
       get :order_correios_create
+      get :order_correios_create_b2b
+      post :approve_order_b2b
+      post :ignore_order_b2b
+      post :run_create_correios_b2b
       get :order_correios_stock_errors
       get :send_xml
+      get :send_xml_b2b
+      post :run_send_xml_b2b
       get :push_tracking
+      get :push_tracking_b2b
+      post :run_push_tracking_b2b
       get :invoice_emition
+      get :invoice_emition_b2b
+      post :run_invoice_emition_b2b
+      get :order_correios_tracking_b2b
       get :api_correios
       get :tracking
       get :stockend

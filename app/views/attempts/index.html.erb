@@ -3,19 +3,29 @@
     when 'create_note_tiny2' then 'Tentativas de Criação de Nota no Tiny2'
     when 'emission_invoice_tiny2' then 'Tentativas de Emissão de Nota Fiscal no Tiny2'
     when 'transfer_tiny_to_shopify_order' then 'Tentativas de Transferência do Tiny para Shopify'
-    else 'Todas as Tentativas'
+    else
+      case params[:channel]
+      when 'b2c' then 'Tentativas B2C (Correios direto)'
+      when 'b2b' then 'Tentativas B2B (Transportadora)'
+      else 'Todas as Tentativas'
+      end
   end
 
   page_icon = case params[:kinds]
     when 'create_note_tiny2' then 'fa-sticky-note'
     when 'emission_invoice_tiny2' then 'fa-file-invoice-dollar'
     when 'transfer_tiny_to_shopify_order' then 'fa-exchange-alt'
-    else 'fa-list-check'
+    else
+      case params[:channel]
+      when 'b2c' then 'fa-store'
+      when 'b2b' then 'fa-truck'
+      else 'fa-list-check'
+      end
   end
 
   title page_title
 
-  has_filters = params[:kinds].present? || params[:status].present? || params[:search].present?
+  has_filters = params[:kinds].present? || params[:status].present? || params[:search].present? || params[:channel].present?
 %>
 
 <div class="container-fluid py-4">
@@ -39,27 +49,93 @@
 
     <div class="filter-section">
       <label class="filter-label">
-        <i class="fas fa-list-ul me-1"></i>Tipo de Tentativa
+        <i class="fas fa-code-branch me-1"></i>Canal
       </label>
       <div class="period-buttons">
         <%= link_to attempts_path(status: params[:status], search: params[:search]),
+                    class: "btn-period #{params[:channel].blank? ? 'btn-period--active' : ''}" do %>
+          <i class="fas fa-list-ul me-1"></i>Todos
+        <% end %>
+
+        <%= link_to attempts_path(channel: 'b2c', status: params[:status], search: params[:search]),
+                    class: "btn-period #{params[:channel] == 'b2c' ? 'btn-period--active' : ''}" do %>
+          <i class="fas fa-store me-1"></i>B2C
+        <% end %>
+
+        <%= link_to attempts_path(channel: 'b2b', status: params[:status], search: params[:search]),
+                    class: "btn-period #{params[:channel] == 'b2b' ? 'btn-period--active' : ''}" do %>
+          <i class="fas fa-truck me-1"></i>B2B
+        <% end %>
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-list-ul me-1"></i>Tipo de Tentativa
+      </label>
+      <div class="period-buttons">
+        <%= link_to attempts_path(channel: params[:channel], status: params[:status], search: params[:search]),
                     class: "btn-period #{params[:kinds].blank? ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-list-ul me-1"></i>Todos
         <% end %>
 
-        <%= link_to attempts_path(kinds: 'create_note_tiny2', status: params[:status], search: params[:search]),
-                    class: "btn-period #{params[:kinds] == 'create_note_tiny2' ? 'btn-period--active' : ''}" do %>
-          <i class="fas fa-sticky-note me-1"></i>Criação de Nota no Tiny2
-        <% end %>
+        <% if params[:channel] == 'b2c' %>
+          <%= link_to attempts_path(channel: 'b2c', kinds: 'create_correios_order', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'create_correios_order' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-box me-1"></i>Criação de Pedido
+          <% end %>
 
-        <%= link_to attempts_path(kinds: 'emission_invoice_tiny2', status: params[:status], search: params[:search]),
-                    class: "btn-period #{params[:kinds] == 'emission_invoice_tiny2' ? 'btn-period--active' : ''}" do %>
-          <i class="fas fa-file-invoice-dollar me-1"></i>Emissão de Nota Fiscal no Tiny2
-        <% end %>
+          <%= link_to attempts_path(channel: 'b2c', kinds: 'send_xml', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'send_xml' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-file-code me-1"></i>Envio XML
+          <% end %>
 
-        <%= link_to attempts_path(kinds: 'transfer_tiny_to_shopify_order', status: params[:status], search: params[:search]),
-                    class: "btn-period #{params[:kinds] == 'transfer_tiny_to_shopify_order' ? 'btn-period--active' : ''}" do %>
-          <i class="fas fa-exchange-alt me-1"></i>Transferência Tiny para Shopify
+          <%= link_to attempts_path(channel: 'b2c', kinds: 'emission_invoice', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'emission_invoice' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-file-invoice-dollar me-1"></i>Emissão de Nota
+          <% end %>
+
+          <%= link_to attempts_path(channel: 'b2c', kinds: 'get_tracking', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'get_tracking' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-truck-fast me-1"></i>Rastreamento
+          <% end %>
+        <% elsif params[:channel] == 'b2b' %>
+          <%= link_to attempts_path(channel: 'b2b', kinds: 'create_correios_order_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'create_correios_order_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-box me-1"></i>Criação de Pedido
+          <% end %>
+
+          <%= link_to attempts_path(channel: 'b2b', kinds: 'send_xml_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'send_xml_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-file-code me-1"></i>Envio XML
+          <% end %>
+
+          <%= link_to attempts_path(channel: 'b2b', kinds: 'emission_invoice_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'emission_invoice_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-file-invoice-dollar me-1"></i>Emissão de Nota
+          <% end %>
+
+          <%= link_to attempts_path(channel: 'b2b', kinds: 'get_tracking_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'get_tracking_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-truck-fast me-1"></i>Rastreamento
+          <% end %>
+        <% else %>
+          <%= link_to attempts_path(kinds: 'create_note_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'create_note_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-sticky-note me-1"></i>Criação de Nota no Tiny2
+          <% end %>
+
+          <%= link_to attempts_path(kinds: 'emission_invoice_tiny2', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'emission_invoice_tiny2' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-file-invoice-dollar me-1"></i>Emissão de Nota Fiscal no Tiny2
+          <% end %>
+
+          <%= link_to attempts_path(kinds: 'transfer_tiny_to_shopify_order', status: params[:status], search: params[:search]),
+                      class: "btn-period #{params[:kinds] == 'transfer_tiny_to_shopify_order' ? 'btn-period--active' : ''}" do %>
+            <i class="fas fa-exchange-alt me-1"></i>Transferência Tiny para Shopify
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -71,32 +147,32 @@
         <i class="fas fa-info-circle me-1"></i>Status
       </label>
       <div class="period-buttons">
-        <%= link_to attempts_path(kinds: params[:kinds], search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], search: params[:search]),
                     class: "btn-period #{params[:status].blank? ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-list-ul me-1"></i>Todos
         <% end %>
 
-        <%= link_to attempts_path(kinds: params[:kinds], status: 'success', search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], status: 'success', search: params[:search]),
                     class: "btn-period #{params[:status] == 'success' ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-check me-1"></i>Success
         <% end %>
 
-        <%= link_to attempts_path(kinds: params[:kinds], status: 'fail', search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], status: 'fail', search: params[:search]),
                     class: "btn-period #{params[:status] == 'fail' ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-times me-1"></i>Fail
         <% end %>
 
-        <%= link_to attempts_path(kinds: params[:kinds], status: 'error', search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], status: 'error', search: params[:search]),
                     class: "btn-period #{params[:status] == 'error' ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-wrench me-1"></i>Error
         <% end %>
 
-        <%= link_to attempts_path(kinds: params[:kinds], status: 'processing', search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], status: 'processing', search: params[:search]),
                     class: "btn-period #{params[:status] == 'processing' ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-spinner me-1"></i>Processing
         <% end %>
 
-        <%= link_to attempts_path(kinds: params[:kinds], status: 'nil', search: params[:search]),
+        <%= link_to attempts_path(channel: params[:channel], kinds: params[:kinds], status: 'nil', search: params[:search]),
                     class: "btn-period #{params[:status] == 'nil' ? 'btn-period--active' : ''}" do %>
           <i class="fas fa-question me-1"></i>Sem Status
         <% end %>
@@ -110,6 +186,7 @@
         <i class="fas fa-search me-1"></i>Buscar tentativa
       </label>
       <%= form_tag(attempts_path, method: 'get') do %>
+        <%= hidden_field_tag :channel, params[:channel] %>
         <%= hidden_field_tag :status, params[:status] %>
         <%= hidden_field_tag :kinds, params[:kinds] %>
         <div class="search-row">

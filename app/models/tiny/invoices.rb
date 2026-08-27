@@ -18,16 +18,16 @@ module Tiny::Invoices
     response.with_indifferent_access[:retorno][:nota_fiscal]
   end
 
-  def obtain_xml(invoice_id)
+  def obtain_xml(invoice_id, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))
     HTTParty.get(ENV.fetch('OBTER_XML_NOTA_FISCAL'),
-                 query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                 query: { token:,
                           formato: 'string',
                           id: invoice_id })
   end
 
-  def invoice_emition(invoice_id)
+  def invoice_emition(invoice_id, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))
     HTTParty.get(ENV.fetch('EMITIR_NOTA_FISCAL'),
-                 query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                 query: { token:,
                           formato: 'string',
                           id: invoice_id })
   end

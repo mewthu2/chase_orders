@@ -18,6 +18,30 @@ class DashboardController < ApplicationController
     Attempt.where(id: latest_ids.map(&:id))
   end
 
+  def push_tracking_b2b
+    tracked_ids = Attempt.where(kinds: :get_tracking_tiny2, status: :success).pluck(:order_correios_id)
+
+    latest_ids = Attempt.where(kinds: :send_xml_tiny2, status: :success, is_transportadora: false)
+                        .where.not(order_correios_id: tracked_ids)
+                        .select('MAX(id) AS id')
+                        .group(:order_correios_id)
+
+    @push_tracking = Attempt.where(id: latest_ids.map(&:id))
+    @job_running = b2b_job_running?(:get_tracking_tiny2)
+  end
+
+  def run_push_tracking_b2b
+    if b2b_job_running?(:get_tracking_tiny2)
+      redirect_to push_tracking_b2b_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:get_tracking_tiny2)
+    GetTrackingJob2.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de solicitação de rastreio (B2B) iniciada com sucesso!'
+    redirect_to push_tracking_b2b_dashboard_index_path
+  end
+
   def send_xml
     processed_ids = Attempt.where(kinds: :send_xml, status: 2, created_at: 30.days.ago..Time.current)
                            .pluck(:order_correios_id)
@@ -29,6 +53,30 @@ class DashboardController < ApplicationController
     @last_errors = {}
   end
 
+  def send_xml_b2b
+    processed_ids = Attempt.where(kinds: :send_xml_tiny2, status: 2, created_at: 30.days.ago..Time.current)
+                           .pluck(:order_correios_id)
+
+    @send_xml = Attempt.where(kinds: :create_correios_order_tiny2, status: 2, created_at: 30.days.ago..Time.current)
+                       .distinct(:order_correios_id)
+                       .where.not(order_correios_id: processed_ids)
+
+    @last_errors = {}
+    @job_running = b2b_job_running?(:send_xml_tiny2)
+  end
+
+  def run_send_xml_b2b
+    if b2b_job_running?(:send_xml_tiny2)
+      redirect_to send_xml_b2b_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:send_xml_tiny2)
+    SendXmlCorreiosLogJob2.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de envio de XML aos Correios (B2B) iniciada com sucesso!'
+    redirect_to send_xml_b2b_dashboard_index_path
+  end
+
   def invoice_emition
     successful_ids = Attempt.where(kinds: :emission_invoice, status: :success)
                             .pluck(:order_correios_id)
@@ -36,6 +84,28 @@ class DashboardController < ApplicationController
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
                               .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
+  end
+
+  def invoice_emition_b2b
+    successful_ids = Attempt.where(kinds: :emission_invoice_tiny2, status: :success)
+                            .pluck(:order_correios_id)
+                            .compact
+    @invoice_emition = Attempt.where(kinds: :create_correios_order_tiny2, status: :success)
+                              .where.not(order_correios_id: successful_ids)
+                              .distinct(:order_correios_id)
+    @job_running = b2b_job_running?(:emission_invoice_tiny2)
+  end
+
+  def run_invoice_emition_b2b
+    if b2b_job_running?(:emission_invoice_tiny2)
+      redirect_to invoice_emition_b2b_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:emission_invoice_tiny2)
+    InvoiceEmitionsJob2.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de emissão de notas fiscais (B2B) iniciada com sucesso!'
+    redirect_to invoice_emition_b2b_dashboard_index_path
   end
 
   def stockend
@@ -139,6 +209,81 @@ class DashboardController < ApplicationController
       pending: queue_attempts.count { |a| a.status == 'fail' },
       processing: queue_attempts.count { |a| a.status == 'processing' }
     }
+  end
+
+  def order_correios_create_b2b
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
+    orders = @orders_response&.dig('pedidos') || []
+
+    successfully_processed_ids = Attempt.where(
+      kinds: :create_correios_order_tiny2,
+      status: :success,
+      created_at: 1.month.ago..Time.current
+    ).pluck(:tiny_order_id).map(&:to_s)
+
+    orders = orders.reject do |order_data|
+      successfully_processed_ids.include?(order_data['pedido']['id'].to_s)
+    end
+
+    order_ids = orders.map { |order_data| order_data['pedido']['id'].to_s }
+    @reviews = Tiny2OrderReview.where(tiny_order_id: order_ids).index_by(&:tiny_order_id)
+
+    @review_filter = params[:review].presence || 'pending'
+
+    @orders = orders.select do |order_data|
+      review = @reviews[order_data['pedido']['id'].to_s]
+
+      case @review_filter
+      when 'approved' then review&.approved?
+      when 'ignored' then review&.ignored?
+      when 'all' then true
+      else review.nil?
+      end
+    end
+
+    @counts = {
+      pending: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s].nil? },
+      approved: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.approved? },
+      ignored: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.ignored? }
+    }
+
+    @job_running = b2b_job_running?(:create_correios_order_tiny2)
+  end
+
+  def run_create_correios_b2b
+    if b2b_job_running?(:create_correios_order_tiny2)
+      redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]), alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:create_correios_order_tiny2)
+    CreateCorreiosLogOrdersJob2.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de criação de pedidos no Correios (B2B) iniciada com sucesso!'
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review])
+  end
+
+  def approve_order_b2b
+    review = Tiny2OrderReview.find_or_initialize_by(tiny_order_id: params[:tiny_order_id].to_s)
+    review.status = :approved
+    review.save!
+
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
+                notice: "Pedido #{params[:tiny_order_id]} marcado para processamento."
+  rescue StandardError => e
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
+                alert: "Erro ao marcar pedido: #{e.message}"
+  end
+
+  def ignore_order_b2b
+    review = Tiny2OrderReview.find_or_initialize_by(tiny_order_id: params[:tiny_order_id].to_s)
+    review.status = :ignored
+    review.save!
+
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
+                notice: "Pedido #{params[:tiny_order_id]} ignorado."
+  rescue StandardError => e
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
+                alert: "Erro ao ignorar pedido: #{e.message}"
   end
 
   def order_correios_stock_errors
@@ -277,6 +422,16 @@ class DashboardController < ApplicationController
     prepare_tracking_data_optimized(@filter_params)
   end
 
+  def order_correios_tracking_b2b
+    @filter_params = {
+      status: params[:status],
+      period: params[:period],
+      order_id: params[:order_id]
+    }
+
+    prepare_tracking_data_optimized_b2b(@filter_params)
+  end
+
   def correios_pipeline
     @period = params[:period].presence || '30'
 
@@ -344,6 +499,19 @@ class DashboardController < ApplicationController
   end
 
   private
+
+  def b2b_job_running?(kind)
+    Attempt.where(kinds: kind, status: :processing, tracking: 'manual_run_all').exists?
+  end
+
+  def start_b2b_job_marker(kind)
+    Attempt.create!(
+      kinds: kind,
+      status: :processing,
+      tracking: 'manual_run_all',
+      message: "Execução manual iniciada por #{current_user.name}"
+    )
+  end
 
   def generate_order_correios_stock_errors_csv(items)
     csv_data = CSV.generate(
@@ -519,6 +687,151 @@ class DashboardController < ApplicationController
           SELECT 1 FROM attempts a
           WHERE a.order_correios_id = so.order_correios_id
             AND a.kinds = 3 AND a.status = 2
+        )
+      )
+      SELECT
+        so.tiny_order_id,
+        CASE
+          WHEN ip.tiny_order_id IS NOT NULL THEN 'invoice_emition'
+          WHEN xp.tiny_order_id IS NOT NULL THEN 'send_xml'
+          WHEN tp.tiny_order_id IS NOT NULL THEN 'push_tracking'
+          ELSE 'completed'
+        END AS current_status
+      FROM successful_orders so
+      LEFT JOIN invoice_pending ip ON so.tiny_order_id = ip.tiny_order_id
+      LEFT JOIN xml_pending xp ON so.tiny_order_id = xp.tiny_order_id
+      LEFT JOIN tracking_pending tp ON so.tiny_order_id = tp.tiny_order_id
+      WHERE 1=1
+      #{conditions_sql}
+      ORDER BY so.created_at DESC;
+    SQL
+
+    results = if sql_params.any?
+      ActiveRecord::Base.connection.exec_query(
+        ActiveRecord::Base.sanitize_sql_array([sql, sql_params])
+      )
+    else
+      ActiveRecord::Base.connection.exec_query(sql)
+    end
+
+    @tracking_summary = {}
+    invoice_count = 0
+    xml_count = 0
+    tracking_count = 0
+
+    results.rows.each do |row|
+      order_id = row[0].to_s
+      status = row[1]
+
+      next if filters[:status].present? && filters[:status] != status
+
+      @tracking_summary[order_id] = {
+        invoice_emition: status == 'invoice_emition',
+        send_xml: status == 'send_xml',
+        push_tracking: status == 'push_tracking'
+      }
+
+      case status
+      when 'invoice_emition'
+        invoice_count += 1
+      when 'send_xml'
+        xml_count += 1
+      when 'push_tracking'
+        tracking_count += 1
+      end
+    end
+
+    @tracking_stats = {
+      invoice_emition: invoice_count,
+      send_xml: xml_count,
+      push_tracking: tracking_count,
+      total_tracking: @tracking_summary.count
+    }
+  end
+
+  def prepare_tracking_data_optimized_b2b(filters = {})
+    base_conditions = []
+    sql_params = {}
+
+    if filters[:period].present?
+      case filters[:period]
+      when 'today'
+        base_conditions << 'so.created_at >= :today_start'
+        sql_params[:today_start] = Date.current.beginning_of_day
+      when '7'
+        base_conditions << 'so.created_at >= :week_start'
+        sql_params[:week_start] = 7.days.ago
+      when '30'
+        base_conditions << 'so.created_at >= :month_start'
+        sql_params[:month_start] = 30.days.ago
+      when '90'
+        base_conditions << 'so.created_at >= :quarter_start'
+        sql_params[:quarter_start] = 90.days.ago
+      end
+    end
+
+    if filters[:order_id].present?
+      base_conditions << 'so.tiny_order_id = :order_id'
+      sql_params[:order_id] = filters[:order_id]
+    end
+
+    # Não inclui "WHERE" aqui — usamos "WHERE 1=1" dentro das CTEs e da query principal
+    conditions_sql = base_conditions.any? ? "AND #{base_conditions.join(' AND ')}" : ''
+
+    create_kind = Attempt.kinds[:create_correios_order_tiny2]
+    invoice_kind = Attempt.kinds[:emission_invoice_tiny2]
+    xml_kind = Attempt.kinds[:send_xml_tiny2]
+    tracking_kind = Attempt.kinds[:get_tracking_tiny2]
+    success_status = Attempt.statuses[:success]
+
+    sql = <<-SQL
+      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = #{create_kind} AND status = #{success_status}
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      ),
+      invoice_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE 1=1
+        #{conditions_sql}
+        AND NOT EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{invoice_kind} AND a.status = #{success_status}
+        )
+      ),
+      xml_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE 1=1
+        #{conditions_sql}
+        AND EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{invoice_kind} AND a.status = #{success_status}
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{xml_kind} AND a.status = #{success_status}
+        )
+      ),
+      tracking_pending AS (
+        SELECT so.tiny_order_id
+        FROM successful_orders so
+        WHERE so.is_transportadora = false
+        #{conditions_sql}
+        AND EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{xml_kind} AND a.status = #{success_status}
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{tracking_kind} AND a.status = #{success_status}
         )
       )
       SELECT

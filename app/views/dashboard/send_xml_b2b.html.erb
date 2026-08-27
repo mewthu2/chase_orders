@@ -1,0 +1,307 @@
+<div class="container-fluid py-4">
+  <% title 'Envio de XML para os Correios (B2B)' %>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-file-code me-2"></i>Envio de XML para os Correios (B2B)</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Etapa 3: Criação no Correios &rarr; Emissão de Nota &rarr; Envio XML &rarr; Rastreamento
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="<%= root_path %>" class="btn btn-dark">
+        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+      </a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+        <i class="fas fa-filter me-1"></i> Filtros
+      </button>
+      <%= button_to run_send_xml_b2b_dashboard_index_path, method: :post,
+                    class: "btn btn-success #{'disabled' if @job_running}",
+                    form_class: 'd-inline-block',
+                    disabled: @job_running,
+                    data: { turbo_confirm: @job_running ? nil : 'Isso irá processar toda a fila de envio de XML B2B. Deseja continuar?' } do %>
+        <i class="fas <%= @job_running ? 'fa-spinner fa-spin' : 'fa-play' %> me-1"></i>
+        <%= @job_running ? 'Executando...' : 'Rodar Rotina Agora' %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="collapse mb-4" id="filtersCollapse">
+    <div class="filters-panel">
+      <form action="<%= send_xml_b2b_dashboard_index_path %>" method="get">
+        <div class="filter-section">
+          <label class="filter-label" for="status"><i class="fas fa-info-circle me-1"></i>Status</label>
+          <div class="search-row">
+            <select name="status" id="status" class="search-input">
+              <option value="">Todos</option>
+              <option value="pending">Pendente</option>
+              <option value="processing">Processando</option>
+              <option value="success">Sucesso</option>
+              <option value="error">Erro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="period"><i class="fas fa-calendar-alt me-1"></i>Período</label>
+          <div class="search-row">
+            <select name="period" id="period" class="search-input">
+              <option value="">Todo o período</option>
+              <option value="today">Hoje</option>
+              <option value="7">Últimos 7 dias</option>
+              <option value="30">Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="order_id"><i class="fas fa-search me-1"></i>ID do Pedido</label>
+          <div class="search-row">
+            <input type="text" name="order_id" id="order_id" class="search-input" placeholder="Ex: 123456">
+            <button type="submit" class="btn-primary-sm">
+              <i class="fas fa-search me-1"></i> Aplicar Filtros
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert alert-warning border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <% if within_schedule? %>
+        <i class="fas fa-check-circle fa-2x me-3 text-warning"></i>
+        <div>
+          <h5 class="mb-1">Fluxo B2B - Etapa 3: Envio XML</h5>
+          <p class="mb-0">
+            <strong><%= @send_xml.count %> pedidos</strong> aguardando
+            Criação no Correios → Emissão de Nota → <strong><i class="fas fa-file-code text-warning"></i> Envio XML</strong> →
+            Rastreamento - Sistema funcionando normalmente (Segunda a Sexta, 08:00 às 22:00)
+          </p>
+        </div>
+      <% else %>
+        <i class="fas fa-clock fa-2x me-3 text-warning"></i>
+        <div>
+          <h5 class="mb-1">Fluxo B2B - Etapa 3: Envio XML</h5>
+          <p class="mb-0">
+            <strong><%= @send_xml.count %> pedidos</strong> aguardando
+            Criação no Correios → Emissão de Nota → <strong><i class="fas fa-file-code text-warning"></i> Envio XML</strong> →
+            Rastreamento - Fora do horário de funcionamento (Retorna Segunda a Sexta, 08:00 às 22:00)
+          </p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-file-code me-2"></i>Pedidos Aguardando Envio de XML (B2B)
+      </h2>
+      <div class="active-filters-row">
+        <% if within_schedule? %>
+          <span class="filter-tag filter-tag--gray">
+            <i class="fa-solid fa-spinner fa-spin"></i> Fila Ativa
+          </span>
+        <% else %>
+          <span class="filter-tag filter-tag--gray">
+            <i class="fas fa-pause"></i> Fila Pausada
+          </span>
+        <% end %>
+        <span class="filter-tag filter-tag--yellow">
+          <i class="fas fa-clock"></i> <%= @send_xml.count %> Na Fila de XML
+        </span>
+      </div>
+    </div>
+    <% if @send_xml.present? %>
+      <div class="table-responsive">
+        <table class="orders-table" id="xmlTable">
+          <thead>
+            <tr>
+              <th width="50" class="text-center">
+                <i class="fas fa-cog"></i>
+              </th>
+              <th class="text-center">
+                <i class="fas fa-hashtag me-1"></i>
+                ID Pedido Tiny
+              </th>
+              <th class="text-center">
+                <i class="fas fa-mail-bulk me-1"></i>
+                ID Correios
+              </th>
+              <th class="text-center">
+                <i class="fas fa-file-invoice me-1"></i>
+                Nota Fiscal
+              </th>
+              <th class="text-center">
+                <i class="fas fa-info-circle me-1"></i>
+                Status Fila
+              </th>
+              <th class="text-center">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                Último Erro
+              </th>
+              <th class="text-center">
+                <i class="fas fa-calendar me-1"></i>
+                Data Criação
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @send_xml.each do |att| %>
+              <% order_id = att.tiny_order_id.to_s %>
+              <% last_error = @last_errors[order_id] %>
+
+              <tr>
+                <td class="text-center">
+                  <div class="d-flex flex-column align-items-center gap-1">
+                    <%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id),
+                        class: 'btn btn-sm btn-outline-info',
+                        method: :post,
+                        target: '_blank',
+                        title: 'Verificar tentativas' do %>
+                      <i class="fas fa-paperclip"></i>
+                    <% end %>
+                    <button class="btn btn-sm btn-outline-info"
+                            onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= att.tiny_order_id %>', '_blank');"
+                            title="Ver no Tiny">
+                      <i class="fas fa-external-link-alt"></i>
+                    </button>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="d-flex flex-column align-items-center">
+                    <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <% if att.order_correios_id.present? %>
+                    <span class="badge bg-info text-dark fs-6"><%= att.order_correios_id %></span>
+                  <% else %>
+                    <span class="badge bg-secondary">-</span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <% if att.id_nota_fiscal.present? %>
+                    <span class="badge bg-success fs-6"><%= att.id_nota_fiscal %></span>
+                  <% else %>
+                    <span class="badge bg-secondary">-</span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-warning text-dark">
+                    <i class="fas fa-clock"></i>
+                    Na Fila XML
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% if last_error && last_error[:message] != 'Rastreio não disponível' %>
+                    <div class="d-flex flex-column align-items-center">
+                      <% if last_error[:status] == 'fail' %>
+                        <span class="badge bg-warning text-dark mb-1">
+                          <i class="fas fa-exclamation-triangle"></i> Falha
+                        </span>
+                      <% elsif last_error[:status] == 'error' %>
+                        <span class="badge bg-danger mb-1">
+                          <i class="fas fa-times-circle"></i> Erro
+                        </span>
+                      <% end %>
+                      <span class="text-danger small" title="<%= last_error[:message] %>">
+                        <%= truncate(last_error[:message], length: 40) %>
+                      </span>
+                      <small class="text-muted">
+                        <%= last_error[:updated_at].strftime('%d/%m') %>
+                      </small>
+                    </div>
+                  <% else %>
+                    <span class="text-muted">-</span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <div class="d-flex flex-column align-items-center">
+                    <span class="text-white"><%= att.created_at.strftime('%d/%m/%Y') %></span>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-file-code fa-3x mb-3 d-block"></i>
+        <h5>Todos os XMLs foram enviados</h5>
+        <p>Não há XMLs aguardando envio aos Correios no momento.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      function initializeDataTable(tableId, options = {}) {
+        const table = document.getElementById(tableId);
+        if (table && !$.fn.DataTable.isDataTable('#' + tableId)) {
+          $('#' + tableId).DataTable({
+            responsive: true,
+            pageLength: 25,
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            },
+            columnDefs: [
+              { className: "text-center", targets: "_all" }
+            ],
+            ...options
+          });
+        }
+      }
+
+      if (document.getElementById('xmlTable')) {
+        initializeDataTable('xmlTable', {
+          order: [[6, 'desc']],
+          columnDefs: [
+            { orderable: false, targets: [0] },
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 50);
+      });
+
+      <% if within_schedule? %>
+        setInterval(function() {
+          if (document.visibilityState === 'visible') {
+            location.reload();
+          }
+        }, 30000);
+      <% else %>
+        setInterval(function() {
+          if (document.visibilityState === 'visible') {
+            location.reload();
+          }
+        }, 300000);
+      <% end %>
+    });
+  </script>
+<% end %>

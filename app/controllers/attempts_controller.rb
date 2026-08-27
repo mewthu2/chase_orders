@@ -11,6 +11,12 @@ class AttemptsController < ApplicationController
       @attempts = @attempts.where(status: params[:status])
     end
 
+    if params[:channel] == 'b2b'
+      @attempts = @attempts.where(kinds: Attempt::B2B_KINDS)
+    elsif params[:channel] == 'b2c'
+      @attempts = @attempts.where(kinds: Attempt::B2C_KINDS)
+    end
+
     @attempts = @attempts.where(kinds: params[:kinds]) if params[:kinds].present?
 
     @attempts = @attempts.order(created_at: :desc)
@@ -19,9 +25,12 @@ class AttemptsController < ApplicationController
 
   def verify_attempts
     @attempts = Attempt.where(tiny_order_id: params[:tiny_order_id])
-                       .limit(20)
-                       .order(created_at: :desc)
-                       .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+
+    @attempts = @attempts.where(kinds: params[:kinds]) if params[:kinds].present?
+
+    @attempts = @attempts.limit(20)
+                         .order(created_at: :desc)
+                         .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
   end
 
   def download_xml
@@ -52,6 +61,15 @@ class AttemptsController < ApplicationController
         GetTrackingJob.perform_now('one', attempt)
       when 'transfer_tiny_to_shopify_order'
         TransferTinyToShopifyOrderJob.perform_now('one', attempt.tiny_order_id)
+      when 'create_correios_order_tiny2'
+        order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), attempt.tiny_order_id)
+        CreateCorreiosLogOrdersJob2.perform_now('one', order)
+      when 'send_xml_tiny2'
+        SendXmlCorreiosLogJob2.perform_now('one', attempt)
+      when 'emission_invoice_tiny2'
+        InvoiceEmitionsJob2.perform_now('one', attempt)
+      when 'get_tracking_tiny2'
+        GetTrackingJob2.perform_now('one', attempt)
       end
       redirect_to(attempts_path(kinds: attempt.kinds), notice: "Pedido #{attempt.tiny_order_id} reprocessado com sucesso.")
     rescue StandardError => e

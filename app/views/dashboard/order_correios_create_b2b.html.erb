@@ -1,0 +1,155 @@
+<div class="container-fluid py-4">
+  <% title 'Criação de Pedidos no Correios (B2B)' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+        </div>
+        <%= button_to run_create_correios_b2b_dashboard_index_path(review: @review_filter), method: :post,
+                      class: "btn btn-success #{'disabled' if @job_running}",
+                      form_class: 'd-inline-block',
+                      disabled: @job_running,
+                      data: { turbo_confirm: @job_running ? nil : 'Isso irá processar todos os pedidos B2B marcados para criação no Correios. Deseja continuar?' } do %>
+          <i class="fas <%= @job_running ? 'fa-spinner fa-spin' : 'fa-play' %> me-1"></i>
+          <%= @job_running ? 'Executando...' : 'Rodar Rotina Agora' %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-primary border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-truck fa-2x me-3 text-primary"></i>
+      <div>
+        <h5 class="mb-1">Fluxo B2B (Tiny2) - Revisão antes da Criação</h5>
+        <p class="mb-0">
+          Pedidos vindos do Tiny2 só entram no fluxo de criação/emissão/XML/rastreamento depois de
+          <strong>marcados</strong> aqui. Pedidos <strong>ignorados</strong> nunca são processados automaticamente.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-truck me-2"></i>Pedidos Tiny2 Aguardando Envio
+        </h5>
+        <div>
+          <span class="badge bg-warning text-dark me-2">
+            <i class="fas fa-hourglass-half"></i> <%= @counts[:pending] %> Pendentes
+          </span>
+          <span class="badge bg-success me-2">
+            <i class="fas fa-check"></i> <%= @counts[:approved] %> Marcados
+          </span>
+          <span class="badge bg-secondary me-2">
+            <i class="fas fa-ban"></i> <%= @counts[:ignored] %> Ignorados
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="btn-group mb-3" role="group">
+        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'pending'),
+                    class: "btn btn-sm #{@review_filter == 'pending' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          Pendentes de revisão
+        <% end %>
+        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'approved'),
+                    class: "btn btn-sm #{@review_filter == 'approved' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          Marcados
+        <% end %>
+        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'ignored'),
+                    class: "btn btn-sm #{@review_filter == 'ignored' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          Ignorados
+        <% end %>
+        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'all'),
+                    class: "btn btn-sm #{@review_filter == 'all' ? 'btn-primary' : 'btn-outline-primary'}" do %>
+          Todos
+        <% end %>
+      </div>
+
+      <% if @orders.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="ordersTableB2b">
+            <thead>
+              <tr>
+                <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
+                <th class="text-center"><i class="fas fa-hashtag me-1"></i>ID Pedido</th>
+                <th class="text-center"><i class="fas fa-user me-1"></i>Cliente</th>
+                <th class="text-center"><i class="fas fa-calendar me-1"></i>Data Pedido</th>
+                <th class="text-center"><i class="fas fa-dollar-sign me-1"></i>Valor Total</th>
+                <th class="text-center"><i class="fas fa-info-circle me-1"></i>Revisão</th>
+                <th class="text-center">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @orders.each do |order_data| %>
+                <% order = order_data['pedido'] %>
+                <% order_id = order['id'].to_s %>
+                <% review = @reviews[order_id] %>
+
+                <tr>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-info"
+                            onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= order['id'] %>', '_blank');"
+                            title="Ver no Tiny">
+                      <i class="fas fa-external-link-alt"></i>
+                    </button>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="fw-bold text-white">#<%= order['numero'] %></span>
+                      <small class="text-muted">ID: <%= order['id'] %></small>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-white"><%= truncate(order['nome'], length: 25) %></span>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-white"><%= order['data_pedido'] %></span>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-success fs-6">R$ <%= number_with_precision(order['valor'].to_f, precision: 2, delimiter: '.', separator: ',') %></span>
+                  </td>
+                  <td class="text-center">
+                    <% if review&.approved? %>
+                      <span class="badge bg-success"><i class="fas fa-check"></i> Marcado</span>
+                    <% elsif review&.ignored? %>
+                      <span class="badge bg-secondary"><i class="fas fa-ban"></i> Ignorado</span>
+                    <% else %>
+                      <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> Pendente</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex gap-2 justify-content-center">
+                      <%= button_to approve_order_b2b_dashboard_index_path(tiny_order_id: order_id, review: @review_filter),
+                                    method: :post, class: 'btn btn-sm btn-success', title: 'Marcar para processamento' do %>
+                        <i class="fas fa-check"></i>
+                      <% end %>
+                      <%= button_to ignore_order_b2b_dashboard_index_path(tiny_order_id: order_id, review: @review_filter),
+                                    method: :post, class: 'btn btn-sm btn-outline-danger', title: 'Ignorar' do %>
+                        <i class="fas fa-ban"></i>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Nenhum pedido nessa categoria</h5>
+          <p class="text-muted">Não há pedidos B2B nessa aba no momento.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,296 @@
+<div class="container-fluid py-4">
+  <% title 'Acompanhamento de Pedidos no Correios (B2B)' %>
+  <%= render 'layouts/partials/messages' %>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Correios (B2B)</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Criação no Correios &rarr; Emissão de Nota &rarr; Envio XML &rarr; Rastreamento &rarr; Processamento Completo
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="<%= root_path %>" class="btn btn-dark">
+        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+      </a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+        <i class="fas fa-filter me-1"></i> Filtros
+      </button>
+      <button class="btn btn-warning" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
+        <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
+      </button>
+      <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+        <i class="fas fa-trash me-1"></i> Excluir pedido da fila
+      </button>
+    </div>
+  </div>
+
+  <div class="modal fade" id="updateInvoiceModal" tabindex="-1" aria-labelledby="updateInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white" id="updateInvoiceModalLabel">
+            <i class="fas fa-edit me-2"></i>Atualizar ID da Nota Fiscal
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="<%= update_invoice_id_dashboard_index_path %>" method="post">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="tiny_order_id" class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="tiny_order_id" name="tiny_order_id" required placeholder="Ex: 911317520">
+              <div class="form-text text-muted">Digite o ID do pedido no sistema Tiny</div>
+            </div>
+            <div class="mb-3">
+              <label for="id_nota_fiscal" class="form-label text-white">ID da Nota Fiscal</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="id_nota_fiscal" name="id_nota_fiscal" required placeholder="Ex: 123456">
+              <div class="form-text text-muted">Digite o novo ID da nota fiscal</div>
+            </div>
+            <div class="alert alert-info border-0">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Atenção:</strong> Esta ação irá atualizar o ID da nota fiscal em todos os attempts com status "success" para o pedido informado.
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-save me-1"></i> Atualizar Nota Fiscal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="deleteOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark border-danger">
+        <div class="modal-header border-danger">
+          <h5 class="modal-title text-white">
+            <i class="fas fa-trash me-2"></i>Excluir pedido da fila
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form action="<%= delete_order_from_queue_dashboard_index_path %>" method="post">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
+              <input type="number" name="tiny_order_id" class="form-control bg-dark text-white border-danger" required>
+            </div>
+            <div class="alert border-0 bg-white bg-opacity-10 text-white">
+              <strong>ATENÇÃO:</strong> Esta ação irá excluir todos os attempts relacionados a este pedido. Esta ação é irreversível.
+            </div>
+          </div>
+          <div class="modal-footer border-danger">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">
+              <i class="fas fa-trash me-1"></i> Excluir pedido
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapse mb-4" id="filtersCollapse">
+    <div class="filters-panel">
+      <form action="<%= order_correios_tracking_b2b_dashboard_index_path %>" method="get">
+        <div class="filter-section">
+          <label class="filter-label" for="status"><i class="fas fa-info-circle me-1"></i>Status</label>
+          <div class="search-row">
+            <select name="status" id="status" class="search-input">
+              <option value="" <%= 'selected' if @filter_params[:status].blank? %>>Todos</option>
+              <option value="invoice_emition" <%= 'selected' if @filter_params[:status] == 'invoice_emition' %>>Aguardando Emissão de Nota</option>
+              <option value="send_xml" <%= 'selected' if @filter_params[:status] == 'send_xml' %>>Aguardando Envio XML</option>
+              <option value="push_tracking" <%= 'selected' if @filter_params[:status] == 'push_tracking' %>>Aguardando Rastreamento</option>
+              <option value="completed" <%= 'selected' if @filter_params[:status] == 'completed' %>>Processamento Completo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="period"><i class="fas fa-calendar-alt me-1"></i>Período</label>
+          <div class="search-row">
+            <select name="period" id="period" class="search-input">
+              <option value="" <%= 'selected' if @filter_params[:period].blank? %>>Todo o período</option>
+              <option value="today" <%= 'selected' if @filter_params[:period] == 'today' %>>Hoje</option>
+              <option value="7" <%= 'selected' if @filter_params[:period] == '7' %>>Últimos 7 dias</option>
+              <option value="30" <%= 'selected' if @filter_params[:period] == '30' %>>Últimos 30 dias</option>
+              <option value="90" <%= 'selected' if @filter_params[:period] == '90' %>>Últimos 90 dias</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="order_id"><i class="fas fa-search me-1"></i>ID do Pedido</label>
+          <div class="search-row">
+            <input type="text" name="order_id" id="order_id" class="search-input" placeholder="Ex: 123456" value="<%= @filter_params[:order_id] %>">
+            <button type="submit" class="btn-primary-sm">
+              <i class="fas fa-search me-1"></i> Aplicar Filtros
+            </button>
+            <a href="<%= order_correios_tracking_b2b_dashboard_index_path %>" class="btn-clear">
+              <i class="fas fa-times me-1"></i> Limpar Filtros
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="alert alert-info border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
+      <div>
+        <h5 class="mb-1">Fluxo de Acompanhamento (B2B)</h5>
+        <p class="mb-0">Pedidos criados no Correios → Emissão de Nota → Envio XML → Rastreamento → Processamento Completo</p>
+        <p class="mb-0 text-muted small">
+          <i class="fas fa-info-circle me-1"></i>Pedidos redespachados a outra transportadora ficam "Processamento Completo" logo após o Envio XML, pois não são rastreados via Correios.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-route me-2"></i>Acompanhamento de Pedidos no Fluxo (B2B)
+      </h2>
+      <div class="active-filters-row">
+        <span class="filter-tag filter-tag--blue">
+          <i class="fas fa-list me-1"></i><%= @tracking_summary.count %> Pedidos<% if @filter_params.values.any?(&:present?) %> (Filtrados)<% end %>
+        </span>
+        <% if @filter_params[:status].present? %>
+          <span class="filter-tag filter-tag--gray">
+            Status: <%= case @filter_params[:status]
+                       when 'invoice_emition' then 'Aguardando Emissão de Nota'
+                       when 'send_xml' then 'Aguardando Envio XML'
+                       when 'push_tracking' then 'Aguardando Rastreamento'
+                       when 'completed' then 'Processamento Completo'
+                       end %>
+          </span>
+        <% end %>
+        <% if @filter_params[:period].present? %>
+          <span class="filter-tag filter-tag--gray">
+            Período: <%= case @filter_params[:period]
+                        when 'today' then 'Hoje'
+                        when '7' then 'Últimos 7 dias'
+                        when '30' then 'Últimos 30 dias'
+                        when '90' then 'Últimos 90 dias'
+                        end %>
+          </span>
+        <% end %>
+        <% if @filter_params[:order_id].present? %>
+          <span class="filter-tag filter-tag--gray">ID: <%= @filter_params[:order_id] %></span>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @tracking_summary.any? %>
+      <div class="table-responsive">
+        <table class="orders-table" id="trackingTable">
+          <thead>
+            <tr>
+              <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
+              <th class="text-center">ID Pedido Tiny</th>
+              <th class="text-center">Emissão de Nota</th>
+              <th class="text-center">Envio XML</th>
+              <th class="text-center">Rastreamento</th>
+              <th class="text-center">Status Atual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @tracking_summary.each do |order_id, status| %>
+              <tr>
+                <td class="text-center">
+                  <%= link_to verify_attempts_attempts_path(tiny_order_id: order_id), class: 'btn btn-sm btn-outline-info', method: :post, target: '_blank' do %>
+                    <i class="fas fa-paperclip"></i>
+                  <% end %>
+                </td>
+                <td class="text-center fw-bold text-white"><%= order_id %></td>
+                <td class="text-center">
+                  <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
+                    <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= status[:send_xml] ? 'bg-info text-dark' : 'bg-success' %>">
+                    <%= status[:send_xml] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= status[:push_tracking] ? 'bg-primary' : 'bg-success' %>">
+                    <%= status[:push_tracking] ? 'Na Fila' : 'Concluído' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% if status[:push_tracking] %>
+                    <span class="badge bg-primary fs-6">Aguardando Rastreamento</span>
+                  <% elsif status[:send_xml] %>
+                    <span class="badge bg-info fs-6">Aguardando Envio XML</span>
+                  <% elsif status[:invoice_emition] %>
+                    <span class="badge bg-warning fs-6">Aguardando Emissão de Nota</span>
+                  <% else %>
+                    <span class="badge bg-success fs-6">Processamento Completo</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+        <h5>
+          <% if @filter_params.values.any?(&:present?) %>
+            Nenhum pedido encontrado com os filtros aplicados
+          <% else %>
+            Nenhum pedido em acompanhamento
+          <% end %>
+        </h5>
+        <p>
+          <% if @filter_params.values.any?(&:present?) %>
+            Tente ajustar os filtros ou limpar para ver todos os pedidos.
+          <% else %>
+            Todos os pedidos foram processados completamente.
+          <% end %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+  document.addEventListener('DOMContentLoaded',function(){
+    if(document.getElementById('trackingTable')){
+      $('#trackingTable').DataTable({
+        responsive:true,
+        pageLength:25,
+        order:[[1,'asc']],
+        language:{url:'//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'}
+      })
+    }
+
+    const deleteForm=document.querySelector('#deleteOrderModal form')
+    if(deleteForm){
+      deleteForm.addEventListener('submit',function(e){
+        const id=deleteForm.querySelector('[name="tiny_order_id"]').value
+        if(!confirm(`ATENÇÃO:\n\nIsso irá excluir TODOS os attempts do pedido ${id}.\n\nDeseja continuar?`)){
+          e.preventDefault()
+        }
+      })
+    }
+  })
+</script>
+<% end %>

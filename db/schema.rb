@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_19_164358) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_24_202500) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -40,6 +40,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_19_164358) do
     t.boolean "xml_sended", default: false
     t.string "tracking"
     t.integer "id_nota_tiny2"
+    t.boolean "is_transportadora", default: false
     t.index ["kinds"], name: "index_attempts_on_kinds"
     t.index ["tiny_order_id"], name: "index_attempts_on_tiny_order_id"
   end
@@ -519,6 +520,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_19_164358) do
     t.datetime "last_execution"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "tiny2_order_reviews", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "tiny_order_id", null: false
+    t.integer "status", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tiny_order_id"], name: "index_tiny2_order_reviews_on_tiny_order_id", unique: true
   end
 
   create_table "user_profiles", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

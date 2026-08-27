@@ -157,19 +157,19 @@ module Tiny::Orders
     response.with_indifferent_access[:retorno]
   end
 
-  def send_tracking(order_id, tracking)
+  def send_tracking(order_id, tracking, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))
     response = JSON.parse(HTTParty.get(ENV.fetch('TINY_SEND_TRACKING'),
-                                       query: { token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                                       query: { token:,
                                                 formato: 'json',
                                                 id: order_id,
                                                 codigoRastreamento: tracking }))
     response.with_indifferent_access[:retorno]
   end
 
-  def change_situation(order_id, new_situation)
+  def change_situation(order_id, new_situation, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))
     response = HTTParty.get(ENV.fetch('ALTERAR_SITUACAO_PEDIDO'),
                             query: {
-                              token: ENV.fetch('TOKEN_TINY3_PRODUCTION'),
+                              token:,
                               formato: 'json',
                               id: order_id,
                               situacao: new_situation

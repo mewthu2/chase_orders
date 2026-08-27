@@ -29,6 +29,7 @@
   <div class="collapse mb-4" id="filtersCollapse">
     <div class="filters-panel">
       <form method="get">
+        <%= hidden_field_tag :tiny_order_id, params[:tiny_order_id] %>
         <div class="filter-section">
           <div class="row g-3">
             <div class="col-md-3">
@@ -45,10 +46,17 @@
               <label for="kinds" class="filter-label">Tipo</label>
               <select name="kinds" id="kinds" class="form-select">
                 <option value="">Todos</option>
-                <option value="create_correios_order">Criação Correios</option>
-                <option value="emission_invoice">Emissão de Nota</option>
-                <option value="send_xml">Envio XML</option>
-                <option value="get_tracking">Rastreamento</option>
+                <option value="create_correios_order" <%= 'selected' if params[:kinds] == 'create_correios_order' %>>Criação Correios</option>
+                <option value="send_xml" <%= 'selected' if params[:kinds] == 'send_xml' %>>Envio XML</option>
+                <option value="emission_invoice" <%= 'selected' if params[:kinds] == 'emission_invoice' %>>Emissão de Nota</option>
+                <option value="get_tracking" <%= 'selected' if params[:kinds] == 'get_tracking' %>>Rastreamento</option>
+                <option value="create_note_tiny2" <%= 'selected' if params[:kinds] == 'create_note_tiny2' %>>Criação de Nota no Tiny2</option>
+                <option value="emission_invoice_tiny2" <%= 'selected' if params[:kinds] == 'emission_invoice_tiny2' %>>Emissão de Nota Fiscal no Tiny2</option>
+                <option value="transfer_tiny_to_shopify_order" <%= 'selected' if params[:kinds] == 'transfer_tiny_to_shopify_order' %>>Transferência Tiny para Shopify</option>
+                <option value="sync_correios_stock" <%= 'selected' if params[:kinds] == 'sync_correios_stock' %>>Sincronização de Estoque Correios</option>
+                <option value="create_correios_order_tiny2" <%= 'selected' if params[:kinds] == 'create_correios_order_tiny2' %>>Criação Correios (B2B)</option>
+                <option value="send_xml_tiny2" <%= 'selected' if params[:kinds] == 'send_xml_tiny2' %>>Envio XML (B2B)</option>
+                <option value="get_tracking_tiny2" <%= 'selected' if params[:kinds] == 'get_tracking_tiny2' %>>Rastreamento (B2B)</option>
               </select>
             </div>
             <div class="col-md-3">

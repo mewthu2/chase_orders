@@ -71,7 +71,7 @@
             <div class="nav-group-header-collapsible" onclick="toggleCorreios()">
               <div class="nav-group-title">
                 <i class="fas fa-mail-bulk"></i>
-                <span class="nav-text">Correios</span>
+                <span class="nav-text">Correios B2C</span>
               </div>
               <i class="fas fa-chevron-right collapse-icon" id="correiosIcon"></i>
             </div>
@@ -120,6 +120,54 @@
                 <%= link_to stock_syncs_path, class: "dropdown-link #{'active' if controller_name == 'stock_syncs'}" do %>
                   <i class="fas fa-sync-alt"></i>
                   <span>Sincronização Estoque</span>
+                <% end %>
+
+                <%= link_to attempts_path(channel: 'b2c'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2c'}" do %>
+                  <i class="fas fa-list-check"></i>
+                  <span>Tentativas B2C</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleCorreiosB2b()">
+              <div class="nav-group-title">
+                <i class="fas fa-truck"></i>
+                <span class="nav-text">Correios B2B</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="correiosB2bIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="correiosB2bDropdown">
+              <div class="dropdown-content">
+                <%= link_to order_correios_create_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-clipboard-check"></i>
+                  <span>Pedidos p/ Aprovar</span>
+                <% end %>
+
+                <%= link_to order_correios_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-route"></i>
+                  <span>Acompanhamento</span>
+                <% end %>
+
+                <%= link_to invoice_emition_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-file-invoice"></i>
+                  <span>Emissão de Notas</span>
+                <% end %>
+
+                <%= link_to send_xml_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-file-code"></i>
+                  <span>Enviar XML</span>
+                <% end %>
+
+                <%= link_to push_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-shipping-fast"></i>
+                  <span>Rastreamento</span>
+                <% end %>
+
+                <%= link_to attempts_path(channel: 'b2b'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2b'}" do %>
+                  <i class="fas fa-list-check"></i>
+                  <span>Tentativas B2B</span>
                 <% end %>
               </div>
             </div>
@@ -239,6 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dropdowns = [
       { id: "crmDropdown",           header: '[onclick="toggleCRM()"]'           },
       { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
+      { id: "correiosB2bDropdown",   header: '[onclick="toggleCorreiosB2b()"]'    },
       { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]'       },
       { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]'  },
       { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]'       },
@@ -289,6 +338,10 @@ function toggleCRM() {
 
 function toggleCorreios() {
   toggleDropdown("correiosDropdown", "correiosIcon", '[onclick="toggleCorreios()"]')
+}
+
+function toggleCorreiosB2b() {
+  toggleDropdown("correiosB2bDropdown", "correiosB2bIcon", '[onclick="toggleCorreiosB2b()"]')
 }
 
 function toggleUsuarios() {

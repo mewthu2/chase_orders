@@ -18,28 +18,42 @@ module Correios::Orders
   end
 
   def create_orders(params, attempt)
+    is_transportadora = params[:cnpj_transportadora].present?
+
     authentication = {
-      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => "Basic #{Base64.strict_encode64(ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(is_transportadora ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     correios_cod_armazem = ENV.fetch('CORREIOS_COD_ARMAZEM')
-    correios_cartao_postagem = ENV.fetch('CORREIOS_CARTAO_POSTAGEM')
-    correios_cnpj_transportadora = ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')
+    correios_cartao_postagem = is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM')
+    correios_cnpj_transportadora = is_transportadora ? params[:cnpj_transportadora] : ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')
     fone = params[:fone].present? ? params[:fone] : ''
+
+    # O serviço 74926 (redespacho para transportadora) exige data+hora e não aceita
+    # o adicional de Valor Declarado (064), diferente dos serviços diretos dos Correios
+    data_solicitacao = is_transportadora ? "#{params[:data_pedido]} 08:00:00" : params[:data_pedido]
+    valor_declarado = is_transportadora ? '' : params[:valor].gsub('.', ',')
+    servicos_adicionais = if ['39888', '06602'].include?(params[:forma_envio])
+                            ['019']
+                          elsif params[:forma_envio] == '74926'
+                            []
+                          else
+                            ['064']
+                          end
 
     body = {
       codigoArmazem: correios_cod_armazem,
       numero: params[:invoice],
-      dataSolicitacao: params[:data_pedido],
-      valordeclarado: params[:valor].gsub('.', ','),
+      dataSolicitacao: data_solicitacao,
+      valordeclarado: valor_declarado,
       cartaoPostagem: correios_cartao_postagem,
       codigoservico: params[:forma_envio],
       numeroPLP: '',
       numeroSerie: '1',
       cnpjTransportadora: correios_cnpj_transportadora,
-      servicosAdicionais: ['39888', '06602'].include?(params[:forma_envio]) ? ['019'] : ['064'],
+      servicosAdicionais: servicos_adicionais,
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],
@@ -133,11 +147,11 @@ module Correios::Orders
     end
   end
 
-  def get_tracking(order_correios_id)
+  def get_tracking(order_correios_id, is_transportadora: false)
     authentication = {
-      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => "Basic #{Base64.strict_encode64(ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(is_transportadora ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     begin
