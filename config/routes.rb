@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       get :order_correios_tracking
       get :order_correios_create
       get :order_correios_create_b2b
+      get :order_correios_create_queue_b2b
       post :approve_order_b2b
       post :ignore_order_b2b
       post :run_create_correios_b2b

@@ -88,6 +88,7 @@
                 <% end %>
 
                 <%= link_to order_correios_create_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">1</span>
                   <i class="fas fa-plus-circle"></i>
                   <span>Criação de Pedidos</span>
                 <% end %>
@@ -98,16 +99,19 @@
                 <% end %>
 
                 <%= link_to invoice_emition_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">2</span>
                   <i class="fas fa-file-invoice"></i>
                   <span>Emissão de Notas</span>
                 <% end %>
 
                 <%= link_to send_xml_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">3</span>
                   <i class="fas fa-file-code"></i>
                   <span>Enviar XML</span>
                 <% end %>
 
                 <%= link_to push_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">4</span>
                   <i class="fas fa-shipping-fast"></i>
                   <span>Rastreamento</span>
                 <% end %>
@@ -141,8 +145,15 @@
             <div class="nav-group-dropdown" id="correiosB2bDropdown">
               <div class="dropdown-content">
                 <%= link_to order_correios_create_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_b2b_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">1</span>
                   <i class="fas fa-clipboard-check"></i>
                   <span>Pedidos p/ Aprovar</span>
+                <% end %>
+
+                <%= link_to order_correios_create_queue_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_queue_b2b_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">2</span>
+                  <i class="fas fa-plus-circle"></i>
+                  <span>Criação de Pedidos</span>
                 <% end %>
 
                 <%= link_to order_correios_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_b2b_dashboard_index_path)}" do %>
@@ -151,18 +162,26 @@
                 <% end %>
 
                 <%= link_to invoice_emition_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_b2b_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">3</span>
                   <i class="fas fa-file-invoice"></i>
                   <span>Emissão de Notas</span>
                 <% end %>
 
                 <%= link_to send_xml_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_b2b_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">4</span>
                   <i class="fas fa-file-code"></i>
                   <span>Enviar XML</span>
                 <% end %>
 
                 <%= link_to push_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_b2b_dashboard_index_path)}" do %>
+                  <span class="nav-step-badge">5</span>
                   <i class="fas fa-shipping-fast"></i>
                   <span>Rastreamento</span>
+                <% end %>
+
+                <%= link_to api_correios_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_dashboard_index_path)}" do %>
+                  <i class="fas fa-cogs"></i>
+                  <span>API Correios</span>
                 <% end %>
 
                 <%= link_to attempts_path(channel: 'b2b'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2b'}" do %>

@@ -250,6 +250,92 @@ class DashboardController < ApplicationController
     @job_running = b2b_job_running?(:create_correios_order_tiny2)
   end
 
+  def order_correios_create_queue_b2b
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
+    @orders = @orders_response&.dig('pedidos') || []
+
+    successfully_processed_ids = Attempt.where(
+      kinds: :create_correios_order_tiny2,
+      status: :success,
+      created_at: 1.month.ago..Time.current
+    ).pluck(:tiny_order_id).map(&:to_s)
+
+    order_ids = @orders.map { |order_data| order_data['pedido']['id'].to_s }
+    approved_ids = Tiny2OrderReview.where(tiny_order_id: order_ids, status: :approved).pluck(:tiny_order_id)
+
+    @pending_orders = @orders.select do |order_data|
+      order_id = order_data['pedido']['id'].to_s
+      approved_ids.include?(order_id) && !successfully_processed_ids.include?(order_id)
+    end
+
+    pending_order_ids = @pending_orders.map { |order_data| order_data['pedido']['id'].to_s }
+
+    relevant_attempts = Attempt.where(
+      kinds: :create_correios_order_tiny2,
+      tiny_order_id: pending_order_ids,
+      created_at: 1.month.ago..Time.current
+    ).where.not(message: [nil, ''])
+                               .order(:created_at)
+
+    queue_attempts = []
+    failed_attempts = []
+
+    relevant_attempts.each do |attempt|
+      case attempt.status
+      when 'fail', 'processing'
+        queue_attempts << attempt
+      when 'error'
+        failed_attempts << attempt if failed_attempts.size < 10
+      end
+    end
+
+    @queue_positions = queue_attempts.each_with_index.to_h do |attempt, index|
+      [
+        attempt.tiny_order_id.to_s,
+        {
+          position: index + 1,
+          status: attempt.status,
+          created_at: attempt.created_at,
+          updated_at: attempt.updated_at,
+          message: attempt.message
+        }
+      ]
+    end
+
+    @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
+
+    grouped_status = relevant_attempts.group_by(&:status)
+    @attempts_summary = {
+      total: relevant_attempts.count,
+      fail: grouped_status['fail']&.size || 0,
+      error: grouped_status['error']&.size || 0,
+      success: grouped_status['success']&.size || 0,
+      processing: grouped_status['processing']&.size || 0
+    }
+
+    @last_errors = {}
+    relevant_attempts
+      .select { |a| %w[fail error].include?(a.status) && a.message.present? }
+      .group_by(&:tiny_order_id).each do |order_id, attempts|
+        last = attempts.max_by(&:updated_at)
+        @last_errors[order_id.to_s] = {
+          message: last.message,
+          status: last.status,
+          updated_at: last.updated_at
+        }
+      end
+
+    @stats = {
+      total_orders: @orders.count,
+      pending_orders: @pending_orders.count,
+      in_queue: queue_attempts.count,
+      successful: successfully_processed_ids.count,
+      failed: failed_attempts.count,
+      pending: queue_attempts.count { |a| a.status == 'fail' },
+      processing: queue_attempts.count { |a| a.status == 'processing' }
+    }
+  end
+
   def run_create_correios_b2b
     if b2b_job_running?(:create_correios_order_tiny2)
       redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]), alert: 'Já existe uma execução dessa rotina em andamento!'

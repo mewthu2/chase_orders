@@ -128,6 +128,10 @@
                   </td>
                   <td class="text-center">
                     <div class="d-flex gap-2 justify-content-center">
+                      <button type="button" class="btn btn-sm btn-outline-info" title="Ver attempts"
+                              onclick="abrirAttemptsModal('<%= order_id %>')">
+                        <i class="fas fa-history"></i>
+                      </button>
                       <%= button_to approve_order_b2b_dashboard_index_path(tiny_order_id: order_id, review: @review_filter),
                                     method: :post, class: 'btn btn-sm btn-success', title: 'Marcar para processamento' do %>
                         <i class="fas fa-check"></i>
@@ -152,4 +156,145 @@
       <% end %>
     </div>
   </div>
+
+  <div class="modal fade" id="attemptsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white">
+            <i class="fas fa-history me-2"></i>Attempts do Pedido #<span id="attemptsModalOrderId"></span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="attemptsSearchInput" class="form-control bg-dark text-white border-secondary mb-3"
+                 placeholder="Buscar por kind...">
+
+          <div id="attemptsModalLoading" class="text-center text-muted py-4" style="display:none;">
+            <i class="fas fa-spinner fa-spin me-1"></i> Carregando...
+          </div>
+          <div id="attemptsModalEmpty" class="text-center text-muted py-4" style="display:none;"></div>
+
+          <div class="table-responsive" id="attemptsModalTableWrapper" style="display:none;">
+            <table class="table table-dark table-sm table-hover">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Kind</th>
+                  <th>Status</th>
+                  <th>Mensagem</th>
+                  <th>Erro</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="attemptsModalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<% content_for :scripts do %>
+  <script>
+    let attemptsModalData = [];
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function truncateText(text, len) {
+      if (!text) return '-';
+      return text.length > len ? text.substring(0, len) + '...' : text;
+    }
+
+    function formatAttemptDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return isNaN(d) ? '-' : d.toLocaleString('pt-BR');
+    }
+
+    function attemptStatusBadge(status) {
+      const map = {
+        success: 'bg-success',
+        fail: 'bg-danger',
+        error: 'bg-danger',
+        processing: 'bg-warning text-dark'
+      };
+      const cls = map[status] || 'bg-secondary';
+      return '<span class="badge ' + cls + '">' + escapeHtml(status || '-') + '</span>';
+    }
+
+    function renderAttemptsRows(attempts) {
+      const tbody = document.getElementById('attemptsModalBody');
+      const wrapper = document.getElementById('attemptsModalTableWrapper');
+      const empty = document.getElementById('attemptsModalEmpty');
+      tbody.innerHTML = '';
+
+      if (attempts.length === 0) {
+        wrapper.style.display = 'none';
+        empty.textContent = 'Nenhum attempt encontrado.';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      wrapper.style.display = '';
+
+      attempts.forEach(function(a) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + a.id + '</td>' +
+          '<td>' + escapeHtml(a.kinds || '-') + '</td>' +
+          '<td>' + attemptStatusBadge(a.status) + '</td>' +
+          '<td title="' + escapeHtml(a.message) + '">' + escapeHtml(truncateText(a.message, 40)) + '</td>' +
+          '<td title="' + escapeHtml(a.error) + '">' + escapeHtml(truncateText(a.error, 40)) + '</td>' +
+          '<td>' + formatAttemptDate(a.created_at) + '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function abrirAttemptsModal(tinyOrderId) {
+      document.getElementById('attemptsModalOrderId').textContent = tinyOrderId;
+      document.getElementById('attemptsSearchInput').value = '';
+      document.getElementById('attemptsModalBody').innerHTML = '';
+      document.getElementById('attemptsModalTableWrapper').style.display = 'none';
+      document.getElementById('attemptsModalEmpty').style.display = 'none';
+      document.getElementById('attemptsModalLoading').style.display = 'block';
+
+      const modalEl = document.getElementById('attemptsModal');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+
+      fetch('/attempts/verify_attempts.json?tiny_order_id=' + encodeURIComponent(tinyOrderId))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          attemptsModalData = data;
+          document.getElementById('attemptsModalLoading').style.display = 'none';
+          renderAttemptsRows(attemptsModalData);
+        })
+        .catch(function() {
+          document.getElementById('attemptsModalLoading').style.display = 'none';
+          document.getElementById('attemptsModalEmpty').textContent = 'Erro ao carregar attempts.';
+          document.getElementById('attemptsModalEmpty').style.display = 'block';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('attemptsSearchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          const term = this.value.toLowerCase();
+          const filtered = attemptsModalData.filter(function(a) {
+            return (a.kinds || '').toLowerCase().includes(term);
+          });
+          renderAttemptsRows(filtered);
+        });
+      }
+    });
+  </script>
+<% end %>

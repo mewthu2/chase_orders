@@ -28,9 +28,28 @@ class AttemptsController < ApplicationController
 
     @attempts = @attempts.where(kinds: params[:kinds]) if params[:kinds].present?
 
-    @attempts = @attempts.limit(20)
-                         .order(created_at: :desc)
-                         .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+    respond_to do |format|
+      format.html do
+        @attempts = @attempts.limit(20)
+                             .order(created_at: :desc)
+                             .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+      end
+      format.json do
+        attempts = @attempts.order(created_at: :desc).limit(100)
+        render json: attempts.map { |a|
+          {
+            id: a.id,
+            kinds: a.kinds,
+            status: a.status,
+            status_code: a.status_code,
+            message: a.message,
+            error: a.error,
+            created_at: a.created_at,
+            has_xml: a.xml_nota.present?
+          }
+        }
+      end
+    end
   end
 
   def download_xml

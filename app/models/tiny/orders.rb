@@ -9,6 +9,8 @@ module Tiny::Orders
       token = ENV.fetch('TOKEN_TINY_PRODUCTION')
     when 'rj'
       token = ENV.fetch('TOKEN_TINY_PRODUCTION_RJ')
+    when 'tiny_2'
+      token = ENV.fetch('TOKEN_TINY2_PRODUCTION')
     when 'tiny_3'
       token = ENV.fetch('TOKEN_TINY3_PRODUCTION')
     end

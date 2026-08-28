@@ -1,0 +1,236 @@
+<div class="container-fluid py-4">
+  <% title 'Criação de Pedidos no Correios (B2B)' %>
+
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <a href="<%= root_path %>" class="btn btn-dark me-2">
+            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-primary border-0 mb-4">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
+      <div>
+        <h5 class="mb-1">Fluxo B2B - Etapa 2: Criação no Correios</h5>
+        <p class="mb-0">
+          <strong><%= @pending_orders.count %> pedidos aprovados</strong> aguardando
+          <strong><i class="fas fa-plus-circle text-primary"></i> Criação no Correios</strong> →
+          Emissão de Nota → Envio XML → Rastreamento
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-dark border border-secondary shadow-sm">
+    <div class="card-header bg-secondary">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="text-white mb-0">
+          <i class="fas fa-plus-circle me-2"></i>Pedidos Aprovados Aguardando Criação no Correios
+        </h5>
+        <div>
+          <span class="badge bg-warning text-dark me-2">
+            <i class="fas fa-clock"></i> Aguardando Processamento
+          </span>
+          <span class="badge bg-primary me-2">
+            <i class="fas fa-plus-circle"></i> <%= @pending_orders.count %> Aguardando Criação
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <% if @pending_orders.present? %>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover" id="ordersTableCreateQueueB2b">
+            <thead>
+              <tr>
+                <th width="50" class="text-center">
+                  <i class="fas fa-cog"></i>
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-hashtag me-1"></i>
+                  ID Pedido
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-user me-1"></i>
+                  Cliente
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-calendar me-1"></i>
+                  Data Pedido
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-dollar-sign me-1"></i>
+                  Valor Total
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Status Fila
+                </th>
+                <th class="text-center">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Último Erro
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @pending_orders.each do |order_data| %>
+                <% order = order_data['pedido'] %>
+                <% order_id = order['id'].to_s %>
+                <% queue_info = @queue_positions[order_id] %>
+                <% last_error = @last_errors[order_id] %>
+
+                <tr>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center gap-1">
+                      <%= link_to verify_attempts_attempts_path(tiny_order_id: order['id']),
+                          class: 'btn btn-sm btn-outline-info',
+                          method: :post,
+                          target: '_blank',
+                          title: 'Verificar tentativas' do %>
+                        <i class="fas fa-paperclip"></i>
+                      <% end %>
+                      <button class="btn btn-sm btn-outline-info"
+                              onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= order['id'] %>', '_blank');"
+                              title="Ver no Tiny">
+                        <i class="fas fa-external-link-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="fw-bold text-white">#<%= order['numero'] %></span>
+                      <small class="text-muted">ID: <%= order['id'] %></small>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="text-white"><%= truncate(order['nome'], length: 25) %></span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex flex-column align-items-center">
+                      <span class="text-white"><%= order['data_pedido'] %></span>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-success fs-6">R$ <%= number_with_precision(order['valor'].to_f, precision: 2, delimiter: '.', separator: ',') %></span>
+                  </td>
+                  <td class="text-center">
+                    <% if queue_info %>
+                      <% if queue_info[:status] == 'fail' %>
+                        <span class="badge bg-warning text-dark">
+                          <i class="fas fa-clock"></i>
+                          Falha
+                        </span>
+                      <% elsif queue_info[:status] == 'processing' %>
+                        <span class="badge bg-primary">
+                          <i class="fas fa-spinner fa-spin"></i>
+                          Processando
+                        </span>
+                      <% end %>
+                    <% else %>
+                      <span class="badge bg-secondary">
+                        <i class="fas fa-minus-circle"></i>
+                        Aguardando
+                      </span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if last_error %>
+                      <div class="d-flex flex-column align-items-center">
+                        <% if last_error[:status] == 'fail' %>
+                          <span class="badge bg-warning text-dark mb-1">
+                            <i class="fas fa-exclamation-triangle"></i> Falha
+                          </span>
+                        <% elsif last_error[:status] == 'error' %>
+                          <span class="badge bg-danger mb-1">
+                            <i class="fas fa-times-circle"></i> Erro
+                          </span>
+                        <% end %>
+                        <span class="text-danger small" title="<%= last_error[:message] %>">
+                          <%= truncate(last_error[:message], length: 40) %>
+                        </span>
+                        <small class="text-muted">
+                          <%= last_error[:updated_at].strftime('%d/%m %H:%M') %>
+                        </small>
+                      </div>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="text-center py-5">
+          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+          <h5 class="text-white">Nenhum pedido aprovado aguardando criação</h5>
+          <p class="text-muted">Não há pedidos aprovados aguardando criação no Correios no momento.</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :styles do %>
+<% end %>
+
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      function initializeDataTable(tableId, options = {}) {
+        const table = document.getElementById(tableId);
+        if (table && !$.fn.DataTable.isDataTable('#' + tableId)) {
+          $('#' + tableId).DataTable({
+            responsive: true,
+            pageLength: 25,
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
+            },
+            columnDefs: [
+              { className: "text-center", targets: "_all" }
+            ],
+            ...options
+          });
+        }
+      }
+
+      if (document.getElementById('ordersTableCreateQueueB2b')) {
+        initializeDataTable('ordersTableCreateQueueB2b', {
+          order: [[3, 'desc']],
+          columnDefs: [
+            { orderable: false, targets: [0] },
+            { className: "text-center", targets: "_all" }
+          ]
+        });
+      }
+
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 50);
+      });
+
+      setInterval(function() {
+        if (document.visibilityState === 'visible') {
+          location.reload();
+        }
+      }, 60000);
+    });
+  </script>
+<% end %>

@@ -164,14 +164,14 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       fone = client_data[:fone]
       uf = client_data[:uf]
     end
-    
+
     cpf = '25405327000255'
 
     # assert sending way
     return attempt.update(error: 'Forma de Envio não localizada', status: :error) unless selected_order.dig(:pedido, :forma_frete).present?
 
     transportadora_nome = selected_order[:pedido][:nome_transportador]
-    via_transportadora = transportadora_nome.present? && transportadora_nome.strip.casecmp('Correios') != 0
+    via_transportadora = transportadora_nome.present? && !transportadora_nome.strip.downcase.include?('correios')
 
     if via_transportadora
       forma_envio_code = '74926'
