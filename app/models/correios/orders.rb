@@ -19,15 +19,16 @@ module Correios::Orders
 
   def create_orders(params, attempt)
     is_transportadora = params[:cnpj_transportadora].present?
+    from_tiny2 = attempt.kinds == 'create_correios_order_tiny2'
 
     authentication = {
-      'numeroCartaoPostagem' => is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => "Basic #{Base64.strict_encode64(is_transportadora ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(from_tiny2 ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     correios_cod_armazem = ENV.fetch('CORREIOS_COD_ARMAZEM')
-    correios_cartao_postagem = is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM')
+    correios_cartao_postagem = from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM')
     correios_cnpj_transportadora = is_transportadora ? params[:cnpj_transportadora] : ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')
     fone = params[:fone].present? ? params[:fone] : ''
 
