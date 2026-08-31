@@ -148,11 +148,11 @@ module Correios::Orders
     end
   end
 
-  def get_tracking(order_correios_id, is_transportadora: false)
+  def get_tracking(order_correios_id, from_tiny2: false)
     authentication = {
-      'numeroCartaoPostagem' => is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => "Basic #{Base64.strict_encode64(is_transportadora ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(from_tiny2 ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     begin

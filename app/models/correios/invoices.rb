@@ -1,12 +1,14 @@
 module Correios::Invoices
   module_function
 
-  def self.send_xml_to_correios(attempt, is_transportadora: false)
+  def self.send_xml_to_correios(attempt)
+    from_tiny2 = attempt.kinds == 'send_xml_tiny2'
+
     headers = {
-      'numeroCartaoPostagem' => is_transportadora ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'codigoArmazem' => ENV.fetch('CORREIOS_COD_ARMAZEM'),
       'Content-Type' => 'application/x-www-form-urlencoded',
-      'Authorization' => "Basic #{Base64.strict_encode64(is_transportadora ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(from_tiny2 ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     body = { xml: attempt.xml_nota }
@@ -20,7 +22,7 @@ module Correios::Invoices
     end
 
     begin
-      tracking = Correios::Orders.get_tracking(attempt.order_correios_id, is_transportadora:)
+      tracking = Correios::Orders.get_tracking(attempt.order_correios_id, from_tiny2:)
     rescue StandardError => e
       attempt.update(error: e, message: 'Erro ao solicitar o rastreio', status: :error)
     end

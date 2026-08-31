@@ -30,7 +30,7 @@ class GetTrackingJob2 < ActiveJob::Base
   def get_one_tracking(att)
     begin
       attempt = Attempt.create(kinds: :get_tracking_tiny2, is_transportadora: att.is_transportadora)
-      tracking = Correios::Orders.get_tracking(att.order_correios_id, is_transportadora: att.is_transportadora)
+      tracking = Correios::Orders.get_tracking(att.order_correios_id, from_tiny2: true)
     rescue StandardError => e
       attempt.update(error: e, status: :error, message: 'Erro na solicitação de rastreio aos Correios')
     end
