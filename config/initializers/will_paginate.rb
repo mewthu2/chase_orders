@@ -1,4 +1,6 @@
 # config/initializers/will_paginate.rb
+require 'will_paginate/array'
+
 if defined?(WillPaginate)
   module WillPaginate
     module ActionView
