@@ -147,6 +147,15 @@
             </tbody>
           </table>
         </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted small"><%= page_entries_info @orders %></span>
+          <%= will_paginate @orders,
+                            class: 'pagination pagination-dark mb-0',
+                            inner_window: 1,
+                            previous_label: '<i class="fas fa-chevron-left"></i>'.html_safe,
+                            next_label: '<i class="fas fa-chevron-right"></i>'.html_safe %>
+        </div>
       <% else %>
         <div class="text-center py-5">
           <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
@@ -190,6 +199,18 @@
               <tbody id="attemptsModalBody"></tbody>
             </table>
           </div>
+
+          <div class="d-flex justify-content-between align-items-center" id="attemptsModalPagination" style="display:none;">
+            <small class="text-muted" id="attemptsModalPageInfo"></small>
+            <div class="btn-group">
+              <button type="button" class="btn btn-sm btn-outline-light" id="attemptsModalPrevBtn">
+                <i class="fas fa-chevron-left me-1"></i>Anterior
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-light" id="attemptsModalNextBtn">
+                Próxima<i class="fas fa-chevron-right ms-1"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -199,6 +220,9 @@
 <% content_for :scripts do %>
   <script>
     let attemptsModalData = [];
+    let attemptsModalOrderId = null;
+    let attemptsModalCurrentPage = 1;
+    let attemptsModalTotalPages = 1;
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
@@ -258,30 +282,57 @@
       });
     }
 
-    function abrirAttemptsModal(tinyOrderId) {
-      document.getElementById('attemptsModalOrderId').textContent = tinyOrderId;
+    function updateAttemptsPaginationControls() {
+      const pagination = document.getElementById('attemptsModalPagination');
+      const pageInfo = document.getElementById('attemptsModalPageInfo');
+      const prevBtn = document.getElementById('attemptsModalPrevBtn');
+      const nextBtn = document.getElementById('attemptsModalNextBtn');
+
+      if (attemptsModalTotalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+      }
+
+      pagination.style.display = '';
+      pageInfo.textContent = 'Página ' + attemptsModalCurrentPage + ' de ' + attemptsModalTotalPages;
+      prevBtn.disabled = attemptsModalCurrentPage <= 1;
+      nextBtn.disabled = attemptsModalCurrentPage >= attemptsModalTotalPages;
+    }
+
+    function loadAttemptsPage(page) {
       document.getElementById('attemptsSearchInput').value = '';
       document.getElementById('attemptsModalBody').innerHTML = '';
       document.getElementById('attemptsModalTableWrapper').style.display = 'none';
       document.getElementById('attemptsModalEmpty').style.display = 'none';
+      document.getElementById('attemptsModalPagination').style.display = 'none';
       document.getElementById('attemptsModalLoading').style.display = 'block';
 
-      const modalEl = document.getElementById('attemptsModal');
-      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      modal.show();
-
-      fetch('/attempts/verify_attempts.json?tiny_order_id=' + encodeURIComponent(tinyOrderId))
+      fetch('/attempts/verify_attempts.json?tiny_order_id=' + encodeURIComponent(attemptsModalOrderId) + '&page=' + page)
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          attemptsModalData = data;
+          attemptsModalData = data.attempts || [];
+          attemptsModalCurrentPage = data.pagination ? data.pagination.current_page : 1;
+          attemptsModalTotalPages = data.pagination ? data.pagination.total_pages : 1;
           document.getElementById('attemptsModalLoading').style.display = 'none';
           renderAttemptsRows(attemptsModalData);
+          updateAttemptsPaginationControls();
         })
         .catch(function() {
           document.getElementById('attemptsModalLoading').style.display = 'none';
           document.getElementById('attemptsModalEmpty').textContent = 'Erro ao carregar attempts.';
           document.getElementById('attemptsModalEmpty').style.display = 'block';
         });
+    }
+
+    function abrirAttemptsModal(tinyOrderId) {
+      attemptsModalOrderId = tinyOrderId;
+      document.getElementById('attemptsModalOrderId').textContent = tinyOrderId;
+
+      const modalEl = document.getElementById('attemptsModal');
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+
+      loadAttemptsPage(1);
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -293,6 +344,19 @@
             return (a.kinds || '').toLowerCase().includes(term);
           });
           renderAttemptsRows(filtered);
+        });
+      }
+
+      const prevBtn = document.getElementById('attemptsModalPrevBtn');
+      const nextBtn = document.getElementById('attemptsModalNextBtn');
+      if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+          if (attemptsModalCurrentPage > 1) loadAttemptsPage(attemptsModalCurrentPage - 1);
+        });
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+          if (attemptsModalCurrentPage < attemptsModalTotalPages) loadAttemptsPage(attemptsModalCurrentPage + 1);
         });
       }
     });

@@ -141,10 +141,18 @@
               <tr>
                 <td class="text-center">
                   <span class="fw-bold text-main"><%= attempt.id %></span>
+                  <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.id %>" title="Copiar ID">
+                    <i class="fas fa-copy"></i>
+                  </button>
                 </td>
                 <td class="text-center">
                   <div class="d-flex flex-column align-items-center">
-                    <span class="fw-bold text-main"><%= attempt.tiny_order_id %></span>
+                    <span class="fw-bold text-main">
+                      <%= attempt.tiny_order_id %>
+                      <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.tiny_order_id %>" title="Copiar ID do pedido">
+                        <i class="fas fa-copy"></i>
+                      </button>
+                    </span>
                     <button class="btn btn-sm btn-outline-primary mt-1"
                             onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= attempt.tiny_order_id %>', '_blank');"
                             title="Ver no Tiny">
@@ -173,11 +181,19 @@
                   <% else %>
                     <span class="badge bg-secondary"><%= attempt.kinds %></span>
                   <% end %>
+                  <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.kinds %>" title="Copiar tipo">
+                    <i class="fas fa-copy"></i>
+                  </button>
                 </td>
                 <td class="text-center">
                   <span class="text-main" title="<%= attempt.message %>">
                     <%= truncate(attempt.message, length: 30) %>
                   </span>
+                  <% if attempt.message.present? %>
+                    <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.message %>" title="Copiar mensagem completa">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  <% end %>
                 </td>
                 <td class="text-center">
                   <% case attempt.status %>
@@ -200,10 +216,20 @@
                   <% else %>
                     <span class="badge bg-secondary"><%= attempt.status %></span>
                   <% end %>
+                  <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.status %>" title="Copiar status">
+                    <i class="fas fa-copy"></i>
+                  </button>
                 </td>
                 <td class="text-center">
                   <div class="d-flex flex-column align-items-center">
-                    <span class="text-main"><%= attempt.status_code %></span>
+                    <span class="text-main">
+                      <%= attempt.status_code %>
+                      <% if attempt.status_code.present? %>
+                        <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.status_code %>" title="Copiar status code">
+                          <i class="fas fa-copy"></i>
+                        </button>
+                      <% end %>
+                    </span>
                     <% if attempt.message.present? %>
                       <small class="text-muted-custom" title="<%= attempt.message %>">
                         <%= truncate(attempt.message, length: 20) %>
@@ -217,6 +243,9 @@
                       <i class="fas fa-exclamation-triangle"></i>
                       <%= truncate(attempt.error, length: 20) %>
                     </span>
+                    <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.error %>" title="Copiar erro completo">
+                      <i class="fas fa-copy"></i>
+                    </button>
                   <% else %>
                     <span class="text-muted-custom">-</span>
                   <% end %>
@@ -248,6 +277,9 @@
                   <div class="d-flex flex-column align-items-center">
                     <span class="text-main"><%= attempt.created_at.strftime('%d/%m/%Y') %></span>
                     <small class="text-muted-custom"><%= attempt.created_at.strftime('%H:%M') %></small>
+                    <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.created_at.strftime('%d/%m/%Y %H:%M') %>" title="Copiar data">
+                      <i class="fas fa-copy"></i>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -279,6 +311,31 @@
 </div>
 
 <% content_for :styles do %>
+  <style>
+    .btn-copy-cell {
+      background: transparent;
+      border: none;
+      color: #8a94a6;
+      padding: 0 4px;
+      margin-left: 2px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
+    .btn-copy-cell:hover {
+      color: #fff;
+    }
+
+    .btn-copy-cell.copy-success {
+      color: #28a745;
+    }
+
+    .btn-copy-cell.copy-error {
+      color: #dc3545;
+    }
+  </style>
 <% end %>
 
 <% content_for :scripts do %>
@@ -303,6 +360,14 @@
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
 
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-copy-cell');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        copiarValorCelula(btn);
+      });
+
       const cards = document.querySelectorAll('.card');
       cards.forEach((card, index) => {
         setTimeout(() => {
@@ -311,6 +376,45 @@
         }, index * 50);
       });
     });
+
+    function copiarValorCelula(botao) {
+      var texto = botao.getAttribute('data-copy-value') || '';
+      if (!texto) return;
+
+      var aplicarFeedback = function(sucesso) {
+        var icone = botao.querySelector('i');
+        var classeOriginal = icone.className;
+
+        icone.className = sucesso ? 'fas fa-check' : 'fas fa-times';
+        botao.classList.add(sucesso ? 'copy-success' : 'copy-error');
+
+        setTimeout(function() {
+          icone.className = classeOriginal;
+          botao.classList.remove('copy-success', 'copy-error');
+        }, 1200);
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texto).then(function() {
+          aplicarFeedback(true);
+        }).catch(function() {
+          aplicarFeedback(false);
+        });
+      } else {
+        var areaTransferencia = document.createElement('textarea');
+        areaTransferencia.value = texto;
+        document.body.appendChild(areaTransferencia);
+        areaTransferencia.select();
+
+        try {
+          aplicarFeedback(document.execCommand('copy'));
+        } catch (err) {
+          aplicarFeedback(false);
+        }
+
+        document.body.removeChild(areaTransferencia);
+      }
+    }
 
     function copiarConteudo(id) {
       var conteudo = document.querySelector('.content' + id);

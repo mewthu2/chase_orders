@@ -247,6 +247,8 @@ class DashboardController < ApplicationController
       ignored: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.ignored? }
     }
 
+    @orders = @orders.paginate(page: params[:page], per_page: 20)
+
     @job_running = b2b_job_running?(:create_correios_order_tiny2)
   end
 

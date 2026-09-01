@@ -35,17 +35,25 @@ class AttemptsController < ApplicationController
                              .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
       end
       format.json do
-        attempts = @attempts.order(created_at: :desc).limit(100)
-        render json: attempts.map { |a|
-          {
-            id: a.id,
-            kinds: a.kinds,
-            status: a.status,
-            status_code: a.status_code,
-            message: a.message,
-            error: a.error,
-            created_at: a.created_at,
-            has_xml: a.xml_nota.present?
+        attempts = @attempts.order(created_at: :desc)
+                             .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+        render json: {
+          attempts: attempts.map { |a|
+            {
+              id: a.id,
+              kinds: a.kinds,
+              status: a.status,
+              status_code: a.status_code,
+              message: a.message,
+              error: a.error,
+              created_at: a.created_at,
+              has_xml: a.xml_nota.present?
+            }
+          },
+          pagination: {
+            current_page: attempts.current_page,
+            total_pages: attempts.total_pages,
+            total_entries: attempts.total_entries
           }
         }
       end
