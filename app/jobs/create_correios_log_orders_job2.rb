@@ -154,6 +154,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       cidade = selected_order[:pedido][:endereco_entrega][:cidade]
       fone = selected_order[:pedido][:endereco_entrega][:fone]
       uf = selected_order[:pedido][:endereco_entrega][:uf]
+      cpf = selected_order[:pedido][:endereco_entrega][:cpf_cnpj]
     else
       endereco = client_data[:endereco]
       numero = client_data[:numero]
@@ -163,9 +164,8 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       cidade = client_data[:cidade]
       fone = client_data[:fone]
       uf = client_data[:uf]
+      cpf = client_data[:cpf_cnpj]
     end
-
-    cpf = '25405327000255'
 
     # assert sending way
     return attempt.update(error: 'Forma de Envio não localizada', status: :error) unless selected_order.dig(:pedido, :forma_frete).present?
