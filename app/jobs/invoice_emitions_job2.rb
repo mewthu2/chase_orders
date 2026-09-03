@@ -45,7 +45,7 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
             tiny_order_id: att.tiny_order_id,
             status_code: response.code,
             message: error_message.to_s.first(100),
-            status: :error
+            status: error_message == 'Nota Fiscal localizada, porém apenas notas pendentes ou rejeitadas podem ser enviadas' ? :success : :error
           )
         elsif body.include?('A nota fiscal não foi enviada')
           attempt.update(

@@ -10,14 +10,23 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
 
     Attempt.find_by(id: marker_id)&.update(status: :success) if marker_id
   rescue StandardError => e
-    Attempt.find_by(id: marker_id)&.update(status: :error, error: e.message) if marker_id
+    Attempt.find_by(id: marker_id)&.update(
+      status: :error,
+      error: e.message
+    ) if marker_id
+
     raise
   end
 
   def send_all_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order_tiny2, status: 2)
-                       .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :send_xml_tiny2, status: 2).pluck(:order_correios_id))
+    @send_xml = Attempt
+      .where(kinds: :create_correios_order_tiny2, status: 2)
+      .distinct(:order_correios_id)
+      .where.not(
+        order_correios_id: Attempt
+          .where(kinds: :send_xml_tiny2, status: 2)
+          .pluck(:order_correios_id)
+      )
 
     @send_xml.each do |att|
       send_one_xml(att)
@@ -25,10 +34,19 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
   end
 
   def insist_on_send_xml
-    @send_xml = Attempt.where(kinds: :create_correios_order_tiny2, status: 2, is_transportadora: false)
-                       .distinct(:order_correios_id)
-                       .where.not(order_correios_id: Attempt.where(kinds: :get_tracking_tiny2, status: 2)
-                                                            .pluck(:order_correios_id))
+    @send_xml = Attempt
+      .where(
+        kinds: :create_correios_order_tiny2,
+        status: 2,
+        is_transportadora: false
+      )
+      .distinct(:order_correios_id)
+      .where.not(
+        order_correios_id: Attempt
+          .where(kinds: :get_tracking_tiny2, status: 2)
+          .pluck(:order_correios_id)
+      )
+
     @send_xml.each do |att|
       send_one_xml(att)
     end
@@ -46,30 +64,19 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
         ENV.fetch('TOKEN_TINY2_PRODUCTION')
       )
     rescue StandardError => e
-      attempt&.update(error: e.message, status: :error)
+      attempt&.update(
+        error: e.message,
+        status: :error
+      )
       return
     end
 
     doc = Nokogiri::XML(invoice)
 
-    xped = doc.at_xpath('//*[local-name()="xPed"]')
-
-    if xped.present?
-      xped.content = att.order_correios_id.to_s
-    else
-      prod = doc.at_xpath('//*[local-name()="det"]/*[local-name()="prod"]')
-
-      unless prod.present?
-        attempt.update(
-          status: :error,
-          error: "Tag prod não encontrada no XML da nota: #{att.id_nota_fiscal}"
-        )
-        return
+    doc.traverse do |node|
+      if node.element? && node.name == 'xPed'
+        node.content = att.order_correios_id.to_s
       end
-
-      xped = Nokogiri::XML::Node.new('xPed', doc)
-      xped.content = att.order_correios_id.to_s
-      prod.add_child(xped)
     end
 
     xml_nfe = doc.at_xpath('//*[local-name()="xml_nfe"]')

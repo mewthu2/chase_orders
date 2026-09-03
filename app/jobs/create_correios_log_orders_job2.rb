@@ -92,11 +92,11 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
 
     # Create Attempt
     attempt = Attempt.create!(kinds: :create_correios_order_tiny2,
-                              tiny_order_id: order[:pedido][:id])
+                              tiny_order_id: 901363892)
 
     # Obtain more info from a specific order
     begin
-      selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), order[:pedido][:id])
+      selected_order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), 901363892)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
     end
@@ -199,7 +199,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
 
     # Setting founded valures
     begin
-      params[:invoice]          << order[:pedido][:id]
+      params[:invoice]          << '901363892'
       params[:numero_ecommerce] << ecommerce_number
       params[:data_pedido]      << selected_order[:pedido][:data_pedido]
       params[:valor]            << assert_value
