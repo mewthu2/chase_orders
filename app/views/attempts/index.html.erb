@@ -283,7 +283,7 @@
                 </td>
                 <td class="text-center">
                   <% if attempt.order_correios_id.present? %>
-                    <span class="badge bg-primary"><%= attempt.order_correios_id %></span>
+                    <span class="badge bg-primary"><i class="fas fa-truck me-1" title="Correios"></i><%= attempt.order_correios_id %></span>
                   <% else %>
                     <span class="badge bg-secondary">Não disponível</span>
                   <% end %>
@@ -372,7 +372,13 @@
                                 </tr>
                                 <tr>
                                   <th>Pedido Correios:</th>
-                                  <td><%= attempt.order_correios_id.present? ? attempt.order_correios_id : 'N/A' %></td>
+                                  <td>
+                                    <% if attempt.order_correios_id.present? %>
+                                      <i class="fas fa-truck me-1" title="Correios"></i><%= attempt.order_correios_id %>
+                                    <% else %>
+                                      N/A
+                                    <% end %>
+                                  </td>
                                 </tr>
                                 <tr>
                                   <th>Nota Fiscal:</th>

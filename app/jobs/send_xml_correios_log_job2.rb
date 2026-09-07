@@ -56,7 +56,9 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
     begin
       attempt = Attempt.create(
         kinds: :send_xml_tiny2,
-        is_transportadora: att.is_transportadora
+        is_transportadora: att.is_transportadora,
+        tiny_order_id: att.tiny_order_id,
+        order_correios_id: att.order_correios_id
       )
 
       invoice = Tiny::Invoices.obtain_xml(

@@ -1,29 +1,32 @@
 <div class="container-fluid py-4">
   <% title 'Criação de Pedidos no Correios (B2B)' %>
 
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <a href="<%= root_path %>" class="btn btn-dark me-2">
-            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-          </a>
-        </div>
-        <%= button_to run_create_correios_b2b_dashboard_index_path(review: @review_filter), method: :post,
-                      class: "btn btn-success #{'disabled' if @job_running}",
-                      form_class: 'd-inline-block',
-                      disabled: @job_running,
-                      data: { turbo_confirm: @job_running ? nil : 'Isso irá processar todos os pedidos B2B marcados para criação no Correios. Deseja continuar?' } do %>
-          <i class="fas <%= @job_running ? 'fa-spinner fa-spin' : 'fa-play' %> me-1"></i>
-          <%= @job_running ? 'Executando...' : 'Rodar Rotina Agora' %>
-        <% end %>
-      </div>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-clipboard-check me-2"></i>Criação de Pedidos no Correios (B2B)</h1>
+      <p class="page-subtitle">
+        <i class="fas fa-clock me-1"></i>
+        Revisão antes da criação — Etapa 1 do fluxo B2B (Tiny2)
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="<%= root_path %>" class="btn btn-dark">
+        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+      </a>
+      <%= button_to run_create_correios_b2b_dashboard_index_path(review: @review_filter), method: :post,
+                    class: "btn btn-success #{'disabled' if @job_running}",
+                    form_class: 'd-inline-block',
+                    disabled: @job_running,
+                    data: { turbo_confirm: @job_running ? nil : 'Isso irá processar todos os pedidos B2B marcados para criação no Correios. Deseja continuar?' } do %>
+        <i class="fas <%= @job_running ? 'fa-spinner fa-spin' : 'fa-play' %> me-1"></i>
+        <%= @job_running ? 'Executando...' : 'Rodar Rotina Agora' %>
+      <% end %>
     </div>
   </div>
 
   <div class="alert alert-primary border-0 mb-4">
     <div class="d-flex align-items-center">
-      <i class="fas fa-truck fa-2x me-3 text-primary"></i>
+      <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
       <div>
         <h5 class="mb-1">Fluxo B2B (Tiny2) - Revisão antes da Criação</h5>
         <p class="mb-0">
@@ -34,49 +37,45 @@
     </div>
   </div>
 
-  <div class="card bg-dark border border-secondary shadow-sm">
-    <div class="card-header bg-secondary">
-      <div class="d-flex justify-content-between align-items-center">
-        <h5 class="text-white mb-0">
-          <i class="fas fa-truck me-2"></i>Pedidos Tiny2 Aguardando Envio
-        </h5>
-        <div>
-          <span class="badge bg-warning text-dark me-2">
-            <i class="fas fa-hourglass-half"></i> <%= @counts[:pending] %> Pendentes
-          </span>
-          <span class="badge bg-success me-2">
-            <i class="fas fa-check"></i> <%= @counts[:approved] %> Marcados
-          </span>
-          <span class="badge bg-secondary me-2">
-            <i class="fas fa-ban"></i> <%= @counts[:ignored] %> Ignorados
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="card-body">
-      <div class="btn-group mb-3" role="group">
+  <div class="filters-panel">
+    <div class="filter-section">
+      <label class="filter-label">
+        <i class="fas fa-filter me-1"></i>Filtrar por revisão
+      </label>
+      <div class="period-buttons">
         <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'pending'),
-                    class: "btn btn-sm #{@review_filter == 'pending' ? 'btn-primary' : 'btn-outline-primary'}" do %>
-          Pendentes de revisão
+                    class: "btn-period #{@review_filter == 'pending' ? 'btn-period--active-white' : ''}" do %>
+          <i class="fas fa-hourglass-half me-1"></i>Pendentes de revisão (<%= @counts[:pending] %>)
         <% end %>
         <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'approved'),
-                    class: "btn btn-sm #{@review_filter == 'approved' ? 'btn-primary' : 'btn-outline-primary'}" do %>
-          Marcados
+                    class: "btn-period #{@review_filter == 'approved' ? 'btn-period--active-white' : ''}" do %>
+          <i class="fas fa-check me-1"></i>Marcados (<%= @counts[:approved] %>)
         <% end %>
         <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'ignored'),
-                    class: "btn btn-sm #{@review_filter == 'ignored' ? 'btn-primary' : 'btn-outline-primary'}" do %>
-          Ignorados
+                    class: "btn-period #{@review_filter == 'ignored' ? 'btn-period--active-white' : ''}" do %>
+          <i class="fas fa-ban me-1"></i>Ignorados (<%= @counts[:ignored] %>)
         <% end %>
         <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'all'),
-                    class: "btn btn-sm #{@review_filter == 'all' ? 'btn-primary' : 'btn-outline-primary'}" do %>
-          Todos
+                    class: "btn-period #{@review_filter == 'all' ? 'btn-period--active-white' : ''}" do %>
+          <i class="fas fa-border-all me-1"></i>Todos
         <% end %>
       </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h2 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Pedidos Tiny2 Aguardando Envio
+      </h2>
+      <span class="filter-tag filter-tag--gray">
+        Revisão: <%= { 'pending' => 'Pendentes de revisão', 'approved' => 'Marcados', 'ignored' => 'Ignorados', 'all' => 'Todos' }[@review_filter] %>
+      </span>
+    </div>
 
       <% if @orders.present? %>
         <div class="table-responsive">
-          <table class="table table-dark table-hover" id="ordersTableB2b">
+          <table class="orders-table" id="ordersTableB2b">
             <thead>
               <tr>
                 <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
@@ -84,7 +83,7 @@
                 <th class="text-center"><i class="fas fa-user me-1"></i>Cliente</th>
                 <th class="text-center"><i class="fas fa-calendar me-1"></i>Data Pedido</th>
                 <th class="text-center"><i class="fas fa-dollar-sign me-1"></i>Valor Total</th>
-                <th class="text-center"><i class="fas fa-info-circle me-1"></i>Revisão</th>
+                <th class="text-center"><i class="fas fa-flag me-1"></i>Revisão</th>
                 <th class="text-center">Ação</th>
               </tr>
             </thead>
@@ -148,22 +147,51 @@
           </table>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted small"><%= page_entries_info @orders %></span>
-          <%= will_paginate @orders,
-                            class: 'pagination pagination-dark mb-0',
-                            inner_window: 1,
-                            previous_label: '<i class="fas fa-chevron-left"></i>'.html_safe,
-                            next_label: '<i class="fas fa-chevron-right"></i>'.html_safe %>
-        </div>
+        <% if @orders.total_pages > 1 %>
+          <div class="pagination-footer">
+            <div class="pagination-info">
+              Mostrando
+              <strong><%= [(@orders.current_page - 1) * @orders.per_page + 1, @orders.total_entries].min %></strong>
+              a
+              <strong><%= [@orders.current_page * @orders.per_page, @orders.total_entries].min %></strong>
+              de <strong><%= @orders.total_entries %></strong> pedidos
+            </div>
+            <div class="pagination-controls">
+              <% if @orders.current_page > 1 %>
+                <%= link_to order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => @orders.current_page - 1)),
+                            class: "page-btn" do %>
+                  <i class="fas fa-chevron-left me-1"></i>Anterior
+                <% end %>
+              <% end %>
+
+              <% window  = 1
+                 p_start = [@orders.current_page - window, 1].max
+                 p_end   = [@orders.current_page + window, @orders.total_pages].min %>
+
+              <% (p_start..p_end).each do |pnum| %>
+                <% if pnum == @orders.current_page %>
+                  <span class="page-btn page-btn--active"><%= pnum %></span>
+                <% else %>
+                  <%= link_to pnum, order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => pnum)), class: "page-btn" %>
+                <% end %>
+              <% end %>
+
+              <% if @orders.current_page < @orders.total_pages %>
+                <%= link_to order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => @orders.current_page + 1)),
+                            class: "page-btn" do %>
+                  Próxima<i class="fas fa-chevron-right ms-1"></i>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
       <% else %>
-        <div class="text-center py-5">
-          <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-          <h5 class="text-white">Nenhum pedido nessa categoria</h5>
-          <p class="text-muted">Não há pedidos B2B nessa aba no momento.</p>
+        <div class="empty-state">
+          <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>
+          <h5>Nenhum pedido nessa categoria</h5>
+          <p>Não há pedidos B2B nessa aba no momento.</p>
         </div>
       <% end %>
-    </div>
   </div>
 
   <div class="modal fade" id="attemptsModal" tabindex="-1" aria-hidden="true">

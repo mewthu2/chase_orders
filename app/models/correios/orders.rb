@@ -113,7 +113,7 @@ module Correios::Orders
         attempt,
         message: @request,
         status: :success,
-        order_correios_id: @request['mensagem'][/ID: (\d+)/, 1]
+        order_correios_id: @request['mensagem'][/pedidos\/(\d+)/, 1]
       )
     end
 

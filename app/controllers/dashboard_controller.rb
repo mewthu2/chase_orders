@@ -50,7 +50,19 @@ class DashboardController < ApplicationController
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: processed_ids)
 
+    pending_order_ids = @send_xml.map(&:tiny_order_id).compact
+
     @last_errors = {}
+    Attempt.where(kinds: :send_xml, status: [:fail, :error], tiny_order_id: pending_order_ids)
+           .where.not(message: [nil, ''])
+           .group_by(&:tiny_order_id).each do |order_id, attempts|
+             last = attempts.max_by(&:updated_at)
+             @last_errors[order_id.to_s] = {
+               message: last.message,
+               status: last.status,
+               updated_at: last.updated_at
+             }
+           end
   end
 
   def send_xml_b2b
@@ -61,7 +73,23 @@ class DashboardController < ApplicationController
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: processed_ids)
 
+    @filter_transportadora = params[:transportadora]
+    @send_xml = @send_xml.where(is_transportadora: @filter_transportadora == 'outra') if @filter_transportadora.present?
+
+    pending_order_ids = @send_xml.map(&:tiny_order_id).compact
+
     @last_errors = {}
+    Attempt.where(kinds: :send_xml_tiny2, status: [:fail, :error], tiny_order_id: pending_order_ids)
+           .where.not(message: [nil, ''])
+           .group_by(&:tiny_order_id).each do |order_id, attempts|
+             last = attempts.max_by(&:updated_at)
+             @last_errors[order_id.to_s] = {
+               message: last.message,
+               status: last.status,
+               updated_at: last.updated_at
+             }
+           end
+
     @job_running = b2b_job_running?(:send_xml_tiny2)
   end
 
@@ -93,6 +121,10 @@ class DashboardController < ApplicationController
     @invoice_emition = Attempt.where(kinds: :create_correios_order_tiny2, status: :success)
                               .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
+
+    @filter_transportadora = params[:transportadora]
+    @invoice_emition = @invoice_emition.where(is_transportadora: @filter_transportadora == 'outra') if @filter_transportadora.present?
+
     @job_running = b2b_job_running?(:emission_invoice_tiny2)
   end
 
@@ -149,8 +181,7 @@ class DashboardController < ApplicationController
       kinds: :create_correios_order,
       tiny_order_id: pending_order_ids,
       created_at: 1.month.ago..Time.current
-    ).where.not(message: [nil, ''])
-                               .order(:created_at)
+    ).order(:created_at)
 
     queue_attempts = []
     failed_attempts = []
@@ -172,7 +203,7 @@ class DashboardController < ApplicationController
           status: attempt.status,
           created_at: attempt.created_at,
           updated_at: attempt.updated_at,
-          message: attempt.message
+          message: attempt.message.presence || attempt.error
         }
       ]
     end
@@ -190,11 +221,11 @@ class DashboardController < ApplicationController
 
     @last_errors = {}
     relevant_attempts
-      .select { |a| %w[fail error].include?(a.status) && a.message.present? }
+      .select { |a| %w[fail error].include?(a.status) && (a.message.present? || a.error.present?) }
       .group_by(&:tiny_order_id).each do |order_id, attempts|
         last = attempts.max_by(&:updated_at)
         @last_errors[order_id.to_s] = {
-          message: last.message,
+          message: last.message.presence || last.error,
           status: last.status,
           updated_at: last.updated_at
         }
@@ -276,8 +307,7 @@ class DashboardController < ApplicationController
       kinds: :create_correios_order_tiny2,
       tiny_order_id: pending_order_ids,
       created_at: 1.month.ago..Time.current
-    ).where.not(message: [nil, ''])
-                               .order(:created_at)
+    ).order(:created_at)
 
     queue_attempts = []
     failed_attempts = []
@@ -299,7 +329,7 @@ class DashboardController < ApplicationController
           status: attempt.status,
           created_at: attempt.created_at,
           updated_at: attempt.updated_at,
-          message: attempt.message
+          message: attempt.message.presence || attempt.error
         }
       ]
     end
@@ -317,11 +347,11 @@ class DashboardController < ApplicationController
 
     @last_errors = {}
     relevant_attempts
-      .select { |a| %w[fail error].include?(a.status) && a.message.present? }
+      .select { |a| %w[fail error].include?(a.status) && (a.message.present? || a.error.present?) }
       .group_by(&:tiny_order_id).each do |order_id, attempts|
         last = attempts.max_by(&:updated_at)
         @last_errors[order_id.to_s] = {
-          message: last.message,
+          message: last.message.presence || last.error,
           status: last.status,
           updated_at: last.updated_at
         }
@@ -514,7 +544,8 @@ class DashboardController < ApplicationController
     @filter_params = {
       status: params[:status],
       period: params[:period],
-      order_id: params[:order_id]
+      order_id: params[:order_id],
+      transportadora: params[:transportadora]
     }
 
     prepare_tracking_data_optimized_b2b(@filter_params)
@@ -863,6 +894,11 @@ class DashboardController < ApplicationController
       sql_params[:order_id] = filters[:order_id]
     end
 
+    if filters[:transportadora].present?
+      base_conditions << 'so.is_transportadora = :transportadora'
+      sql_params[:transportadora] = filters[:transportadora] == 'outra' ? 1 : 0
+    end
+
     # Não inclui "WHERE" aqui — usamos "WHERE 1=1" dentro das CTEs e da query principal
     conditions_sql = base_conditions.any? ? "AND #{base_conditions.join(' AND ')}" : ''
 
@@ -878,62 +914,26 @@ class DashboardController < ApplicationController
         FROM attempts
         WHERE kinds = #{create_kind} AND status = #{success_status}
         GROUP BY tiny_order_id, order_correios_id, is_transportadora
-      ),
-      invoice_pending AS (
-        SELECT so.tiny_order_id
-        FROM successful_orders so
-        WHERE 1=1
-        #{conditions_sql}
-        AND NOT EXISTS (
-          SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = #{invoice_kind} AND a.status = #{success_status}
-        )
-      ),
-      xml_pending AS (
-        SELECT so.tiny_order_id
-        FROM successful_orders so
-        WHERE 1=1
-        #{conditions_sql}
-        AND EXISTS (
-          SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = #{invoice_kind} AND a.status = #{success_status}
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = #{xml_kind} AND a.status = #{success_status}
-        )
-      ),
-      tracking_pending AS (
-        SELECT so.tiny_order_id
-        FROM successful_orders so
-        WHERE so.is_transportadora = false
-        #{conditions_sql}
-        AND EXISTS (
-          SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = #{xml_kind} AND a.status = #{success_status}
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM attempts a
-          WHERE a.order_correios_id = so.order_correios_id
-            AND a.kinds = #{tracking_kind} AND a.status = #{success_status}
-        )
       )
       SELECT
         so.tiny_order_id,
-        CASE
-          WHEN ip.tiny_order_id IS NOT NULL THEN 'invoice_emition'
-          WHEN xp.tiny_order_id IS NOT NULL THEN 'send_xml'
-          WHEN tp.tiny_order_id IS NOT NULL THEN 'push_tracking'
-          ELSE 'completed'
-        END AS current_status
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{invoice_kind} AND a.status = #{success_status}
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{xml_kind} AND a.status = #{success_status}
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = #{tracking_kind} AND a.status = #{success_status}
+        ) AS tracking_done
       FROM successful_orders so
-      LEFT JOIN invoice_pending ip ON so.tiny_order_id = ip.tiny_order_id
-      LEFT JOIN xml_pending xp ON so.tiny_order_id = xp.tiny_order_id
-      LEFT JOIN tracking_pending tp ON so.tiny_order_id = tp.tiny_order_id
       WHERE 1=1
       #{conditions_sql}
       ORDER BY so.created_at DESC;
@@ -947,6 +947,8 @@ class DashboardController < ApplicationController
       ActiveRecord::Base.connection.exec_query(sql)
     end
 
+    boolean_type = ActiveModel::Type::Boolean.new
+
     @tracking_summary = {}
     invoice_count = 0
     xml_count = 0
@@ -954,17 +956,35 @@ class DashboardController < ApplicationController
 
     results.rows.each do |row|
       order_id = row[0].to_s
-      status = row[1]
+      is_transportadora = boolean_type.cast(row[1])
+      invoice_done = boolean_type.cast(row[2])
+      xml_done = boolean_type.cast(row[3])
+      tracking_done = boolean_type.cast(row[4])
 
-      next if filters[:status].present? && filters[:status] != status
+      # Cada etapa só pode estar concluída se as etapas anteriores do fluxo também estiverem
+      # (Criação → Emissão de Nota → Envio XML → Rastreamento), senão fica "Na Fila".
+      current_status =
+        if !invoice_done
+          'invoice_emition'
+        elsif !xml_done
+          'send_xml'
+        elsif is_transportadora || tracking_done
+          'completed'
+        else
+          'push_tracking'
+        end
+
+      next if filters[:status].present? && filters[:status] != current_status
 
       @tracking_summary[order_id] = {
-        invoice_emition: status == 'invoice_emition',
-        send_xml: status == 'send_xml',
-        push_tracking: status == 'push_tracking'
+        invoice_done: invoice_done,
+        xml_done: xml_done,
+        tracking_done: tracking_done,
+        is_transportadora: is_transportadora,
+        current_status: current_status
       }
 
-      case status
+      case current_status
       when 'invoice_emition'
         invoice_count += 1
       when 'send_xml'

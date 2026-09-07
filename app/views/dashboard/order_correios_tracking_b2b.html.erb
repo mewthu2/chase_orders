@@ -95,7 +95,7 @@
     </div>
   </div>
 
-  <div class="collapse mb-4" id="filtersCollapse">
+  <div class="collapse show mb-4" id="filtersCollapse">
     <div class="filters-panel">
       <form action="<%= order_correios_tracking_b2b_dashboard_index_path %>" method="get">
         <div class="filter-section">
@@ -122,6 +122,19 @@
               <option value="7" <%= 'selected' if @filter_params[:period] == '7' %>>Últimos 7 dias</option>
               <option value="30" <%= 'selected' if @filter_params[:period] == '30' %>>Últimos 30 dias</option>
               <option value="90" <%= 'selected' if @filter_params[:period] == '90' %>>Últimos 90 dias</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <label class="filter-label" for="transportadora"><i class="fas fa-truck-moving me-1"></i>Transportadora</label>
+          <div class="search-row">
+            <select name="transportadora" id="transportadora" class="search-input">
+              <option value="" <%= 'selected' if @filter_params[:transportadora].blank? %>>Todos</option>
+              <option value="correios" <%= 'selected' if @filter_params[:transportadora] == 'correios' %>>Correios</option>
+              <option value="outra" <%= 'selected' if @filter_params[:transportadora] == 'outra' %>>Outra Transportadora</option>
             </select>
           </div>
         </div>
@@ -189,6 +202,11 @@
         <% if @filter_params[:order_id].present? %>
           <span class="filter-tag filter-tag--gray">ID: <%= @filter_params[:order_id] %></span>
         <% end %>
+        <% if @filter_params[:transportadora].present? %>
+          <span class="filter-tag filter-tag--gray">
+            Transportadora: <%= @filter_params[:transportadora] == 'outra' ? 'Outra Transportadora' : 'Correios' %>
+          </span>
+        <% end %>
       </div>
     </div>
 
@@ -199,6 +217,8 @@
             <tr>
               <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
               <th class="text-center">ID Pedido Tiny</th>
+              <th class="text-center">Transportadora</th>
+              <th class="text-center">Criação no Correios</th>
               <th class="text-center">Emissão de Nota</th>
               <th class="text-center">Envio XML</th>
               <th class="text-center">Rastreamento</th>
@@ -215,26 +235,41 @@
                 </td>
                 <td class="text-center fw-bold text-white"><%= order_id %></td>
                 <td class="text-center">
-                  <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
-                    <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>
+                  <% if status[:is_transportadora] %>
+                    <span class="badge bg-warning text-dark"><i class="fas fa-truck-moving me-1"></i>Outra Transportadora</span>
+                  <% else %>
+                    <span class="badge bg-info text-dark"><i class="fas fa-truck me-1"></i>Correios</span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-success">Concluído</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge <%= status[:invoice_done] ? 'bg-success' : 'bg-warning text-dark' %>">
+                    <%= status[:invoice_done] ? 'Concluído' : 'Na Fila' %>
                   </span>
                 </td>
                 <td class="text-center">
-                  <span class="badge <%= status[:send_xml] ? 'bg-info text-dark' : 'bg-success' %>">
-                    <%= status[:send_xml] ? 'Na Fila' : 'Concluído' %>
+                  <span class="badge <%= status[:xml_done] ? 'bg-success' : 'bg-info text-dark' %>">
+                    <%= status[:xml_done] ? 'Concluído' : 'Na Fila' %>
                   </span>
                 </td>
                 <td class="text-center">
-                  <span class="badge <%= status[:push_tracking] ? 'bg-primary' : 'bg-success' %>">
-                    <%= status[:push_tracking] ? 'Na Fila' : 'Concluído' %>
-                  </span>
+                  <% if status[:is_transportadora] %>
+                    <span class="badge bg-secondary">Não se Aplica</span>
+                  <% else %>
+                    <span class="badge <%= status[:tracking_done] ? 'bg-success' : 'bg-primary' %>">
+                      <%= status[:tracking_done] ? 'Concluído' : 'Na Fila' %>
+                    </span>
+                  <% end %>
                 </td>
                 <td class="text-center">
-                  <% if status[:push_tracking] %>
+                  <% case status[:current_status] %>
+                  <% when 'push_tracking' %>
                     <span class="badge bg-primary fs-6">Aguardando Rastreamento</span>
-                  <% elsif status[:send_xml] %>
+                  <% when 'send_xml' %>
                     <span class="badge bg-info fs-6">Aguardando Envio XML</span>
-                  <% elsif status[:invoice_emition] %>
+                  <% when 'invoice_emition' %>
                     <span class="badge bg-warning fs-6">Aguardando Emissão de Nota</span>
                   <% else %>
                     <span class="badge bg-success fs-6">Processamento Completo</span>
