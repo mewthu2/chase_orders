@@ -75,20 +75,46 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
 
     doc = Nokogiri::XML(invoice)
 
-    doc.traverse do |node|
-      if node.element? && node.name == 'xPed'
-        node.content = att.order_correios_id.to_s
+    order_number = att.order_correios_id.to_s
+
+    products = doc.xpath('//*[local-name()="prod"]')
+
+    if products.empty?
+      attempt.update(
+        status: :error,
+        error: "Nenhuma tag prod encontrada na nota #{att.id_nota_fiscal}"
+      )
+      return
+    end
+
+    products.each do |prod|
+      xped = prod.at_xpath('./*[local-name()="xPed"]')
+
+      if xped.present?
+        xped.content = order_number
+      else
+        xped = Nokogiri::XML::Node.new('xPed', doc)
+        xped.content = order_number
+
+        ind_tot = prod.at_xpath('./*[local-name()="indTot"]')
+
+        if ind_tot.present?
+          ind_tot.add_next_sibling(xped)
+        else
+          prod.add_child(xped)
+        end
       end
     end
 
     xml_nfe = doc.at_xpath('//*[local-name()="xml_nfe"]')
 
-    if xml_nfe.present?
+    if attempt.present? && xml_nfe.present?
       xml_nfe_content =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n#{xml_nfe.inner_html}"
+        %(<?xml version="1.0" encoding="UTF-8"?>\n) +
+        xml_nfe.inner_html
 
-      attempt.update(
-        xml_nota: xml_nfe_content.gsub("\n", ''),
+      attempt.update!(
+        xml_nota: xml_nfe_content.delete("\n"),
         order_correios_id: att.order_correios_id,
         id_nota_fiscal: att.id_nota_fiscal,
         tiny_order_id: att.tiny_order_id
@@ -96,15 +122,15 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
 
       Correios::Invoices.send_xml_to_correios(attempt)
     else
-      attempt.update(
+      attempt.update!(
         status: :error,
-        error: "Nota vazia, pedido tiny: #{att.tiny_order_id}"
+        error: "Nota vazia, pedido Tiny: #{att.tiny_order_id}"
       )
 
       Attempt.where(
         tiny_order_id: att.tiny_order_id,
         status: :success,
-        kinds: :emission_invoice_tiny2
+        kinds: :emission_invoice
       ).destroy_all
     end
   end
