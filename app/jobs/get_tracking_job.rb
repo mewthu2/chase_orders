@@ -1,11 +1,16 @@
 class GetTrackingJob < ActiveJob::Base
-  def perform(param, att)
+  def perform(param, att, marker_id = nil)
     case param
     when 'all'
       pull_all_tracking
     when 'one'
       get_one_tracking(att)
     end
+
+    Attempt.find_by(id: marker_id)&.update(status: :success) if marker_id
+  rescue StandardError => e
+    Attempt.find_by(id: marker_id)&.update(status: :error, error: e.message) if marker_id
+    raise
   end
 
   def pull_all_tracking
@@ -59,5 +64,7 @@ class GetTrackingJob < ActiveJob::Base
     else
       attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
     end
+
+    attempt
   end
 end

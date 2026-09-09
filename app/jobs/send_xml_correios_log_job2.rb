@@ -70,7 +70,7 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
         error: e.message,
         status: :error
       )
-      return
+      return attempt
     end
 
     doc = Nokogiri::XML(invoice)
@@ -84,7 +84,7 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
         status: :error,
         error: "Nenhuma tag prod encontrada na nota #{att.id_nota_fiscal}"
       )
-      return
+      return attempt
     end
 
     products.each do |prod|
@@ -133,5 +133,7 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
         kinds: :emission_invoice
       ).destroy_all
     end
+
+    attempt
   end
 end

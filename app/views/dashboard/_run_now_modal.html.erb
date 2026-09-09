@@ -1,0 +1,94 @@
+<div class="modal fade" id="runNowModal" tabindex="-1" aria-labelledby="runNowModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header">
+        <h5 class="modal-title" id="runNowModalLabel">Executando rotina...</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="runNowModalCloseX"></button>
+      </div>
+      <div class="modal-body">
+        <div id="runNowLoading" class="text-center py-5">
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+          <p class="mb-0">Processando, aguarde...</p>
+        </div>
+
+        <div id="runNowBulkProgress" style="display: none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong id="runNowBulkProgressLabel">Processando 0 de 0...</strong>
+          </div>
+          <div class="progress mb-3" style="height: 10px;">
+            <div class="progress-bar bg-primary" id="runNowBulkProgressBar" role="progressbar" style="width: 0%;"></div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-dark table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Pedido Tiny</th>
+                  <th>Detalhe</th>
+                </tr>
+              </thead>
+              <tbody id="runNowBulkResultsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="runNowResult" style="display: none;">
+          <div class="mb-3" id="runNowStatusBanner"></div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <h6 class="text-info">Informações</h6>
+              <table class="table table-dark table-sm mb-0">
+                <tr><th>Attempt ID:</th><td id="runNowId">-</td></tr>
+                <tr><th>Tipo:</th><td id="runNowKinds">-</td></tr>
+                <tr><th>Status Code:</th><td id="runNowStatusCode">-</td></tr>
+                <tr><th>Data:</th><td id="runNowCreatedAt">-</td></tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h6 class="text-info">Identificadores</h6>
+              <table class="table table-dark table-sm mb-0">
+                <tr><th>Pedido Tiny:</th><td id="runNowTinyOrderId">-</td></tr>
+                <tr><th>Pedido Correios:</th><td id="runNowOrderCorreiosId">-</td></tr>
+                <tr><th>Nota Fiscal:</th><td id="runNowIdNotaFiscal">-</td></tr>
+                <tr><th>Rastreio:</th><td id="runNowTracking">-</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="mb-3" id="runNowMessageWrap" style="display: none;">
+            <h6 class="text-info">Mensagem</h6>
+            <div class="bg-black p-3 rounded" style="max-height: 150px; overflow-y: auto;">
+              <pre class="text-white mb-0" style="white-space: pre-wrap;" id="runNowMessage"></pre>
+            </div>
+          </div>
+
+          <div class="mb-3" id="runNowErrorWrap" style="display: none;">
+            <h6 class="text-danger">Erro</h6>
+            <div class="bg-black p-3 rounded" style="max-height: 150px; overflow-y: auto;">
+              <pre class="text-danger mb-0" style="white-space: pre-wrap;" id="runNowError"></pre>
+            </div>
+          </div>
+
+          <div class="mb-3" id="runNowXmlWrap" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="text-info mb-0">XML da Nota Fiscal</h6>
+              <div>
+                <button type="button" class="btn btn-sm btn-outline-info" id="runNowCopyXmlBtn">
+                  <i class="fas fa-copy me-1"></i>Copiar
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" id="runNowDownloadXmlBtn">
+                  <i class="fas fa-download me-1"></i>Baixar XML
+                </button>
+              </div>
+            </div>
+            <textarea class="form-control bg-black text-white" id="runNowXml" rows="8" readonly style="font-family: monospace; font-size: 0.8rem;"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="runNowCloseBtn">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>

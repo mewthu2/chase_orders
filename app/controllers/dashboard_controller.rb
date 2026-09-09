@@ -15,7 +15,28 @@ class DashboardController < ApplicationController
                         .select('MAX(id) AS id')
                         .group(:order_correios_id)
 
-    Attempt.where(id: latest_ids.map(&:id))
+    @push_tracking = Attempt.where(id: latest_ids.map(&:id))
+    @job_running = b2b_job_running?(:get_tracking)
+  end
+
+  def run_push_tracking
+    if b2b_job_running?(:get_tracking)
+      redirect_to push_tracking_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:get_tracking)
+    GetTrackingJob.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de solicitação de rastreio iniciada com sucesso!'
+    redirect_to push_tracking_dashboard_index_path
+  end
+
+  def run_push_tracking_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = GetTrackingJob.new.get_one_tracking(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
   def push_tracking_b2b
@@ -42,6 +63,14 @@ class DashboardController < ApplicationController
     redirect_to push_tracking_b2b_dashboard_index_path
   end
 
+  def run_push_tracking_b2b_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = GetTrackingJob2.new.get_one_tracking(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
   def send_xml
     processed_ids = Attempt.where(kinds: :send_xml, status: 2, created_at: 30.days.ago..Time.current)
                            .pluck(:order_correios_id)
@@ -63,6 +92,28 @@ class DashboardController < ApplicationController
                updated_at: last.updated_at
              }
            end
+
+    @job_running = b2b_job_running?(:send_xml)
+  end
+
+  def run_send_xml
+    if b2b_job_running?(:send_xml)
+      redirect_to send_xml_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:send_xml)
+    SendXmlCorreiosLogJob.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de envio de XML aos Correios iniciada com sucesso!'
+    redirect_to send_xml_dashboard_index_path
+  end
+
+  def run_send_xml_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = SendXmlCorreiosLogJob.new.send_one_xml(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
   def send_xml_b2b
@@ -105,6 +156,14 @@ class DashboardController < ApplicationController
     redirect_to send_xml_b2b_dashboard_index_path
   end
 
+  def run_send_xml_b2b_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = SendXmlCorreiosLogJob2.new.send_one_xml(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
   def invoice_emition
     successful_ids = Attempt.where(kinds: :emission_invoice, status: :success)
                             .pluck(:order_correios_id)
@@ -112,6 +171,28 @@ class DashboardController < ApplicationController
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
                               .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
+
+    @job_running = b2b_job_running?(:emission_invoice)
+  end
+
+  def run_invoice_emition
+    if b2b_job_running?(:emission_invoice)
+      redirect_to invoice_emition_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
+      return
+    end
+
+    marker = start_b2b_job_marker(:emission_invoice)
+    InvoiceEmitionsJob.perform_later('all', nil, marker.id)
+    flash[:notice] = 'Rotina de emissão de notas fiscais iniciada com sucesso!'
+    redirect_to invoice_emition_dashboard_index_path
+  end
+
+  def run_invoice_emition_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = InvoiceEmitionsJob.new.one_emission(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
   def invoice_emition_b2b
@@ -138,6 +219,14 @@ class DashboardController < ApplicationController
     InvoiceEmitionsJob2.perform_later('all', nil, marker.id)
     flash[:notice] = 'Rotina de emissão de notas fiscais (B2B) iniciada com sucesso!'
     redirect_to invoice_emition_b2b_dashboard_index_path
+  end
+
+  def run_invoice_emition_b2b_now
+    queue_attempt = Attempt.find(params[:attempt_id])
+    result = InvoiceEmitionsJob2.new.one_emission(queue_attempt)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
   def stockend
@@ -240,6 +329,15 @@ class DashboardController < ApplicationController
       pending: queue_attempts.count { |a| a.status == 'fail' },
       processing: queue_attempts.count { |a| a.status == 'processing' }
     }
+  end
+
+  def run_order_correios_create_now
+    tiny_order_id = params[:attempt_id].to_s
+    order = { pedido: { id: tiny_order_id } }
+    result = CreateCorreiosLogOrdersJob.new.create_one_log_order(order)
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
   def order_correios_create_b2b
@@ -630,6 +728,24 @@ class DashboardController < ApplicationController
       tracking: 'manual_run_all',
       message: "Execução manual iniciada por #{current_user.name}"
     )
+  end
+
+  def attempt_result_json(attempt)
+    {
+      success: attempt.status == 'success',
+      id: attempt.id,
+      kinds: attempt.kinds,
+      status: attempt.status,
+      status_code: attempt.status_code,
+      message: attempt.message,
+      error: attempt.error,
+      tracking: attempt.tracking,
+      order_correios_id: attempt.order_correios_id,
+      id_nota_fiscal: attempt.id_nota_fiscal,
+      tiny_order_id: attempt.tiny_order_id,
+      created_at: attempt.created_at&.strftime('%d/%m/%Y %H:%M:%S'),
+      xml_nota: attempt.xml_nota
+    }
   end
 
   def generate_order_correios_stock_errors_csv(items)

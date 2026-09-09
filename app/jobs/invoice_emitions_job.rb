@@ -1,5 +1,5 @@
 class InvoiceEmitionsJob < ActiveJob::Base
-  def perform(param, att)
+  def perform(param, att, marker_id = nil)
     # return unless ScheduleUtils.within_schedule?
 
     case param
@@ -8,6 +8,11 @@ class InvoiceEmitionsJob < ActiveJob::Base
     when 'one'
       one_emission(att)
     end
+
+    Attempt.find_by(id: marker_id)&.update(status: :success) if marker_id
+  rescue StandardError => e
+    Attempt.find_by(id: marker_id)&.update(status: :error, error: e.message) if marker_id
+    raise
   end
 
   def all_emissions
@@ -77,5 +82,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
         status: :error
       )
     end
+
+    attempt
   end
 end

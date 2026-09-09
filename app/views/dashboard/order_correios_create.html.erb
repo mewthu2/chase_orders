@@ -11,6 +11,9 @@
           <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
             <i class="fas fa-filter me-1"></i> Filtros
           </button>
+          <button type="button" class="btn btn-warning" id="bulkRunBtn" disabled>
+            <i class="fas fa-plus-circle me-1"></i> Criar Selecionados (<span id="bulkRunCount">0</span>)
+          </button>
         </div>
       </div>
     </div>
@@ -97,6 +100,9 @@
           <table class="table table-dark table-hover" id="ordersTable">
             <thead>
               <tr>
+                <th width="30" class="text-center">
+                  <input type="checkbox" id="selectAllCheckbox" title="Selecionar todos nesta página">
+                </th>
                 <th width="50" class="text-center">
                   <i class="fas fa-cog"></i>
                 </th>
@@ -135,15 +141,23 @@
                 
                 <tr>
                   <td class="text-center">
+                    <input type="checkbox" class="row-select-checkbox" data-id="<%= order['id'] %>" data-tiny-order-id="<%= order['id'] %>">
+                  </td>
+                  <td class="text-center">
                     <div class="d-flex flex-column align-items-center gap-1">
-                      <%= link_to verify_attempts_attempts_path(tiny_order_id: order['id']), 
-                          class: 'btn btn-sm btn-outline-info', 
-                          method: :post, 
+                      <button class="btn btn-sm btn-warning"
+                              onclick="runQueueItemNow('<%= run_order_correios_create_now_dashboard_index_path %>', '<%= order['id'] %>', 'Criando pedido no Correios...')"
+                              title="Criar este pedido no Correios agora">
+                        <i class="fas fa-plus-circle"></i>
+                      </button>
+                      <%= link_to verify_attempts_attempts_path(tiny_order_id: order['id']),
+                          class: 'btn btn-sm btn-outline-info',
+                          method: :post,
                           target: '_blank',
                           title: 'Verificar tentativas' do %>
                         <i class="fas fa-paperclip"></i>
                       <% end %>
-                      <button class="btn btn-sm btn-outline-info" 
+                      <button class="btn btn-sm btn-outline-info"
                               onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= order['id'] %>', '_blank');"
                               title="Ver no Tiny">
                         <i class="fas fa-external-link-alt"></i>
@@ -226,12 +240,15 @@
       <% end %>
     </div>
   </div>
+
+  <%= render 'dashboard/run_now_modal' %>
 </div>
 
 <% content_for :styles do %>
 <% end %>
 
 <% content_for :scripts do %>
+  <%= render 'dashboard/run_now_script' %>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       function initializeDataTable(tableId, options = {}) {
@@ -253,13 +270,63 @@
 
       if (document.getElementById('ordersTable')) {
         initializeDataTable('ordersTable', {
-          order: [[3, 'desc']],
+          order: [[4, 'desc']],
           columnDefs: [
-            { orderable: false, targets: [0] },
+            { orderable: false, targets: [0, 1] },
             { className: "text-center", targets: "_all" }
           ]
         });
       }
+
+      (function() {
+        var selectedIds = new Set();
+        var tinyOrderIdById = {};
+
+        function updateBulkButton() {
+          var btn = document.getElementById('bulkRunBtn');
+          if (!btn) return;
+          document.getElementById('bulkRunCount').textContent = selectedIds.size;
+          btn.disabled = selectedIds.size === 0;
+        }
+
+        document.addEventListener('change', function(e) {
+          if (e.target.classList && e.target.classList.contains('row-select-checkbox')) {
+            var id = e.target.dataset.id;
+            if (e.target.checked) {
+              selectedIds.add(id);
+              tinyOrderIdById[id] = e.target.dataset.tinyOrderId;
+            } else {
+              selectedIds.delete(id);
+            }
+            updateBulkButton();
+          }
+
+          if (e.target.id === 'selectAllCheckbox') {
+            var checked = e.target.checked;
+            document.querySelectorAll('.row-select-checkbox').forEach(function(cb) {
+              cb.checked = checked;
+              var id = cb.dataset.id;
+              if (checked) {
+                selectedIds.add(id);
+                tinyOrderIdById[id] = cb.dataset.tinyOrderId;
+              } else {
+                selectedIds.delete(id);
+              }
+            });
+            updateBulkButton();
+          }
+        });
+
+        var bulkBtn = document.getElementById('bulkRunBtn');
+        if (bulkBtn) {
+          bulkBtn.addEventListener('click', function() {
+            var items = Array.from(selectedIds).map(function(id) {
+              return { id: id, tinyOrderId: tinyOrderIdById[id] };
+            });
+            runQueueItemsBulk('<%= run_order_correios_create_now_dashboard_index_path %>', items, 'Criando pedidos selecionados no Correios...');
+          });
+        }
+      })();
 
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

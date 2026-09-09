@@ -64,5 +64,7 @@ class GetTrackingJob2 < ActiveJob::Base
     else
       attempt.update(status: :error, error: 'Correios ainda não disponibilizou o código de rastreio')
     end
+
+    attempt
   end
 end

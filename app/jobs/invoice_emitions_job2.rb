@@ -71,5 +71,7 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
     rescue StandardError => e
       attempt.update(error: e.message.first(100), status: :error)
     end
+
+    attempt
   end
 end

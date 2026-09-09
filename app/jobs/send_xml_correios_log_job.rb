@@ -1,5 +1,5 @@
 class SendXmlCorreiosLogJob < ActiveJob::Base
-  def perform(param, att)
+  def perform(param, att, marker_id = nil)
     case param
     when 'all'
       send_all_xml
@@ -7,6 +7,11 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
     when 'one'
       send_one_xml(att)
     end
+
+    Attempt.find_by(id: marker_id)&.update(status: :success) if marker_id
+  rescue StandardError => e
+    Attempt.find_by(id: marker_id)&.update(status: :error, error: e.message) if marker_id
+    raise
   end
 
   def send_all_xml
@@ -35,7 +40,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
       invoice = Tiny::Invoices.obtain_xml(att.id_nota_fiscal.to_s)
     rescue StandardError => e
       attempt.update(error: e, status: :error)
-      return
+      return attempt
     end
 
     doc = Nokogiri::XML(invoice)
@@ -61,5 +66,7 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
       attempt.update(status: :error, error: "Nota vazia, pedido tiny: #{att.tiny_order_id}")
       Attempt.where(tiny_order_id: att.tiny_order_id, status: :success, kinds: :emission_invoice).destroy_all
     end
+
+    attempt
   end
 end

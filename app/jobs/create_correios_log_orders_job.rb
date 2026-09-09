@@ -110,7 +110,7 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     attempt.update(error: 'Dados do Cliente não disponíveis', status: :error) unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
 
     # Find client data on selected order hash
-    return unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
+    return attempt unless selected_order.present? && selected_order[:pedido].present? && selected_order[:pedido][:cliente].present?
     client_data = selected_order[:pedido][:cliente]
 
     # Some 'total_pedido' have a zero value, reasoned by discount
@@ -159,7 +159,10 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     end
 
     # assert sending way
-    return attempt.update(error: 'Forma de Envio não localizada', status: :error) unless selected_order.dig(:pedido, :forma_frete).present?
+    unless selected_order.dig(:pedido, :forma_frete).present?
+      attempt.update(error: 'Forma de Envio não localizada', status: :error)
+      return attempt
+    end
 
     forma_envio_code = case selected_order[:pedido][:forma_frete]
                        when 'SEDEX CORREIOS LOG+'
@@ -169,7 +172,8 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
                        when 'SEDEX HOJE LOG+'
                          '06602'
                        else
-                         return attempt.update(error: 'Forma de Envio desconhecida', status: :error)
+                         attempt.update(error: 'Forma de Envio desconhecida', status: :error)
+                         return attempt
                        end
 
     # Setting founded valures
@@ -208,6 +212,8 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
 
     # Create Order in Correios Log +
     Correios::Orders.create_orders(params, attempt) unless attempt.error.present?
+
+    attempt
   end
 
   def verify_params(attempt, params)
