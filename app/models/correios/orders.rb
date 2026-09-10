@@ -3,14 +3,17 @@ module Correios::Orders
 
   MAX_LOG_SIZE = 100
 
-  def truncate_value(value)
+  def truncate_value(attempt, key, value)
     v = value.to_s
+    column = attempt.class.columns_hash[key.to_s]
+    return v if column&.type == :text
+
     v.length > MAX_LOG_SIZE ? v[0...MAX_LOG_SIZE] : v
   end
 
   def safe_update(attempt, data)
     data.each do |k, v|
-      data[k] = truncate_value(v)
+      data[k] = truncate_value(attempt, k, v)
     end
     attempt.update(data)
   rescue ActiveRecord::ValueTooLong

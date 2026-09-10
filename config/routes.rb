@@ -49,7 +49,9 @@ Rails.application.routes.draw do
       post :approve_order_b2b
       post :ignore_order_b2b
       post :run_create_correios_b2b
+      post :run_order_correios_create_b2b_now
       get :order_correios_stock_errors
+      get :order_correios_stock_errors_b2b
       get :send_xml
       post :run_send_xml
       post :run_send_xml_now

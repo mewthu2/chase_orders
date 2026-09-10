@@ -478,6 +478,21 @@ class DashboardController < ApplicationController
     redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review])
   end
 
+  def run_order_correios_create_b2b_now
+    tiny_order_id = params[:attempt_id].to_s
+    order = { pedido: { id: tiny_order_id } }
+    result = CreateCorreiosLogOrdersJob2.new.create_one_log_order(order)
+
+    if result.nil?
+      render json: { success: false, error: 'Pedido não aprovado para processamento.' }, status: :unprocessable_entity
+      return
+    end
+
+    render json: attempt_result_json(result)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
   def approve_order_b2b
     review = Tiny2OrderReview.find_or_initialize_by(tiny_order_id: params[:tiny_order_id].to_s)
     review.status = :approved
@@ -621,6 +636,132 @@ class DashboardController < ApplicationController
         send_data(
           generate_order_correios_stock_errors_csv(@missing_stock_items),
           filename: "produtos_sem_estoque_correios_#{Time.current.strftime('%Y-%m-%d_%H-%M-%S')}.csv",
+          type: 'text/csv; charset=utf-8',
+          disposition: 'attachment'
+        )
+      end
+    end
+  end
+
+  def order_correios_stock_errors_b2b
+    @orders_response = Tiny::Orders.get_orders_response(
+      '',
+      'preparando_envio',
+      ENV.fetch('TOKEN_TINY2_PRODUCTION'),
+      '',
+      4.weeks.ago.strftime('%d/%m/%Y')
+    )
+
+    @orders = @orders_response&.dig('pedidos') || []
+
+    successfully_processed_ids = Attempt.where(
+      kinds: :create_correios_order_tiny2,
+      status: :success,
+      created_at: 1.month.ago..Time.current
+    ).pluck(:tiny_order_id).map(&:to_s)
+
+    @pending_orders = @orders.reject do |order_data|
+      order_id = order_data['pedido']['id'].to_s
+      successfully_processed_ids.include?(order_id)
+    end
+
+    @orders_by_id = @pending_orders.index_by do |order_data|
+      order_data['pedido']['id'].to_s
+    end
+
+    pending_order_ids = @pending_orders.map do |order_data|
+      order_data['pedido']['id'].to_s
+    end
+
+    stock_error_message = 'Produto(s) informado(s) não existe(m) no estoque:'
+
+    stock_error_attempts = Attempt.where(
+      kinds: :create_correios_order_tiny2,
+      tiny_order_id: pending_order_ids,
+      created_at: 1.month.ago..Time.current
+    )
+    .where.not(message: [nil, ''])
+    .where(
+      'message LIKE ?',
+      "#{ActiveRecord::Base.sanitize_sql_like(stock_error_message)}%"
+    )
+    .order(updated_at: :desc)
+
+    unique_items_by_order_and_product = {}
+
+    stock_error_attempts.each do |attempt|
+      attempt_params = attempt.params.to_s
+
+      tiny_order_id = attempt.tiny_order_id.to_s.presence ||
+                      extract_attempt_param(attempt_params, :pedido_id) ||
+                      extract_attempt_param(attempt_params, :invoice)
+
+      next if tiny_order_id.blank?
+
+      order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
+
+      missing_product_codes = extract_missing_stock_product_codes(
+        attempt.message,
+        stock_error_message
+      )
+
+      missing_product_codes.each do |product_code|
+        quantity = extract_item_quantity_from_attempt_params(
+          attempt_params,
+          product_code
+        )
+
+        unique_key = "#{tiny_order_id}-#{product_code}"
+
+        next if unique_items_by_order_and_product.key?(unique_key)
+
+        unique_items_by_order_and_product[unique_key] = {
+          attempt_id: attempt.id,
+          tiny_order_id: tiny_order_id,
+          tiny_order_number: order_data&.dig('numero'),
+          id_nota_fiscal: attempt.id_nota_fiscal.presence || extract_attempt_param(attempt_params, :invoice),
+          numero_ecommerce: extract_attempt_param(attempt_params, :numero_ecommerce),
+          customer_name: extract_attempt_param(attempt_params, :nome) || order_data&.dig('nome'),
+          data_pedido: extract_attempt_param(attempt_params, :data_pedido) || order_data&.dig('data_pedido'),
+          valor: extract_attempt_param(attempt_params, :valor) || order_data&.dig('valor'),
+          product_code: product_code,
+          quantity: quantity,
+          status: attempt.status,
+          message: attempt.message,
+          created_at: attempt.created_at,
+          updated_at: attempt.updated_at
+        }
+      end
+    end
+
+    @missing_stock_items = unique_items_by_order_and_product.values
+
+    @missing_stock_summary = @missing_stock_items
+      .group_by { |item| item[:product_code] }
+      .map do |product_code, items|
+        {
+          product_code: product_code,
+          orders_count: items.map { |item| item[:tiny_order_id] }.uniq.count,
+          attempts_count: items.count,
+          total_quantity: items.sum { |item| item[:quantity].to_s.tr(',', '.').to_f }
+        }
+      end
+      .sort_by { |item| -item[:total_quantity] }
+
+    @stats = {
+      total_attempts: stock_error_attempts.count,
+      total_items: @missing_stock_items.count,
+      total_products: @missing_stock_summary.count,
+      total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
+    }
+
+    respond_to do |format|
+      format.html
+
+      format.csv do
+        send_data(
+          generate_order_correios_stock_errors_csv(@missing_stock_items),
+          filename: "produtos_sem_estoque_correios_b2b_#{Time.current.strftime('%Y-%m-%d_%H-%M-%S')}.csv",
           type: 'text/csv; charset=utf-8',
           disposition: 'attachment'
         )

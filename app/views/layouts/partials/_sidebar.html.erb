@@ -156,6 +156,11 @@
                   <span>Criação de Pedidos</span>
                 <% end %>
 
+                <%= link_to order_correios_stock_errors_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_stock_errors_b2b_dashboard_index_path)}" do %>
+                  <i class="fas fa-box-open"></i>
+                  <span>Produtos Sem Estoque</span>
+                <% end %>
+
                 <%= link_to order_correios_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_b2b_dashboard_index_path)}" do %>
                   <i class="fas fa-route"></i>
                   <span>Acompanhamento</span>
