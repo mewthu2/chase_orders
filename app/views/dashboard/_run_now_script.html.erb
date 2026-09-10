@@ -11,6 +11,8 @@
     document.getElementById('runNowResult').style.display = 'none';
     document.getElementById('runNowMessageWrap').style.display = 'none';
     document.getElementById('runNowErrorWrap').style.display = 'none';
+    document.getElementById('runNowParamsWrap').style.display = 'none';
+    document.getElementById('runNowRequisitionWrap').style.display = 'none';
     document.getElementById('runNowXmlWrap').style.display = 'none';
     document.getElementById('runNowCloseBtn').disabled = false;
     document.getElementById('runNowModalCloseX').disabled = false;
@@ -71,6 +73,16 @@
     if (data.xml_nota) {
       document.getElementById('runNowXml').value = data.xml_nota;
       document.getElementById('runNowXmlWrap').style.display = 'block';
+    }
+
+    if (data.params) {
+      document.getElementById('runNowParams').textContent = data.params;
+      document.getElementById('runNowParamsWrap').style.display = 'block';
+    }
+
+    if (data.requisition) {
+      document.getElementById('runNowRequisition').textContent = data.requisition;
+      document.getElementById('runNowRequisitionWrap').style.display = 'block';
     }
   }
 
@@ -176,6 +188,24 @@
         });
       });
     }
+
+    function bindCopyButton(buttonId, sourceId) {
+      var btn = document.getElementById(buttonId);
+      if (!btn) return;
+      btn.addEventListener('click', function() {
+        var text = document.getElementById(sourceId).textContent;
+        navigator.clipboard.writeText(text).then(function() {
+          var original = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+          setTimeout(function() {
+            btn.innerHTML = original;
+          }, 2000);
+        });
+      });
+    }
+
+    bindCopyButton('runNowCopyParamsBtn', 'runNowParams');
+    bindCopyButton('runNowCopyRequisitionBtn', 'runNowRequisition');
 
     var downloadBtn = document.getElementById('runNowDownloadXmlBtn');
     if (downloadBtn) {

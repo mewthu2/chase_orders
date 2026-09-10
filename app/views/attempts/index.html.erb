@@ -316,6 +316,12 @@
                     <i class="fas fa-info-circle"></i> Detalhes
                   </button>
 
+                  <% if attempt.requisition.present? || attempt.params.present? %>
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#requisitionModal<%= attempt.id %>">
+                      <i class="fas fa-file-code"></i> Ver Requisição
+                    </button>
+                  <% end %>
+
                   <!-- Modal para detalhes -->
                   <div class="modal fade" id="attemptModal<%= attempt.id %>" tabindex="-1" aria-labelledby="attemptModalLabel<%= attempt.id %>" aria-hidden="true">
                     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -447,6 +453,50 @@
                       </div>
                     </div>
                   </div>
+
+                  <% if attempt.requisition.present? || attempt.params.present? %>
+                    <!-- Modal para requisição completa -->
+                    <div class="modal fade" id="requisitionModal<%= attempt.id %>" tabindex="-1" aria-labelledby="requisitionModalLabel<%= attempt.id %>" aria-hidden="true">
+                      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content bg-dark text-white">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="requisitionModalLabel<%= attempt.id %>">
+                              Requisição da Tentativa #<%= attempt.id %>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="text-info mb-0">Parâmetros (params)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="copyAttemptField(this, 'attemptParams<%= attempt.id %>')">
+                                  <i class="fas fa-copy me-1"></i>Copiar
+                                </button>
+                              </div>
+                              <div class="bg-black p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="attemptParams<%= attempt.id %>" class="text-white mb-0" style="white-space: pre-wrap; word-break: break-all;"><%= attempt.params.presence || 'N/A' %></pre>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="text-info mb-0">Requisição (requisition)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="copyAttemptField(this, 'attemptRequisition<%= attempt.id %>')">
+                                  <i class="fas fa-copy me-1"></i>Copiar
+                                </button>
+                              </div>
+                              <div class="bg-black p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="attemptRequisition<%= attempt.id %>" class="text-white mb-0" style="white-space: pre-wrap; word-break: break-all;"><%= attempt.requisition.presence || 'N/A' %></pre>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% end %>
                 </td>
               </tr>
             <% end %>
@@ -485,6 +535,19 @@
 
 <% content_for :scripts do %>
   <script>
+    function copyAttemptField(button, elementId) {
+      var el = document.getElementById(elementId);
+      if (!el) return;
+
+      navigator.clipboard.writeText(el.textContent).then(function() {
+        var original = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+        setTimeout(function() {
+          button.innerHTML = original;
+        }, 2000);
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       // Inicializar tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))

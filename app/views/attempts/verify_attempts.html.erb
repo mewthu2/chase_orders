@@ -98,6 +98,9 @@
         <table class="orders-table" id="attemptsTable">
           <thead>
             <tr>
+              <th width="50" class="text-center">
+                <i class="fas fa-cog"></i>
+              </th>
               <th class="text-center">
                 <i class="fas fa-hashtag me-1"></i>
                 <%= Attempt.human_attribute_name :id %>
@@ -139,6 +142,56 @@
           <tbody>
             <% @attempts.each do |attempt| %>
               <tr>
+                <td class="text-center">
+                  <% if attempt.requisition.present? || attempt.params.present? %>
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#requisitionModal<%= attempt.id %>" title="Ver Requisição">
+                      <i class="fas fa-file-code"></i>
+                    </button>
+
+                    <div class="modal fade" id="requisitionModal<%= attempt.id %>" tabindex="-1" aria-labelledby="requisitionModalLabel<%= attempt.id %>" aria-hidden="true">
+                      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                        <div class="modal-content bg-dark text-white">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="requisitionModalLabel<%= attempt.id %>">
+                              Requisição da Tentativa #<%= attempt.id %>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="mb-3">
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="text-info mb-0">Parâmetros (params)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="copyAttemptField(this, 'attemptParams<%= attempt.id %>')">
+                                  <i class="fas fa-copy me-1"></i>Copiar
+                                </button>
+                              </div>
+                              <div class="bg-black p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="attemptParams<%= attempt.id %>" class="text-white mb-0" style="white-space: pre-wrap; word-break: break-all;"><%= attempt.params.presence || 'N/A' %></pre>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="text-info mb-0">Requisição (requisition)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="copyAttemptField(this, 'attemptRequisition<%= attempt.id %>')">
+                                  <i class="fas fa-copy me-1"></i>Copiar
+                                </button>
+                              </div>
+                              <div class="bg-black p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                <pre id="attemptRequisition<%= attempt.id %>" class="text-white mb-0" style="white-space: pre-wrap; word-break: break-all;"><%= attempt.requisition.presence || 'N/A' %></pre>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% else %>
+                    <span class="text-muted-custom">-</span>
+                  <% end %>
+                </td>
                 <td class="text-center">
                   <span class="fw-bold text-main"><%= attempt.id %></span>
                   <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.id %>" title="Copiar ID">
@@ -340,16 +393,30 @@
 
 <% content_for :scripts do %>
   <script>
+    function copyAttemptField(button, elementId) {
+      var el = document.getElementById(elementId);
+      if (!el) return;
+
+      navigator.clipboard.writeText(el.textContent).then(function() {
+        var original = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+        setTimeout(function() {
+          button.innerHTML = original;
+        }, 2000);
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       if (document.getElementById('attemptsTable')) {
         $('#attemptsTable').DataTable({
           responsive: true,
           pageLength: 25,
-          order: [[0, 'desc']],
+          order: [[1, 'desc']],
           language: {
             url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/pt-BR.json'
           },
           columnDefs: [
+            { orderable: false, targets: [0] },
             { className: "text-center", targets: "_all" }
           ]
         });

@@ -885,7 +885,9 @@ class DashboardController < ApplicationController
       id_nota_fiscal: attempt.id_nota_fiscal,
       tiny_order_id: attempt.tiny_order_id,
       created_at: attempt.created_at&.strftime('%d/%m/%Y %H:%M:%S'),
-      xml_nota: attempt.xml_nota
+      xml_nota: attempt.xml_nota,
+      params: attempt.params,
+      requisition: attempt.requisition
     }
   end
 
