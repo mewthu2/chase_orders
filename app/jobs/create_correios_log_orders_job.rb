@@ -187,12 +187,12 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       params[:numero]           << numero
       params[:complemento]      << complemento
       params[:bairro]           << bairro
-      params[:cep]              << cep.gsub('.', '').gsub('-', '')
+      params[:cep]              << cep.gsub(/\D/, '')
       params[:cidade]           << cidade
       params[:uf]               << uf
-      params[:fone]             << fone
+      params[:fone] << fone.gsub(/\D/, '')
       params[:email]            << email
-      params[:cpf_cnpj]         << cpf.gsub('.', '').gsub('-', '')
+      params[:cpf_cnpj]         << cpf.gsub(/\D/, '')
       params[:pedido_id]        << selected_order[:pedido][:id]
       params[:forma_envio]      << forma_envio_code
 

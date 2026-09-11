@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_08_24_202500) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_11_212455) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -41,6 +41,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_08_24_202500) do
     t.string "tracking"
     t.integer "id_nota_tiny2"
     t.boolean "is_transportadora", default: false
+    t.index ["kinds", "status", "order_correios_id"], name: "index_attempts_on_kinds_status_order_correios_id"
     t.index ["kinds"], name: "index_attempts_on_kinds"
     t.index ["tiny_order_id"], name: "index_attempts_on_tiny_order_id"
   end

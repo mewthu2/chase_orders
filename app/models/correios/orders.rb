@@ -67,7 +67,7 @@ module Correios::Orders
         cep: params[:cep],
         cidade: params[:cidade],
         uf: params[:uf],
-        ddd: fone.match(/\(([^)]+)\)/).present? ? fone.match(/\(([^)]+)\)/)[1] : fone,
+        ddd: fone.to_s.gsub(/\D/, '')[0, 2],
         telefone: fone.scan(/[^()]+/)&.last&.strip || fone,
         email: params[:email],
         cpf: params[:cpf_cnpj].length <= 11 ? params[:cpf_cnpj] : '',

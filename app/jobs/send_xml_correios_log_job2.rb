@@ -20,13 +20,10 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
 
   def send_all_xml
     @send_xml = Attempt
-      .where(kinds: :create_correios_order_tiny2, status: 2)
+      .where(kinds: :create_correios_order_tiny2, status: :success)
+      .where.not(order_correios_id: nil)
+      .where(not_yet_sent_sql, kind: Attempt.kinds[:send_xml_tiny2], status: Attempt.statuses[:success])
       .distinct(:order_correios_id)
-      .where.not(
-        order_correios_id: Attempt
-          .where(kinds: :send_xml_tiny2, status: 2)
-          .pluck(:order_correios_id)
-      )
 
     @send_xml.each do |att|
       send_one_xml(att)
@@ -37,19 +34,27 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
     @send_xml = Attempt
       .where(
         kinds: :create_correios_order_tiny2,
-        status: 2,
+        status: :success,
         is_transportadora: false
       )
+      .where.not(order_correios_id: nil)
+      .where(not_yet_sent_sql, kind: Attempt.kinds[:get_tracking_tiny2], status: Attempt.statuses[:success])
       .distinct(:order_correios_id)
-      .where.not(
-        order_correios_id: Attempt
-          .where(kinds: :get_tracking_tiny2, status: 2)
-          .pluck(:order_correios_id)
-      )
 
     @send_xml.each do |att|
       send_one_xml(att)
     end
+  end
+
+  def not_yet_sent_sql
+    <<~SQL.squish
+      NOT EXISTS (
+        SELECT 1 FROM attempts later
+        WHERE later.kinds = :kind
+          AND later.status = :status
+          AND later.order_correios_id = attempts.order_correios_id
+      )
+    SQL
   end
 
   def send_one_xml(att)

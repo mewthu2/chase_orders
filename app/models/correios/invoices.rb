@@ -42,18 +42,7 @@ module Correios::Invoices
         end
 
       when 400
-        body = response.body.to_s
-
-        if body =~ /Pedido informado \((\d+)\) indispon\\u00edvel.+faturado/
-          pedido_id = ::Regexp.last_match(1).to_i
-
-          if pedido_id == attempt.order_correios_id
-            attempt.update(status: :success, xml_sended: true, status_code: response.code, message: response.body)
-          else
-            attempt.update(status: :error, status_code: response.code, message: response.body)
-          end
-
-        elsif tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
+        if tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
           attempt.update(
             status: :success,
             status_code: response.code,
@@ -62,7 +51,7 @@ module Correios::Invoices
             tracking: tracking['rastreio'][0]['codigoObjeto']
           )
         else
-          attempt.update(status: :error, status_code: response.code, message: 'Rastreio não disponível')
+          attempt.update(status: :error, status_code: response.code, message: response.body)
         end
       end
     else
