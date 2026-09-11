@@ -221,7 +221,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       params[:uf]               << uf
       params[:fone]             << fone
       params[:email]            << email
-      params[:cpf_cnpj]         << cpf.gsub('.', '').gsub('-', '')
+      params[:cpf_cnpj]         << cpf.gsub(/\D/, '')
       params[:pedido_id]        << selected_order[:pedido][:id]
       params[:forma_envio]      << forma_envio_code
       params[:cnpj_transportadora] << cnpj_transportadora if via_transportadora
