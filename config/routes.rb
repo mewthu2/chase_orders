@@ -179,6 +179,21 @@ Rails.application.routes.draw do
 
   resources :logs, only: [:index]
   
+  resources :profiles
+  resources :transfer_locations
+
+  resources :b2b_orders do
+    collection do
+      get :shipping_methods
+      post :parse_items_spreadsheet
+      get :product_stock
+      get :search_product
+    end
+    member do
+      post :transmit
+    end
+  end
+
   resources :users do
     member do
       patch :toggle_admin

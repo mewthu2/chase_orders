@@ -1,7 +1,7 @@
 class UsersController < ApplicationController
   before_action :authenticate_user!
   before_action :set_user, only: [:show, :edit, :update, :destroy]
-  before_action :admin_required, except: [:edit, :update]
+  guard_screen :users_management, except: [:edit, :update]
   before_action :check_user_permission, only: [:edit, :update]
 
   def index
@@ -73,12 +73,6 @@ class UsersController < ApplicationController
 
   def set_user
     @user = User.includes(:profiles).find(params[:id])
-  end
-
-  def admin_required
-    unless current_user.admin?
-      redirect_to root_path, alert: 'Acesso negado.'
-    end
   end
 
   def check_user_permission

@@ -1,0 +1,71 @@
+<% content_for :title, "Pedidos B2B" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-handshake me-2"></i>Pedidos B2B</h1>
+      <p class="page-subtitle">Pedidos de venda comum e transferências de estoque</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @b2b_orders.size %> pedido(s)</span>
+      <%= link_to new_b2b_order_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Novo Pedido<% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Pedidos</h5></div>
+
+    <%= form_with url: b2b_orders_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
+      <%= select_tag :status, options_for_select([['Todos status', ''], ['Rascunho', 'draft'], ['Salvo', 'saved'], ['Transmitido', 'transmitted'], ['Erro', 'error']], params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
+      <%= select_tag :kind, options_for_select([['Todos tipos', ''], ['Pedido Comum', 'sale'], ['Transferência de Estoque', 'stock_transfer']], params[:kind]), class: 'field-input', onchange: 'this.form.submit()' %>
+    <% end %>
+
+    <% if @b2b_orders.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tipo</th>
+              <th>Destino</th>
+              <th class="text-center">Status</th>
+              <th>Referência Tiny</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @b2b_orders.each do |order| %>
+              <tr>
+                <td class="text-main">#<%= order.id %></td>
+                <td><%= order.sale? ? 'Pedido Comum' : 'Transferência de Estoque' %></td>
+                <td class="text-muted-custom"><%= order.sale? ? order.client&.display_name : order.transfer_location&.name %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= order.transmitted? ? 'status-pill--active' : (order.error? ? 'status-pill--inactive' : '') %>">
+                    <%= { 'draft' => 'Rascunho', 'saved' => 'Salvo', 'transmitted' => 'Transmitido', 'error' => 'Erro' }[order.status] %>
+                  </span>
+                </td>
+                <td class="text-muted-custom"><%= order.tiny_reference_number.presence || '-' %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_b2b_order_path(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <% if order.transmittable? %>
+                      <%= button_to transmit_b2b_order_path(order), method: :post, class: "action-btn action-btn--edit", form: { data: { turbo_confirm: 'Transmitir este pedido para o Tiny?' } } do %>
+                        <i class="fas fa-paper-plane"></i>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-handshake fa-3x mb-3 d-block"></i>
+        <h5>Nenhum pedido cadastrado</h5>
+        <%= link_to new_b2b_order_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Novo Pedido<% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

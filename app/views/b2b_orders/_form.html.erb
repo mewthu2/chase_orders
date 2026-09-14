@@ -1,0 +1,245 @@
+<%= form_with model: @b2b_order, local: true, id: 'b2bOrderForm' do |form| %>
+  <% if @b2b_order.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% @b2b_order.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Tipo do Pedido</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6 form-check">
+          <%= form.radio_button :kind, 'sale', id: 'kind_sale', checked: @b2b_order.sale? || @b2b_order.new_record? %>
+          <label class="form-check-label text-main" for="kind_sale">Pedido Comum</label>
+        </div>
+        <div class="form-col-6 form-check">
+          <%= form.radio_button :kind, 'stock_transfer', id: 'kind_stock_transfer', checked: @b2b_order.stock_transfer? %>
+          <label class="form-check-label text-main" for="kind_stock_transfer">Transferência de Estoque</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section" id="clientSection">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-building me-2"></i>Cliente</h5></div>
+    <div class="form-section-body">
+      <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
+      <div id="clientSearchResults" class="list-group mt-2"></div>
+      <%= form.hidden_field :client_id, id: 'clientIdField' %>
+    </div>
+  </div>
+
+  <div class="form-section" id="transferLocationSection">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-warehouse me-2"></i>Local de Destino</h5></div>
+    <div class="form-section-body">
+      <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-truck me-2"></i>Transportadora e Frete</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Transportadora</label>
+          <select id="carrierSelect" class="field-input">
+            <option value="">Carregando...</option>
+          </select>
+          <%= form.hidden_field :carrier_name, id: 'carrierNameField' %>
+          <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Frete por conta</label>
+          <%= form.select :freight_paid_by, [['Remetente', 'shipper'], ['Destinatário', 'recipient']], { include_blank: false }, { class: 'field-input' } %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Valor do frete</label>
+          <%= form.number_field :freight_value, step: 0.01, class: 'field-input' %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
+    <div class="form-section-body">
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <input type="file" id="csvUploadInput" accept=".csv" class="field-input" style="max-width: 300px;">
+        <input type="text" id="manualSkuInput" class="field-input" placeholder="Buscar produto por SKU/nome..." style="max-width: 300px;">
+      </div>
+      <div id="manualSearchResults" class="list-group mb-3"></div>
+
+      <table class="orders-table" id="itemsTable">
+        <thead>
+          <tr><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Estoque</th><th></th></tr>
+        </thead>
+        <tbody id="itemsTableBody">
+          <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
+            <tr>
+              <td>
+                <%= hidden_field_tag "b2b_order[b2b_order_items_attributes][#{index}][id]", item.id %>
+                <%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][sku]", item.sku, class: 'field-input' %>
+              </td>
+              <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input' %></td>
+              <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][quantity]", item.quantity, class: 'field-input' %></td>
+              <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][price]", item.price, step: 0.01, class: 'field-input' %></td>
+              <td class="item-stock-cell" data-sku="<%= item.sku %>">-</td>
+              <td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Estoque exibido é só informativo — não bloqueia o envio.</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-body">
+      <label class="field-label">Observações</label>
+      <%= form.text_area :notes, class: 'field-input', rows: 3 %>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" name="b2b_order[status]" value="draft" class="btn-cancel">Salvar Rascunho</button>
+    <button type="submit" name="b2b_order[status]" value="saved" class="btn-submit">Salvar</button>
+  </div>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var itemIndex = <%= @b2b_order.b2b_order_items.size %>;
+
+  function toggleKindSections() {
+    var isSale = document.getElementById('kind_sale').checked;
+    document.getElementById('clientSection').style.display = isSale ? '' : 'none';
+    document.getElementById('transferLocationSection').style.display = isSale ? 'none' : '';
+  }
+  document.getElementById('kind_sale').addEventListener('change', toggleKindSections);
+  document.getElementById('kind_stock_transfer').addEventListener('change', toggleKindSections);
+  toggleKindSections();
+
+  // Transportadora via AJAX
+  fetch('<%= shipping_methods_b2b_orders_path %>')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var select = document.getElementById('carrierSelect');
+      select.innerHTML = '<option value="">Selecione...</option>';
+      (data.shipping_methods || []).forEach(function (m) {
+        var opt = document.createElement('option');
+        opt.value = m.method;
+        opt.textContent = m.name;
+        opt.dataset.name = m.name;
+        if (m.method === '<%= @b2b_order.carrier_shipping_method %>') opt.selected = true;
+        select.appendChild(opt);
+      });
+    });
+  document.getElementById('carrierSelect').addEventListener('change', function (e) {
+    var opt = e.target.selectedOptions[0];
+    document.getElementById('carrierNameField').value = opt ? (opt.dataset.name || '') : '';
+    document.getElementById('carrierMethodField').value = e.target.value;
+  });
+
+  // Cliente via AJAX (reaproveita ClientsController#search)
+  var clientTimeout;
+  document.getElementById('clientSearchInput').addEventListener('input', function (e) {
+    clearTimeout(clientTimeout);
+    var q = e.target.value;
+    clientTimeout = setTimeout(function () {
+      fetch('<%= search_clients_path %>?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var box = document.getElementById('clientSearchResults');
+          box.innerHTML = '';
+          (data.clients || []).forEach(function (c) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.textContent = c.display_name + ' - ' + c.registration;
+            item.addEventListener('click', function () {
+              document.getElementById('clientIdField').value = c.id;
+              document.getElementById('clientSearchInput').value = c.display_name;
+              box.innerHTML = '';
+            });
+            box.appendChild(item);
+          });
+        });
+    }, 300);
+  });
+
+  function addItemRow(sku, name, quantity, price) {
+    var tbody = document.getElementById('itemsTableBody');
+    var row = document.createElement('tr');
+    row.innerHTML =
+      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][sku]" value="' + (sku || '') + '"></td>' +
+      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '"></td>' +
+      '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
+      '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
+      '<td class="item-stock-cell" data-sku="' + (sku || '') + '">-</td>' +
+      '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
+    tbody.appendChild(row);
+    itemIndex++;
+    fetchStockFor(row.querySelector('.item-stock-cell'));
+  }
+
+  document.getElementById('itemsTableBody').addEventListener('click', function (e) {
+    var btn = e.target.closest('.remove-item-row');
+    if (btn) btn.closest('tr').remove();
+  });
+
+  function fetchStockFor(cell) {
+    var sku = cell.dataset.sku;
+    if (!sku) return;
+    fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { cell.textContent = data.quantity + ' (' + data.status + ')'; });
+  }
+  document.querySelectorAll('.item-stock-cell').forEach(fetchStockFor);
+
+  // Upload de planilha (tempo real)
+  document.getElementById('csvUploadInput').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var formData = new FormData();
+    formData.append('file', file);
+    fetch('<%= parse_items_spreadsheet_b2b_orders_path %>', { method: 'POST', body: formData, headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) { alert(data.message); return; }
+        data.items.forEach(function (item) { addItemRow(item.sku, item.name, item.quantity, 0); });
+      });
+  });
+
+  // Busca manual de produto
+  var searchTimeout;
+  document.getElementById('manualSkuInput').addEventListener('input', function (e) {
+    clearTimeout(searchTimeout);
+    var q = e.target.value;
+    searchTimeout = setTimeout(function () {
+      if (!q) { document.getElementById('manualSearchResults').innerHTML = ''; return; }
+      fetch('<%= search_product_b2b_orders_path %>?query=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var box = document.getElementById('manualSearchResults');
+          box.innerHTML = '';
+          (data.products || []).forEach(function (p) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.textContent = p.sku + ' - ' + p.name + ' (estoque: ' + p.quantity + ')';
+            item.addEventListener('click', function () {
+              addItemRow(p.sku, p.name, 1, 0);
+              box.innerHTML = '';
+              document.getElementById('manualSkuInput').value = '';
+            });
+            box.appendChild(item);
+          });
+        });
+    }, 300);
+  });
+});
+</script>
+<% end %>

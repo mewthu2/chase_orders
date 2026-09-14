@@ -1,6 +1,6 @@
 class MarketingTasksController < ApplicationController
   before_action :set_task, only: [:show, :update, :start_work, :mark_converted, :mark_not_converted, :add_note]
-  before_action :check_marketing_access
+  guard_screen :marketing_tasks
   before_action :redirect_agent_from_dashboard, only: [:index, :dashboard]
 
   def index
@@ -146,12 +146,6 @@ class MarketingTasksController < ApplicationController
 
   def task_params
     params.require(:marketing_task).permit(:status, :notes, :order_number, :converted)
-  end
-
-  def check_marketing_access
-    unless current_user.admin? || current_user.agent_marketing? || current_user.admin_marketing?
-      redirect_to root_path, alert: 'Acesso negado!'
-    end
   end
 
   def filter_tasks

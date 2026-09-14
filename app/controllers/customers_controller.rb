@@ -1,6 +1,6 @@
 class CustomersController < ApplicationController
   before_action :authenticate_user!
-  before_action :require_admin!
+  guard_screen :customers
 
   LOCATION_COLORS = [
     { bg: '#0D6EFD', fg: '#fff' },
@@ -122,9 +122,4 @@ class CustomersController < ApplicationController
     colors
   end
 
-  def require_admin!
-    unless current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?)
-      redirect_to root_path, alert: "Acesso restrito a administradores."
-    end
-  end
 end

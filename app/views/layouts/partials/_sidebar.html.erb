@@ -33,10 +33,42 @@
                   <i class="fas fa-users-cog"></i>
                   <span>Gerenciar Usuários</span>
                 <% end %>
+                <%= link_to profiles_path, class: "dropdown-link #{'active' if controller_name == 'profiles'}" do %>
+                  <i class="fas fa-user-shield"></i>
+                  <span>Perfis e Permissões</span>
+                <% end %>
               <% end %>
             </div>
           </div>
         </div>
+
+        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') %>
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
+              <div class="nav-group-title">
+                <i class="fas fa-handshake"></i>
+                <span class="nav-text">Pedidos</span>
+              </div>
+              <i class="fas fa-chevron-right collapse-icon" id="pedidosB2bIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="pedidosB2bDropdown">
+              <div class="dropdown-content">
+                <% if current_user&.can_access_screen?('b2b_orders') %>
+                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders'}" do %>
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Pedidos B2B</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('transfer_locations') %>
+                  <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
+                    <i class="fas fa-warehouse"></i>
+                    <span>Locais de Transferência</span>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
 
         <% if current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?) %>
           <div class="nav-item nav-group-collapsible">
@@ -313,6 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
       { id: "correiosB2bDropdown",   header: '[onclick="toggleCorreiosB2b()"]'    },
       { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]'       },
+      { id: "pedidosB2bDropdown",    header: '[onclick="togglePedidosB2b()"]'     },
       { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]'  },
       { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]'       },
       { id: "marketingDropdown",     header: '[onclick="toggleMarketing()"]'      },
@@ -370,6 +403,10 @@ function toggleCorreiosB2b() {
 
 function toggleUsuarios() {
   toggleDropdown("usuariosDropdown", "usuariosIcon", '[onclick="toggleUsuarios()"]')
+}
+
+function togglePedidosB2b() {
+  toggleDropdown("pedidosB2bDropdown", "pedidosB2bIcon", '[onclick="togglePedidosB2b()"]')
 }
 
 function togglePlannerOrders() {

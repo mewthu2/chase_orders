@@ -1,6 +1,6 @@
 class MarketingCampaignsController < ApplicationController
   before_action :set_campaign, only: [:edit, :update, :destroy, :toggle_status, :add_user, :remove_user, :statistics, :delete_all_tasks] # Added delete_all_tasks to before_action
-  before_action :check_admin_marketing_access
+  guard_screen :marketing_campaigns
 
   def index
     @campaigns = MarketingCampaign.includes(:campaign_users, :marketing_tasks)
@@ -128,12 +128,6 @@ class MarketingCampaignsController < ApplicationController
       :status,
       :active
     )
-  end
-
-  def check_admin_marketing_access
-    unless current_user.admin? || current_user.admin_marketing?
-      redirect_to root_path, alert: 'Acesso negado!'
-    end
   end
 
   def calculate_global_stats

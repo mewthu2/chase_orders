@@ -1,0 +1,72 @@
+<% content_for :title, "Locais de Transferência" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-warehouse me-2"></i>Locais de Transferência</h1>
+      <p class="page-subtitle">Destinos usados para transferência de estoque no Tiny</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @transfer_locations.size %> local(is)</span>
+      <%= link_to new_transfer_location_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Novo Local
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Locais</h5>
+    </div>
+
+    <% if @transfer_locations.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CNPJ</th>
+              <th>Cidade/UF</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @transfer_locations.each do |location| %>
+              <tr>
+                <td class="text-main"><%= location.name %></td>
+                <td class="text-muted-custom"><%= location.cnpj_formatted %></td>
+                <td class="text-muted-custom"><%= location.city %>/<%= location.state %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= location.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+                    <%= location.active? ? 'Ativo' : 'Inativo' %>
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_transfer_location_path(location), class: "action-btn action-btn--edit" do %>
+                      <i class="fas fa-pencil-alt"></i>
+                    <% end %>
+                    <%= link_to location, method: :delete,
+                                class: "action-btn action-btn--danger",
+                                data: { confirm: "Tem certeza que deseja excluir este local?" } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-warehouse fa-3x mb-3 d-block"></i>
+        <h5>Nenhum local cadastrado</h5>
+        <%= link_to new_transfer_location_path, class: "btn-export" do %>
+          <i class="fas fa-plus me-1"></i>Novo Local
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<% content_for :title, "Editar Pedido B2B" %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-handshake me-2"></i>Editar Pedido B2B</h1>
+      <p class="page-subtitle">#<%= @b2b_order.id %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to b2b_orders_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

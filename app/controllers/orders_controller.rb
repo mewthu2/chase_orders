@@ -1,6 +1,6 @@
 class OrdersController < ApplicationController
   before_action :authenticate_user!
-  before_action :require_admin!
+  guard_screen :orders
 
   LOCATION_COLORS = [
     { bg: '0D6EFD', fg: 'FFFFFF' },
@@ -240,7 +240,4 @@ class OrdersController < ApplicationController
     locations.each_with_index.to_h { |loc, i| [loc.id, LOCATION_COLORS[i % LOCATION_COLORS.size]] }
   end
 
-  def require_admin!
-    redirect_to root_path, alert: "Acesso restrito a administradores." unless current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?)
-  end
 end

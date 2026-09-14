@@ -90,6 +90,10 @@ class User < ApplicationRecord
     (profile_ids & [Profile::ADMIN_MARKETING, Profile::AGENT_MARKETING]).any?
   end
 
+  def can_access_screen?(screen_key)
+    admin? || profiles.any? { |p| p.can_access?(screen_key.to_s) }
+  end
+
   def profile_names
     profiles.pluck(:name).join(', ')
   end
@@ -197,21 +201,6 @@ class User < ApplicationRecord
     return AVAILABLE_LOCATIONS.keys.first if admin?
 
     allowed_location_keys.first
-  end
-
-  def can_access_feature?(feature)
-    permissions = {
-      user_management: -> { admin? },
-      location_management: -> { admin? },
-      stock_corrections: -> { location_access? },
-      inventory_control: -> { location_access? },
-      reports: -> { admin? || manager? },
-      marketing_campaigns_admin: -> { admin? || admin_marketing? },
-      marketing_tasks: -> { admin? || marketing_user? },
-      marketing_dashboard: -> { admin? || marketing_user? }
-    }
-
-    permissions[feature]&.call || false
   end
 
   def access_stats

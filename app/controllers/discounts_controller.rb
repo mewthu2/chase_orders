@@ -1,7 +1,7 @@
 class DiscountsController < ApplicationController
   before_action :authenticate_user!
   before_action :setup_shopify_session, only: [:toggle_status]
-  before_action :admin_or_manager!, except: []
+  guard_screen :discounts
   before_action :admin_only!, only: [:logs, :sync]
 
   def index
@@ -355,12 +355,6 @@ class DiscountsController < ApplicationController
     end
 
     { success: false, error: 'Resposta inesperada da API Shopify' }
-  end
-
-  def admin_or_manager!
-    return if current_user&.admin? || current_user&.manager?
-
-    redirect_to root_path, alert: 'Acesso negado.'
   end
 
   def admin_only!

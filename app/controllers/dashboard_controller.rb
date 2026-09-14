@@ -1,6 +1,6 @@
 class DashboardController < ApplicationController
   before_action :authenticate_user!
-  before_action :admin_only!
+  guard_screen :dashboard_correios
   protect_from_forgery except: :modal_test
 
   require 'csv'
@@ -1465,9 +1465,4 @@ class DashboardController < ApplicationController
 
   def api_correios; end
 
-  def admin_only!
-    unless current_user&.admin?
-      redirect_to dashboard_index_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
-    end
-  end
 end

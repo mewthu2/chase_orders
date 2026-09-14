@@ -1,0 +1,77 @@
+<%= form_with model: @profile, local: true, class: 'needs-validation', novalidate: true do |form| %>
+  <% if @profile.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @profile.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-id-badge me-2"></i>Informações Básicas</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name,
+              class: "field-input #{'field-input--error' if @profile.errors[:name].any?}",
+              required: true %>
+          <% if @profile.errors[:name].any? %>
+            <span class="field-error"><%= @profile.errors[:name].first %></span>
+          <% end %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Descrição</label>
+          <%= form.text_field :description, class: "field-input" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-toggle-on me-2"></i>Status</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-check form-switch">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @profile.new_record? ? true : @profile.active? %>
+        <label class="form-check-label text-main fw-bold">Perfil Ativo</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-desktop me-2"></i>Telas Permitidas</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <% Screen.options_for_select.each do |label, key| %>
+          <div class="form-col-4">
+            <div class="form-check">
+              <%= check_box_tag 'profile[screen_keys][]',
+                                key,
+                                @profile.screen_keys.include?(key),
+                                { class: 'form-check-input', id: "screen_#{key}" } %>
+              <label class="form-check-label text-main" for="screen_<%= key %>"><%= label %></label>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <span class="text-muted-custom d-block mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        Perfis novos começam sem nenhuma tela marcada.
+      </span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@profile.new_record? ? 'Criar Perfil' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", profiles_path, class: "btn-cancel" %>
+  </div>
+<% end %>

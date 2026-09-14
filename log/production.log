@@ -1,0 +1,419 @@
+E, [2026-09-13T21:36:36.124956 #20174] ERROR -- : Erro ao conectar com Redis: Error connecting to Redis on localhost:6379 (Errno::ECONNREFUSED)
+E, [2026-09-13T21:36:36.125489 #20174] ERROR -- : Verifique se o Redis está rodando em: redis://localhost:6379/1
+E, [2026-09-13T21:36:57.445792 #20466] ERROR -- : Erro ao conectar com Redis: Error connecting to Redis on localhost:6379 (Errno::ECONNREFUSED)
+E, [2026-09-13T21:36:57.446339 #20466] ERROR -- : Verifique se o Redis está rodando em: redis://localhost:6379/1
+I, [2026-09-13T21:37:33.499626 #21027]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:37:36.368500 #21027] DEBUG -- :   [1m[36mProfile Load (141.8ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` ORDER BY `profiles`.`id` ASC[0m
+D, [2026-09-13T21:37:37.807065 #21027] DEBUG -- :   [1m[36mUser Count (142.1ms)[0m  [1m[34mSELECT COUNT(*) FROM `users`[0m
+I, [2026-09-13T21:42:01.015839 #24980]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-13T21:42:15.972649 #25260]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-13T21:42:48.229476 #25674]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:42:49.783718 #25674] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (143.2ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+I, [2026-09-13T21:43:12.384590 #25974]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:43:14.405434 #25974] DEBUG -- :   [1m[35m (147.1ms)[0m  [1m[34mSELECT GET_LOCK('790898136975000495', 0)[0m
+D, [2026-09-13T21:43:14.554983 #25974] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (148.2ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+D, [2026-09-13T21:43:14.705173 #25974] DEBUG -- :   [1m[36mActiveRecord::InternalMetadata Load (148.2ms)[0m  [1m[34mSELECT * FROM `ar_internal_metadata` WHERE `ar_internal_metadata`.`key` = 'environment' ORDER BY `ar_internal_metadata`.`key` ASC LIMIT 1[0m
+I, [2026-09-13T21:43:14.705866 #25974]  INFO -- : Migrating to CreateScreenPermissions (20260913230000)
+D, [2026-09-13T21:43:14.886012 #25974] DEBUG -- :   [1m[35m (172.8ms)[0m  [1m[35mCREATE TABLE `screen_permissions` (`id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, `profile_id` bigint NOT NULL, `screen_key` varchar(255) NOT NULL, `created_at` datetime(6) NOT NULL, `updated_at` datetime(6) NOT NULL, INDEX `index_screen_permissions_on_profile_id` (`profile_id`), CONSTRAINT `fk_rails_a7df1b35e4`
+FOREIGN KEY (`profile_id`)
+  REFERENCES `profiles` (`id`)
+)[0m
+D, [2026-09-13T21:43:15.043994 #25974] DEBUG -- :   [1m[35m (156.7ms)[0m  [1m[35mCREATE UNIQUE INDEX `index_screen_permissions_on_profile_id_and_screen_key` ON `screen_permissions` (`profile_id`, `screen_key`)[0m
+D, [2026-09-13T21:43:15.193008 #25974] DEBUG -- :   [1m[35m (148.3ms)[0m  [1m[32m      INSERT INTO screen_permissions (profile_id, screen_key, created_at, updated_at) VALUES
+        (1, 'users_management', NOW(), NOW()),
+        (1, 'orders', NOW(), NOW()),
+        (5, 'orders', NOW(), NOW()),
+        (6, 'orders', NOW(), NOW()),
+        (1, 'customers', NOW(), NOW()),
+        (5, 'customers', NOW(), NOW()),
+        (6, 'customers', NOW(), NOW()),
+        (1, 'discounts', NOW(), NOW()),
+        (2, 'discounts', NOW(), NOW()),
+        (1, 'logs', NOW(), NOW()),
+        (1, 'dashboard_correios', NOW(), NOW()),
+        (1, 'marketing_campaigns', NOW(), NOW()),
+        (5, 'marketing_campaigns', NOW(), NOW()),
+        (1, 'marketing_tasks', NOW(), NOW()),
+        (5, 'marketing_tasks', NOW(), NOW()),
+        (6, 'marketing_tasks', NOW(), NOW())
+[0m
+D, [2026-09-13T21:43:15.341898 #25974] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Create (147.8ms)[0m  [1m[32mINSERT INTO `schema_migrations` (`version`) VALUES ('20260913230000')[0m
+D, [2026-09-13T21:43:15.490306 #25974] DEBUG -- :   [1m[35m (147.8ms)[0m  [1m[34mSELECT RELEASE_LOCK('790898136975000495')[0m
+I, [2026-09-13T21:43:46.479953 #26497]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:43:48.476754 #26497] DEBUG -- :   [1m[36mProfile Load (143.1ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` ORDER BY `profiles`.`id` ASC[0m
+I, [2026-09-13T21:44:26.946194 #27050]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:44:29.333467 #27050] DEBUG -- :   [1m[36mProfile Load (139.5ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` ORDER BY `profiles`.`id` ASC[0m
+D, [2026-09-13T21:44:30.601302 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.4ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 1[0m
+D, [2026-09-13T21:44:30.742480 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.4ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 2[0m
+D, [2026-09-13T21:44:30.883662 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.4ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 3[0m
+D, [2026-09-13T21:44:31.024979 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.4ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 4[0m
+D, [2026-09-13T21:44:31.166170 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.2ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 5[0m
+D, [2026-09-13T21:44:31.307593 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.5ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 6[0m
+D, [2026-09-13T21:44:32.292701 #27050] DEBUG -- :   [1m[36mUser Load (139.9ms)[0m  [1m[34mSELECT `users`.* FROM `users` INNER JOIN `user_profiles` ON `user_profiles`.`user_id` = `users`.`id` INNER JOIN `profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `profiles`.`id` = 1 LIMIT 1[0m
+D, [2026-09-13T21:44:32.728364 #27050] DEBUG -- :   [1m[36mProfile Pluck (139.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 1[0m
+D, [2026-09-13T21:44:33.008935 #27050] DEBUG -- :   [1m[36mProfile Load (278.6ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 2 LIMIT 1[0m
+D, [2026-09-13T21:44:33.289577 #27050] DEBUG -- :   [1m[36mScreenPermission Exists? (278.3ms)[0m  [1m[34mSELECT 1 AS one FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 2 AND `screen_permissions`.`screen_key` = 'discounts' LIMIT 1[0m
+D, [2026-09-13T21:44:33.568588 #27050] DEBUG -- :   [1m[36mScreenPermission Exists? (278.2ms)[0m  [1m[34mSELECT 1 AS one FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 2 AND `screen_permissions`.`screen_key` = 'logs' LIMIT 1[0m
+D, [2026-09-13T21:44:33.709365 #27050] DEBUG -- :   [1m[36mTRANSACTION (138.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T21:44:33.849576 #27050] DEBUG -- :   [1m[36mProfile Create (278.8ms)[0m  [1m[32mINSERT INTO `profiles` (`name`, `description`, `active`, `created_at`, `updated_at`) VALUES ('__tmp_verify_screen_perms__', NULL, TRUE, '2026-09-14 00:44:33.569513', '2026-09-14 00:44:33.569513')[0m
+D, [2026-09-13T21:44:33.989501 #27050] DEBUG -- :   [1m[36mTRANSACTION (139.3ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T21:44:34.130476 #27050] DEBUG -- :   [1m[36mTRANSACTION (139.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T21:44:34.270371 #27050] DEBUG -- :   [1m[36mScreenPermission Load (279.4ms)[0m  [1m[34mSELECT `screen_permissions`.* FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7 AND `screen_permissions`.`screen_key` = 'orders' LIMIT 1[0m
+D, [2026-09-13T21:44:34.413967 #27050] DEBUG -- :   [1m[36mScreenPermission Load (139.1ms)[0m  [1m[34mSELECT `screen_permissions`.* FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7 AND `screen_permissions`.`screen_key` = 'customers' LIMIT 1[0m
+D, [2026-09-13T21:44:34.555878 #27050] DEBUG -- :   [1m[36mScreenPermission Load (139.6ms)[0m  [1m[34mSELECT `screen_permissions`.* FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7[0m
+D, [2026-09-13T21:44:34.698250 #27050] DEBUG -- :   [1m[36mScreenPermission Create (139.8ms)[0m  [1m[32mINSERT INTO `screen_permissions` (`profile_id`, `screen_key`, `created_at`, `updated_at`) VALUES (7, 'orders', '2026-09-14 00:44:34.557717', '2026-09-14 00:44:34.557717')[0m
+D, [2026-09-13T21:44:34.838730 #27050] DEBUG -- :   [1m[36mScreenPermission Create (139.2ms)[0m  [1m[32mINSERT INTO `screen_permissions` (`profile_id`, `screen_key`, `created_at`, `updated_at`) VALUES (7, 'customers', '2026-09-14 00:44:34.698802', '2026-09-14 00:44:34.698802')[0m
+D, [2026-09-13T21:44:34.978808 #27050] DEBUG -- :   [1m[36mTRANSACTION (139.2ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T21:44:35.119815 #27050] DEBUG -- :   [1m[36mProfile Load (139.3ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 7 LIMIT 1[0m
+D, [2026-09-13T21:44:35.260401 #27050] DEBUG -- :   [1m[36mScreenPermission Pluck (139.3ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7[0m
+D, [2026-09-13T21:44:35.400048 #27050] DEBUG -- :   [1m[36mTRANSACTION (138.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T21:44:35.681427 #27050] DEBUG -- :   [1m[36mUserProfile Load (139.4ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`profile_id` = 7[0m
+D, [2026-09-13T21:44:35.821917 #27050] DEBUG -- :   [1m[36mScreenPermission Load (139.1ms)[0m  [1m[34mSELECT `screen_permissions`.* FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7[0m
+D, [2026-09-13T21:44:35.963194 #27050] DEBUG -- :   [1m[36mScreenPermission Destroy (139.5ms)[0m  [1m[31mDELETE FROM `screen_permissions` WHERE `screen_permissions`.`id` = 18[0m
+D, [2026-09-13T21:44:36.102656 #27050] DEBUG -- :   [1m[36mScreenPermission Destroy (138.3ms)[0m  [1m[31mDELETE FROM `screen_permissions` WHERE `screen_permissions`.`id` = 17[0m
+D, [2026-09-13T21:44:36.242574 #27050] DEBUG -- :   [1m[36mProfile Destroy (139.2ms)[0m  [1m[31mDELETE FROM `profiles` WHERE `profiles`.`id` = 7[0m
+D, [2026-09-13T21:44:36.382012 #27050] DEBUG -- :   [1m[36mTRANSACTION (138.9ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T21:44:36.522855 #27050] DEBUG -- :   [1m[36mScreenPermission Count (139.3ms)[0m  [1m[34mSELECT COUNT(*) FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 7[0m
+I, [2026-09-13T21:45:04.542558 #27496]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-13T21:45:38.833328 #28018]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T21:45:40.238549 #28018] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (143.8ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+I, [2026-09-13T23:57:21.187205 #31325]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:57:23.405575 #31325] DEBUG -- :   [1m[35m (141.6ms)[0m  [1m[34mSELECT GET_LOCK('790898136975000495', 0)[0m
+D, [2026-09-13T23:57:23.549200 #31325] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (141.9ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+D, [2026-09-13T23:57:23.694054 #31325] DEBUG -- :   [1m[36mActiveRecord::InternalMetadata Load (143.3ms)[0m  [1m[34mSELECT * FROM `ar_internal_metadata` WHERE `ar_internal_metadata`.`key` = 'environment' ORDER BY `ar_internal_metadata`.`key` ASC LIMIT 1[0m
+I, [2026-09-13T23:57:23.695063 #31325]  INFO -- : Migrating to CreateTransferLocations (20260914000000)
+D, [2026-09-13T23:57:23.865590 #31325] DEBUG -- :   [1m[35m (161.3ms)[0m  [1m[35mCREATE TABLE `transfer_locations` (`id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, `name` varchar(255) NOT NULL, `registration` varchar(255) NOT NULL, `state_registration` varchar(255), `street` varchar(255) NOT NULL, `number` varchar(255) NOT NULL, `complement` varchar(255), `neighbourhood` varchar(255) NOT NULL, `city` varchar(255) NOT NULL, `state` varchar(255) NOT NULL, `zip` varchar(255) NOT NULL, `active` tinyint(1) DEFAULT TRUE NOT NULL, `created_at` datetime(6) NOT NULL, `updated_at` datetime(6) NOT NULL)[0m
+D, [2026-09-13T23:57:24.008368 #31325] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Create (141.8ms)[0m  [1m[32mINSERT INTO `schema_migrations` (`version`) VALUES ('20260914000000')[0m
+D, [2026-09-13T23:57:24.150338 #31325] DEBUG -- :   [1m[35m (141.4ms)[0m  [1m[34mSELECT RELEASE_LOCK('790898136975000495')[0m
+I, [2026-09-13T23:57:49.169271 #31816]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:57:51.959240 #31816] DEBUG -- :   [1m[36mTRANSACTION (157.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:57:52.118370 #31816] DEBUG -- :   [1m[36mTransferLocation Create (316.8ms)[0m  [1m[32mINSERT INTO `transfer_locations` (`name`, `registration`, `state_registration`, `street`, `number`, `complement`, `neighbourhood`, `city`, `state`, `zip`, `active`, `created_at`, `updated_at`) VALUES ('__tmp_verify__', '25.405.327/0001-74', NULL, 'Rua X', '1', NULL, 'B', 'BH', 'MG', '30000-000', TRUE, '2026-09-14 02:57:51.800177', '2026-09-14 02:57:51.800177')[0m
+D, [2026-09-13T23:57:52.276857 #31816] DEBUG -- :   [1m[36mTRANSACTION (157.8ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:57:52.594681 #31816] DEBUG -- :   [1m[36mTransferLocation Exists? (314.7ms)[0m  [1m[34mSELECT 1 AS one FROM `transfer_locations` WHERE `transfer_locations`.`active` = TRUE AND `transfer_locations`.`id` = 1 LIMIT 1[0m
+I, [2026-09-13T23:58:03.361663 #31983]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:58:06.194115 #31983] DEBUG -- :   [1m[36mTransferLocation Load (298.0ms)[0m  [1m[34mSELECT `transfer_locations`.* FROM `transfer_locations` WHERE `transfer_locations`.`name` = '__tmp_verify__' LIMIT 1[0m
+D, [2026-09-13T23:58:06.811768 #31983] DEBUG -- :   [1m[36mTransferLocation Destroy (150.8ms)[0m  [1m[31mDELETE FROM `transfer_locations` WHERE `transfer_locations`.`id` = 1[0m
+D, [2026-09-13T23:58:07.111843 #31983] DEBUG -- :   [1m[36mTransferLocation Exists? (297.5ms)[0m  [1m[34mSELECT 1 AS one FROM `transfer_locations` WHERE `transfer_locations`.`name` = '__tmp_verify__' LIMIT 1[0m
+I, [2026-09-13T23:58:30.493577 #32460]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:58:32.636496 #32460] DEBUG -- :   [1m[35m (147.7ms)[0m  [1m[34mSELECT GET_LOCK('790898136975000495', 0)[0m
+D, [2026-09-13T23:58:32.786027 #32460] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (148.2ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+D, [2026-09-13T23:58:32.935352 #32460] DEBUG -- :   [1m[36mActiveRecord::InternalMetadata Load (148.4ms)[0m  [1m[34mSELECT * FROM `ar_internal_metadata` WHERE `ar_internal_metadata`.`key` = 'environment' ORDER BY `ar_internal_metadata`.`key` ASC LIMIT 1[0m
+I, [2026-09-13T23:58:32.935833 #32460]  INFO -- : Migrating to SeedB2bScreenPermissions (20260914000300)
+D, [2026-09-13T23:58:33.094619 #32460] DEBUG -- :   [1m[35m (148.7ms)[0m  [1m[32m      INSERT INTO screen_permissions (profile_id, screen_key, created_at, updated_at) VALUES
+        (1, 'b2b_orders', NOW(), NOW()),
+        (1, 'transfer_locations', NOW(), NOW())
+[0m
+D, [2026-09-13T23:58:33.244588 #32460] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Create (149.3ms)[0m  [1m[32mINSERT INTO `schema_migrations` (`version`) VALUES ('20260914000300')[0m
+D, [2026-09-13T23:58:33.394491 #32460] DEBUG -- :   [1m[35m (149.5ms)[0m  [1m[34mSELECT RELEASE_LOCK('790898136975000495')[0m
+I, [2026-09-13T23:58:39.912109 #32620]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:58:42.760844 #32620] DEBUG -- :   [1m[36mProfile Load (155.9ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 1 LIMIT 1[0m
+D, [2026-09-13T23:58:43.562476 #32620] DEBUG -- :   [1m[36mScreenPermission Pluck (164.0ms)[0m  [1m[34mSELECT `screen_permissions`.`screen_key` FROM `screen_permissions` WHERE `screen_permissions`.`profile_id` = 1[0m
+I, [2026-09-13T23:59:02.926048 #32978]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:59:04.889133 #32978] DEBUG -- :   [1m[35m (142.8ms)[0m  [1m[34mSELECT GET_LOCK('790898136975000495', 0)[0m
+D, [2026-09-13T23:59:05.034042 #32978] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (143.0ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+D, [2026-09-13T23:59:05.179355 #32978] DEBUG -- :   [1m[36mActiveRecord::InternalMetadata Load (143.5ms)[0m  [1m[34mSELECT * FROM `ar_internal_metadata` WHERE `ar_internal_metadata`.`key` = 'environment' ORDER BY `ar_internal_metadata`.`key` ASC LIMIT 1[0m
+I, [2026-09-13T23:59:05.180838 #32978]  INFO -- : Migrating to CreateB2bOrders (20260914000100)
+D, [2026-09-13T23:59:05.360555 #32978] DEBUG -- :   [1m[35m (163.6ms)[0m  [1m[35mCREATE TABLE `b2b_orders` (`id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, `kind` int NOT NULL, `status` int DEFAULT 0 NOT NULL, `client_id` bigint, `transfer_location_id` bigint, `user_id` bigint NOT NULL, `carrier_name` varchar(255), `carrier_shipping_method` varchar(255), `freight_paid_by` int, `freight_value` decimal(10,2), `tiny_reference_id` varchar(255), `tiny_reference_number` varchar(255), `error_message` text, `notes` text, `created_at` datetime(6) NOT NULL, `updated_at` datetime(6) NOT NULL, INDEX `index_b2b_orders_on_client_id` (`client_id`), INDEX `index_b2b_orders_on_transfer_location_id` (`transfer_location_id`), INDEX `index_b2b_orders_on_user_id` (`user_id`), CONSTRAINT `fk_rails_f90b1cd5bc`
+FOREIGN KEY (`client_id`)
+  REFERENCES `clients` (`id`)
+, CONSTRAINT `fk_rails_b0f28ea2ec`
+FOREIGN KEY (`transfer_location_id`)
+  REFERENCES `transfer_locations` (`id`)
+, CONSTRAINT `fk_rails_62b6fb405f`
+FOREIGN KEY (`user_id`)
+  REFERENCES `users` (`id`)
+)[0m
+D, [2026-09-13T23:59:05.504247 #32978] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Create (142.7ms)[0m  [1m[32mINSERT INTO `schema_migrations` (`version`) VALUES ('20260914000100')[0m
+I, [2026-09-13T23:59:05.504413 #32978]  INFO -- : Migrating to CreateB2bOrderItems (20260914000200)
+D, [2026-09-13T23:59:05.661411 #32978] DEBUG -- :   [1m[35m (153.8ms)[0m  [1m[35mCREATE TABLE `b2b_order_items` (`id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, `b2b_order_id` bigint NOT NULL, `sku` varchar(255) NOT NULL, `name` varchar(255), `quantity` int NOT NULL, `price` decimal(10,2) NOT NULL, `created_at` datetime(6) NOT NULL, `updated_at` datetime(6) NOT NULL, INDEX `index_b2b_order_items_on_b2b_order_id` (`b2b_order_id`), CONSTRAINT `fk_rails_33881edf89`
+FOREIGN KEY (`b2b_order_id`)
+  REFERENCES `b2b_orders` (`id`)
+)[0m
+D, [2026-09-13T23:59:05.805168 #32978] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Create (143.1ms)[0m  [1m[32mINSERT INTO `schema_migrations` (`version`) VALUES ('20260914000200')[0m
+D, [2026-09-13T23:59:05.948331 #32978] DEBUG -- :   [1m[35m (142.6ms)[0m  [1m[34mSELECT RELEASE_LOCK('790898136975000495')[0m
+I, [2026-09-13T23:59:29.745618 #33450]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:59:32.536850 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:32.677693 #33450] DEBUG -- :   [1m[36mTransferLocation Create (279.1ms)[0m  [1m[32mINSERT INTO `transfer_locations` (`name`, `registration`, `state_registration`, `street`, `number`, `complement`, `neighbourhood`, `city`, `state`, `zip`, `active`, `created_at`, `updated_at`) VALUES ('__tmp_verify2__', '25.405.327/0001-74', NULL, 'Rua X', '1', NULL, 'B', 'BH', 'MG', '30000-000', TRUE, '2026-09-14 02:59:32.396099', '2026-09-14 02:59:32.396099')[0m
+D, [2026-09-13T23:59:32.818831 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.2ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:34.310636 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.2ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:34.875775 #33450] DEBUG -- :   [1m[36mProfile Load (138.9ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:35.168170 #33450] DEBUG -- :   [1m[36mUser Exists? (138.7ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_user__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-13T23:59:35.307870 #33450] DEBUG -- :   [1m[36mUserProfile Exists? (138.0ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:35.449628 #33450] DEBUG -- :   [1m[36mUser Create (138.8ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_user__', NULL, '__tmp_user__@example.com', '$2a$12$7d.9X7wntW91E4GWiJSid.mpwFpKE//QYTKkSk4n3jOyIP9E7.3Ua', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 02:59:35.309382', '2026-09-14 02:59:35.309382', TRUE, '[]')[0m
+D, [2026-09-13T23:59:35.589617 #33450] DEBUG -- :   [1m[36mUserProfile Exists? (138.2ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 22 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:35.729830 #33450] DEBUG -- :   [1m[36mUserProfile Create (138.8ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (22, 3, '2026-09-14 02:59:35.590174', '2026-09-14 02:59:35.590174')[0m
+D, [2026-09-13T23:59:35.869608 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.6ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:36.705960 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:36.845546 #33450] DEBUG -- :   [1m[36mB2bOrder Create (282.6ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (1, 0, NULL, 2, 22, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 02:59:36.559695', '2026-09-14 02:59:36.559695')[0m
+D, [2026-09-13T23:59:36.986373 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.6ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:37.138020 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.5ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:37.280331 #33450] DEBUG -- :   [1m[36mB2bOrder Exists? (281.5ms)[0m  [1m[34mSELECT 1 AS one FROM `b2b_orders` WHERE `b2b_orders`.`transfer_location_id` = 2 LIMIT 1[0m
+D, [2026-09-13T23:59:37.424908 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.8ms)[0m  [1m[31mROLLBACK[0m
+D, [2026-09-13T23:59:37.578678 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:38.178223 #33450] DEBUG -- :   [1m[36mB2bOrderItem Load (139.7ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 1[0m
+D, [2026-09-13T23:59:38.317284 #33450] DEBUG -- :   [1m[36mB2bOrder Destroy (137.7ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 1[0m
+D, [2026-09-13T23:59:38.457985 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.0ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:38.600620 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:38.740230 #33450] DEBUG -- :   [1m[36mB2bOrder Exists? (278.0ms)[0m  [1m[34mSELECT 1 AS one FROM `b2b_orders` WHERE `b2b_orders`.`transfer_location_id` = 2 LIMIT 1[0m
+D, [2026-09-13T23:59:38.882806 #33450] DEBUG -- :   [1m[36mTransferLocation Destroy (138.5ms)[0m  [1m[31mDELETE FROM `transfer_locations` WHERE `transfer_locations`.`id` = 2[0m
+D, [2026-09-13T23:59:39.022486 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.2ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:39.166152 #33450] DEBUG -- :   [1m[36mTRANSACTION (138.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:39.305831 #33450] DEBUG -- :   [1m[36mUserProfile Load (278.5ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 22[0m
+D, [2026-09-13T23:59:39.447199 #33450] DEBUG -- :   [1m[36mUserProfile Destroy (138.5ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 27[0m
+D, [2026-09-13T23:59:39.881305 #33450] DEBUG -- :   [1m[36mMarketingTask Update All (145.0ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 22[0m
+D, [2026-09-13T23:59:40.306004 #33450] DEBUG -- :   [1m[36mCampaignUser Load (139.6ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 22[0m
+D, [2026-09-13T23:59:40.734278 #33450] DEBUG -- :   [1m[36mMarketingCampaign Update All (139.8ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 22[0m
+D, [2026-09-13T23:59:40.878743 #33450] DEBUG -- :   [1m[36mUser Destroy (143.3ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 22[0m
+D, [2026-09-13T23:59:41.020476 #33450] DEBUG -- :   [1m[36mTRANSACTION (139.8ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:41.302002 #33450] DEBUG -- :   [1m[36mTransferLocation Exists? (277.8ms)[0m  [1m[34mSELECT 1 AS one FROM `transfer_locations` WHERE `transfer_locations`.`id` = 2 LIMIT 1[0m
+I, [2026-09-13T23:59:50.121233 #33739]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-13T23:59:53.376839 #33739] DEBUG -- :   [1m[36mTRANSACTION (154.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:53.981216 #33739] DEBUG -- :   [1m[36mProfile Load (148.5ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:54.300631 #33739] DEBUG -- :   [1m[36mUser Exists? (149.4ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_b2b__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-13T23:59:54.452796 #33739] DEBUG -- :   [1m[36mUserProfile Exists? (149.4ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:54.607648 #33739] DEBUG -- :   [1m[36mUser Create (148.9ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_b2b__', NULL, '__tmp_b2b__@example.com', '$2a$12$y/KL.KKkfggDSXVJr.p4IOMjIPCuI0wd5nt2RrD9GzGCUMr732HbK', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 02:59:54.455285', '2026-09-14 02:59:54.455285', TRUE, '[]')[0m
+D, [2026-09-13T23:59:54.759080 #33739] DEBUG -- :   [1m[36mUserProfile Exists? (148.5ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 23 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-13T23:59:54.908668 #33739] DEBUG -- :   [1m[36mUserProfile Create (148.3ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (23, 3, '2026-09-14 02:59:54.759624', '2026-09-14 02:59:54.759624')[0m
+D, [2026-09-13T23:59:55.057768 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.3ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:55.824490 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:55.974987 #33739] DEBUG -- :   [1m[36mClient Create (299.0ms)[0m  [1m[32mINSERT INTO `clients` (`responsible_name`, `business_name`, `registration`, `state_registration`, `municipal_registration`, `street`, `neighbourhood`, `number`, `city`, `state`, `zip`, `email`, `phone`, `created_at`, `updated_at`) VALUES ('__tmp_client__', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 02:59:55.674272', '2026-09-14 02:59:55.674272')[0m
+D, [2026-09-13T23:59:56.123787 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.1ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:57.505059 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:57.654200 #33739] DEBUG -- :   [1m[36mB2bOrder Create (297.9ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (0, 1, 2, NULL, 23, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 02:59:57.354838', '2026-09-14 02:59:57.354838')[0m
+D, [2026-09-13T23:59:57.805077 #33739] DEBUG -- :   [1m[36mB2bOrderItem Create (148.3ms)[0m  [1m[32mINSERT INTO `b2b_order_items` (`b2b_order_id`, `sku`, `name`, `quantity`, `price`, `created_at`, `updated_at`) VALUES (2, 'SKU1', NULL, 1, 10.0, '2026-09-14 02:59:57.655560', '2026-09-14 02:59:57.655560')[0m
+D, [2026-09-13T23:59:57.953655 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.0ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:58.114173 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:58.262663 #33739] DEBUG -- :   [1m[36mB2bOrderItem Load (296.6ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 2[0m
+D, [2026-09-13T23:59:58.413494 #33739] DEBUG -- :   [1m[36mB2bOrderItem Destroy (148.4ms)[0m  [1m[31mDELETE FROM `b2b_order_items` WHERE `b2b_order_items`.`id` = 1[0m
+D, [2026-09-13T23:59:58.563390 #33739] DEBUG -- :   [1m[36mB2bOrder Destroy (148.7ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 2[0m
+D, [2026-09-13T23:59:58.712920 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.5ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:58.862118 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.2ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:59.011603 #33739] DEBUG -- :   [1m[36mClient Destroy (149.0ms)[0m  [1m[31mDELETE FROM `clients` WHERE `clients`.`id` = 2[0m
+D, [2026-09-13T23:59:59.160217 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.1ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-13T23:59:59.311321 #33739] DEBUG -- :   [1m[36mTRANSACTION (148.3ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-13T23:59:59.459621 #33739] DEBUG -- :   [1m[36mUserProfile Load (296.7ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 23[0m
+D, [2026-09-13T23:59:59.608330 #33739] DEBUG -- :   [1m[36mUserProfile Destroy (147.6ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 28[0m
+D, [2026-09-14T00:00:00.061489 #33739] DEBUG -- :   [1m[36mMarketingTask Update All (149.0ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 23[0m
+D, [2026-09-14T00:00:00.514671 #33739] DEBUG -- :   [1m[36mCampaignUser Load (148.9ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 23[0m
+D, [2026-09-14T00:00:00.969034 #33739] DEBUG -- :   [1m[36mMarketingCampaign Update All (149.5ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 23[0m
+D, [2026-09-14T00:00:01.119506 #33739] DEBUG -- :   [1m[36mUser Destroy (149.1ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 23[0m
+D, [2026-09-14T00:00:01.267846 #33739] DEBUG -- :   [1m[36mTRANSACTION (147.6ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T00:00:57.368565 #34725]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:00:59.589911 #34850]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:02:09.180822 #35958]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:02:15.281645 #36017]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:02:24.555588 #36169]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:03:15.373103 #36968]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:03:23.049347 #37147]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T00:03:39.710078 #37343]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:03:43.566946 #37343] DEBUG -- :   [1m[36mTRANSACTION (156.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:03:44.202987 #37343] DEBUG -- :   [1m[36mProfile Load (156.1ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:03:44.539694 #37343] DEBUG -- :   [1m[36mUser Exists? (156.1ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_job__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T00:03:44.699333 #37343] DEBUG -- :   [1m[36mUserProfile Exists? (156.9ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:03:44.862071 #37343] DEBUG -- :   [1m[36mUser Create (157.0ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_job__', NULL, '__tmp_job__@example.com', '$2a$12$wZFDrmJNdpceqpNoCUTxh.hNqoWRN5pAm/6qfMJf/i8gTrtjlXQ/q', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 03:03:44.701729', '2026-09-14 03:03:44.701729', TRUE, '[]')[0m
+D, [2026-09-14T00:03:45.022096 #37343] DEBUG -- :   [1m[36mUserProfile Exists? (156.6ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 24 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:03:45.181194 #37343] DEBUG -- :   [1m[36mUserProfile Create (157.6ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (24, 3, '2026-09-14 03:03:45.022607', '2026-09-14 03:03:45.022607')[0m
+D, [2026-09-14T00:03:45.340698 #37343] DEBUG -- :   [1m[36mTRANSACTION (157.4ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:03:46.151812 #37343] DEBUG -- :   [1m[36mTRANSACTION (156.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:03:46.308718 #37343] DEBUG -- :   [1m[36mClient Exists? (313.0ms)[0m  [1m[34mSELECT 1 AS one FROM `clients` WHERE `clients`.`registration` = '25.405.327/0001-74' LIMIT 1[0m
+D, [2026-09-14T00:03:46.468830 #37343] DEBUG -- :   [1m[36mClient Create (157.1ms)[0m  [1m[32mINSERT INTO `clients` (`responsible_name`, `business_name`, `registration`, `state_registration`, `municipal_registration`, `street`, `neighbourhood`, `number`, `city`, `state`, `zip`, `email`, `phone`, `created_at`, `updated_at`) VALUES ('__tmp_job_client__', NULL, '25.405.327/0001-74', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 03:03:46.309471', '2026-09-14 03:03:46.309471')[0m
+D, [2026-09-14T00:03:46.626843 #37343] DEBUG -- :   [1m[36mTRANSACTION (156.7ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:03:47.434582 #37343] DEBUG -- :   [1m[36mTRANSACTION (156.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:03:47.911354 #37343] DEBUG -- :   [1m[36mTRANSACTION (155.8ms)[0m  [1m[31mROLLBACK[0m
+I, [2026-09-14T00:03:55.688157 #37626]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:03:58.806839 #37626] DEBUG -- :   [1m[36mTRANSACTION (138.9ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:03:59.371387 #37626] DEBUG -- :   [1m[36mProfile Load (138.9ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:03:59.666871 #37626] DEBUG -- :   [1m[36mUser Exists? (139.3ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_job__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T00:03:59.809651 #37626] DEBUG -- :   [1m[36mUserProfile Exists? (139.7ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:03:59.953087 #37626] DEBUG -- :   [1m[36mTRANSACTION (138.9ms)[0m  [1m[31mROLLBACK[0m
+I, [2026-09-14T00:04:19.414626 #37921]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:04:21.931825 #37921] DEBUG -- :   [1m[36mUser Load (296.5ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`email` = '__tmp_job__@example.com' LIMIT 1[0m
+D, [2026-09-14T00:04:22.862683 #37921] DEBUG -- :   [1m[36mClient Load (297.8ms)[0m  [1m[34mSELECT `clients`.* FROM `clients` WHERE `clients`.`registration` = '25.405.327/0001-74' AND `clients`.`responsible_name` = '__tmp_job_client__' LIMIT 1[0m
+I, [2026-09-14T00:04:41.773393 #38334]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:04:44.046795 #38334] DEBUG -- :   [1m[36mUser Load (141.9ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`email` = '__tmp_job__@example.com'[0m
+D, [2026-09-14T00:04:45.070683 #38334] DEBUG -- :   [1m[36mB2bOrder Load (141.6ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`user_id` = 24[0m
+I, [2026-09-14T00:05:12.440248 #38730]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:05:14.890707 #38730] DEBUG -- :   [1m[36mUser Load (284.6ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`email` = '__tmp_job__@example.com' LIMIT 1[0m
+D, [2026-09-14T00:05:15.343956 #38730] DEBUG -- :   [1m[36mTRANSACTION (141.8ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:05:15.781325 #38730] DEBUG -- :   [1m[36mUserProfile Load (143.8ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 24[0m
+D, [2026-09-14T00:05:15.934461 #38730] DEBUG -- :   [1m[36mUserProfile Destroy (142.4ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 29[0m
+D, [2026-09-14T00:05:16.373946 #38730] DEBUG -- :   [1m[36mMarketingTask Update All (143.3ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 24[0m
+D, [2026-09-14T00:05:16.809779 #38730] DEBUG -- :   [1m[36mCampaignUser Load (142.2ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 24[0m
+D, [2026-09-14T00:05:17.245379 #38730] DEBUG -- :   [1m[36mMarketingCampaign Update All (142.4ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 24[0m
+D, [2026-09-14T00:05:17.389844 #38730] DEBUG -- :   [1m[36mUser Destroy (142.8ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 24[0m
+D, [2026-09-14T00:05:17.534038 #38730] DEBUG -- :   [1m[36mTRANSACTION (142.8ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:05:18.112490 #38730] DEBUG -- :   [1m[36mClient Load (286.2ms)[0m  [1m[34mSELECT `clients`.* FROM `clients` WHERE `clients`.`responsible_name` = '__tmp_job_client__' LIMIT 1[0m
+D, [2026-09-14T00:05:18.417654 #38730] DEBUG -- :   [1m[36mTRANSACTION (142.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:05:18.561177 #38730] DEBUG -- :   [1m[36mClient Destroy (142.6ms)[0m  [1m[31mDELETE FROM `clients` WHERE `clients`.`id` = 3[0m
+D, [2026-09-14T00:05:18.704393 #38730] DEBUG -- :   [1m[36mTRANSACTION (142.2ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T00:21:22.789645 #39769]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T00:21:26.449152 #39769] DEBUG -- :   [1m[36mTRANSACTION (149.1ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:27.058542 #39769] DEBUG -- :   [1m[36mProfile Load (150.9ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:27.382197 #39769] DEBUG -- :   [1m[36mUser Exists? (148.3ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_job__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T00:21:27.531805 #39769] DEBUG -- :   [1m[36mUserProfile Exists? (147.9ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:27.684338 #39769] DEBUG -- :   [1m[36mUser Create (148.3ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_job__', NULL, '__tmp_job__@example.com', '$2a$12$RNZ5mgcV3PGb01K2fKHXEuB7wx0xdtd0G74hbojvdIR7OGhsUe.Ti', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 03:21:27.533290', '2026-09-14 03:21:27.533290', TRUE, '[]')[0m
+D, [2026-09-14T00:21:27.834038 #39769] DEBUG -- :   [1m[36mUserProfile Exists? (147.7ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 25 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:27.983825 #39769] DEBUG -- :   [1m[36mUserProfile Create (148.3ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (25, 3, '2026-09-14 03:21:27.834524', '2026-09-14 03:21:27.834524')[0m
+D, [2026-09-14T00:21:28.133046 #39769] DEBUG -- :   [1m[36mTRANSACTION (147.9ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:21:28.899026 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.5ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:29.047704 #39769] DEBUG -- :   [1m[36mClient Exists? (297.4ms)[0m  [1m[34mSELECT 1 AS one FROM `clients` WHERE `clients`.`registration` = '25.405.327/0001-74' LIMIT 1[0m
+D, [2026-09-14T00:21:29.199591 #39769] DEBUG -- :   [1m[36mClient Create (149.5ms)[0m  [1m[32mINSERT INTO `clients` (`responsible_name`, `business_name`, `registration`, `state_registration`, `municipal_registration`, `street`, `neighbourhood`, `number`, `city`, `state`, `zip`, `email`, `phone`, `created_at`, `updated_at`) VALUES ('__tmp_job_client__', NULL, '25.405.327/0001-74', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 03:21:29.048257', '2026-09-14 03:21:29.048257')[0m
+D, [2026-09-14T00:21:29.349177 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.4ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:21:30.735674 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.5ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:30.884836 #39769] DEBUG -- :   [1m[36mB2bOrder Create (297.8ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (0, 1, 4, NULL, 25, 'Jamef', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 03:21:30.585718', '2026-09-14 03:21:30.585718')[0m
+D, [2026-09-14T00:21:31.035821 #39769] DEBUG -- :   [1m[36mB2bOrderItem Create (149.2ms)[0m  [1m[32mINSERT INTO `b2b_order_items` (`b2b_order_id`, `sku`, `name`, `quantity`, `price`, `created_at`, `updated_at`) VALUES (3, 'SKU1', NULL, 1, 1.0, '2026-09-14 03:21:30.885628', '2026-09-14 03:21:30.885628')[0m
+D, [2026-09-14T00:21:31.184884 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.2ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T00:21:31.186285 #39769]  INFO -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6] Performing TransmitB2bOrderJob (Job ID: 70152767-4deb-4fac-ae01-217bd2e7e1b6) from Sidekiq(default) with arguments: 3
+D, [2026-09-14T00:21:31.486331 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mB2bOrder Load (298.2ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:31.640445 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mTRANSACTION (148.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:31.789665 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mUser Load (297.9ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 25 LIMIT 1[0m
+D, [2026-09-14T00:21:31.942282 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mClient Load (148.1ms)[0m  [1m[34mSELECT `clients`.* FROM `clients` WHERE `clients`.`id` = 4 LIMIT 1[0m
+D, [2026-09-14T00:21:32.091885 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mB2bOrderItem Exists? (147.9ms)[0m  [1m[34mSELECT 1 AS one FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:32.242204 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mB2bOrder Update (148.5ms)[0m  [1m[33mUPDATE `b2b_orders` SET `b2b_orders`.`status` = 2, `b2b_orders`.`tiny_reference_id` = '123', `b2b_orders`.`tiny_reference_number` = '456', `b2b_orders`.`updated_at` = '2026-09-14 03:21:32.092350' WHERE `b2b_orders`.`id` = 3[0m
+D, [2026-09-14T00:21:32.391899 #39769] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6]   [1m[36mTRANSACTION (148.4ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T00:21:32.392722 #39769]  INFO -- : [ActiveJob] [TransmitB2bOrderJob] [70152767-4deb-4fac-ae01-217bd2e7e1b6] Performed TransmitB2bOrderJob (Job ID: 70152767-4deb-4fac-ae01-217bd2e7e1b6) from Sidekiq(default) in 1206.59ms
+D, [2026-09-14T00:21:32.543771 #39769] DEBUG -- :   [1m[36mB2bOrder Load (149.0ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T00:21:32.696290 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.2ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:32.844932 #39769] DEBUG -- :   [1m[36mB2bOrderItem Load (297.0ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 3[0m
+D, [2026-09-14T00:21:32.996503 #39769] DEBUG -- :   [1m[36mB2bOrderItem Destroy (149.1ms)[0m  [1m[31mDELETE FROM `b2b_order_items` WHERE `b2b_order_items`.`id` = 2[0m
+D, [2026-09-14T00:21:33.147034 #39769] DEBUG -- :   [1m[36mB2bOrder Destroy (148.5ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 3[0m
+D, [2026-09-14T00:21:33.296576 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.4ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:21:33.446515 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.0ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:33.594940 #39769] DEBUG -- :   [1m[36mClient Destroy (147.7ms)[0m  [1m[31mDELETE FROM `clients` WHERE `clients`.`id` = 4[0m
+D, [2026-09-14T00:21:33.743759 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.3ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T00:21:33.893734 #39769] DEBUG -- :   [1m[36mTRANSACTION (147.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T00:21:34.042973 #39769] DEBUG -- :   [1m[36mUserProfile Load (296.9ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 25[0m
+D, [2026-09-14T00:21:34.194263 #39769] DEBUG -- :   [1m[36mUserProfile Destroy (148.1ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 30[0m
+D, [2026-09-14T00:21:34.652744 #39769] DEBUG -- :   [1m[36mMarketingTask Update All (150.0ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 25[0m
+D, [2026-09-14T00:21:35.112034 #39769] DEBUG -- :   [1m[36mCampaignUser Load (149.3ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 25[0m
+D, [2026-09-14T00:21:35.568994 #39769] DEBUG -- :   [1m[36mMarketingCampaign Update All (149.4ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 25[0m
+D, [2026-09-14T00:21:35.720017 #39769] DEBUG -- :   [1m[36mUser Destroy (148.8ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 25[0m
+D, [2026-09-14T00:21:35.869849 #39769] DEBUG -- :   [1m[36mTRANSACTION (148.7ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T04:29:51.139361 #48647]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:30:00.688276 #48803]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:30:04.482267 #48803] DEBUG -- :   [1m[36mTRANSACTION (147.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:05.091977 #48803] DEBUG -- :   [1m[36mProfile Load (148.7ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:05.409714 #48803] DEBUG -- :   [1m[36mUser Exists? (149.1ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_ctrl__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T04:30:05.559877 #48803] DEBUG -- :   [1m[36mUserProfile Exists? (148.5ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:05.711589 #48803] DEBUG -- :   [1m[36mUser Create (148.8ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_ctrl__', NULL, '__tmp_ctrl__@example.com', '$2a$12$ZuE1Ors/IFSd0byWxtsnyuvAm5zolg96lxuSI738EywpQmX3HR6ze', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:30:05.560949', '2026-09-14 07:30:05.560949', TRUE, '[]')[0m
+D, [2026-09-14T04:30:05.861408 #48803] DEBUG -- :   [1m[36mUserProfile Exists? (148.4ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 26 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:06.010531 #48803] DEBUG -- :   [1m[36mUserProfile Create (148.0ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (26, 3, '2026-09-14 07:30:05.861831', '2026-09-14 07:30:05.861831')[0m
+D, [2026-09-14T04:30:06.160158 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.6ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:30:06.924586 #48803] DEBUG -- :   [1m[36mTRANSACTION (149.0ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:07.073640 #48803] DEBUG -- :   [1m[36mClient Exists? (298.1ms)[0m  [1m[34mSELECT 1 AS one FROM `clients` WHERE `clients`.`registration` = '25.405.327/0001-74' LIMIT 1[0m
+D, [2026-09-14T04:30:07.224219 #48803] DEBUG -- :   [1m[36mClient Create (148.6ms)[0m  [1m[32mINSERT INTO `clients` (`responsible_name`, `business_name`, `registration`, `state_registration`, `municipal_registration`, `street`, `neighbourhood`, `number`, `city`, `state`, `zip`, `email`, `phone`, `created_at`, `updated_at`) VALUES ('__tmp_ctrl_client__', NULL, '25.405.327/0001-74', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:30:07.074226', '2026-09-14 07:30:07.074226')[0m
+D, [2026-09-14T04:30:07.372822 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.1ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:30:08.744995 #48803] DEBUG -- :   [1m[36mTRANSACTION (147.9ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:08.893357 #48803] DEBUG -- :   [1m[36mB2bOrder Create (296.4ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (0, 1, 5, NULL, 26, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:30:08.596023', '2026-09-14 07:30:08.596023')[0m
+D, [2026-09-14T04:30:09.046044 #48803] DEBUG -- :   [1m[36mB2bOrderItem Create (149.4ms)[0m  [1m[32mINSERT INTO `b2b_order_items` (`b2b_order_id`, `sku`, `name`, `quantity`, `price`, `created_at`, `updated_at`) VALUES (4, 'SKU1', 'P', 1, 1.0, '2026-09-14 07:30:08.894044', '2026-09-14 07:30:08.894044')[0m
+D, [2026-09-14T04:30:09.196444 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.5ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:30:09.368901 #48803] DEBUG -- :   [1m[36mTRANSACTION (158.5ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:09.524891 #48803] DEBUG -- :   [1m[36mB2bOrderItem Load (314.9ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 4[0m
+D, [2026-09-14T04:30:09.675533 #48803] DEBUG -- :   [1m[36mB2bOrderItem Destroy (148.3ms)[0m  [1m[31mDELETE FROM `b2b_order_items` WHERE `b2b_order_items`.`id` = 3[0m
+D, [2026-09-14T04:30:09.825222 #48803] DEBUG -- :   [1m[36mB2bOrder Destroy (148.2ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 4[0m
+D, [2026-09-14T04:30:09.973738 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.1ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:30:10.123035 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.2ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:10.271760 #48803] DEBUG -- :   [1m[36mClient Destroy (148.2ms)[0m  [1m[31mDELETE FROM `clients` WHERE `clients`.`id` = 5[0m
+D, [2026-09-14T04:30:10.420666 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.2ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:30:10.573314 #48803] DEBUG -- :   [1m[36mTRANSACTION (147.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:10.721780 #48803] DEBUG -- :   [1m[36mUserProfile Load (296.2ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 26[0m
+D, [2026-09-14T04:30:10.871796 #48803] DEBUG -- :   [1m[36mUserProfile Destroy (148.4ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 31[0m
+D, [2026-09-14T04:30:11.331331 #48803] DEBUG -- :   [1m[36mMarketingTask Update All (149.5ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 26[0m
+D, [2026-09-14T04:30:11.788345 #48803] DEBUG -- :   [1m[36mCampaignUser Load (149.1ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 26[0m
+D, [2026-09-14T04:30:12.242965 #48803] DEBUG -- :   [1m[36mMarketingCampaign Update All (149.2ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 26[0m
+D, [2026-09-14T04:30:12.393792 #48803] DEBUG -- :   [1m[36mUser Destroy (148.9ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 26[0m
+D, [2026-09-14T04:30:12.543202 #48803] DEBUG -- :   [1m[36mTRANSACTION (148.4ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T04:30:49.262767 #49621]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:30:57.402412 #49621] DEBUG -- :   [1m[36mTRANSACTION (158.3ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:30:58.059297 #49621] DEBUG -- :   [1m[36mProfile Load (162.7ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:58.404451 #49621] DEBUG -- :   [1m[36mUser Exists? (162.3ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_ctrl__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T04:30:58.565369 #49621] DEBUG -- :   [1m[36mUserProfile Exists? (158.9ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:58.726773 #49621] DEBUG -- :   [1m[36mUser Create (156.5ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_ctrl__', NULL, '__tmp_ctrl__@example.com', '$2a$12$sc98RE9Wr3TAZaBf8yTIAuLwiz4Xl9qfoDyRjtrF9KIDwTZ2XOZDi', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:30:58.567341', '2026-09-14 07:30:58.567341', TRUE, '[]')[0m
+D, [2026-09-14T04:30:58.888105 #49621] DEBUG -- :   [1m[36mUserProfile Exists? (159.7ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 27 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:30:59.049379 #49621] DEBUG -- :   [1m[36mUserProfile Create (159.6ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (27, 3, '2026-09-14 07:30:58.888793', '2026-09-14 07:30:58.888793')[0m
+D, [2026-09-14T04:30:59.210791 #49621] DEBUG -- :   [1m[36mTRANSACTION (160.7ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:31:00.028502 #49621] DEBUG -- :   [1m[36mTRANSACTION (157.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:31:00.184712 #49621] DEBUG -- :   [1m[36mClient Exists? (313.8ms)[0m  [1m[34mSELECT 1 AS one FROM `clients` WHERE `clients`.`registration` = '25.405.327/0001-74' LIMIT 1[0m
+D, [2026-09-14T04:31:00.346229 #49621] DEBUG -- :   [1m[36mClient Create (159.3ms)[0m  [1m[32mINSERT INTO `clients` (`responsible_name`, `business_name`, `registration`, `state_registration`, `municipal_registration`, `street`, `neighbourhood`, `number`, `city`, `state`, `zip`, `email`, `phone`, `created_at`, `updated_at`) VALUES ('__tmp_ctrl_client__', NULL, '25.405.327/0001-74', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:31:00.185076', '2026-09-14 07:31:00.185076')[0m
+D, [2026-09-14T04:31:00.502245 #49621] DEBUG -- :   [1m[36mTRANSACTION (155.3ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:31:01.999054 #49621] DEBUG -- :   [1m[36mTRANSACTION (158.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:31:02.160170 #49621] DEBUG -- :   [1m[36mB2bOrder Create (319.9ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (0, 1, 6, NULL, 27, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:31:01.839170', '2026-09-14 07:31:01.839170')[0m
+D, [2026-09-14T04:31:02.325024 #49621] DEBUG -- :   [1m[36mB2bOrderItem Create (163.6ms)[0m  [1m[32mINSERT INTO `b2b_order_items` (`b2b_order_id`, `sku`, `name`, `quantity`, `price`, `created_at`, `updated_at`) VALUES (5, 'SKU1', 'P', 1, 1.0, '2026-09-14 07:31:02.160789', '2026-09-14 07:31:02.160789')[0m
+D, [2026-09-14T04:31:02.487956 #49621] DEBUG -- :   [1m[36mTRANSACTION (162.4ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:31:02.649171 #49621] DEBUG -- :   [1m[36mTRANSACTION (158.5ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:31:02.810664 #49621] DEBUG -- :   [1m[36mB2bOrderItem Load (320.0ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 5[0m
+D, [2026-09-14T04:31:02.975783 #49621] DEBUG -- :   [1m[36mB2bOrderItem Destroy (163.4ms)[0m  [1m[31mDELETE FROM `b2b_order_items` WHERE `b2b_order_items`.`id` = 4[0m
+D, [2026-09-14T04:31:03.133369 #49621] DEBUG -- :   [1m[36mB2bOrder Destroy (156.2ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 5[0m
+D, [2026-09-14T04:31:03.295058 #49621] DEBUG -- :   [1m[36mTRANSACTION (161.1ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:31:03.456454 #49621] DEBUG -- :   [1m[36mTRANSACTION (160.2ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:31:03.612159 #49621] DEBUG -- :   [1m[36mClient Destroy (155.2ms)[0m  [1m[31mDELETE FROM `clients` WHERE `clients`.`id` = 6[0m
+D, [2026-09-14T04:31:03.768180 #49621] DEBUG -- :   [1m[36mTRANSACTION (155.5ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:31:03.929419 #49621] DEBUG -- :   [1m[36mTRANSACTION (159.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:31:04.084536 #49621] DEBUG -- :   [1m[36mUserProfile Load (314.7ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 27[0m
+D, [2026-09-14T04:31:04.252465 #49621] DEBUG -- :   [1m[36mUserProfile Destroy (165.9ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 32[0m
+D, [2026-09-14T04:31:04.755449 #49621] DEBUG -- :   [1m[36mMarketingTask Update All (160.1ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 27[0m
+D, [2026-09-14T04:31:05.253196 #49621] DEBUG -- :   [1m[36mCampaignUser Load (165.7ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 27[0m
+D, [2026-09-14T04:31:05.751558 #49621] DEBUG -- :   [1m[36mMarketingCampaign Update All (159.4ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 27[0m
+D, [2026-09-14T04:31:05.913254 #49621] DEBUG -- :   [1m[36mUser Destroy (160.1ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 27[0m
+D, [2026-09-14T04:31:06.074898 #49621] DEBUG -- :   [1m[36mTRANSACTION (161.1ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T04:31:15.651844 #49956]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:31:39.092039 #50378]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:31:47.057924 #50430]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:32:57.823965 #51457]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:33:37.712567 #52151]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:36:24.966430 #55740]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:37:24.030661 #56377]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:40:04.081711 #58621]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:42:44.743910 #60722]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:43:55.843123 #60722] DEBUG -- :   [1m[36mUser Load (174.1ms)[0m  [1m[34mSELECT `users`.* FROM `users` INNER JOIN `user_profiles` ON `user_profiles`.`user_id` = `users`.`id` INNER JOIN `profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `profiles`.`id` = 1 LIMIT 1[0m
+D, [2026-09-14T04:43:56.406227 #60722] DEBUG -- :   [1m[36mProfile Pluck (174.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 1[0m
+D, [2026-09-14T04:43:56.408184 #60722] DEBUG -- :   [1m[36mCACHE Profile Pluck (0.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 1[0m
+I, [2026-09-14T04:44:07.577048 #61809]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:44:09.497975 #61830]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+I, [2026-09-14T04:44:19.177902 #61983]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:44:20.974073 #61983] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (166.7ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+I, [2026-09-14T04:44:28.208514 #62133]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:44:29.779618 #62133] DEBUG -- :   [1m[36mActiveRecord::SchemaMigration Load (159.8ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+I, [2026-09-14T04:45:21.231022 #62829]  INFO -- : Redis conectado com sucesso: redis://:h8y2g85vs2ma841b3brv0egp09qbdckmsxt6pe6v44xnjb5f9b0p@graceful-toucan-55f3ff2065.redisgreen.net:11042
+D, [2026-09-14T04:45:25.087993 #62829] DEBUG -- :   [1m[36mTRANSACTION (177.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:25.816165 #62829] DEBUG -- :   [1m[36mProfile Load (174.7ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` WHERE `profiles`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:45:26.183688 #62829] DEBUG -- :   [1m[36mUser Exists? (177.0ms)[0m  [1m[34mSELECT 1 AS one FROM `users` WHERE `users`.`email` = CAST('__tmp_e2e__@example.com' AS BINARY) LIMIT 1[0m
+D, [2026-09-14T04:45:26.361527 #62829] DEBUG -- :   [1m[36mUserProfile Exists? (174.6ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` IS NULL AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:45:26.539348 #62829] DEBUG -- :   [1m[36mUser Create (174.2ms)[0m  [1m[32mINSERT INTO `users` (`name`, `phone`, `email`, `encrypted_password`, `reset_password_token`, `reset_password_sent_at`, `remember_created_at`, `sign_in_count`, `current_sign_in_at`, `last_sign_in_at`, `current_sign_in_ip`, `last_sign_in_ip`, `confirmation_token`, `unlock_token`, `confirmed_at`, `confirmation_sent_at`, `unconfirmed_email`, `created_at`, `updated_at`, `active`, `allowed_locations`) VALUES ('__tmp_e2e__', NULL, '__tmp_e2e__@example.com', '$2a$12$COQl7TYhXAV9yOYzeiEcSOwGNDpOmsrnKP0nZdYhtz8Rxd5WyxR3C', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:45:26.363065', '2026-09-14 07:45:26.363065', TRUE, '[]')[0m
+D, [2026-09-14T04:45:26.717603 #62829] DEBUG -- :   [1m[36mUserProfile Exists? (176.6ms)[0m  [1m[34mSELECT 1 AS one FROM `user_profiles` WHERE `user_profiles`.`user_id` = 28 AND `user_profiles`.`profile_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:45:26.895805 #62829] DEBUG -- :   [1m[36mUserProfile Create (176.2ms)[0m  [1m[32mINSERT INTO `user_profiles` (`user_id`, `profile_id`, `created_at`, `updated_at`) VALUES (28, 3, '2026-09-14 07:45:26.718381', '2026-09-14 07:45:26.718381')[0m
+D, [2026-09-14T04:45:27.073562 #62829] DEBUG -- :   [1m[36mTRANSACTION (176.3ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:45:27.964317 #62829] DEBUG -- :   [1m[36mTRANSACTION (178.3ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:28.141883 #62829] DEBUG -- :   [1m[36mTransferLocation Create (355.9ms)[0m  [1m[32mINSERT INTO `transfer_locations` (`name`, `registration`, `state_registration`, `street`, `number`, `complement`, `neighbourhood`, `city`, `state`, `zip`, `active`, `created_at`, `updated_at`) VALUES ('__tmp_e2e_loc__', '25.405.327/0001-74', NULL, 'Rua', '1', NULL, 'B', 'BH', 'MG', '30000-000', TRUE, '2026-09-14 07:45:27.784736', '2026-09-14 07:45:27.784736')[0m
+D, [2026-09-14T04:45:28.314291 #62829] DEBUG -- :   [1m[36mTRANSACTION (171.8ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:45:29.922922 #62829] DEBUG -- :   [1m[36mTRANSACTION (176.7ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:30.100773 #62829] DEBUG -- :   [1m[36mB2bOrder Create (354.7ms)[0m  [1m[32mINSERT INTO `b2b_orders` (`kind`, `status`, `client_id`, `transfer_location_id`, `user_id`, `carrier_name`, `carrier_shipping_method`, `freight_paid_by`, `freight_value`, `tiny_reference_id`, `tiny_reference_number`, `error_message`, `notes`, `created_at`, `updated_at`) VALUES (1, 1, NULL, 3, 28, 'Jamef', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-09-14 07:45:29.745113', '2026-09-14 07:45:29.745113')[0m
+D, [2026-09-14T04:45:30.278866 #62829] DEBUG -- :   [1m[36mB2bOrderItem Create (176.7ms)[0m  [1m[32mINSERT INTO `b2b_order_items` (`b2b_order_id`, `sku`, `name`, `quantity`, `price`, `created_at`, `updated_at`) VALUES (6, 'SKUX', 'Produto X', 3, 12.5, '2026-09-14 07:45:30.101426', '2026-09-14 07:45:30.101426')[0m
+D, [2026-09-14T04:45:30.457048 #62829] DEBUG -- :   [1m[36mTRANSACTION (177.5ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T04:45:30.458654 #62829]  INFO -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00] Performing TransmitB2bOrderJob (Job ID: f2d0e950-bce5-453e-89c8-ed0bf6aa8f00) from Sidekiq(default) with arguments: 6
+D, [2026-09-14T04:45:30.813579 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mB2bOrder Load (353.4ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`id` = 6 LIMIT 1[0m
+D, [2026-09-14T04:45:30.993294 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mTRANSACTION (177.3ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:31.169886 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mUser Load (354.0ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 28 LIMIT 1[0m
+D, [2026-09-14T04:45:31.364302 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mTransferLocation Load (188.9ms)[0m  [1m[34mSELECT `transfer_locations`.* FROM `transfer_locations` WHERE `transfer_locations`.`id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:45:31.542147 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mB2bOrderItem Exists? (176.1ms)[0m  [1m[34mSELECT 1 AS one FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 6 LIMIT 1[0m
+D, [2026-09-14T04:45:31.719320 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mB2bOrder Update (174.0ms)[0m  [1m[33mUPDATE `b2b_orders` SET `b2b_orders`.`status` = 2, `b2b_orders`.`tiny_reference_id` = '777', `b2b_orders`.`tiny_reference_number` = '777', `b2b_orders`.`updated_at` = '2026-09-14 07:45:31.542744' WHERE `b2b_orders`.`id` = 6[0m
+D, [2026-09-14T04:45:31.894852 #62829] DEBUG -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00]   [1m[36mTRANSACTION (174.9ms)[0m  [1m[35mCOMMIT[0m
+I, [2026-09-14T04:45:31.895935 #62829]  INFO -- : [ActiveJob] [TransmitB2bOrderJob] [f2d0e950-bce5-453e-89c8-ed0bf6aa8f00] Performed TransmitB2bOrderJob (Job ID: f2d0e950-bce5-453e-89c8-ed0bf6aa8f00) from Sidekiq(default) in 1437.47ms
+D, [2026-09-14T04:45:32.071176 #62829] DEBUG -- :   [1m[36mB2bOrder Load (173.8ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`id` = 6 LIMIT 1[0m
+D, [2026-09-14T04:45:32.250819 #62829] DEBUG -- :   [1m[36mTRANSACTION (177.4ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:32.428277 #62829] DEBUG -- :   [1m[36mB2bOrderItem Load (355.2ms)[0m  [1m[34mSELECT `b2b_order_items`.* FROM `b2b_order_items` WHERE `b2b_order_items`.`b2b_order_id` = 6[0m
+D, [2026-09-14T04:45:32.605439 #62829] DEBUG -- :   [1m[36mB2bOrderItem Destroy (174.6ms)[0m  [1m[31mDELETE FROM `b2b_order_items` WHERE `b2b_order_items`.`id` = 5[0m
+D, [2026-09-14T04:45:32.786703 #62829] DEBUG -- :   [1m[36mB2bOrder Destroy (178.3ms)[0m  [1m[31mDELETE FROM `b2b_orders` WHERE `b2b_orders`.`id` = 6[0m
+D, [2026-09-14T04:45:32.960786 #62829] DEBUG -- :   [1m[36mTRANSACTION (173.4ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:45:33.154943 #62829] DEBUG -- :   [1m[36mTRANSACTION (184.8ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:33.342863 #62829] DEBUG -- :   [1m[36mB2bOrder Exists? (372.8ms)[0m  [1m[34mSELECT 1 AS one FROM `b2b_orders` WHERE `b2b_orders`.`transfer_location_id` = 3 LIMIT 1[0m
+D, [2026-09-14T04:45:33.517411 #62829] DEBUG -- :   [1m[36mTransferLocation Destroy (173.7ms)[0m  [1m[31mDELETE FROM `transfer_locations` WHERE `transfer_locations`.`id` = 3[0m
+D, [2026-09-14T04:45:33.708970 #62829] DEBUG -- :   [1m[36mTRANSACTION (190.9ms)[0m  [1m[35mCOMMIT[0m
+D, [2026-09-14T04:45:33.885258 #62829] DEBUG -- :   [1m[36mTRANSACTION (173.6ms)[0m  [1m[35mBEGIN[0m
+D, [2026-09-14T04:45:34.061290 #62829] DEBUG -- :   [1m[36mUserProfile Load (349.8ms)[0m  [1m[34mSELECT `user_profiles`.* FROM `user_profiles` WHERE `user_profiles`.`user_id` = 28[0m
+D, [2026-09-14T04:45:34.237097 #62829] DEBUG -- :   [1m[36mUserProfile Destroy (173.7ms)[0m  [1m[31mDELETE FROM `user_profiles` WHERE `user_profiles`.`id` = 33[0m
+D, [2026-09-14T04:45:34.772585 #62829] DEBUG -- :   [1m[36mMarketingTask Update All (175.9ms)[0m  [1m[33mUPDATE `marketing_tasks` SET `marketing_tasks`.`user_id` = NULL WHERE `marketing_tasks`.`user_id` = 28[0m
+D, [2026-09-14T04:45:35.306542 #62829] DEBUG -- :   [1m[36mCampaignUser Load (175.5ms)[0m  [1m[34mSELECT `campaign_users`.* FROM `campaign_users` WHERE `campaign_users`.`user_id` = 28[0m
+D, [2026-09-14T04:45:35.844302 #62829] DEBUG -- :   [1m[36mMarketingCampaign Update All (177.0ms)[0m  [1m[33mUPDATE `marketing_campaigns` SET `marketing_campaigns`.`created_by_id` = NULL WHERE `marketing_campaigns`.`created_by_id` = 28[0m
+D, [2026-09-14T04:45:36.020292 #62829] DEBUG -- :   [1m[36mUser Destroy (174.6ms)[0m  [1m[31mDELETE FROM `users` WHERE `users`.`id` = 28[0m
+D, [2026-09-14T04:45:36.194286 #62829] DEBUG -- :   [1m[36mTRANSACTION (173.3ms)[0m  [1m[35mCOMMIT[0m

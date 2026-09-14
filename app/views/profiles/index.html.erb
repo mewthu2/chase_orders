@@ -1,0 +1,93 @@
+<% content_for :title, "Perfis e Permissões" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title">
+        <i class="fas fa-user-shield me-2"></i>Perfis e Permissões
+      </h1>
+      <p class="page-subtitle">Controle quais telas cada perfil pode acessar</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge">
+        <i class="fas fa-list me-1"></i><%= @profiles.size %> perfil(is)
+      </span>
+      <%= link_to new_profile_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Novo Perfil
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5 class="table-card-title">
+        <i class="fas fa-list me-2"></i>Lista de Perfis
+      </h5>
+    </div>
+
+    <% if @profiles.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Usuários</th>
+              <th>Telas Permitidas</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @profiles.each do |profile| %>
+              <tr>
+                <td class="text-main"><%= profile.name %></td>
+                <td class="text-muted-custom"><%= profile.description.presence || '-' %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= profile.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+                    <%= profile.active? ? 'Ativo' : 'Inativo' %>
+                  </span>
+                </td>
+                <td class="text-center"><%= profile.users_count %></td>
+                <td>
+                  <% if profile.screen_keys.any? %>
+                    <div class="location-chip-group">
+                      <% profile.screen_keys.first(3).each do |key| %>
+                        <span class="location-chip"><%= Screen.label(key) %></span>
+                      <% end %>
+                      <% if profile.screen_keys.count > 3 %>
+                        <span class="location-chip location-chip--more">+<%= profile.screen_keys.count - 3 %></span>
+                      <% end %>
+                    </div>
+                  <% else %>
+                    <span class="text-muted-custom">Nenhuma</span>
+                  <% end %>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_profile_path(profile), class: "action-btn action-btn--edit" do %>
+                      <i class="fas fa-pencil-alt"></i>
+                    <% end %>
+                    <%= link_to profile, method: :delete,
+                                class: "action-btn action-btn--danger",
+                                data: { confirm: "Tem certeza que deseja excluir este perfil?" } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-user-shield fa-3x mb-3 d-block"></i>
+        <h5>Nenhum perfil encontrado</h5>
+        <%= link_to new_profile_path, class: "btn-export" do %>
+          <i class="fas fa-plus me-1"></i>Novo Perfil
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

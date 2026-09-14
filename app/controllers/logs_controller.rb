@@ -1,6 +1,6 @@
 class LogsController < ApplicationController
   before_action :authenticate_user!
-  before_action :admin_only!
+  guard_screen :logs
 
   def index
     @logs = filter_logs
@@ -80,8 +80,4 @@ class LogsController < ApplicationController
     logs
   end
 
-  def admin_only!
-    return if current_user&.admin?
-    redirect_to root_path, alert: 'Acesso negado. Apenas administradores podem acessar esta funcionalidade.'
-  end
 end
