@@ -15,8 +15,12 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
   end
 
   def send_all_xml
+    invoiced_ids = Attempt.where(kinds: :emission_invoice, status: :success)
+                          .pluck(:order_correios_id)
+
     @send_xml = Attempt.where(kinds: :create_correios_order, status: :success)
                        .where.not(order_correios_id: nil)
+                       .where(order_correios_id: invoiced_ids)
                        .where(not_yet_sent_sql, kind: Attempt.kinds[:send_xml], status: Attempt.statuses[:success])
                        .distinct(:order_correios_id)
 
@@ -26,8 +30,12 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
   end
 
   def insist_on_send_xml
+    invoiced_ids = Attempt.where(kinds: :emission_invoice, status: :success)
+                          .pluck(:order_correios_id)
+
     @send_xml = Attempt.where(kinds: :create_correios_order, status: :success)
                        .where.not(order_correios_id: nil)
+                       .where(order_correios_id: invoiced_ids)
                        .where(not_yet_sent_sql, kind: Attempt.kinds[:get_tracking], status: Attempt.statuses[:success])
                        .distinct(:order_correios_id)
 

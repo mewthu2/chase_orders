@@ -75,9 +75,13 @@ class DashboardController < ApplicationController
     processed_ids = Attempt.where(kinds: :send_xml, status: 2, created_at: 30.days.ago..Time.current)
                            .pluck(:order_correios_id)
 
+    invoiced_ids = Attempt.where(kinds: :emission_invoice, status: :success)
+                          .pluck(:order_correios_id)
+
     @send_xml = Attempt.where(kinds: :create_correios_order, status: 2, created_at: 30.days.ago..Time.current)
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: processed_ids)
+                       .where(order_correios_id: invoiced_ids)
 
     pending_order_ids = @send_xml.map(&:tiny_order_id).compact
 
@@ -120,9 +124,13 @@ class DashboardController < ApplicationController
     processed_ids = Attempt.where(kinds: :send_xml_tiny2, status: 2, created_at: 30.days.ago..Time.current)
                            .pluck(:order_correios_id)
 
+    invoiced_ids = Attempt.where(kinds: :emission_invoice_tiny2, status: :success)
+                          .pluck(:order_correios_id)
+
     @send_xml = Attempt.where(kinds: :create_correios_order_tiny2, status: 2, created_at: 30.days.ago..Time.current)
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: processed_ids)
+                       .where(order_correios_id: invoiced_ids)
 
     @filter_transportadora = params[:transportadora]
     @send_xml = @send_xml.where(is_transportadora: @filter_transportadora == 'outra') if @filter_transportadora.present?

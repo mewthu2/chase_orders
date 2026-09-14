@@ -365,13 +365,13 @@
 
       <% if within_schedule? %>
         setInterval(function() {
-          if (document.visibilityState === 'visible') {
+          if (document.visibilityState === 'visible' && !runNowIsBusy()) {
             location.reload();
           }
         }, 30000);
       <% else %>
         setInterval(function() {
-          if (document.visibilityState === 'visible') {
+          if (document.visibilityState === 'visible' && !runNowIsBusy()) {
             location.reload();
           }
         }, 300000);

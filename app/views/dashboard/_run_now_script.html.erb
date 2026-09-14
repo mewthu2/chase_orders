@@ -1,6 +1,11 @@
 <script>
   var runNowShouldReloadOnClose = false;
 
+  function runNowIsBusy() {
+    var modalEl = document.getElementById('runNowModal');
+    return !!(modalEl && modalEl.classList.contains('show'));
+  }
+
   function runQueueItemNow(url, attemptId, label) {
     var modalEl = document.getElementById('runNowModal');
     var modal = bootstrap.Modal.getOrCreateInstance(modalEl);

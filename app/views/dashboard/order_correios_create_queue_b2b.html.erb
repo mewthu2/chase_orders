@@ -294,7 +294,7 @@
       });
 
       setInterval(function() {
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'visible' && !runNowIsBusy()) {
           location.reload();
         }
       }, 60000);
