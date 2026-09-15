@@ -60,6 +60,52 @@ class AttemptsController < ApplicationController
     end
   end
 
+  def bairro_lookup
+    attempt = Attempt.find(params[:attempt_id])
+    token = bairro_fix_token(attempt)
+    pedido = Tiny::Orders.obtain_order(token, attempt.tiny_order_id)[:pedido]
+
+    unless pedido.present? && pedido[:cliente].present?
+      return render json: { success: false, error: 'Pedido não encontrado na Tiny' }, status: :unprocessable_entity
+    end
+
+    cliente = pedido[:cliente]
+    endereco_entrega = pedido[:endereco_entrega]
+    fonte = endereco_entrega.presence || cliente
+
+    render json: {
+      success: true,
+      kinds: attempt.kinds,
+      tiny_order_id: attempt.tiny_order_id,
+      cpf_cnpj: cliente[:cpf_cnpj].to_s.gsub(/\D/, ''),
+      endereco: fonte[:endereco],
+      numero: fonte[:numero],
+      complemento: fonte[:complemento],
+      bairro: fonte[:bairro],
+      cep: fonte[:cep],
+      cidade: fonte[:cidade],
+      uf: fonte[:uf],
+      endereco_entrega_presente: endereco_entrega.present?
+    }
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
+  def fix_bairro
+    attempt = Attempt.find(params[:attempt_id])
+    token = bairro_fix_token(attempt)
+    cpf_cnpj = params[:cpf_cnpj].to_s
+    address = params.permit(:endereco, :numero, :complemento, :bairro, :cep, :cidade, :uf).to_h.symbolize_keys
+
+    if cpf_cnpj.blank? || address[:bairro].blank?
+      return render json: { success: false, error: 'CPF/CNPJ e bairro são obrigatórios' }, status: :unprocessable_entity
+    end
+
+    render json: Tiny::Contacts.update_address(cpf_cnpj, address, token)
+  rescue StandardError => e
+    render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
   def download_xml
     attempt = Attempt.find(params[:id])
 
@@ -106,8 +152,12 @@ class AttemptsController < ApplicationController
 
   private
 
+  def bairro_fix_token(attempt)
+    attempt.kinds == 'create_correios_order_tiny2' ? ENV.fetch('TOKEN_TINY2_PRODUCTION') : ENV.fetch('TOKEN_TINY3_PRODUCTION')
+  end
+
   def load_form_references; end
-  
+
   def params_per_page(per_page_param)
     per_page = (per_page_param || 20).to_i
     [10, 20, 50, 100].include?(per_page) ? per_page : 20

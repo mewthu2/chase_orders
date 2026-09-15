@@ -47,8 +47,6 @@ module Correios::Orders
                             ['064']
                           end
 
-    fone = fone[0, 2] + fone[3..] if fone.length == 11 && fone[2] == '9'
-
     body = {
       codigoArmazem: correios_cod_armazem,
       numero: params[:invoice],
@@ -64,13 +62,13 @@ module Correios::Orders
         nome: params[:nome],
         logradouro: params[:endereco],
         numeroEndereco: params[:numero],
-        complemento: params[:complemento],
+        complemento: params[:complemento].to_s.first(60),
         bairro: params[:bairro],
         cep: params[:cep],
         cidade: params[:cidade],
         uf: params[:uf],
         ddd: fone.to_s.gsub(/\D/, '')[0, 2],
-        telefone: fone,
+        telefone: fone.to_s.gsub(/\D/, '')[2..],
         email: params[:email],
         cpf: params[:cpf_cnpj].length <= 11 ? params[:cpf_cnpj] : '',
         cnpj: params[:cpf_cnpj].length > 11 ? params[:cpf_cnpj].gsub('/', '') : ''

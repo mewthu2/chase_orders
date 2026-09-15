@@ -299,6 +299,15 @@
                     <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.error %>" title="Copiar erro completo">
                       <i class="fas fa-copy"></i>
                     </button>
+
+                    <% if attempt.kinds.in?(%w[create_correios_order create_correios_order_tiny2]) && attempt.error.to_s.downcase.include?('bairro') %>
+                      <br>
+                      <button type="button" class="btn btn-sm btn-outline-warning mt-1"
+                              onclick="openBairroFixModal(<%= attempt.id %>, '<%= attempt.tiny_order_id %>', <%= attempt.kinds == 'create_correios_order_tiny2' %>)"
+                              title="Corrigir bairro">
+                        <i class="fas fa-map-marker-alt me-1"></i>Corrigir Bairro
+                      </button>
+                    <% end %>
                   <% else %>
                     <span class="text-muted-custom">-</span>
                   <% end %>
@@ -360,6 +369,93 @@
         <p>Não há tentativas de integração para os filtros aplicados.</p>
       </div>
     <% end %>
+  </div>
+
+  <%# ===== MODAL: CORRIGIR BAIRRO ===== %>
+  <div class="modal fade" id="bairroFixModal" tabindex="-1" aria-labelledby="bairroFixModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-white">
+        <div class="modal-header">
+          <h5 class="modal-title" id="bairroFixModalLabel">Corrigir Bairro</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="bairroFixLoading" class="text-center py-3">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2 mb-0" id="bairroFixLoadingText">Buscando dados do pedido na Tiny...</p>
+          </div>
+
+          <div id="bairroFixContent" style="display:none">
+            <div id="bairroFixWarning" class="alert alert-warning" style="display:none">
+              <i class="fas fa-exclamation-triangle me-1"></i>
+              Este pedido tem um endereço de entrega próprio na Tiny, diferente do cadastro do cliente.
+              A correção abaixo atualiza apenas o <strong>cadastro do cliente</strong> — pode não refletir
+              nesse pedido específico (limitação da API da Tiny).
+            </div>
+
+            <p class="mb-3">
+              <strong>Pedido Tiny:</strong> <span id="bairroFixTinyOrderId"></span>
+              <span id="bairroFixChannelBadge" class="badge ms-1"></span>
+            </p>
+
+            <div class="mb-3">
+              <label for="bairroFixCep" class="form-label">CEP</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="bairroFixCep" placeholder="00000-000">
+                <button class="btn btn-outline-info" type="button" id="bairroFixSearchBtn">
+                  <i class="fas fa-search me-1"></i>Buscar CEP
+                </button>
+              </div>
+              <small class="text-muted-custom" id="bairroFixCepAddress" style="display:none"></small>
+            </div>
+
+            <div class="row g-2 mb-2">
+              <div class="col-8">
+                <label for="bairroFixEndereco" class="form-label">Endereço</label>
+                <input type="text" class="form-control" id="bairroFixEndereco" placeholder="Rua/Avenida">
+              </div>
+              <div class="col-4">
+                <label for="bairroFixNumero" class="form-label">Número</label>
+                <input type="text" class="form-control" id="bairroFixNumero">
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <label for="bairroFixComplemento" class="form-label">Complemento</label>
+              <input type="text" class="form-control" id="bairroFixComplemento">
+            </div>
+
+            <div class="mb-2">
+              <label for="bairroFixBairro" class="form-label">Bairro <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="bairroFixBairro" placeholder="Digite ou confirme o bairro">
+              <small class="text-muted-custom">Alguns CEPs (geralmente de cidade toda) não têm bairro no ViaCEP — nesse caso digite manualmente.</small>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-8">
+                <label for="bairroFixCidade" class="form-label">Cidade</label>
+                <input type="text" class="form-control" id="bairroFixCidade">
+              </div>
+              <div class="col-4">
+                <label for="bairroFixUf" class="form-label">UF</label>
+                <input type="text" class="form-control" id="bairroFixUf" maxlength="2">
+              </div>
+            </div>
+
+            <div id="bairroFixResult" style="display:none"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-primary" id="bairroFixConfirmBtn" style="display:none">
+            <i class="fas fa-check me-1"></i>Confirmar Correção
+          </button>
+          <button type="button" class="btn btn-success" id="bairroFixRetryBtn" style="display:none">
+            <i class="fas fa-redo me-1"></i>Tentar Criar Pedido Novamente
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -513,6 +609,221 @@
         }
       }
     }
+
+    var bairroFixState = {};
+
+    function openBairroFixModal(attemptId, tinyOrderId, isB2b) {
+      var modalEl = document.getElementById('bairroFixModal');
+      var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      var channelLabel = isB2b ? 'Tiny 2 (B2B)' : 'Tiny 3 (B2C)';
+
+      bairroFixState = { attemptId: attemptId, tinyOrderId: tinyOrderId, kinds: null, cpfCnpj: null };
+
+      document.getElementById('bairroFixLoadingText').textContent = 'Buscando dados do pedido no ' + channelLabel + '...';
+
+      var channelBadge = document.getElementById('bairroFixChannelBadge');
+      channelBadge.textContent = channelLabel;
+      channelBadge.className = 'badge ms-1 ' + (isB2b ? 'bg-info text-dark' : 'bg-primary');
+
+      document.getElementById('bairroFixLoading').style.display = 'block';
+      document.getElementById('bairroFixContent').style.display = 'none';
+      document.getElementById('bairroFixWarning').style.display = 'none';
+      document.getElementById('bairroFixCepAddress').style.display = 'none';
+      document.getElementById('bairroFixResult').style.display = 'none';
+      document.getElementById('bairroFixResult').innerHTML = '';
+      ['bairroFixCep', 'bairroFixEndereco', 'bairroFixNumero', 'bairroFixComplemento',
+       'bairroFixBairro', 'bairroFixCidade', 'bairroFixUf'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('bairroFixConfirmBtn').style.display = 'none';
+      document.getElementById('bairroFixRetryBtn').style.display = 'none';
+      document.getElementById('bairroFixTinyOrderId').textContent = tinyOrderId;
+
+      modal.show();
+
+      fetch('<%= bairro_lookup_attempts_path %>?attempt_id=' + encodeURIComponent(attemptId), {
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          document.getElementById('bairroFixLoading').style.display = 'none';
+
+          if (!data.success) {
+            document.getElementById('bairroFixResult').style.display = 'block';
+            document.getElementById('bairroFixResult').innerHTML =
+              '<div class="alert alert-danger mb-0">' + (data.error || 'Erro ao buscar pedido na Tiny') + '</div>';
+            return;
+          }
+
+          bairroFixState.kinds = data.kinds;
+          bairroFixState.cpfCnpj = data.cpf_cnpj;
+
+          document.getElementById('bairroFixContent').style.display = 'block';
+          document.getElementById('bairroFixCep').value = data.cep || '';
+          document.getElementById('bairroFixEndereco').value = data.endereco || '';
+          document.getElementById('bairroFixNumero').value = data.numero || '';
+          document.getElementById('bairroFixComplemento').value = data.complemento || '';
+          document.getElementById('bairroFixBairro').value = data.bairro || '';
+          document.getElementById('bairroFixCidade').value = data.cidade || '';
+          document.getElementById('bairroFixUf').value = data.uf || '';
+          document.getElementById('bairroFixWarning').style.display = data.endereco_entrega_presente ? 'block' : 'none';
+          document.getElementById('bairroFixConfirmBtn').style.display = 'inline-block';
+        })
+        .catch(function(err) {
+          document.getElementById('bairroFixLoading').style.display = 'none';
+          document.getElementById('bairroFixResult').style.display = 'block';
+          document.getElementById('bairroFixResult').innerHTML =
+            '<div class="alert alert-danger mb-0">Falha de comunicação: ' + err.message + '</div>';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var searchCepBtn = document.getElementById('bairroFixSearchBtn');
+      if (searchCepBtn) {
+        searchCepBtn.addEventListener('click', function() {
+          var cep = document.getElementById('bairroFixCep').value.replace(/\D/g, '');
+          var addressEl = document.getElementById('bairroFixCepAddress');
+
+          if (cep.length !== 8) {
+            addressEl.style.display = 'block';
+            addressEl.textContent = 'CEP inválido.';
+            return;
+          }
+
+          searchCepBtn.disabled = true;
+          searchCepBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+          fetch('https://viacep.com.br/ws/' + cep + '/json/')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+              addressEl.style.display = 'block';
+
+              if (data.erro) {
+                addressEl.textContent = 'CEP não encontrado no ViaCEP.';
+                return;
+              }
+
+              if (data.logradouro) document.getElementById('bairroFixEndereco').value = data.logradouro;
+              if (data.localidade) document.getElementById('bairroFixCidade').value = data.localidade;
+              if (data.uf) document.getElementById('bairroFixUf').value = data.uf;
+
+              if (data.bairro) {
+                document.getElementById('bairroFixBairro').value = data.bairro;
+                addressEl.textContent = 'Endereço preenchido a partir do ViaCEP.';
+              } else {
+                addressEl.textContent = 'Este CEP não tem bairro cadastrado no ViaCEP (comum em CEPs gerais de cidade) — digite o bairro manualmente.';
+              }
+            })
+            .catch(function() {
+              addressEl.style.display = 'block';
+              addressEl.textContent = 'Falha ao consultar o ViaCEP.';
+            })
+            .finally(function() {
+              searchCepBtn.disabled = false;
+              searchCepBtn.innerHTML = '<i class="fas fa-search me-1"></i>Buscar CEP';
+            });
+        });
+      }
+
+      var confirmBtn = document.getElementById('bairroFixConfirmBtn');
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+          var bairro = document.getElementById('bairroFixBairro').value.trim();
+          var resultEl = document.getElementById('bairroFixResult');
+
+          if (!bairro) {
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<div class="alert alert-warning mb-0">Informe o bairro antes de confirmar.</div>';
+            return;
+          }
+
+          confirmBtn.disabled = true;
+          confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Corrigindo...';
+
+          fetch('<%= fix_bairro_attempts_path %>', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+              attempt_id: bairroFixState.attemptId,
+              cpf_cnpj: bairroFixState.cpfCnpj,
+              endereco: document.getElementById('bairroFixEndereco').value.trim(),
+              numero: document.getElementById('bairroFixNumero').value.trim(),
+              complemento: document.getElementById('bairroFixComplemento').value.trim(),
+              bairro: bairro,
+              cep: document.getElementById('bairroFixCep').value.trim(),
+              cidade: document.getElementById('bairroFixCidade').value.trim(),
+              uf: document.getElementById('bairroFixUf').value.trim()
+            })
+          })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+              resultEl.style.display = 'block';
+
+              if (data.success) {
+                resultEl.innerHTML = '<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-1"></i>Endereço corrigido na Tiny com sucesso!</div>';
+                confirmBtn.style.display = 'none';
+                document.getElementById('bairroFixRetryBtn').style.display = 'inline-block';
+              } else {
+                resultEl.innerHTML = '<div class="alert alert-danger mb-0">' + (data.error || 'Erro ao corrigir bairro') + '</div>';
+              }
+            })
+            .catch(function(err) {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML = '<div class="alert alert-danger mb-0">Falha de comunicação: ' + err.message + '</div>';
+            })
+            .finally(function() {
+              confirmBtn.disabled = false;
+              confirmBtn.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Correção';
+            });
+        });
+      }
+
+      var retryBtn = document.getElementById('bairroFixRetryBtn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', function() {
+          var resultEl = document.getElementById('bairroFixResult');
+          var retryUrl = bairroFixState.kinds === 'create_correios_order_tiny2'
+            ? '<%= run_order_correios_create_b2b_now_dashboard_index_path %>'
+            : '<%= run_order_correios_create_now_dashboard_index_path %>';
+
+          retryBtn.disabled = true;
+          retryBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Recriando...';
+
+          fetch(retryUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ attempt_id: bairroFixState.tinyOrderId })
+          })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+              resultEl.style.display = 'block';
+
+              if (data.success) {
+                resultEl.innerHTML += '<div class="alert alert-success mb-0 mt-2"><i class="fas fa-check-circle me-1"></i>Pedido criado no Correios com sucesso! Recarregando...</div>';
+                setTimeout(function() { location.reload(); }, 1500);
+              } else {
+                resultEl.innerHTML += '<div class="alert alert-danger mb-0 mt-2">Falha ao recriar: ' + (data.error || 'erro desconhecido') + '</div>';
+              }
+            })
+            .catch(function(err) {
+              resultEl.style.display = 'block';
+              resultEl.innerHTML += '<div class="alert alert-danger mb-0 mt-2">Falha de comunicação: ' + err.message + '</div>';
+            })
+            .finally(function() {
+              retryBtn.disabled = false;
+              retryBtn.innerHTML = '<i class="fas fa-redo me-1"></i>Tentar Criar Pedido Novamente';
+            });
+        });
+      }
+    });
 
     function showCopyFeedback(id, sucesso) {
       var botao = document.querySelector(`button[onclick="copiarConteudo(${id})"]`);

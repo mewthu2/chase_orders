@@ -142,6 +142,8 @@ Rails.application.routes.draw do
       get :reprocess
       get :verify_attempts
       get :download_xml
+      get :bairro_lookup
+      post :fix_bairro
     end
   end
 

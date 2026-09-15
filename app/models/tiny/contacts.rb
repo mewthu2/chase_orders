@@ -1,49 +1,32 @@
 module Tiny::Contacts
   module_function
 
-  def obtain_contact(token, contact_id)
-    response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_CONTATO'),
-                                       query: { token:,
-                                                formato: 'json',
-                                                id: contact_id }))
-    response.with_indifferent_access[:retorno]
-  end
+  ADDRESS_FIELDS = %i[endereco numero complemento bairro cep cidade uf].freeze
 
-  def search_contact(token, cpf_cnpj, search)
-    response = JSON.parse(HTTParty.get(ENV.fetch('PESQUISA_CONTATO'),
-                                       query: { token:,
-                                                formato: 'json',
-                                                cpf_cnpj:,
-                                                pesquis: search }))
-    response.with_indifferent_access[:retorno]
-  end
+  # DOC = https://tiny.com.br/api-docs/api2-contatos-alterar
+  def update_address(cpf_cnpj, address, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))
+    contato = { cpf_cnpj: }.merge(address.slice(*ADDRESS_FIELDS).compact_blank)
 
-  def find_contact_and_get_phone(token, cpf_cnpj, nome)
-    cpf_search_result = search_contact(token, cpf_cnpj, '')
+    response = JSON.parse(HTTParty.post(ENV.fetch('ALTERAR_CONTATO'),
+                                        body: {
+                                          token:,
+                                          formato: 'json',
+                                          contato: contato.to_json
+                                        })).with_indifferent_access
 
-    if cpf_search_result && cpf_search_result['contatos']
-      active_contacts = cpf_search_result['contatos'].select { |c| c['contato']['situacao'] == 'Ativo' }
-      last_active = active_contacts.last
+    retorno = response[:retorno] || {}
 
-      if last_active
-        contact_id = last_active['contato']['id']
-        contact_details = obtain_contact(token, contact_id)
-        return contact_details['contato']['celular'] if contact_details && contact_details['contato']
-      end
+    if retorno[:status] == 'OK'
+      { success: true }
+    else
+      erro = retorno.dig(:registros, :registro, :erros, :erro) ||
+             retorno.dig(:erros, :erro) ||
+             'Erro desconhecido ao atualizar contato na Tiny'
+      erro = erro.map { |e| e['erro'] || e[:erro] }.join(', ') if erro.is_a?(Array)
+
+      { success: false, error: erro.to_s }
     end
-
-    name_search_result = search_contact(token, '', nome)
-
-    if name_search_result && name_search_result['contatos']
-      active_contacts = name_search_result['contatos'].select { |c| c['contato']['situacao'] == 'Ativo' }
-      last_active = active_contacts.last
-
-      if last_active
-        contact_id = last_active['contato']['id']
-        contact_details = obtain_contact(token, contact_id)
-        return contact_details['contato']['celular'] if contact_details && contact_details['contato']
-      end
-    end
-    nil
+  rescue StandardError => e
+    { success: false, error: e.message }
   end
 end
