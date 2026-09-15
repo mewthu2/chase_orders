@@ -178,10 +178,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 300);
   });
 
-  function addItemRow(sku, name, quantity, price) {
+  function photoCellHtml(sku, imageUrl) {
+    if (imageUrl) {
+      return '<td class="item-photo-cell" data-sku="' + (sku || '') + '">' +
+        '<img src="' + imageUrl + '" class="rounded border border-secondary" style="width: 40px; height: 40px; object-fit: cover;" loading="lazy"></td>';
+    }
+    return '<td class="item-photo-cell" data-sku="' + (sku || '') + '">' +
+      '<span class="rounded border border-secondary d-flex align-items-center justify-content-center text-muted-custom" style="width: 40px; height: 40px;"><i class="fas fa-image"></i></span></td>';
+  }
+
+  function addItemRow(sku, name, quantity, price, imageUrl) {
     var tbody = document.getElementById('itemsTableBody');
     var row = document.createElement('tr');
     row.innerHTML =
+      photoCellHtml(sku, imageUrl) +
       '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][sku]" value="' + (sku || '') + '"></td>' +
       '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '"></td>' +
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
@@ -191,6 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
     tbody.appendChild(row);
     itemIndex++;
     fetchStockFor(row.querySelector('.item-stock-cell'));
+    if (!imageUrl) fetchImageFor(row.querySelector('.item-photo-cell'));
   }
 
   document.getElementById('itemsTableBody').addEventListener('click', function (e) {
@@ -207,6 +218,20 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   document.querySelectorAll('.item-stock-cell').forEach(fetchStockFor);
 
+  function fetchImageFor(cell) {
+    var sku = cell.dataset.sku;
+    if (!sku || cell.querySelector('img')) return;
+    fetch('<%= search_product_b2b_orders_path %>?query=' + encodeURIComponent(sku))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var matched = (data.products || []).find(function (p) { return p.sku.toUpperCase() === sku.toUpperCase(); });
+        if (matched && matched.image_url) {
+          cell.innerHTML = '<img src="' + matched.image_url + '" class="rounded border border-secondary" style="width: 40px; height: 40px; object-fit: cover;" loading="lazy">';
+        }
+      });
+  }
+  document.querySelectorAll('.item-photo-cell').forEach(fetchImageFor);
+
   // Upload de planilha (tempo real)
   document.getElementById('csvUploadInput').addEventListener('change', function (e) {
     var file = e.target.files[0];
@@ -217,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.success) { alert(data.message); return; }
-        data.items.forEach(function (item) { addItemRow(item.sku, item.name, item.quantity, item.suggested_price || 0); });
+        data.items.forEach(function (item) { addItemRow(item.sku, item.name, item.quantity, item.suggested_price || 0, item.image_url); });
       });
   });
 
@@ -266,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
             item.appendChild(text);
 
             item.addEventListener('click', function () {
-              addItemRow(p.sku, p.name, 1, p.suggested_price || 0);
+              addItemRow(p.sku, p.name, 1, p.suggested_price || 0, p.image_url);
               box.innerHTML = '';
               document.getElementById('manualSkuInput').value = '';
             });
