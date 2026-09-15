@@ -35,7 +35,48 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
+  def create_carrier_contact(carrier)
+    response = do_post('contato.incluir.php', contato: build_contato(carrier).to_json)
+    parse_contato_response(response)
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#create_carrier_contact exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+
   private
+
+  def build_contato(carrier)
+    {
+      sequencia: '1',
+      nome: carrier.name,
+      tipo_pessoa: 'J',
+      cpf_cnpj: carrier.registration.to_s.gsub(/\D/, ''),
+      ie: carrier.state_registration.presence || '',
+      endereco: carrier.street,
+      numero: carrier.number,
+      complemento: carrier.complement.presence || '',
+      bairro: carrier.neighbourhood,
+      cep: carrier.zip.to_s.gsub(/\D/, ''),
+      cidade: carrier.city,
+      uf: carrier.state,
+      fone: carrier.phone.presence || '',
+      email: carrier.email.presence || '',
+      situacao: 'A',
+      tipos_contato: [{ tipo: 'Transportadora' }]
+    }
+  end
+
+  def parse_contato_response(response)
+    retorno = JSON.parse(response.body).with_indifferent_access[:retorno]
+    if retorno[:status] == 'OK'
+      registro = retorno.dig(:registros, :registro)
+      { success: true, tiny_contact_id: registro&.dig(:id)&.to_s }
+    else
+      registro = retorno.dig(:registros, :registro)
+      erro = registro&.dig(:erros)&.dig(:erro) || retorno.dig(:erros, :erro)
+      { success: false, error: Array(erro).join(', ').presence || erro.to_s.presence || 'Erro desconhecido na API Tiny' }
+    end
+  end
 
   def do_post(endpoint, body_params)
     HTTParty.post("#{BASE_URL}/#{endpoint}",
@@ -64,7 +105,7 @@ class B2bTinyService
         cep: client.zip.presence || ''
       },
       forma_envio: 'T',
-      nome_transportador: b2b_order.carrier_name,
+      nome_transportador: b2b_order.carrier&.name || b2b_order.carrier_name,
       forma_frete: b2b_order.carrier_shipping_method,
       frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
       valor_frete: b2b_order.freight_value.to_f,
@@ -103,7 +144,7 @@ class B2bTinyService
           cep: transfer_location.zip
         },
         itens: items.map { |item| { item: item } },
-        transportador: { nome: b2b_order.carrier_name },
+        transportador: { nome: b2b_order.carrier&.name || b2b_order.carrier_name },
         forma_frete: b2b_order.carrier_shipping_method,
         frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
         valor_frete: b2b_order.freight_value.to_f,

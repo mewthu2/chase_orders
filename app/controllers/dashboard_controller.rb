@@ -238,7 +238,7 @@ class DashboardController < ApplicationController
   end
 
   def stockend
-    response = Correios::Orders.get_stock(params[:item_code])
+    response = Correios::Orders.get_stock(params[:item_code], from_tiny2: params[:b2b] == '1')
     if response.code == 200
       @stock = response
     else
@@ -248,13 +248,30 @@ class DashboardController < ApplicationController
   end
 
   def tracking
-    response = Correios::Orders.get_tracking(params[:tracking_number])
+    response = Correios::Orders.get_tracking(params[:tracking_number], from_tiny2: params[:b2b] == '1')
     if response.code == 200
       @tracking = response['rastreio']
     else
       @tracking = nil
     end
     json_response(@tracking)
+  end
+
+  def stuck_orders
+    summary = Correios::StuckOrders.summary_for_sku(params[:sku], from_tiny2: params[:b2b] == '1')
+    json_response(summary)
+  end
+
+  def search_product
+    query = params[:query].to_s.strip
+    if query.blank?
+      render json: { success: false, message: 'Query não fornecida' }
+      return
+    end
+
+    products = Product.where('LOWER(sku) LIKE :q OR LOWER(shopify_product_name) LIKE :q', q: "%#{query.downcase}%").limit(10)
+
+    render json: { success: true, products: products.map { |p| { sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p) } } }
   end
 
   def order_correios_create
@@ -569,17 +586,26 @@ class DashboardController < ApplicationController
     )
     .order(updated_at: :desc)
 
-    unique_items_by_order_and_product = {}
+    # A lista de SKUs sem estoque de um pedido muda a cada nova tentativa (o job
+    # roda periodicamente), então olhamos só a tentativa mais recente de cada
+    # pedido — uma tentativa antiga pode citar um SKU que já não falta mais.
+    latest_attempt_by_order = {}
 
     stock_error_attempts.each do |attempt|
-      attempt_params = attempt.params.to_s
-
       tiny_order_id = attempt.tiny_order_id.to_s.presence ||
-                      extract_attempt_param(attempt_params, :pedido_id) ||
-                      extract_attempt_param(attempt_params, :invoice)
+                      extract_attempt_param(attempt.params.to_s, :pedido_id) ||
+                      extract_attempt_param(attempt.params.to_s, :invoice)
 
       next if tiny_order_id.blank?
+      next if latest_attempt_by_order.key?(tiny_order_id)
 
+      latest_attempt_by_order[tiny_order_id] = attempt
+    end
+
+    unique_items_by_order_and_product = {}
+
+    latest_attempt_by_order.each do |tiny_order_id, attempt|
+      attempt_params = attempt.params.to_s
       order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
 
       missing_product_codes = extract_missing_stock_product_codes(
@@ -594,8 +620,6 @@ class DashboardController < ApplicationController
         )
 
         unique_key = "#{tiny_order_id}-#{product_code}"
-
-        next if unique_items_by_order_and_product.key?(unique_key)
 
         unique_items_by_order_and_product[unique_key] = {
           attempt_id: attempt.id,
@@ -695,17 +719,26 @@ class DashboardController < ApplicationController
     )
     .order(updated_at: :desc)
 
-    unique_items_by_order_and_product = {}
+    # A lista de SKUs sem estoque de um pedido muda a cada nova tentativa (o job
+    # roda periodicamente), então olhamos só a tentativa mais recente de cada
+    # pedido — uma tentativa antiga pode citar um SKU que já não falta mais.
+    latest_attempt_by_order = {}
 
     stock_error_attempts.each do |attempt|
-      attempt_params = attempt.params.to_s
-
       tiny_order_id = attempt.tiny_order_id.to_s.presence ||
-                      extract_attempt_param(attempt_params, :pedido_id) ||
-                      extract_attempt_param(attempt_params, :invoice)
+                      extract_attempt_param(attempt.params.to_s, :pedido_id) ||
+                      extract_attempt_param(attempt.params.to_s, :invoice)
 
       next if tiny_order_id.blank?
+      next if latest_attempt_by_order.key?(tiny_order_id)
 
+      latest_attempt_by_order[tiny_order_id] = attempt
+    end
+
+    unique_items_by_order_and_product = {}
+
+    latest_attempt_by_order.each do |tiny_order_id, attempt|
+      attempt_params = attempt.params.to_s
       order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
 
       missing_product_codes = extract_missing_stock_product_codes(
@@ -720,8 +753,6 @@ class DashboardController < ApplicationController
         )
 
         unique_key = "#{tiny_order_id}-#{product_code}"
-
-        next if unique_items_by_order_and_product.key?(unique_key)
 
         unique_items_by_order_and_product[unique_key] = {
           attempt_id: attempt.id,
@@ -865,6 +896,16 @@ class DashboardController < ApplicationController
   end
 
   private
+
+  def image_url_for(product)
+    return product.image_url if product.image_url.present?
+
+    Shopify::Products.update_product_with_shopify_id(product) if product.shopify_product_id.blank?
+    return nil unless product.shopify_product_id.present?
+
+    Shopify::Products.update_product_with_image_url(product)
+    product.image_url
+  end
 
   def b2b_job_running?(kind)
     Attempt.where(kinds: kind, status: :processing, tracking: 'manual_run_all').exists?
@@ -1472,5 +1513,7 @@ class DashboardController < ApplicationController
   end
 
   def api_correios; end
+
+  def api_correios_b2b; end
 
 end

@@ -9,7 +9,8 @@ class Screen
     marketing_campaigns: 'Campanhas de Marketing',
     marketing_tasks:     'Tarefas de Marketing',
     b2b_orders:          'Pedidos B2B',
-    transfer_locations:  'Locais de Transferência'
+    transfer_locations:  'Locais de Transferência',
+    carriers:            'Transportadoras'
   }.freeze
 
   def self.keys = DEFINITIONS.keys.map(&:to_s)

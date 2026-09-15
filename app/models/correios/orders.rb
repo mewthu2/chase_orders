@@ -165,11 +165,11 @@ module Correios::Orders
     end
   end
 
-  def get_stock(item_code)
+  def get_stock(item_code, from_tiny2: false)
     authentication = {
-      'numeroCartaoPostagem' => ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
+      'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
-      'Authorization' => "Basic #{Base64.strict_encode64(ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
+      'Authorization' => "Basic #{Base64.strict_encode64(from_tiny2 ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
     HTTParty.get("#{ENV.fetch('CORREIOS_ESTOQUE')}#{item_code}/estoque", headers: authentication)

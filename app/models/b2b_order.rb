@@ -1,6 +1,7 @@
 class B2bOrder < ApplicationRecord
   belongs_to :client, optional: true
   belongs_to :transfer_location, optional: true
+  belongs_to :carrier, optional: true
   belongs_to :user
   has_many :b2b_order_items, dependent: :destroy
   accepts_nested_attributes_for :b2b_order_items, allow_destroy: true, reject_if: :all_blank

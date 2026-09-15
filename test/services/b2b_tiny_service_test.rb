@@ -80,4 +80,49 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     refute result[:success]
     assert_equal 'Item sem CFOP', result[:error]
   end
+
+  test 'create_sale_order sends the carrier name from the associated Carrier record' do
+    carrier = Carrier.create!(
+      name: 'Jamef Transportes', registration: '25.405.327/0001-74', street: 'Rua Service',
+      number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
+    )
+    order = B2bOrder.create!(kind: :sale, status: :saved, user: @user, client: @client, carrier: carrier)
+    order.b2b_order_items.create!(sku: 'SKU1', name: 'Produto 1', quantity: 1, price: 10)
+
+    stub_request(:post, 'https://api.tiny.com.br/api2/pedido.incluir.php')
+      .with { |req| JSON.parse(req.body)['pedido'].include?('"nome_transportador":"Jamef Transportes"') }
+      .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '1', numero: '2' } } } }.to_json)
+
+    result = @service.create_sale_order(order)
+    assert result[:success]
+  end
+
+  test 'create_carrier_contact returns the Tiny contact id on success' do
+    carrier = Carrier.create!(
+      name: 'Jamef Transportes', registration: '25.405.327/0001-74', street: 'Rua Service',
+      number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
+    )
+
+    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
+      .with { |req| body = JSON.parse(req.body)['contato']; body.include?('"nome":"Jamef Transportes"') && body.include?('"tipo":"Transportadora"') }
+      .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '555' } } } }.to_json)
+
+    result = @service.create_carrier_contact(carrier)
+    assert result[:success]
+    assert_equal '555', result[:tiny_contact_id]
+  end
+
+  test 'create_carrier_contact returns the Tiny error message on failure' do
+    carrier = Carrier.create!(
+      name: 'Jamef Transportes', registration: '25.405.327/0001-74', street: 'Rua Service',
+      number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
+    )
+
+    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
+      .to_return(body: { retorno: { status: 'Erro', erros: { erro: 'CNPJ já cadastrado' } } }.to_json)
+
+    result = @service.create_carrier_contact(carrier)
+    refute result[:success]
+    assert_equal 'CNPJ já cadastrado', result[:error]
+  end
 end

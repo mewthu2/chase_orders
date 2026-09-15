@@ -66,7 +66,11 @@ class B2bOrdersController < ApplicationController
       next if sku.blank? || quantity <= 0
 
       product = Product.find_by(sku: sku)
-      { sku: sku, name: product&.shopify_product_name, quantity: quantity }
+      stock = product ? correios_stock_for(product) : { quantity: 0, status: 'error' }
+      { sku: sku, name: product&.shopify_product_name, quantity: quantity,
+        suggested_price: suggested_price_for(product),
+        image_url: product ? image_url_for(product) : nil,
+        stock_quantity: stock[:quantity], stock_status: stock[:status] }
     end
 
     if items.empty?
@@ -82,12 +86,12 @@ class B2bOrdersController < ApplicationController
     sku = params[:sku]
     product = Product.find_by(sku: sku)
 
-    unless product&.shopify_variant_id.present?
+    unless product
       render json: { success: true, quantity: 0, status: 'error', message: 'Produto não encontrado' }
       return
     end
 
-    render json: { success: true, **shopify_stock_for(product) }
+    render json: { success: true, **correios_stock_for(product) }
   end
 
   def search_product
@@ -99,33 +103,36 @@ class B2bOrdersController < ApplicationController
 
     products = Product.where('LOWER(sku) LIKE :q OR LOWER(shopify_product_name) LIKE :q', q: "%#{query.downcase}%").limit(10)
 
-    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, **shopify_stock_for(p) } } }
+    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p), **correios_stock_for(p) } } }
   end
 
   private
 
-  def create_shopify_session
-    ShopifyAPI::Auth::Session.new(shop: 'chasebrasil.myshopify.com', access_token: ENV.fetch('LAGOA_SECA_TOKEN_APP'))
+  def suggested_price_for(product)
+    return nil unless product&.price.present?
+
+    (product.price.to_f * 0.4).round(2)
   end
 
-  def shopify_stock_for(product)
-    query = <<~GRAPHQL
-      query {
-        productVariant(id: "gid://shopify/ProductVariant/#{product.shopify_variant_id}") {
-          inventoryQuantity
-        }
-      }
-    GRAPHQL
+  def image_url_for(product)
+    return product.image_url if product.image_url.present?
 
-    client = ShopifyAPI::Clients::Graphql::Admin.new(session: create_shopify_session)
-    response = client.query(query: query)
-    variant = response.body.dig('data', 'productVariant')
+    Shopify::Products.update_product_with_shopify_id(product) if product.shopify_product_id.blank?
+    return nil unless product.shopify_product_id.present?
 
-    quantity = variant&.dig('inventoryQuantity') || 0
+    Shopify::Products.update_product_with_image_url(product)
+    product.image_url
+  end
+
+  def correios_stock_for(product)
+    response = Correios::Orders.get_stock(product.sku, from_tiny2: true)
+    return { quantity: 0, status: 'error' } unless response.respond_to?(:success?) && response.success?
+
+    quantity = JSON.parse(response.body)['disponivel'].to_i
     status = quantity > 10 ? 'high' : (quantity.positive? ? 'low' : 'out')
     { quantity: quantity, status: status }
   rescue StandardError => e
-    Rails.logger.error "B2bOrdersController#shopify_stock_for exception: #{e.message}"
+    Rails.logger.error "B2bOrdersController#correios_stock_for exception: #{e.message}"
     { quantity: 0, status: 'error' }
   end
 
@@ -135,7 +142,7 @@ class B2bOrdersController < ApplicationController
 
   def b2b_order_params
     params.require(:b2b_order).permit(
-      :kind, :status, :client_id, :transfer_location_id, :carrier_name,
+      :kind, :status, :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_paid_by, :freight_value, :notes,
       b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :_destroy]
     )

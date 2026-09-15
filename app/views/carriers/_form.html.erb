@@ -1,0 +1,95 @@
+<%= form_with model: @carrier, local: true, class: 'needs-validation', novalidate: true do |form| %>
+  <% if @carrier.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @carrier.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-id-badge me-2"></i>Identificação</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name, class: "field-input #{'field-input--error' if @carrier.errors[:name].any?}", required: true %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">CNPJ <span class="required">*</span></label>
+          <%= form.text_field :registration, class: "field-input #{'field-input--error' if @carrier.errors[:registration].any?}", required: true, placeholder: "00.000.000/0000-00" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Inscrição Estadual</label>
+          <%= form.text_field :state_registration, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Telefone</label>
+          <%= form.text_field :phone, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">E-mail</label>
+          <%= form.text_field :email, class: "field-input" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-map-marker-alt me-2"></i>Endereço</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Rua <span class="required">*</span></label>
+          <%= form.text_field :street, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">Número <span class="required">*</span></label>
+          <%= form.text_field :number, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Complemento</label>
+          <%= form.text_field :complement, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Bairro <span class="required">*</span></label>
+          <%= form.text_field :neighbourhood, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Cidade <span class="required">*</span></label>
+          <%= form.text_field :city, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">UF <span class="required">*</span></label>
+          <%= form.text_field :state, class: "field-input", required: true, maxlength: 2 %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">CEP <span class="required">*</span></label>
+          <%= form.text_field :zip, class: "field-input", required: true %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-toggle-on me-2"></i>Status</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-check form-switch">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @carrier.new_record? ? true : @carrier.active? %>
+        <label class="form-check-label text-main fw-bold">Ativo</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@carrier.new_record? ? 'Criar Transportadora' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", carriers_path, class: "btn-cancel" %>
+  </div>
+<% end %>

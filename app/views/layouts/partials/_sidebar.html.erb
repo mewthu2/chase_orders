@@ -42,7 +42,7 @@
           </div>
         </div>
 
-        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') %>
+        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') || current_user&.can_access_screen?('carriers') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
               <div class="nav-group-title">
@@ -63,6 +63,12 @@
                   <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
                     <i class="fas fa-warehouse"></i>
                     <span>Locais de Transferência</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('carriers') %>
+                  <%= link_to carriers_path, class: "dropdown-link #{'active' if controller_name == 'carriers'}" do %>
+                    <i class="fas fa-truck"></i>
+                    <span>Transportadoras</span>
                   <% end %>
                 <% end %>
               </div>
@@ -216,7 +222,7 @@
                   <span>Rastreamento</span>
                 <% end %>
 
-                <%= link_to api_correios_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_dashboard_index_path)}" do %>
+                <%= link_to api_correios_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_b2b_dashboard_index_path)}" do %>
                   <i class="fas fa-cogs"></i>
                   <span>API Correios</span>
                 <% end %>

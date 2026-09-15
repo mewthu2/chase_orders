@@ -1,0 +1,83 @@
+<% content_for :title, "Transportadoras" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-truck me-2"></i>Transportadoras</h1>
+      <p class="page-subtitle">Transportadoras usadas nos Pedidos B2B</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @carriers.size %> transportadora(s)</span>
+      <%= link_to new_carrier_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Nova Transportadora
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Transportadoras</h5>
+    </div>
+
+    <% if @carriers.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CNPJ</th>
+              <th>Cidade/UF</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Tiny</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @carriers.each do |carrier| %>
+              <tr>
+                <td class="text-main"><%= carrier.name %></td>
+                <td class="text-muted-custom"><%= carrier.cnpj_formatted %></td>
+                <td class="text-muted-custom"><%= carrier.city %>/<%= carrier.state %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= carrier.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+                    <%= carrier.active? ? 'Ativo' : 'Inativo' %>
+                  </span>
+                </td>
+                <td class="text-center">
+                  <% if carrier.transmitted? %>
+                    <span class="status-pill status-pill--active" title="ID Tiny: <%= carrier.tiny_contact_id %>">Transmitida</span>
+                  <% else %>
+                    <span class="status-pill status-pill--inactive"><%= carrier.tiny_error.presence || 'Não transmitida' %></span>
+                  <% end %>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= button_to transmit_carrier_path(carrier), method: :post, class: "action-btn action-btn--edit", form: { style: 'display:inline' } do %>
+                      <i class="fas fa-paper-plane"></i>
+                    <% end %>
+                    <%= link_to edit_carrier_path(carrier), class: "action-btn action-btn--edit" do %>
+                      <i class="fas fa-pencil-alt"></i>
+                    <% end %>
+                    <%= link_to carrier, method: :delete,
+                                class: "action-btn action-btn--danger",
+                                data: { confirm: "Tem certeza que deseja excluir esta transportadora?" } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-truck fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma transportadora cadastrada</h5>
+        <%= link_to new_carrier_path, class: "btn-export" do %>
+          <i class="fas fa-plus me-1"></i>Nova Transportadora
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

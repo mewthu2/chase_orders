@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_14_000300) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_15_131608) do
   create_table "api_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "email"
     t.string "password_digest"
@@ -73,6 +73,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_000300) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "carrier_id"
+    t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
     t.index ["user_id"], name: "index_b2b_orders_on_user_id"
@@ -89,6 +91,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_000300) do
     t.index ["marketing_campaign_id", "user_id"], name: "index_campaign_users_on_campaign_and_user", unique: true
     t.index ["marketing_campaign_id"], name: "index_campaign_users_on_marketing_campaign_id"
     t.index ["user_id"], name: "index_campaign_users_on_user_id"
+  end
+
+  create_table "carriers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "registration", null: false
+    t.string "state_registration"
+    t.string "street", null: false
+    t.string "number", null: false
+    t.string "complement"
+    t.string "neighbourhood", null: false
+    t.string "city", null: false
+    t.string "state", null: false
+    t.string "zip", null: false
+    t.string "phone"
+    t.string "email"
+    t.boolean "active", default: true, null: false
+    t.string "tiny_contact_id"
+    t.datetime "transmitted_at"
+    t.text "tiny_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "clients", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -627,6 +650,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_000300) do
   end
 
   add_foreign_key "b2b_order_items", "b2b_orders"
+  add_foreign_key "b2b_orders", "carriers"
   add_foreign_key "b2b_orders", "clients"
   add_foreign_key "b2b_orders", "transfer_locations"
   add_foreign_key "b2b_orders", "users"

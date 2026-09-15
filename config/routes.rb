@@ -72,8 +72,11 @@ Rails.application.routes.draw do
       post :run_invoice_emition_b2b_now
       get :order_correios_tracking_b2b
       get :api_correios
+      get :api_correios_b2b
       get :tracking
       get :stockend
+      get :stuck_orders
+      get :search_product
       post :update_invoice_id
       post :delete_order_from_queue
       get :teste_embalagem
@@ -183,6 +186,12 @@ Rails.application.routes.draw do
   
   resources :profiles
   resources :transfer_locations
+
+  resources :carriers do
+    member do
+      post :transmit
+    end
+  end
 
   resources :b2b_orders do
     collection do
