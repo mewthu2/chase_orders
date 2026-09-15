@@ -77,7 +77,7 @@
 
       <table class="orders-table" id="itemsTable">
         <thead>
-          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Estoque</th><th></th></tr>
+          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Estoque Correios B2B</th><th></th></tr>
         </thead>
         <tbody id="itemsTableBody">
           <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
@@ -200,8 +200,8 @@ document.addEventListener('DOMContentLoaded', function () {
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);
     itemIndex++;
-    fetchStockFor(row.querySelector('.item-stock-cell'));
-    if (!imageUrl) fetchImageFor(row.querySelector('.item-photo-cell'));
+    queueStockFetch(row.querySelector('.item-stock-cell'));
+    if (!imageUrl) queueImageFetch(row.querySelector('.item-photo-cell'));
   }
 
   document.getElementById('itemsTableBody').addEventListener('click', function (e) {
@@ -209,28 +209,54 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btn) btn.closest('tr').remove();
   });
 
-  function fetchStockFor(cell) {
-    var sku = cell.dataset.sku;
-    if (!sku) return;
-    fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
-      .then(function (r) { return r.json(); })
-      .then(function (data) { cell.textContent = data.quantity + ' (' + data.status + ')'; });
-  }
-  document.querySelectorAll('.item-stock-cell').forEach(fetchStockFor);
+  // Fila sequencial: consulta o estoque um item de cada vez, com uma pequena
+  // pausa entre cada um, pra não travar a tela disparando tudo de uma vez
+  // quando o pedido tem muitos itens.
+  function makeQueue(processFn, delayMs) {
+    var queue = [];
+    var running = false;
 
-  function fetchImageFor(cell) {
+    function runNext() {
+      var cell = queue.shift();
+      if (!cell) { running = false; return; }
+
+      processFn(cell).finally(function () { setTimeout(runNext, delayMs); });
+    }
+
+    return function (cell) {
+      queue.push(cell);
+      if (!running) { running = true; runNext(); }
+    };
+  }
+
+  var queueStockFetch = makeQueue(function (cell) {
     var sku = cell.dataset.sku;
-    if (!sku || cell.querySelector('img')) return;
-    fetch('<%= search_product_b2b_orders_path %>?query=' + encodeURIComponent(sku))
+    if (!sku) return Promise.resolve();
+
+    return fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { cell.textContent = data.quantity + ' (' + data.status + ')'; })
+      .catch(function () { cell.textContent = 'erro'; });
+  }, 200);
+
+  document.querySelectorAll('.item-stock-cell').forEach(queueStockFetch);
+
+  var queueImageFetch = makeQueue(function (cell) {
+    var sku = cell.dataset.sku;
+    if (!sku || cell.querySelector('img')) return Promise.resolve();
+
+    return fetch('<%= search_product_b2b_orders_path %>?query=' + encodeURIComponent(sku))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var matched = (data.products || []).find(function (p) { return p.sku.toUpperCase() === sku.toUpperCase(); });
         if (matched && matched.image_url) {
           cell.innerHTML = '<img src="' + matched.image_url + '" class="rounded border border-secondary" style="width: 40px; height: 40px; object-fit: cover;" loading="lazy">';
         }
-      });
-  }
-  document.querySelectorAll('.item-photo-cell').forEach(fetchImageFor);
+      })
+      .catch(function () {});
+  }, 200);
+
+  document.querySelectorAll('.item-photo-cell').forEach(queueImageFetch);
 
   // Upload de planilha (tempo real)
   document.getElementById('csvUploadInput').addEventListener('change', function (e) {

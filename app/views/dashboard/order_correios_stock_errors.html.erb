@@ -62,6 +62,7 @@
             <tr>
               <th class="text-center">Produto</th>
               <th class="text-center">Quantidade Necessária</th>
+              <th class="text-center">Estoque Correios B2C</th>
               <th class="text-center">Pedidos Afetados</th>
               <th class="text-center">Attempts</th>
             </tr>
@@ -85,6 +86,10 @@
                       separator: ','
                     ) %>
                   </span>
+                </td>
+
+                <td class="text-center item-stock-cell-b2c" data-sku="<%= item[:product_code] %>">
+                  <i class="fas fa-spinner fa-spin text-muted-custom"></i>
                 </td>
 
                 <td class="text-center">
@@ -333,6 +338,38 @@
           ]
         });
       }
+
+      // Estoque Correios B2C: consulta um produto de cada vez, com uma pequena
+      // pausa entre cada um, pra não travar a tela disparando tudo de uma vez.
+      (function () {
+        var queue = Array.prototype.slice.call(document.querySelectorAll('.item-stock-cell-b2c'));
+
+        function processNext() {
+          var cell = queue.shift();
+          if (!cell) return;
+
+          var sku = cell.dataset.sku;
+          if (!sku) { processNext(); return; }
+
+          fetch('<%= stockend_dashboard_index_path %>?item_code=' + encodeURIComponent(sku))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data && data.disponivel !== undefined && data.disponivel !== null) {
+                cell.innerHTML = '<span class="fw-bold ' + (data.disponivel > 0 ? 'text-success' : 'text-danger') + '">' + data.disponivel + '</span>';
+              } else {
+                cell.innerHTML = '<span class="text-muted-custom">-</span>';
+              }
+            })
+            .catch(function () {
+              cell.innerHTML = '<span class="text-danger">erro</span>';
+            })
+            .finally(function () {
+              setTimeout(processNext, 200);
+            });
+        }
+
+        processNext();
+      })();
 
       const tooltipTriggerList = [].slice.call(
         document.querySelectorAll('[title]')
