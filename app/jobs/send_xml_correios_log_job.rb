@@ -109,6 +109,20 @@ class SendXmlCorreiosLogJob < ActiveJob::Base
       end
     end
 
+    compra = doc.at_xpath('//*[local-name()="compra"]')
+
+    if compra.present?
+      compra_xped = compra.at_xpath('./*[local-name()="xPed"]')
+
+      if compra_xped.present?
+        compra_xped.content = order_number
+      else
+        compra_xped = Nokogiri::XML::Node.new('xPed', doc)
+        compra_xped.content = order_number
+        compra.add_child(compra_xped)
+      end
+    end
+
     xml_nfe = doc.at_xpath('//*[local-name()="xml_nfe"]')
 
     if attempt.present? && xml_nfe.present?
