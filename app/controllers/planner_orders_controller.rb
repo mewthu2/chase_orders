@@ -2,6 +2,7 @@ require 'csv'
 
 class PlannerOrdersController < ApplicationController
   before_action :authenticate_user!
+  guard_screen :planner_orders
   before_action :set_planner_order, only: [:show, :edit, :update, :transmit, :export_xlsx]
 
   def index

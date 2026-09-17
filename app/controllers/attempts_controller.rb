@@ -91,17 +91,26 @@ class AttemptsController < ApplicationController
     render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
+  # A Tiny não tem endpoint pra alterar o endereço de entrega de um pedido
+  # específico (só o cadastro do cliente, que não reflete no pedido quando ele
+  # tem endereço de entrega próprio). Por isso a correção fica só no Honey: ao
+  # recriar o pedido no Correios, esse endereço substitui o vindo da Tiny.
   def fix_bairro
     attempt = Attempt.find(params[:attempt_id])
-    token = bairro_fix_token(attempt)
-    cpf_cnpj = params[:cpf_cnpj].to_s
     address = params.permit(:endereco, :numero, :complemento, :bairro, :cep, :cidade, :uf).to_h.symbolize_keys
 
-    if cpf_cnpj.blank? || address[:bairro].blank?
-      return render json: { success: false, error: 'CPF/CNPJ e bairro são obrigatórios' }, status: :unprocessable_entity
+    if address[:bairro].blank?
+      return render json: { success: false, error: 'Bairro é obrigatório' }, status: :unprocessable_entity
     end
 
-    render json: Tiny::Contacts.update_address(cpf_cnpj, address, token)
+    correction = AddressCorrection.find_or_initialize_by(tiny_order_id: attempt.tiny_order_id.to_s)
+    correction.assign_attributes(address)
+
+    if correction.save
+      render json: { success: true }
+    else
+      render json: { success: false, error: correction.errors.full_messages.join(', ') }, status: :unprocessable_entity
+    end
   rescue StandardError => e
     render json: { success: false, error: e.message }, status: :unprocessable_entity
   end

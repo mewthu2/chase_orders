@@ -199,6 +199,9 @@ Rails.application.routes.draw do
       post :parse_items_spreadsheet
       get :product_stock
       get :search_product
+      get :product_picker
+      get :search_client
+      post :import_client
     end
     member do
       post :transmit

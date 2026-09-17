@@ -5,7 +5,7 @@ class B2bOrdersController < ApplicationController
   before_action :set_b2b_order, only: [:edit, :update, :transmit]
 
   def index
-    @b2b_orders = B2bOrder.includes(:client, :transfer_location, :user).recent
+    @b2b_orders = B2bOrder.includes(:client, :transfer_location).recent
     @b2b_orders = @b2b_orders.where(status: params[:status]) if params[:status].present?
     @b2b_orders = @b2b_orders.where(kind: params[:kind]) if params[:kind].present?
   end
@@ -66,11 +66,9 @@ class B2bOrdersController < ApplicationController
       next if sku.blank? || quantity <= 0
 
       product = Product.find_by(sku: sku)
-      stock = product ? correios_stock_for(product) : { quantity: 0, status: 'error' }
       { sku: sku, name: product&.shopify_product_name, quantity: quantity,
         suggested_price: suggested_price_for(product),
-        image_url: product ? image_url_for(product) : nil,
-        stock_quantity: stock[:quantity], stock_status: stock[:status] }
+        image_url: product ? image_url_for(product) : nil }
     end
 
     if items.empty?
@@ -101,12 +99,112 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    products = Product.where('LOWER(sku) LIKE :q OR LOWER(shopify_product_name) LIKE :q', q: "%#{query.downcase}%").limit(10)
+    products = token_search(query).limit(10)
 
-    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p), **correios_stock_for(p) } } }
+    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p) } } }
+  end
+
+  # Modal "Selecionar Produtos" (estilo Shopify): agrupa os SKUs encontrados
+  # pelo nome do produto, cada grupo vira "produto" com suas variantes (SKUs).
+  def product_picker
+    query = params[:query].to_s.strip
+    products = query.present? ? token_search(query).limit(300) : Product.order(:shopify_product_name).limit(60)
+
+    grouped = products.group_by { |p| p.shopify_product_name.presence || p.sku }.first(40)
+
+    result = grouped.map do |name, variants|
+      {
+        name: name,
+        image_url: variants.find { |v| v.image_url.present? }&.image_url,
+        variants: variants.map do |v|
+          {
+            id: v.id,
+            sku: v.sku,
+            option: v.option1.presence || v.sku,
+            price: suggested_price_for(v)
+          }
+        end
+      }
+    end
+
+    render json: { success: true, products: result }
+  end
+
+  def search_client
+    query = params[:query].to_s.strip
+    if query.blank?
+      render json: { success: false, message: 'Query não fornecida' }
+      return
+    end
+
+    local_clients = Client.where(
+      'LOWER(responsible_name) LIKE :q OR LOWER(business_name) LIKE :q OR registration LIKE :q',
+      q: "%#{query.downcase}%"
+    ).limit(10)
+
+    local_registrations = local_clients.filter_map { |c| c.registration.to_s.gsub(/\D/, '').presence }
+
+    local_results = local_clients.map do |c|
+      { source: 'honey', client_id: c.id, name: c.display_name, registration: c.cnpj_formatted }
+    end
+
+    tiny_results = B2bTinyService.new.search_clients(query).filter_map do |c|
+      digits = c[:registration].to_s.gsub(/\D/, '')
+      next if digits.present? && local_registrations.include?(digits)
+
+      {
+        source: 'tiny', tiny_id: c[:tiny_id], name: c[:name], registration: c[:registration],
+        street: c[:street], number: c[:number], complement: c[:complement],
+        neighbourhood: c[:neighbourhood], city: c[:city], state: c[:state], zip: c[:zip],
+        email: c[:email], phone: c[:phone]
+      }
+    end.first(10)
+
+    render json: { success: true, clients: local_results + tiny_results }
+  end
+
+  def import_client
+    registration = params[:registration].to_s.gsub(/\D/, '')
+
+    client = if registration.present?
+               Client.where(
+                 "REPLACE(REPLACE(REPLACE(registration, '.', ''), '/', ''), '-', '') = ?",
+                 registration
+               ).first
+             end
+    client ||= Client.new(
+      responsible_name: params[:name],
+      registration: registration.presence,
+      street: params[:street],
+      number: params[:number],
+      neighbourhood: params[:neighbourhood],
+      city: params[:city],
+      state: params[:state],
+      zip: params[:zip],
+      email: params[:email],
+      phone: params[:phone]
+    )
+
+    if client.persisted? || client.save
+      render json: { success: true, client: { id: client.id, display_name: client.display_name, registration: client.cnpj_formatted } }
+    else
+      render json: { success: false, errors: client.errors.full_messages }
+    end
   end
 
   private
+
+  # Busca "inteligente": cada palavra da query precisa aparecer em algum lugar
+  # do SKU ou do nome, em qualquer ordem — assim "signature black" encontra
+  # "Legging Signature Seamless Black", "Short Signature Black" etc.
+  def token_search(query)
+    tokens = query.to_s.downcase.split(/\s+/).reject(&:blank?)
+    return Product.none if tokens.empty?
+
+    tokens.reduce(Product.all) do |scope, token|
+      scope.where('LOWER(sku) LIKE :q OR LOWER(shopify_product_name) LIKE :q', q: "%#{token}%")
+    end
+  end
 
   def suggested_price_for(product)
     return nil unless product&.price.present?

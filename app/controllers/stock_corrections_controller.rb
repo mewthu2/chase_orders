@@ -1,5 +1,6 @@
 class StockCorrectionsController < ApplicationController
   before_action :authenticate_user!
+  guard_screen :stock_corrections
   before_action :set_stock_correction, only: %i[
     show edit update destroy finalize_correction execute_all
     save_item_correction reopen retry_shopify_sync

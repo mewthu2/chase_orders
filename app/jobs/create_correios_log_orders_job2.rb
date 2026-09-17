@@ -166,7 +166,18 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       uf = client_data[:uf]
       cpf = client_data[:cpf_cnpj]
     end
-    
+
+    # Pedidos com correção salva no Honey usam esse endereço no lugar do da Tiny
+    if (correction = AddressCorrection.for(order[:pedido][:id]))
+      endereco = correction.endereco.presence || endereco
+      numero = correction.numero.presence || numero
+      complemento = correction.complemento.presence || complemento
+      bairro = correction.bairro.presence || bairro
+      cep = correction.cep.presence || cep
+      cidade = correction.cidade.presence || cidade
+      uf = correction.uf.presence || uf
+    end
+
     # assert sending way
     unless selected_order.dig(:pedido, :forma_frete).present?
       attempt.update(error: 'Forma de Envio não localizada', status: :error)

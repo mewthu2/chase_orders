@@ -1,6 +1,25 @@
 class DashboardController < ApplicationController
   before_action :authenticate_user!
-  guard_screen :dashboard_correios
+
+  # Actions exclusivas do painel "Correios B2B" (permissão dashboard_correios_b2b).
+  B2B_ONLY_ACTIONS = %i[
+    push_tracking_b2b run_push_tracking_b2b run_push_tracking_b2b_now
+    send_xml_b2b run_send_xml_b2b run_send_xml_b2b_now
+    invoice_emition_b2b run_invoice_emition_b2b run_invoice_emition_b2b_now
+    order_correios_create_b2b order_correios_create_queue_b2b
+    run_create_correios_b2b run_order_correios_create_b2b_now
+    approve_order_b2b ignore_order_b2b
+    order_correios_stock_errors_b2b order_correios_tracking_b2b api_correios_b2b
+  ].freeze
+
+  # Actions usadas pelas duas telas (buscas via AJAX) — liberadas para quem
+  # tiver a permissão B2C ou a B2B.
+  SHARED_CORREIOS_ACTIONS = %i[stockend tracking stuck_orders search_product].freeze
+
+  guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS
+  guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS
+  before_action :authorize_correios_dashboard!, only: SHARED_CORREIOS_ACTIONS
+
   protect_from_forgery except: :modal_test
 
   require 'csv'
@@ -897,6 +916,13 @@ class DashboardController < ApplicationController
 
   private
 
+  def authorize_correios_dashboard!
+    return if current_user&.can_access_screen?('dashboard_correios') ||
+              current_user&.can_access_screen?('dashboard_correios_b2b')
+
+    redirect_to root_path, alert: 'Acesso negado.'
+  end
+
   def image_url_for(product)
     return product.image_url if product.image_url.present?
 
@@ -1220,7 +1246,7 @@ class DashboardController < ApplicationController
       WITH successful_orders AS (
         SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
         FROM attempts
-        WHERE kinds = #{create_kind} AND status = #{success_status}
+        WHERE kinds = #{create_kind} AND status = #{success_status} AND tiny_order_id IS NOT NULL
         GROUP BY tiny_order_id, order_correios_id, is_transportadora
       )
       SELECT
@@ -1308,6 +1334,21 @@ class DashboardController < ApplicationController
       push_tracking: tracking_count,
       total_tracking: @tracking_summary.count
     }
+
+    # O nome do cliente vem do "params" gravado quando o pedido foi criado no
+    # Correios (CreateCorreiosLogOrdersJob2#create_one_log_order) — não existe
+    # um B2bOrder correspondente pra esses pedidos, pois eles vêm direto do Tiny.
+    client_names_by_tiny_id = Attempt.where(kinds: create_kind, status: success_status, tiny_order_id: @tracking_summary.keys)
+                                      .where.not(params: [nil, ''])
+                                      .order(created_at: :desc)
+                                      .pluck(:tiny_order_id, :params)
+                                      .each_with_object({}) do |(order_id, params), h|
+                                        h[order_id.to_s] ||= params[/:nome\s*=>\s*"([^"]*)"/, 1]
+                                      end
+
+    @tracking_summary.each do |order_id, data|
+      data[:client_name] = client_names_by_tiny_id[order_id]
+    end
   end
 
   def pipeline_status_payload(period)

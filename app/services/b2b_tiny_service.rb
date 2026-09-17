@@ -19,6 +19,37 @@ class B2bTinyService
     []
   end
 
+  def search_clients(query)
+    response = HTTParty.get("#{BASE_URL}/contatos.pesquisa.php",
+                             query: { token: @token, pesquisa: query, formato: 'json' })
+    parsed = JSON.parse(response.body).with_indifferent_access
+    return [] unless parsed.dig(:retorno, :status) == 'OK'
+
+    Array(parsed.dig(:retorno, :contatos)).filter_map do |entry|
+      c = entry[:contato]
+      next unless c
+
+      {
+        tiny_id: c[:id],
+        name: c[:nome],
+        tipo_pessoa: c[:tipo_pessoa],
+        registration: c[:cpf_cnpj],
+        street: c[:endereco],
+        number: c[:numero],
+        complement: c[:complemento],
+        neighbourhood: c[:bairro],
+        city: c[:cidade],
+        state: c[:uf],
+        zip: c[:cep],
+        email: c[:email],
+        phone: c[:fone]
+      }
+    end
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#search_clients exception: #{e.message}"
+    []
+  end
+
   def create_sale_order(b2b_order)
     response = do_post('pedido.incluir.php', pedido: build_pedido(b2b_order).to_json)
     parse_pedido_response(response)

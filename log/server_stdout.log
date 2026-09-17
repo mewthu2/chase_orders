@@ -1,0 +1,643 @@
+=> Booting Puma
+=> Rails 7.2.2.1 application starting in development 
+=> Run `bin/rails server --help` for more startup options
+Puma starting in single mode...
+* Puma version: 6.6.0 ("Return to Forever")
+* Ruby version: ruby 3.2.2 (2023-03-30 revision e51014f9c0) [arm64-darwin23]
+*  Min threads: 5
+*  Max threads: 5
+*  Environment: development
+*          PID: 55167
+* Listening on http://127.0.0.1:3000
+* Listening on http://[::1]:3000
+Use Ctrl-C to stop
+Started GET "/" for ::1 at 2026-09-17 14:11:16 -0300
+  [1m[36mActiveRecord::SchemaMigration Load (164.2ms)[0m  [1m[34mSELECT `schema_migrations`.`version` FROM `schema_migrations` ORDER BY `schema_migrations`.`version` ASC[0m
+Processing by HomeController#index as */*
+Completed 401 Unauthorized in 7ms (ActiveRecord: 0.0ms (0 queries, 0 cached) | GC: 0.0ms)
+
+
+Started GET "/dashboard/order_correios_create_queue_b2b" for ::1 at 2026-09-17 14:16:16 -0300
+Processing by DashboardController#order_correios_create_queue_b2b as HTML
+  [1m[36mUser Load (191.0ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Pluck (164.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :status, [:fail, :error, :success, :processing]
+ (called from <class:Attempt> at /Users/danielfernandes/projects/ChaseOrders/app/models/attempt.rb:2)
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :kinds, [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order, :sync_correios_stock, :create_correios_order_tiny2, :send_xml_tiny2, :get_tracking_tiny2]
+ (called from <class:Attempt> at /Users/danielfernandes/projects/ChaseOrders/app/models/attempt.rb:3)
+  [1m[36mAttempt Pluck (162.9ms)[0m  [1m[34mSELECT `attempts`.`tiny_order_id` FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`status` = 2 AND `attempts`.`created_at` BETWEEN '2026-08-17 17:16:21.775580' AND '2026-09-17 17:16:21.775751'[0m
+  ↳ app/controllers/dashboard_controller.rb:436:in `order_correios_create_queue_b2b'
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :status, [:approved, :ignored]
+ (called from <class:Tiny2OrderReview> at /Users/danielfernandes/projects/ChaseOrders/app/models/tiny2_order_review.rb:2)
+  [1m[36mTiny2OrderReview Pluck (160.6ms)[0m  [1m[34mSELECT `tiny2_order_reviews`.`tiny_order_id` FROM `tiny2_order_reviews` WHERE `tiny2_order_reviews`.`tiny_order_id` IN ('901573891', '901580270', '901780552', '901920980', '901923505', '901925976', '901929716', '901942222') AND `tiny2_order_reviews`.`status` = 0[0m
+  ↳ app/controllers/dashboard_controller.rb:439:in `order_correios_create_queue_b2b'
+  [1m[36mAttempt Load (2443.3ms)[0m  [1m[34mSELECT `attempts`.* FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`tiny_order_id` IN (901573891, 901580270, 901780552, 901920980, 901923505, 901925976, 901929716, 901942222) AND `attempts`.`created_at` BETWEEN '2026-08-17 17:16:22.755545' AND '2026-09-17 17:16:22.755711' ORDER BY `attempts`.`created_at` ASC[0m
+  ↳ app/controllers/dashboard_controller.rb:457:in `order_correios_create_queue_b2b'
+  [1m[36mAttempt Count (164.9ms)[0m  [1m[34mSELECT COUNT(*) FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`tiny_order_id` IN (901573891, 901580270, 901780552, 901920980, 901923505, 901925976, 901929716, 901942222) AND `attempts`.`created_at` BETWEEN '2026-08-17 17:16:22.755545' AND '2026-09-17 17:16:22.755711'[0m
+  ↳ app/controllers/dashboard_controller.rb:483:in `order_correios_create_queue_b2b'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_create_queue_b2b.html.erb within layouts/application
+  Rendered dashboard/_run_now_modal.html.erb (Duration: 0.4ms | GC: 0.0ms)
+  Rendered dashboard/_run_now_script.html.erb (Duration: 0.4ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_create_queue_b2b.html.erb within layouts/application (Duration: 9.6ms | GC: 0.2ms)
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (322.8ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (2.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 344.0ms | GC: 4.4ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.6ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (1.4ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mProfile Load (321.0ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 655.1ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 1014.3ms | GC: 4.6ms)
+Completed 200 OK in 9715ms (Views: 59.1ms | ActiveRecord: 8574.3ms (22 queries, 14 cached) | GC: 95.7ms)
+
+
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 14:52:30 -0300
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[36mUser Load (1400.2ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Pluck (183.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 14:52:32 -0300
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[35mSQL (350.9ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mB2bOrder Load (170.9ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`tiny_reference_id` IN ('901884669', '901506043', '901928284', '901561390', '901916323', '901883834', '901580655', '901579956', '901578310', '901885232', '901877160', '901502116', '901497770', '901501644', '901674138', '901673931', '901673113', '901672805', '901672354', '901669368', '901658480', '901363892', '901574031', '901574297', '901569163', '')[0m
+  ↳ app/controllers/dashboard_controller.rb:1340:in `each_with_object'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  Rendered layouts/partials/_messages.html.erb (Duration: 0.6ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 15.9ms | GC: 0.0ms)
+  [1m[36mProfile Pluck (173.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.2ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (173.4ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 386.8ms | GC: 0.0ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (1.1ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mUser Load (1046.2ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Load (175.9ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 184.9ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 590.3ms | GC: 0.0ms)
+Completed 200 OK in 3122ms (Views: 76.6ms | ActiveRecord: 2969.9ms (20 queries, 13 cached) | GC: 0.0ms)
+
+
+  [1m[36mProfile Pluck (174.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[35mSQL (345.2ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mB2bOrder Load (173.5ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`tiny_reference_id` IN ('901884669', '901506043', '901928284', '901561390', '901916323', '901883834', '901580655', '901579956', '901578310', '901885232', '901877160', '901502116', '901497770', '901501644', '901674138', '901673931', '901673113', '901672805', '901672354', '901669368', '901658480', '901363892', '901574031', '901574297', '901569163', '')[0m
+  ↳ app/controllers/dashboard_controller.rb:1340:in `each_with_object'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  Rendered layouts/partials/_messages.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 4.0ms | GC: 0.0ms)
+  [1m[36mProfile Pluck (174.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (5.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 14:52:34 -0300
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[36mProfile Exists? (171.5ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 453.3ms | GC: 21.9ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (0.9ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mUser Load (185.4ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Load (172.5ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 191.4ms | GC: 6.7ms)
+  [1m[36mProfile Pluck (175.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  Rendered layout layouts/application.html.erb (Duration: 652.1ms | GC: 28.6ms)
+  ↳ app/models/user.rb:125:in `profile_ids'
+Completed 200 OK in 2417ms (Views: 145.5ms | ActiveRecord: 2419.6ms (20 queries, 13 cached) | GC: 31.6ms)
+
+
+  [1m[35mSQL (363.0ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mB2bOrder Load (168.8ms)[0m  [1m[34mSELECT `b2b_orders`.* FROM `b2b_orders` WHERE `b2b_orders`.`tiny_reference_id` IN ('901884669', '901506043', '901928284', '901561390', '901916323', '901883834', '901580655', '901579956', '901578310', '901885232', '901877160', '901502116', '901497770', '901501644', '901674138', '901673931', '901673113', '901672805', '901672354', '901669368', '901658480', '901363892', '901574031', '901574297', '901569163', '')[0m
+  ↳ app/controllers/dashboard_controller.rb:1340:in `each_with_object'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  Rendered layouts/partials/_messages.html.erb (Duration: 0.3ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 7.3ms | GC: 1.9ms)
+  [1m[36mProfile Pluck (171.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.2ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (172.4ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 402.1ms | GC: 7.3ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.3ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (0.8ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mProfile Load (172.2ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 180.5ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 593.3ms | GC: 9.2ms)
+Completed 200 OK in 1509ms (Views: 80.6ms | ActiveRecord: 1402.1ms (20 queries, 13 cached) | GC: 18.9ms)
+
+
+Started GET "/dashboard/order_correios_create_queue_b2b" for ::1 at 2026-09-17 14:55:47 -0300
+Processing by DashboardController#order_correios_create_queue_b2b as HTML
+  [1m[36mUser Load (179.0ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Pluck (174.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :status, [:fail, :error, :success, :processing]
+ (called from <class:Attempt> at /Users/danielfernandes/projects/ChaseOrders/app/models/attempt.rb:2)
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :kinds, [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order, :sync_correios_stock, :create_correios_order_tiny2, :send_xml_tiny2, :get_tracking_tiny2]
+ (called from <class:Attempt> at /Users/danielfernandes/projects/ChaseOrders/app/models/attempt.rb:3)
+  [1m[36mAttempt Pluck (171.1ms)[0m  [1m[34mSELECT `attempts`.`tiny_order_id` FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`status` = 2 AND `attempts`.`created_at` BETWEEN '2026-08-17 17:55:51.209767' AND '2026-09-17 17:55:51.209925'[0m
+  ↳ app/controllers/dashboard_controller.rb:436:in `order_correios_create_queue_b2b'
+DEPRECATION WARNING: Defining enums with keyword arguments is deprecated and will be removed
+in Rails 8.0. Positional arguments should be used instead:
+
+enum :status, [:approved, :ignored]
+ (called from <class:Tiny2OrderReview> at /Users/danielfernandes/projects/ChaseOrders/app/models/tiny2_order_review.rb:2)
+  [1m[36mTiny2OrderReview Pluck (167.1ms)[0m  [1m[34mSELECT `tiny2_order_reviews`.`tiny_order_id` FROM `tiny2_order_reviews` WHERE `tiny2_order_reviews`.`tiny_order_id` IN ('901573891', '901580270', '901780552', '901884669', '901920980', '901923505', '901925976', '901929716', '901942222') AND `tiny2_order_reviews`.`status` = 0[0m
+  ↳ app/controllers/dashboard_controller.rb:439:in `order_correios_create_queue_b2b'
+  [1m[36mAttempt Load (2549.0ms)[0m  [1m[34mSELECT `attempts`.* FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`tiny_order_id` IN (901573891, 901580270, 901780552, 901920980, 901923505, 901925976, 901929716, 901942222) AND `attempts`.`created_at` BETWEEN '2026-08-17 17:55:52.235132' AND '2026-09-17 17:55:52.235478' ORDER BY `attempts`.`created_at` ASC[0m
+  ↳ app/controllers/dashboard_controller.rb:457:in `order_correios_create_queue_b2b'
+  [1m[36mAttempt Count (174.1ms)[0m  [1m[34mSELECT COUNT(*) FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`tiny_order_id` IN (901573891, 901580270, 901780552, 901920980, 901923505, 901925976, 901929716, 901942222) AND `attempts`.`created_at` BETWEEN '2026-08-17 17:55:52.235132' AND '2026-09-17 17:55:52.235478'[0m
+  ↳ app/controllers/dashboard_controller.rb:483:in `order_correios_create_queue_b2b'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_create_queue_b2b.html.erb within layouts/application
+  Rendered dashboard/_run_now_modal.html.erb (Duration: 0.3ms | GC: 0.0ms)
+  Rendered dashboard/_run_now_script.html.erb (Duration: 0.4ms | GC: 0.1ms)
+  Rendered dashboard/order_correios_create_queue_b2b.html.erb within layouts/application (Duration: 5.8ms | GC: 0.2ms)
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (344.5ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (1.2ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 366.4ms | GC: 0.5ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 1.4ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (1.1ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mProfile Load (343.6ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 700.2ms | GC: 0.7ms)
+  Rendered layout layouts/application.html.erb (Duration: 1079.7ms | GC: 1.4ms)
+Completed 200 OK in 8332ms (Views: 53.8ms | ActiveRecord: 7516.0ms (22 queries, 14 cached) | GC: 32.9ms)
+
+
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 15:02:22 -0300
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[36mUser Load (1345.0ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 15:02:24 -0300
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[36mProfile Pluck (181.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[35mSQL (332.2ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2 AND tiny_order_id IS NOT NULL
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mAttempt Pluck (493.2ms)[0m  [1m[34mSELECT `attempts`.`tiny_order_id`, `attempts`.`params` FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`status` = 2 AND `attempts`.`tiny_order_id` IN (901884669, 901506043, 901928284, 901561390, 901916323, 901883834, 901580655, 901579956, 901578310, 901885232, 901877160, 901502116, 901497770, 901501644, 901674138, 901673931, 901673113, 901672805, 901672354, 901669368, 901658480, 901363892, 901574031, 901574297, 901569163) AND NOT ((`attempts`.`params` = '' OR `attempts`.`params` IS NULL)) ORDER BY `attempts`.`created_at` DESC[0m
+  ↳ app/controllers/dashboard_controller.rb:1344:in `prepare_tracking_data_optimized_b2b'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  [1m[36mUser Load (1021.0ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  Rendered layouts/partials/_messages.html.erb (Duration: 3.0ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 39.5ms | GC: 0.8ms)
+  [1m[36mProfile Pluck (167.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Pluck (161.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.2ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (162.7ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (2.5ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 373.8ms | GC: 0.0ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 1.1ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (2.0ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[35mSQL (326.9ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2 AND tiny_order_id IS NOT NULL
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mProfile Load (162.1ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 172.5ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 591.2ms | GC: 0.8ms)
+Completed 200 OK in 3138ms (Views: 117.7ms | ActiveRecord: 2974.6ms (20 queries, 13 cached) | GC: 2.2ms)
+
+
+  [1m[36mAttempt Pluck (549.4ms)[0m  [1m[34mSELECT `attempts`.`tiny_order_id`, `attempts`.`params` FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`status` = 2 AND `attempts`.`tiny_order_id` IN (901884669, 901506043, 901928284, 901561390, 901916323, 901883834, 901580655, 901579956, 901578310, 901885232, 901877160, 901502116, 901497770, 901501644, 901674138, 901673931, 901673113, 901672805, 901672354, 901669368, 901658480, 901363892, 901574031, 901574297, 901569163) AND NOT ((`attempts`.`params` = '' OR `attempts`.`params` IS NULL)) ORDER BY `attempts`.`created_at` DESC[0m
+  ↳ app/controllers/dashboard_controller.rb:1344:in `prepare_tracking_data_optimized_b2b'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  Rendered layouts/partials/_messages.html.erb (Duration: 1.2ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 36.8ms | GC: 0.0ms)
+  [1m[36mProfile Pluck (232.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.4ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (164.4ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 453.6ms | GC: 22.8ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.1ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (0.6ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mProfile Load (165.6ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 177.4ms | GC: 4.2ms)
+  Rendered layout layouts/application.html.erb (Duration: 673.0ms | GC: 27.0ms)
+Completed 200 OK in 2902ms (Views: 191.7ms | ActiveRecord: 2673.3ms (20 queries, 13 cached) | GC: 28.9ms)
+
+
+Started GET "/dashboard/order_correios_tracking_b2b" for ::1 at 2026-09-17 15:10:35 -0300
+Processing by DashboardController#order_correios_tracking_b2b as HTML
+  [1m[36mUser Load (1217.8ms)[0m  [1m[34mSELECT `users`.* FROM `users` WHERE `users`.`id` = 6 ORDER BY `users`.`id` ASC LIMIT 1[0m
+  [1m[36mProfile Pluck (160.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[35mSQL (327.0ms)[0m  [1m[35m      WITH successful_orders AS (
+        SELECT tiny_order_id, order_correios_id, is_transportadora, MAX(created_at) AS created_at
+        FROM attempts
+        WHERE kinds = 8 AND status = 2 AND tiny_order_id IS NOT NULL
+        GROUP BY tiny_order_id, order_correios_id, is_transportadora
+      )
+      SELECT
+        so.tiny_order_id,
+        so.is_transportadora,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 5 AND a.status = 2
+        ) AS invoice_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 9 AND a.status = 2
+        ) AS xml_done,
+        EXISTS (
+          SELECT 1 FROM attempts a
+          WHERE a.order_correios_id = so.order_correios_id
+            AND a.kinds = 10 AND a.status = 2
+        ) AS tracking_done
+      FROM successful_orders so
+      WHERE 1=1
+      
+      ORDER BY so.created_at DESC;
+[0m
+  ↳ app/controllers/dashboard_controller.rb:1281:in `prepare_tracking_data_optimized_b2b'
+  [1m[36mAttempt Pluck (493.3ms)[0m  [1m[34mSELECT `attempts`.`tiny_order_id`, `attempts`.`params` FROM `attempts` WHERE `attempts`.`kinds` = 8 AND `attempts`.`status` = 2 AND `attempts`.`tiny_order_id` IN (901884669, 901506043, 901928284, 901561390, 901916323, 901883834, 901580655, 901579956, 901578310, 901885232, 901877160, 901502116, 901497770, 901501644, 901674138, 901673931, 901673113, 901672805, 901672354, 901669368, 901658480, 901363892, 901574031, 901574297, 901569163) AND NOT ((`attempts`.`params` = '' OR `attempts`.`params` IS NULL)) ORDER BY `attempts`.`created_at` DESC[0m
+  ↳ app/controllers/dashboard_controller.rb:1344:in `prepare_tracking_data_optimized_b2b'
+  Rendering layout layouts/application.html.erb
+  Rendering dashboard/order_correios_tracking_b2b.html.erb within layouts/application
+  Rendered layouts/partials/_messages.html.erb (Duration: 3.5ms | GC: 0.0ms)
+  Rendered dashboard/order_correios_tracking_b2b.html.erb within layouts/application (Duration: 17.9ms | GC: 0.6ms)
+  [1m[36mProfile Pluck (192.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.3ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.0ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (2.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.9ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.7ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (1.1ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mCACHE Profile Pluck (0.6ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  [1m[36mProfile Exists? (162.5ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/models/user.rb:102:in `profile_name'
+  [1m[36mCACHE Profile Pluck (1.8ms)[0m  [1m[34mSELECT `profiles`.`id` FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/models/user.rb:125:in `profile_ids'
+  Rendered layouts/partials/_sidebar.html.erb (Duration: 409.1ms | GC: 1.1ms)
+  Rendered layouts/partials/_content.html.erb (Duration: 0.7ms | GC: 0.0ms)
+  [1m[36mCACHE Profile Exists? (1.7ms)[0m  [1m[34mSELECT 1 AS one FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6 LIMIT 1[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:59
+  [1m[36mProfile Load (166.5ms)[0m  [1m[34mSELECT `profiles`.* FROM `profiles` INNER JOIN `user_profiles` ON `profiles`.`id` = `user_profiles`.`profile_id` WHERE `user_profiles`.`user_id` = 6[0m
+  ↳ app/views/layouts/partials/_footer.html.erb:60:in `map'
+  Rendered layouts/partials/_footer.html.erb (Duration: 182.2ms | GC: 1.1ms)
+  Rendered layout layouts/application.html.erb (Duration: 616.1ms | GC: 2.8ms)
+Completed 200 OK in 2982ms (Views: 109.1ms | ActiveRecord: 2856.9ms (20 queries, 13 cached) | GC: 8.0ms)
+
+

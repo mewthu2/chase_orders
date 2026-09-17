@@ -386,11 +386,11 @@
           </div>
 
           <div id="bairroFixContent" style="display:none">
-            <div id="bairroFixWarning" class="alert alert-warning" style="display:none">
-              <i class="fas fa-exclamation-triangle me-1"></i>
+            <div id="bairroFixWarning" class="alert alert-info" style="display:none">
+              <i class="fas fa-circle-info me-1"></i>
               Este pedido tem um endereço de entrega próprio na Tiny, diferente do cadastro do cliente.
-              A correção abaixo atualiza apenas o <strong>cadastro do cliente</strong> — pode não refletir
-              nesse pedido específico (limitação da API da Tiny).
+              A Tiny não permite corrigir isso via API, então a correção abaixo é salva aqui no Honey e
+              será usada no lugar do endereço da Tiny quando este pedido for recriado nos Correios.
             </div>
 
             <p class="mb-3">
@@ -617,7 +617,7 @@
       var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
       var channelLabel = isB2b ? 'Tiny 2 (B2B)' : 'Tiny 3 (B2C)';
 
-      bairroFixState = { attemptId: attemptId, tinyOrderId: tinyOrderId, kinds: null, cpfCnpj: null };
+      bairroFixState = { attemptId: attemptId, tinyOrderId: tinyOrderId, kinds: null };
 
       document.getElementById('bairroFixLoadingText').textContent = 'Buscando dados do pedido no ' + channelLabel + '...';
 
@@ -656,7 +656,6 @@
           }
 
           bairroFixState.kinds = data.kinds;
-          bairroFixState.cpfCnpj = data.cpf_cnpj;
 
           document.getElementById('bairroFixContent').style.display = 'block';
           document.getElementById('bairroFixCep').value = data.cep || '';
@@ -749,7 +748,6 @@
             },
             body: JSON.stringify({
               attempt_id: bairroFixState.attemptId,
-              cpf_cnpj: bairroFixState.cpfCnpj,
               endereco: document.getElementById('bairroFixEndereco').value.trim(),
               numero: document.getElementById('bairroFixNumero').value.trim(),
               complemento: document.getElementById('bairroFixComplemento').value.trim(),
@@ -764,7 +762,7 @@
               resultEl.style.display = 'block';
 
               if (data.success) {
-                resultEl.innerHTML = '<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-1"></i>Endereço corrigido na Tiny com sucesso!</div>';
+                resultEl.innerHTML = '<div class="alert alert-success mb-0"><i class="fas fa-check-circle me-1"></i>Endereço corrigido no Honey com sucesso! Ele será usado ao recriar este pedido.</div>';
                 confirmBtn.style.display = 'none';
                 document.getElementById('bairroFixRetryBtn').style.display = 'inline-block';
               } else {

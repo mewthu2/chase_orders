@@ -7,9 +7,9 @@
   <% end %>
 
   <div class="form-section">
-    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Tipo do Pedido</h5></div>
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do Pedido</h5></div>
     <div class="form-section-body">
-      <div class="form-grid">
+      <div class="form-grid mb-3">
         <div class="form-col-6 form-check">
           <%= form.radio_button :kind, 'sale', id: 'kind_sale', checked: @b2b_order.sale? || @b2b_order.new_record? %>
           <label class="form-check-label text-main" for="kind_sale">Pedido Comum</label>
@@ -19,48 +19,32 @@
           <label class="form-check-label text-main" for="kind_stock_transfer">Transferência de Estoque</label>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="form-section" id="clientSection">
-    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-building me-2"></i>Cliente</h5></div>
-    <div class="form-section-body">
-      <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
-      <div id="clientSearchResults" class="list-group mt-2"></div>
-      <%= form.hidden_field :client_id, id: 'clientIdField' %>
-    </div>
-  </div>
-
-  <div class="form-section" id="transferLocationSection">
-    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-warehouse me-2"></i>Local de Destino</h5></div>
-    <div class="form-section-body">
-      <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-truck me-2"></i>Transportadora e Frete</h5></div>
-    <div class="form-section-body">
       <div class="form-grid">
-        <div class="form-col-4">
-          <label class="field-label">Transportadora</label>
-          <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+        <div class="form-col-6" id="clientSection">
+          <label class="field-label">Cliente</label>
+          <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
+          <div id="clientSearchResults" class="list-group mt-2"></div>
+          <%= form.hidden_field :client_id, id: 'clientIdField' %>
         </div>
-        <div class="form-col-4">
+
+        <div class="form-col-6" id="transferLocationSection">
+          <label class="field-label">Local de Destino</label>
+          <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+        </div>
+
+        <div class="form-col-6">
           <label class="field-label">Forma de Envio</label>
           <select id="shippingMethodSelect" class="field-input">
             <option value="">Carregando...</option>
           </select>
           <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
         </div>
-        <div class="form-col-4">
-          <label class="field-label">Frete por conta</label>
-          <%= form.select :freight_paid_by, [['Remetente', 'shipper'], ['Destinatário', 'recipient']], { include_blank: false }, { class: 'field-input' } %>
-        </div>
-        <div class="form-col-4">
-          <label class="field-label">Valor do frete</label>
-          <%= form.number_field :freight_value, step: 0.01, class: 'field-input' %>
+
+        <div class="form-col-6" id="carrierSection" style="display: none;">
+          <label class="field-label">Transportadora</label>
+          <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
       </div>
     </div>
@@ -69,11 +53,18 @@
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
     <div class="form-section-body">
-      <div class="d-flex gap-2 mb-3 flex-wrap">
+      <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+        <button type="button" class="btn-export" data-bs-toggle="modal" data-bs-target="#productPickerModal">
+          <i class="fas fa-plus me-1"></i>Adicionar Produtos
+        </button>
         <input type="file" id="csvUploadInput" accept=".csv" class="field-input" style="max-width: 300px;">
-        <input type="text" id="manualSkuInput" class="field-input" placeholder="Buscar produto por SKU/nome..." style="max-width: 300px;">
+        <a href="/templates/planilha_modelo_itens_b2b.csv" download class="btn-back">
+          <i class="fas fa-download me-1"></i>Baixar planilha modelo
+        </a>
+        <button type="button" id="refreshStockButton" class="btn-back">
+          <i class="fas fa-sync me-1"></i>Atualizar estoque
+        </button>
       </div>
-      <div id="manualSearchResults" class="list-group mb-3"></div>
 
       <table class="orders-table" id="itemsTable">
         <thead>
@@ -91,9 +82,9 @@
               </td>
               <td>
                 <%= hidden_field_tag "b2b_order[b2b_order_items_attributes][#{index}][id]", item.id %>
-                <%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][sku]", item.sku, class: 'field-input' %>
+                <%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][sku]", item.sku, class: 'field-input', readonly: true %>
               </td>
-              <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input' %></td>
+              <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input', readonly: true %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][quantity]", item.quantity, class: 'field-input' %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][price]", item.price, step: 0.01, class: 'field-input' %></td>
               <td class="item-stock-cell" data-sku="<%= item.sku %>">-</td>
@@ -103,6 +94,29 @@
         </tbody>
       </table>
       <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Estoque exibido é só informativo — não bloqueia o envio.</span>
+    </div>
+  </div>
+
+  <div class="modal fade" id="productPickerModal" tabindex="-1" aria-labelledby="productPickerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content" style="background: #161b22; border: 1px solid #21262d; color: #e6edf3;">
+        <div class="modal-header" style="border-bottom: 1px solid #21262d;">
+          <h5 class="modal-title" id="productPickerModalLabel" style="color: #e6edf3;">Selecionar Produtos</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="productPickerSearchInput" class="field-input" placeholder="Buscar por nome ou SKU (ex: signature black)..." autocomplete="off">
+
+          <div id="productPickerResults" class="mt-3">
+            <div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid #21262d;">
+          <span class="text-muted-custom me-auto" id="productPickerSelectedCount">0 variantes selecionadas</span>
+          <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn-export" id="productPickerAddButton" disabled>Adicionar</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -123,6 +137,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   var itemIndex = <%= @b2b_order.b2b_order_items.size %>;
+  var stockCache = {}; // sku -> quantity, preenchido pela busca do modal e reaproveitado na tabela
 
   function toggleKindSections() {
     var isSale = document.getElementById('kind_sale').checked;
@@ -132,6 +147,14 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('kind_sale').addEventListener('change', toggleKindSections);
   document.getElementById('kind_stock_transfer').addEventListener('change', toggleKindSections);
   toggleKindSections();
+
+  // Transportadora só faz sentido escolher quando a Forma de Envio é "Transportadora"
+  function toggleCarrierSection() {
+    var select = document.getElementById('shippingMethodSelect');
+    var selectedOption = select.options[select.selectedIndex];
+    var isCarrier = !!selectedOption && selectedOption.textContent.trim().toLowerCase() === 'transportadora';
+    document.getElementById('carrierSection').style.display = isCarrier ? '' : 'none';
+  }
 
   // Forma de Envio via AJAX (lista vem do Tiny)
   fetch('<%= shipping_methods_b2b_orders_path %>')
@@ -146,37 +169,103 @@ document.addEventListener('DOMContentLoaded', function () {
         if (m.method === '<%= @b2b_order.carrier_shipping_method %>') opt.selected = true;
         select.appendChild(opt);
       });
+      toggleCarrierSection();
     });
   document.getElementById('shippingMethodSelect').addEventListener('change', function (e) {
     document.getElementById('carrierMethodField').value = e.target.value;
+    toggleCarrierSection();
   });
 
-  // Cliente via AJAX (reaproveita ClientsController#search)
+  // Cliente via AJAX (busca no Honey e no Tiny ao mesmo tempo)
   var clientTimeout;
+  // Cada busca tem uma "geração": se uma nova busca for feita (ou um cliente
+  // for selecionado) antes da resposta chegar, a resposta antiga é descartada
+  // em vez de sobrescrever a caixa de resultados já limpa/selecionada.
+  var clientSearchGeneration = 0;
   document.getElementById('clientSearchInput').addEventListener('input', function (e) {
     clearTimeout(clientTimeout);
+    var myGeneration = ++clientSearchGeneration;
     var q = e.target.value;
+    var box = document.getElementById('clientSearchResults');
+
+    if (!q) { box.innerHTML = ''; return; }
+
+    box.innerHTML = '<div class="list-group-item"><i class="fas fa-spinner fa-spin me-2"></i>Buscando no Honey e no Tiny...</div>';
+
     clientTimeout = setTimeout(function () {
-      fetch('<%= search_clients_path %>?q=' + encodeURIComponent(q))
+      fetch('<%= search_client_b2b_orders_path %>?query=' + encodeURIComponent(q))
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var box = document.getElementById('clientSearchResults');
+          if (myGeneration !== clientSearchGeneration) return;
           box.innerHTML = '';
-          (data.clients || []).forEach(function (c) {
+          var clients = data.clients || [];
+
+          clients.forEach(function (c) {
             var item = document.createElement('button');
             item.type = 'button';
-            item.className = 'list-group-item list-group-item-action';
-            item.textContent = c.display_name + ' - ' + c.registration;
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+
+            var label = document.createElement('span');
+            label.textContent = c.name + (c.registration ? ' - ' + c.registration : '');
+            item.appendChild(label);
+
+            var badge = document.createElement('span');
+            badge.className = c.source === 'honey' ? 'badge bg-success' : 'badge bg-warning text-dark';
+            badge.textContent = c.source === 'honey' ? 'Honey' : 'Tiny';
+            item.appendChild(badge);
+
             item.addEventListener('click', function () {
-              document.getElementById('clientIdField').value = c.id;
-              document.getElementById('clientSearchInput').value = c.display_name;
-              box.innerHTML = '';
+              if (c.source === 'honey') {
+                selectClient(c.client_id, c.name);
+                box.innerHTML = '';
+                return;
+              }
+
+              item.disabled = true;
+              label.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Cadastrando no Honey...';
+
+              fetch('<%= import_client_b2b_orders_path %>', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                  name: c.name, registration: c.registration, street: c.street, number: c.number,
+                  neighbourhood: c.neighbourhood, city: c.city, state: c.state, zip: c.zip,
+                  email: c.email, phone: c.phone
+                })
+              })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+                  if (result.success) {
+                    selectClient(result.client.id, result.client.display_name);
+                    box.innerHTML = '';
+                  } else {
+                    alert('Erro ao cadastrar cliente no Honey: ' + (result.errors || []).join(', '));
+                  }
+                });
             });
+
             box.appendChild(item);
           });
+
+          if (clients.length === 0) {
+            var emptyState = document.createElement('div');
+            emptyState.className = 'list-group-item';
+            emptyState.innerHTML = 'Nenhum cliente encontrado no Honey ou no Tiny. ' +
+              '<a href="<%= new_client_path %>" target="_blank">Cadastrar novo cliente</a>';
+            box.appendChild(emptyState);
+          }
         });
     }, 300);
   });
+
+  function selectClient(id, name) {
+    clientSearchGeneration++;
+    document.getElementById('clientIdField').value = id;
+    document.getElementById('clientSearchInput').value = name;
+  }
 
   function photoCellHtml(sku, imageUrl) {
     if (imageUrl) {
@@ -192,15 +281,14 @@ document.addEventListener('DOMContentLoaded', function () {
     var row = document.createElement('tr');
     row.innerHTML =
       photoCellHtml(sku, imageUrl) +
-      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][sku]" value="' + (sku || '') + '"></td>' +
-      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '"></td>' +
+      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][sku]" value="' + (sku || '') + '" readonly></td>' +
+      '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '" readonly></td>' +
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
       '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
       '<td class="item-stock-cell" data-sku="' + (sku || '') + '">-</td>' +
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);
     itemIndex++;
-    queueStockFetch(row.querySelector('.item-stock-cell'));
     if (!imageUrl) queueImageFetch(row.querySelector('.item-photo-cell'));
   }
 
@@ -233,13 +321,36 @@ document.addEventListener('DOMContentLoaded', function () {
     var sku = cell.dataset.sku;
     if (!sku) return Promise.resolve();
 
+    if (Object.prototype.hasOwnProperty.call(stockCache, sku)) {
+      var cached = stockCache[sku];
+      cell.textContent = cached.quantity + ' (' + cached.status + ')';
+      return Promise.resolve();
+    }
+
     return fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
       .then(function (r) { return r.json(); })
-      .then(function (data) { cell.textContent = data.quantity + ' (' + data.status + ')'; })
+      .then(function (data) {
+        stockCache[sku] = { quantity: data.quantity, status: data.status };
+        cell.textContent = data.quantity + ' (' + data.status + ')';
+      })
       .catch(function () { cell.textContent = 'erro'; });
   }, 200);
 
-  document.querySelectorAll('.item-stock-cell').forEach(queueStockFetch);
+  // Verifica o estoque da tabela de itens apenas uma vez, ao carregar a tela.
+  // Itens adicionados depois (planilha, modal) só têm o estoque consultado
+  // quando o usuário clicar em "Atualizar estoque", pra não travar a fila
+  // com uma consulta por item num upload com muitas linhas.
+  function checkAllItemsStock(force) {
+    var cells = Array.prototype.slice.call(document.querySelectorAll('.item-stock-cell'));
+    if (force) cells.forEach(function (cell) { delete stockCache[cell.dataset.sku]; });
+    cells.forEach(queueStockFetch);
+  }
+
+  checkAllItemsStock(false);
+
+  document.getElementById('refreshStockButton').addEventListener('click', function () {
+    checkAllItemsStock(true);
+  });
 
   var queueImageFetch = makeQueue(function (cell) {
     var sku = cell.dataset.sku;
@@ -272,59 +383,188 @@ document.addEventListener('DOMContentLoaded', function () {
       });
   });
 
-  // Busca manual de produto
-  var searchTimeout;
-  document.getElementById('manualSkuInput').addEventListener('input', function (e) {
-    clearTimeout(searchTimeout);
-    var q = e.target.value;
-    if (q) {
-      document.getElementById('manualSearchResults').innerHTML =
-        '<div class="list-group-item bg-dark text-white-50"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
-    }
+  // ===== Modal "Selecionar Produtos" (estilo Shopify) =====
+  var pickerSelected = {}; // sku -> { sku, name, price, image_url }
+  function renderPickerStock(cell, cached) {
+    var html = cached.quantity > 0
+      ? '<span>' + cached.quantity + '</span>'
+      : '<span class="text-warning"><i class="fas fa-triangle-exclamation me-1"></i>0</span>';
+    cell.innerHTML = html;
+  }
 
-    searchTimeout = setTimeout(function () {
-      if (!q) { document.getElementById('manualSearchResults').innerHTML = ''; return; }
-      fetch('<%= search_product_b2b_orders_path %>?query=' + encodeURIComponent(q))
+  // Dispara a consulta de estoque de todas as variantes em paralelo (sem fila
+  // com atraso — é só um punhado de resultados de uma busca no modal). Cada
+  // chamada tem uma "geração": se uma nova busca for feita antes da resposta
+  // chegar, a resposta antiga é descartada em vez de atualizar a tela.
+  var pickerStockGeneration = 0;
+
+  function fetchPickerStock(cells) {
+    var myGeneration = ++pickerStockGeneration;
+
+    cells.forEach(function (cell) {
+      var sku = cell.dataset.sku;
+
+      if (Object.prototype.hasOwnProperty.call(stockCache, sku)) {
+        renderPickerStock(cell, stockCache[sku]);
+        return;
+      }
+
+      fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var box = document.getElementById('manualSearchResults');
-          box.innerHTML = '';
-          (data.products || []).forEach(function (p) {
-            var item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'list-group-item list-group-item-action d-flex align-items-center gap-2';
-
-            if (p.image_url) {
-              var img = document.createElement('img');
-              img.src = p.image_url;
-              img.loading = 'lazy';
-              img.className = 'rounded border border-secondary flex-shrink-0';
-              img.style.width = '44px';
-              img.style.height = '44px';
-              img.style.objectFit = 'cover';
-              item.appendChild(img);
-            } else {
-              var placeholder = document.createElement('span');
-              placeholder.className = 'rounded border border-secondary d-flex align-items-center justify-content-center text-muted flex-shrink-0';
-              placeholder.style.width = '44px';
-              placeholder.style.height = '44px';
-              placeholder.innerHTML = '<i class="fas fa-image"></i>';
-              item.appendChild(placeholder);
-            }
-
-            var text = document.createElement('span');
-            text.textContent = p.sku + ' - ' + p.name + ' (estoque: ' + p.quantity + ')';
-            item.appendChild(text);
-
-            item.addEventListener('click', function () {
-              addItemRow(p.sku, p.name, 1, p.suggested_price || 0, p.image_url);
-              box.innerHTML = '';
-              document.getElementById('manualSkuInput').value = '';
-            });
-            box.appendChild(item);
-          });
+          stockCache[sku] = { quantity: data.quantity, status: data.status };
+          if (myGeneration !== pickerStockGeneration) return; // busca já foi trocada, ignora
+          renderPickerStock(cell, stockCache[sku]);
+        })
+        .catch(function () {
+          if (myGeneration !== pickerStockGeneration) return;
+          cell.innerHTML = '<span class="text-danger">-</span>';
         });
-    }, 300);
+    });
+  }
+
+  function updatePickerFooter() {
+    var count = Object.keys(pickerSelected).length;
+    document.getElementById('productPickerSelectedCount').textContent = count + ' variante' + (count === 1 ? '' : 's') + ' selecionada' + (count === 1 ? '' : 's');
+    document.getElementById('productPickerAddButton').disabled = count === 0;
+  }
+
+  function renderPickerResults(products) {
+    var box = document.getElementById('productPickerResults');
+    box.innerHTML = '';
+
+    if (products.length === 0) {
+      box.innerHTML = '<div class="text-muted-custom text-center py-4">Nenhum produto encontrado.</div>';
+      return;
+    }
+
+    var table = document.createElement('table');
+    table.className = 'orders-table';
+    table.innerHTML = '<thead><tr><th></th><th>Produto</th><th class="text-center">Disponível</th><th class="text-center">Preço</th></tr></thead>';
+    var tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+
+    products.forEach(function (product) {
+      var variantSkus = product.variants.map(function (v) { return v.sku; });
+
+      var productRow = document.createElement('tr');
+      var productCb = document.createElement('input');
+      productCb.type = 'checkbox';
+      productCb.className = 'form-check-input';
+
+      var productCbCell = document.createElement('td');
+      productCbCell.appendChild(productCb);
+      productRow.appendChild(productCbCell);
+
+      var nameCell = document.createElement('td');
+      nameCell.className = 'd-flex align-items-center gap-2';
+      if (product.image_url) {
+        nameCell.innerHTML = '<img src="' + product.image_url + '" class="rounded border border-secondary" style="width: 36px; height: 36px; object-fit: cover;" loading="lazy">';
+      } else {
+        nameCell.innerHTML = '<span class="rounded border border-secondary d-flex align-items-center justify-content-center text-muted-custom" style="width: 36px; height: 36px;"><i class="fas fa-image"></i></span>';
+      }
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = product.name;
+      nameSpan.className = 'fw-bold';
+      nameCell.appendChild(nameSpan);
+      productRow.appendChild(nameCell);
+      productRow.appendChild(document.createElement('td'));
+      productRow.appendChild(document.createElement('td'));
+      tbody.appendChild(productRow);
+
+      var variantCheckboxes = [];
+
+      function setVariantSelected(cb, variant) {
+        if (cb.checked) {
+          pickerSelected[variant.sku] = {
+            sku: variant.sku,
+            name: product.name + ' - ' + variant.option,
+            price: variant.price || 0,
+            image_url: product.image_url
+          };
+        } else {
+          delete pickerSelected[variant.sku];
+        }
+      }
+
+      product.variants.forEach(function (variant) {
+        var row = document.createElement('tr');
+
+        var cbCell = document.createElement('td');
+        cbCell.style.paddingLeft = '2rem';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'form-check-input';
+        cb.addEventListener('change', function () {
+          setVariantSelected(cb, variant);
+          productCb.checked = variantCheckboxes.every(function (c) { return c.checked; });
+          updatePickerFooter();
+        });
+        variantCheckboxes.push(cb);
+        cbCell.appendChild(cb);
+        row.appendChild(cbCell);
+
+        var optionCell = document.createElement('td');
+        optionCell.textContent = variant.option;
+        optionCell.style.paddingLeft = '2rem';
+        row.appendChild(optionCell);
+
+        var stockCell = document.createElement('td');
+        stockCell.className = 'text-center item-picker-stock-cell';
+        stockCell.dataset.sku = variant.sku;
+        stockCell.innerHTML = '<i class="fas fa-spinner fa-spin text-muted-custom"></i>';
+        row.appendChild(stockCell);
+
+        var priceCell = document.createElement('td');
+        priceCell.className = 'text-center';
+        priceCell.textContent = variant.price ? 'R$ ' + Number(variant.price).toFixed(2) : '-';
+        row.appendChild(priceCell);
+
+        tbody.appendChild(row);
+      });
+
+      productCb.addEventListener('change', function () {
+        variantCheckboxes.forEach(function (cb, idx) {
+          cb.checked = productCb.checked;
+          setVariantSelected(cb, product.variants[idx]);
+        });
+        updatePickerFooter();
+      });
+    });
+
+    box.appendChild(table);
+    fetchPickerStock(Array.prototype.slice.call(document.querySelectorAll('.item-picker-stock-cell')));
+  }
+
+  var pickerSearchTimeout;
+  document.getElementById('productPickerSearchInput').addEventListener('input', function (e) {
+    clearTimeout(pickerSearchTimeout);
+    pickerStockGeneration++; // invalida qualquer resposta de estoque que ainda esteja a caminho
+    var q = e.target.value.trim();
+    var box = document.getElementById('productPickerResults');
+
+    if (!q) { box.innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>'; return; }
+
+    box.innerHTML = '<div class="text-muted-custom text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
+
+    pickerSearchTimeout = setTimeout(function () {
+      fetch('<%= product_picker_b2b_orders_path %>?query=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) { renderPickerResults(data.products || []); });
+    }, 350);
+  });
+
+  document.getElementById('productPickerAddButton').addEventListener('click', function () {
+    Object.values(pickerSelected).forEach(function (item) {
+      addItemRow(item.sku, item.name, 1, item.price, item.image_url);
+    });
+    pickerSelected = {};
+    updatePickerFooter();
+    document.getElementById('productPickerSearchInput').value = '';
+    document.getElementById('productPickerResults').innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>';
+    var modalEl = document.getElementById('productPickerModal');
+    var modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) modalInstance.hide();
   });
 });
 </script>

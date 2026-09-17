@@ -50,22 +50,32 @@
       <h5 class="form-section-title"><i class="fas fa-desktop me-2"></i>Telas Permitidas</h5>
     </div>
     <div class="form-section-body">
-      <div class="form-grid">
-        <% Screen.options_for_select.each do |label, key| %>
-          <div class="form-col-4">
-            <div class="form-check">
-              <%= check_box_tag 'profile[screen_keys][]',
-                                key,
-                                @profile.screen_keys.include?(key),
-                                { class: 'form-check-input', id: "screen_#{key}" } %>
-              <label class="form-check-label text-main" for="screen_<%= key %>"><%= label %></label>
-            </div>
+      <% Screen.grouped.each do |group_name, options| %>
+        <div class="mb-3 pb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <strong class="text-main"><i class="fas fa-layer-group me-2"></i><%= group_name %></strong>
+            <button type="button" class="btn-back btn-sm screen-group-toggle" data-group="<%= group_name.parameterize %>">
+              Marcar/desmarcar todos
+            </button>
           </div>
-        <% end %>
-      </div>
+          <div class="form-grid" data-group-checkboxes="<%= group_name.parameterize %>">
+            <% options.each do |label, key| %>
+              <div class="form-col-4">
+                <div class="form-check">
+                  <%= check_box_tag 'profile[screen_keys][]',
+                                    key,
+                                    @profile.screen_keys.include?(key),
+                                    { class: 'form-check-input', id: "screen_#{key}" } %>
+                  <label class="form-check-label text-main" for="screen_<%= key %>"><%= label %></label>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
       <span class="text-muted-custom d-block mt-2">
         <i class="fas fa-info-circle me-1"></i>
-        Perfis novos começam sem nenhuma tela marcada.
+        Perfis novos começam sem nenhuma tela marcada. Os grupos espelham o menu lateral — marque só os itens que o perfil deve ver.
       </span>
     </div>
   </div>
@@ -74,4 +84,19 @@
     <%= form.submit (@profile.new_record? ? 'Criar Perfil' : 'Salvar Alterações'), class: "btn-submit" %>
     <%= link_to "Cancelar", profiles_path, class: "btn-cancel" %>
   </div>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.screen-group-toggle').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var group = btn.dataset.group;
+        var boxes = document.querySelectorAll('[data-group-checkboxes="' + group + '"] input[type="checkbox"]');
+        var allChecked = Array.prototype.every.call(boxes, function (b) { return b.checked; });
+        boxes.forEach(function (b) { b.checked = !allChecked; });
+      });
+    });
+  });
+</script>
 <% end %>

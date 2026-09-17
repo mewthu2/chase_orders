@@ -217,6 +217,7 @@
             <tr>
               <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
               <th class="text-center">ID Pedido Tiny</th>
+              <th class="text-center">Cliente</th>
               <th class="text-center">Transportadora</th>
               <th class="text-center">Criação no Correios</th>
               <th class="text-center">Emissão de Nota</th>
@@ -234,6 +235,7 @@
                   <% end %>
                 </td>
                 <td class="text-center fw-bold text-white"><%= order_id %></td>
+                <td class="text-center"><%= status[:client_name].presence || '-' %></td>
                 <td class="text-center">
                   <% if status[:is_transportadora] %>
                     <span class="badge bg-warning text-dark"><i class="fas fa-truck-moving me-1"></i>Outra Transportadora</span>

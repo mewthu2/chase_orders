@@ -76,7 +76,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.admin? || current_user&.profiles&.any?(&:marketing_profile?) %>
+        <% if current_user&.can_access_screen?('orders') || current_user&.can_access_screen?('customers') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCRM()">
               <div class="nav-group-title">
@@ -87,24 +87,28 @@
             </div>
             <div class="nav-group-dropdown" id="crmDropdown">
               <div class="dropdown-content">
-                <%= link_to orders_path, class: "dropdown-link #{'active' if controller_name == 'orders' && action_name == 'index'}" do %>
-                  <i class="fas fa-shopping-cart"></i>
-                  <span>Pedidos</span>
+                <% if current_user&.can_access_screen?('orders') %>
+                  <%= link_to orders_path, class: "dropdown-link #{'active' if controller_name == 'orders' && action_name == 'index'}" do %>
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Pedidos</span>
+                  <% end %>
+                  <%= link_to coupon_usage_orders_path, class: "dropdown-link #{'active' if current_page?(coupon_usage_orders_path)}" do %>
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Uso de Cupons</span>
+                  <% end %>
                 <% end %>
-                <%= link_to customers_path, class: "dropdown-link #{'active' if controller_name == 'customers'}" do %>
-                  <i class="fas fa-users"></i>
-                  <span>Clientes</span>
-                <% end %>
-                <%= link_to coupon_usage_orders_path, class: "dropdown-link #{'active' if current_page?(coupon_usage_orders_path)}" do %>
-                  <i class="fas fa-ticket-alt"></i>
-                  <span>Uso de Cupons</span>
+                <% if current_user&.can_access_screen?('customers') %>
+                  <%= link_to customers_path, class: "dropdown-link #{'active' if controller_name == 'customers'}" do %>
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                  <% end %>
                 <% end %>
               </div>
             </div>
           </div>
         <% end %>
 
-        <% if current_user&.admin? %>
+        <% if current_user&.can_access_screen?('dashboard_correios') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCorreios()">
               <div class="nav-group-title">
@@ -171,7 +175,9 @@
               </div>
             </div>
           </div>
+        <% end %>
 
+        <% if current_user&.can_access_screen?('dashboard_correios_b2b') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCorreiosB2b()">
               <div class="nav-group-title">
@@ -236,7 +242,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.admin? %>
+        <% if current_user&.can_access_screen?('planner_orders') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="togglePlannerOrders()">
               <div class="nav-group-title">
@@ -260,7 +266,7 @@
           </div>
         <% end %>
 
-        <% unless current_user&.marketing_user? %>
+        <% if current_user&.can_access_screen?('stock_corrections') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
               <div class="nav-group-title">

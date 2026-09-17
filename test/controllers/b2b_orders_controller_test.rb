@@ -71,20 +71,19 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test 'search_product returns stock from the Correios API' do
+  test 'search_product does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
     Product.create!(sku: 'SKU-COR', shopify_product_name: 'Produto Correios')
-
-    stub_request(:get, 'https://correios-log.example.com/estoque/SKU-COR/estoque')
-      .to_return(status: 200, body: { disponivel: 25 }.to_json)
 
     get search_product_b2b_orders_path, params: { query: 'SKU-COR' }
     json = JSON.parse(response.body)
 
     assert json['success']
     product_json = json['products'].first
-    assert_equal 25, product_json['quantity']
-    assert_equal 'high', product_json['status']
+    assert_equal 'SKU-COR', product_json['sku']
+    refute product_json.key?('quantity')
+    refute product_json.key?('status')
+    assert_not_requested :get, 'https://correios-log.example.com/estoque/SKU-COR/estoque'
   end
 
   test 'product_stock returns stock from the Correios API for a known SKU' do
@@ -113,12 +112,9 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'error', json['status']
   end
 
-  test 'parse_items_spreadsheet includes Correios stock for each parsed item' do
+  test 'parse_items_spreadsheet does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
     Product.create!(sku: 'SKU-CSV', shopify_product_name: 'Produto CSV')
-
-    stub_request(:get, 'https://correios-log.example.com/estoque/SKU-CSV/estoque')
-      .to_return(status: 200, body: { disponivel: 0 }.to_json)
 
     csv_content = "SKU,Quantidade\nSKU-CSV,2\n"
     file = Rack::Test::UploadedFile.new(StringIO.new(csv_content), 'text/csv', original_filename: 'items.csv')
@@ -130,7 +126,8 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     item = json['items'].first
     assert_equal 'SKU-CSV', item['sku']
     assert_equal 2, item['quantity']
-    assert_equal 0, item['stock_quantity']
-    assert_equal 'out', item['stock_status']
+    refute item.key?('stock_quantity')
+    refute item.key?('stock_status')
+    assert_not_requested :get, 'https://correios-log.example.com/estoque/SKU-CSV/estoque'
   end
 end
