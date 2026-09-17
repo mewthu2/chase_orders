@@ -196,6 +196,7 @@
             <tr>
               <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
               <th class="text-center">ID Pedido Tiny</th>
+              <th class="text-center">Cliente</th>
               <th class="text-center">Emissão de Nota</th>
               <th class="text-center">Envio XML</th>
               <th class="text-center">Rastreamento</th>
@@ -211,6 +212,7 @@
                   <% end %>
                 </td>
                 <td class="text-center fw-bold text-white"><%= order_id %></td>
+                <td class="text-center"><%= status[:client_name].presence || '-' %></td>
                 <td class="text-center">
                   <span class="badge <%= status[:invoice_emition] ? 'bg-warning text-dark' : 'bg-success' %>">
                     <%= status[:invoice_emition] ? 'Na Fila' : 'Concluído' %>

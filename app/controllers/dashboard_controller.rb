@@ -1200,6 +1200,20 @@ class DashboardController < ApplicationController
       push_tracking: tracking_count,
       total_tracking: @tracking_summary.count
     }
+
+    # O nome do cliente vem do "params" gravado quando o pedido foi criado no
+    # Correios (CreateCorreiosLogOrdersJob#create_one_log_order).
+    client_names_by_tiny_id = Attempt.where(kinds: :create_correios_order, status: :success, tiny_order_id: @tracking_summary.keys)
+                                      .where.not(params: [nil, ''])
+                                      .order(created_at: :desc)
+                                      .pluck(:tiny_order_id, :params)
+                                      .each_with_object({}) do |(order_id, params), h|
+                                        h[order_id.to_s] ||= params[/:nome\s*=>\s*"([^"]*)"/, 1]
+                                      end
+
+    @tracking_summary.each do |order_id, data|
+      data[:client_name] = client_names_by_tiny_id[order_id]
+    end
   end
 
   def prepare_tracking_data_optimized_b2b(filters = {})
