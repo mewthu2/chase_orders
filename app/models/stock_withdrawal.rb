@@ -7,8 +7,13 @@ class StockWithdrawal < ApplicationRecord
     'damaged' => 'Danificado',
     'correction' => 'Correção',
     'quality_control' => 'Controle de qualidade',
+    'marketing' => 'Marketing',
     'other' => 'Outro'
   }.freeze
+
+  # O Shopify só aceita uma lista fixa de motivos no ajuste de inventário e não tem "marketing";
+  # o mais próximo é "promotion" (Promoção ou doação). O texto "marketing" fica na referência do histórico.
+  SHOPIFY_REASONS = { 'marketing' => 'promotion' }.freeze
 
   STALE_PROCESSING_AFTER = 10.minutes
 
@@ -29,8 +34,28 @@ class StockWithdrawal < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
 
+  # Rascunho e retirada com falhas podem ser editados. Na com falhas, só as linhas ainda não
+  # retiradas mudam; as já retiradas (e data/motivo, já usados no Shopify) ficam travadas.
   def editable?
-    draft?
+    draft? || partially_failed?
+  end
+
+  def header_locked?
+    !draft?
+  end
+
+  def editable_items
+    items.reject(&:done?)
+  end
+
+  def locked_items
+    items.select(&:done?)
+  end
+
+  # Pode ser excluída em qualquer status, menos enquanto está sendo processada agora.
+  # Excluir NÃO devolve estoque ao Shopify: o que já foi retirado lá continua retirado.
+  def deletable?
+    !processing? || stale_processing?
   end
 
   # Concluir (ou tentar de novo as falhas) só vale para rascunho e para o que terminou com falhas.
@@ -55,9 +80,13 @@ class StockWithdrawal < ApplicationRecord
     STATUS_LABELS[status]
   end
 
-  # Referência gravada no histórico do inventário do Shopify.
+  def shopify_reason
+    SHOPIFY_REASONS.fetch(reason, reason)
+  end
+
+  # Referência gravada no histórico do inventário do Shopify (inclui o motivo do Honey).
   def reference_uri
-    "honey://stock-withdrawal/#{id}"
+    "honey://stock-withdrawal/#{id}?motivo=#{reason}"
   end
 
   private

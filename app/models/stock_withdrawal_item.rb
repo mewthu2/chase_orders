@@ -9,6 +9,11 @@ class StockWithdrawalItem < ApplicationRecord
   validate :product_must_be_linked_to_shopify
   validate :not_duplicated_in_memory
 
+  # Linha já retirada do Shopify: não pode mais ser alterada nem refeita.
+  def locked?
+    done?
+  end
+
   private
 
   # Sem o ID do item de inventário não dá para retirar no Shopify; avisamos antes de concluir.

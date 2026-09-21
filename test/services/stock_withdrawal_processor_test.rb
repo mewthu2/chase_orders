@@ -223,4 +223,64 @@ class StockWithdrawalProcessorTest < ActiveSupport::TestCase
     assert_equal @user, log.user
     assert_equal 1, log.details_parsed['done']
   end
+
+  test 'a Marketing withdrawal is adjusted in Shopify with reason promotion and the marketing reference' do
+    withdrawal = withdrawal_with([[@a, @lagoa, 2]], reason: 'marketing')
+    stub_levels('111' => { '9001' => 10 })
+    stub_adjust
+
+    StockWithdrawalProcessor.call(withdrawal)
+
+    assert_equal 'promotion', @graphql_calls.first['reason']
+    assert_match(/\?motivo=marketing\z/, @graphql_calls.first['referenceDocumentUri'])
+    assert withdrawal.reload.completed?
+  end
+
+  test 'allow_negative withdraws a line above the available stock (Shopify accepts a negative balance)' do
+    withdrawal = withdrawal_with([[@a, @lagoa, 3]])
+    stub_levels('111' => { '9001' => 0 })
+    stub_adjust
+
+    summary = StockWithdrawalProcessor.call(withdrawal, allow_negative: true)
+
+    assert_equal 1, summary.done
+    assert_equal [-3], @graphql_calls.first['changes'].map { |c| c['delta'] }
+    item = withdrawal.reload.items.first
+    assert item.done?
+    assert_equal 0, item.available_before
+    assert_equal '-3', @a.reload.stock_lagoa_seca
+    assert withdrawal.completed?
+  end
+
+  test 'without allow_negative the same line still fails (it is opt-in)' do
+    withdrawal = withdrawal_with([[@a, @lagoa, 3]])
+    stub_levels('111' => { '9001' => 0 })
+    stub_adjust
+
+    StockWithdrawalProcessor.call(withdrawal)
+
+    assert_empty @graphql_calls
+    assert_match(/Estoque insuficiente/, withdrawal.reload.items.first.error_message)
+  end
+
+  test 'allow_negative does not bypass a product missing or untracked in the location' do
+    withdrawal = withdrawal_with([[@a, @lagoa, 1], [@b, @lagoa, 1]])
+    stub_levels('111' => { '9001' => :missing, '9002' => nil })
+    stub_adjust
+
+    StockWithdrawalProcessor.call(withdrawal, allow_negative: true)
+
+    assert_empty @graphql_calls
+    assert withdrawal.reload.items.all?(&:failed?)
+  end
+
+  test 'the audit log records when negative balance was allowed' do
+    withdrawal = withdrawal_with([[@a, @lagoa, 3]])
+    stub_levels('111' => { '9001' => 0 })
+    stub_adjust
+
+    StockWithdrawalProcessor.call(withdrawal, user: @user, allow_negative: true)
+
+    assert_equal true, Log.last.details_parsed['allow_negative']
+  end
 end

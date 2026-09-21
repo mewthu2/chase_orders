@@ -9,12 +9,27 @@
     <div class="header-actions">
       <%= link_to stock_withdrawals_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
       <% if @withdrawal.editable? %>
-        <%= link_to edit_stock_withdrawal_path(@withdrawal), class: "btn-back" do %><i class="fas fa-pencil-alt me-1"></i>Editar<% end %>
+        <%= link_to edit_stock_withdrawal_path(@withdrawal), class: "btn-back" do %><i class="fas fa-pencil-alt me-1"></i><%= @withdrawal.partially_failed? ? 'Editar linhas não concluídas' : 'Editar' %><% end %>
+      <% end %>
+      <% if @withdrawal.deletable? %>
+        <%= button_to stock_withdrawal_path(@withdrawal), method: :delete, class: "btn-back",
+                      form: { data: { turbo_confirm: (@withdrawal.draft? ? "Excluir este rascunho de retirada?" : "Excluir esta retirada? Ela já foi enviada ao Shopify: excluir aqui NÃO devolve o estoque retirado (o histórico do inventário lá continua).") } } do %>
+          <i class="fas fa-trash me-1"></i>Excluir
+        <% end %>
       <% end %>
       <% if @withdrawal.processable? %>
-        <%= button_to complete_stock_withdrawal_path(@withdrawal), method: :post, class: "btn-export",
-                      form: { data: { turbo_confirm: "Retirar #{@withdrawal.items.reject(&:done?).sum(&:quantity)} unidade(s) do estoque do Shopify agora? A retirada é lançada no histórico do inventário e não há como desfazer automaticamente." } } do %>
-          <i class="fas fa-check me-2"></i><%= @withdrawal.partially_failed? ? 'Tentar novamente' : 'Concluir e retirar do Shopify' %>
+        <% pending_units = @withdrawal.items.reject(&:done?).sum(&:quantity) %>
+        <% confirm = "Retirar #{pending_units} unidade(s) do estoque do Shopify agora? A retirada é lançada no histórico do inventário e não há como desfazer automaticamente." %>
+        <% confirm += " Se marcou \"Permitir saldo negativo\", linhas acima do disponível serão retiradas mesmo assim e o estoque poderá ficar negativo no Shopify." if @withdrawal.partially_failed? %>
+        <%= form_with url: complete_stock_withdrawal_path(@withdrawal), method: :post, local: true, class: 'd-flex align-items-center gap-3', data: { turbo_confirm: confirm } do %>
+          <% if @withdrawal.partially_failed? %>
+            <label class="text-main d-flex align-items-center gap-2 mb-0" title="Retira mesmo quando a quantidade é maior que o disponível no Shopify (o saldo fica negativo)">
+              <input type="checkbox" name="allow_negative" value="1"> Permitir saldo negativo
+            </label>
+          <% end %>
+          <button type="submit" class="btn-export">
+            <i class="fas fa-check me-2"></i><%= @withdrawal.partially_failed? ? 'Tentar novamente' : 'Concluir e retirar do Shopify' %>
+          </button>
         <% end %>
       <% end %>
     </div>

@@ -125,7 +125,10 @@ Rails.application.routes.draw do
 
   resources :stock_withdrawals do
     member { post :complete }
-    collection { get :search_product }
+    collection do
+      get :search_product
+      get :live_stock
+    end
   end
   
   resources :available_locations

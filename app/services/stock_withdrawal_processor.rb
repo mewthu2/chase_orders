@@ -11,12 +11,15 @@ class StockWithdrawalProcessor
 
   Summary = Struct.new(:done, :failed, keyword_init: true)
 
-  def self.call(withdrawal, user: nil)
-    new(withdrawal, user: user).call
+  # allow_negative: aceita retirar acima do disponível (o Shopify permite saldo negativo). É opt-in
+  # explícito de quem concluiu; o padrão continua bloqueando linha acima do disponível.
+  def self.call(withdrawal, user: nil, allow_negative: false)
+    new(withdrawal, user: user, allow_negative: allow_negative).call
   end
 
-  def initialize(withdrawal, user: nil)
+  def initialize(withdrawal, user: nil, allow_negative: false)
     @withdrawal = withdrawal
+    @allow_negative = allow_negative
     @user = user || withdrawal.user
     @inventory = ShopifyInventoryService.new
   end
@@ -59,7 +62,9 @@ class StockWithdrawalProcessor
 
     quantity = available[key]
     return fail_line(item, 'Produto não rastreado nesta location do Shopify') && false if quantity.nil?
-    return fail_line(item, "Estoque insuficiente: disponível #{quantity}, retirada #{item.quantity}") && false if item.quantity > quantity
+    if item.quantity > quantity && !@allow_negative
+      return fail_line(item, "Estoque insuficiente: disponível #{quantity}, retirada #{item.quantity}") && false
+    end
 
     item.available_before = quantity
     true
@@ -82,7 +87,7 @@ class StockWithdrawalProcessor
     @inventory.adjust_available(
       location_id: shopify_location_id,
       changes: items.map { |item| { inventory_item_id: item.product.shopify_inventory_item_id, delta: -item.quantity } },
-      reason: @withdrawal.reason,
+      reason: @withdrawal.shopify_reason,
       reference_uri: @withdrawal.reference_uri
     )
   end
@@ -123,7 +128,7 @@ class StockWithdrawalProcessor
     LogService.create_log(
       user: @user, resource_type: 'stock_withdrawal', action_type: 'complete',
       resource_name: "Retirada ##{@withdrawal.id}", resource_id: @withdrawal.id,
-      details: { done: done, failed: failed, reason: @withdrawal.reason, reference: @withdrawal.reference_uri }
+      details: { done: done, failed: failed, reason: @withdrawal.reason, reference: @withdrawal.reference_uri, allow_negative: @allow_negative }
     )
   end
 end
