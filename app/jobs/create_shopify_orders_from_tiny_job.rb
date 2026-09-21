@@ -212,7 +212,7 @@ class CreateShopifyOrdersFromTinyJob < ActiveJob::Base
           error: 'Draft order not found',
           tracking: "kind:#{kind}|failed:draft_order_not_found"
         )
-        return puts('Draft order not found')
+        return puts('Rascunho de pedido não encontrado')
       end
 
       total_price = draft_order['total_price'].to_f

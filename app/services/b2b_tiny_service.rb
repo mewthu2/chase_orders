@@ -1,6 +1,20 @@
 class B2bTinyService
   BASE_URL = 'https://api.tiny.com.br/api2'.freeze
 
+  # IDs cadastrados na conta Tiny (confirmados via listas.precos.pesquisa.php
+  # e comparando id_natureza_operacao de pedidos reais "Padrão" vs
+  # "Transferencia") — não existe endpoint de leitura pra natureza de
+  # operação, então esses valores foram lidos diretamente de pedidos já
+  # criados manualmente no Tiny.
+  TRANSFER_PRICE_LIST_ID = '8198'.freeze
+  TINY_SITUACAO_CODES = {
+    'aberto' => 'aberto', 'aprovado' => 'aprovado', 'preparando_envio' => 'preparando_envio',
+    'faturado' => 'faturado', 'pronto_para_envio' => 'pronto_envio', 'enviado' => 'enviado',
+    'nao_entregue' => 'nao_entregue', 'cancelado' => 'cancelado',
+    'dados_incompletos' => 'dados_incompletos'
+  }.freeze
+  NATUREZA_OPERACAO_IDS = { 'standard' => '898357546', 'transfer' => '790850411' }.freeze
+
   def initialize
     @token = ENV.fetch('TOKEN_TINY2_PRODUCTION')
   end
@@ -74,6 +88,32 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
+  def update_order_status(tiny_reference_id, status)
+    response = do_post('pedido.alterar.situacao.php',
+                       id: tiny_reference_id, situacao: TINY_SITUACAO_CODES.fetch(status.to_s))
+    retorno = JSON.parse(response.body).with_indifferent_access[:retorno]
+    return { success: true } if retorno[:status] == 'OK'
+
+    erros = Array(retorno[:erros]).flat_map { |e| Array(e[:erro] || e) }
+    { success: false, error: erros.join(', ').presence || 'Erro desconhecido na API Tiny' }
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#update_order_status exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+
+  def order_status(tiny_reference_id)
+    response = HTTParty.get("#{BASE_URL}/pedido.obter.php",
+                             query: { token: @token, formato: 'json', id: tiny_reference_id })
+    retorno = JSON.parse(response.body).with_indifferent_access[:retorno]
+    return nil unless retorno[:status] == 'OK'
+
+    pedido = retorno[:pedido]
+    { situacao: pedido[:situacao], tracking_code: pedido[:codigo_rastreamento].presence }
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#order_status exception: #{e.message}"
+    nil
+  end
+
   private
 
   def build_contato(carrier)
@@ -117,11 +157,13 @@ class B2bTinyService
   def build_pedido(b2b_order)
     client = b2b_order.client
 
-    {
+    pedido = {
       situacao: 'aberto',
       data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
+      id_natureza_operacao: NATUREZA_OPERACAO_IDS[b2b_order.price_list],
       itens: b2b_order.b2b_order_items.map do |i|
-        { item: { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity, valor_unitario: i.price.to_f } }
+        { item: { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity,
+                   valor_unitario: (i.price.to_f - i.discount.to_f) } }
       end,
       cliente: {
         nome: client.display_name,
@@ -140,8 +182,35 @@ class B2bTinyService
       forma_frete: b2b_order.carrier_shipping_method,
       frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
       valor_frete: b2b_order.freight_value.to_f,
-      obs: b2b_order.notes.presence || "Pedido B2B ##{b2b_order.id}"
+      obs: build_obs(b2b_order)
     }
+
+    pedido[:id_lista_preco] = TRANSFER_PRICE_LIST_ID if b2b_order.transfer?
+
+    if b2b_order.different_shipping_address?
+      pedido[:endereco_entrega] = {
+        nome_destinatario: client.display_name,
+        endereco: b2b_order.shipping_street.presence || '',
+        numero: b2b_order.shipping_number.presence || '',
+        complemento: b2b_order.shipping_complement.presence || '',
+        bairro: b2b_order.shipping_neighbourhood.presence || '',
+        cidade: b2b_order.shipping_city.presence || '',
+        uf: b2b_order.shipping_state.presence || '',
+        cep: b2b_order.shipping_zip.presence || ''
+      }
+    end
+
+    pedido
+  end
+
+  # Não há vendedor cadastrado no Tiny desta conta (vendedores.pesquisa.php
+  # não retorna registros), então não há id_vendedor pra mapear — o nome
+  # digitado na Honey só fica visível via observações.
+  def build_obs(b2b_order)
+    base = b2b_order.notes.presence || "Pedido B2B ##{b2b_order.id}"
+    return base if b2b_order.salesperson_name.blank?
+
+    "Vendedor: #{b2b_order.salesperson_name} | #{base}"
   end
 
   def build_nota_fiscal(b2b_order)
@@ -149,7 +218,7 @@ class B2bTinyService
 
     items = b2b_order.b2b_order_items.map do |i|
       { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity.to_s,
-        valor_unitario: format('%.2f', i.price), tipo: 'P', cfop: '5152' }
+        valor_unitario: format('%.2f', i.price.to_f - i.discount.to_f), tipo: 'P', cfop: '5152' }
     end
 
     valor_produtos = items.sum { |it| it[:valor_unitario].to_f * it[:quantidade].to_f }

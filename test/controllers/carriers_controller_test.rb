@@ -45,7 +45,9 @@ class CarriersControllerTest < ActionDispatch::IntegrationTest
       name: 'Com Pedido', registration: '25.405.327/0001-74', street: 'Rua A',
       number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    B2bOrder.create!(kind: :sale, status: :draft, carrier: carrier, user: @admin)
+    client = Client.create!(responsible_name: 'Cliente Carrier Destroy')
+    order = B2bOrder.create!(kind: :sale, carrier: carrier, user: @admin, client: client)
+    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
 
     assert_no_difference 'Carrier.count' do
       delete carrier_path(carrier)

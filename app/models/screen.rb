@@ -12,6 +12,8 @@ class Screen
     b2b_orders:             'Pedidos B2B',
     transfer_locations:     'Locais de Transferência',
     carriers:               'Transportadoras',
+    companies:              'Empresas',
+    fiscal_notes:           'Notas Fiscais',
     planner_orders:         'Planejador',
     stock_corrections:      'Controle de Estoque'
   }.freeze
@@ -19,7 +21,7 @@ class Screen
   # Agrupamento espelhando o menu lateral — usado na tela de Perfis pra
   # organizar as permissões do mesmo jeito que o usuário vê o menu.
   GROUPS = {
-    'Pedidos B2B'  => %i[b2b_orders transfer_locations carriers],
+    'Pedidos B2B'  => %i[b2b_orders transfer_locations carriers companies fiscal_notes],
     'CRM'          => %i[orders customers],
     'Correios B2C' => %i[dashboard_correios],
     'Correios B2B' => %i[dashboard_correios_b2b],

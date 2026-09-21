@@ -1,0 +1,41 @@
+<% content_for :title, "Nota Fiscal #{@fiscal_note.number}" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>NF-e <%= @fiscal_note.number %> / <%= @fiscal_note.series %></h1>
+      <p class="page-subtitle"><%= fiscal_note_status_pill(@fiscal_note) %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to fiscal_notes_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <% if @fiscal_note.xml_available? %>
+        <%= link_to xml_fiscal_note_path(@fiscal_note), class: "btn-export" do %><i class="fas fa-download me-2"></i>Baixar XML<% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-info-circle me-2"></i>Dados da nota</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6"><label class="field-label">Empresa emissora</label><div class="text-main"><%= @fiscal_note.company.legal_name %> (<%= @fiscal_note.company.cnpj_formatted %>)</div></div>
+        <div class="form-col-6">
+          <label class="field-label">Pedido</label>
+          <div class="text-main">
+            <% if fiscal_note_order_path(@fiscal_note) %><%= link_to "##{@fiscal_note.b2b_order_id}", fiscal_note_order_path(@fiscal_note) %><% else %>-<% end %>
+          </div>
+        </div>
+        <div class="form-col-12"><label class="field-label">Chave de acesso</label><div class="text-main"><%= @fiscal_note.access_key.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">Natureza da operação</label><div class="text-main"><%= @fiscal_note.operation_nature.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">CFOP</label><div class="text-main"><%= @fiscal_note.cfop_summary.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">Valor total</label><div class="text-main"><%= number_to_currency(@fiscal_note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></div></div>
+        <div class="form-col-4"><label class="field-label">Ambiente</label><div class="text-main"><%= @fiscal_note.producao? ? 'Produção' : 'Homologação' %></div></div>
+        <div class="form-col-4"><label class="field-label">Protocolo de autorização</label><div class="text-main"><%= @fiscal_note.protocol.presence || 'Não transmitida à SEFAZ' %></div></div>
+        <div class="form-col-4"><label class="field-label">Emitida em</label><div class="text-main"><%= (@fiscal_note.issued_at || @fiscal_note.created_at).in_time_zone.strftime('%d/%m/%Y %H:%M') %></div></div>
+        <% if @fiscal_note.error_message.present? %>
+          <div class="form-col-12"><label class="field-label">Erro</label><div class="text-main"><%= @fiscal_note.error_message %></div></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,91 @@
+<% content_for :title, "Dados fiscais dos produtos" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-barcode me-2"></i>Dados fiscais dos produtos</h1>
+      <p class="page-subtitle">NCM, CEST, origem e unidade usados na emissão de nota fiscal</p>
+    </div>
+    <div class="header-actions">
+      <%= link_to fiscal_notes_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Notas Fiscais<% end %>
+      <%= button_to import_all_from_tiny_fiscal_products_path(q: params[:q], missing: params[:missing]), method: :post,
+                    class: "btn-export", disabled: @import_running || @importable_count.zero?,
+                    form: { data: { turbo_confirm: "Buscar no Tiny os dados fiscais de #{@importable_count} produto(s) sem NCM? Só lê do Tiny e roda em segundo plano." } } do %>
+        <i class="fas fa-cloud-download-alt me-2"></i>Buscar do Tiny (<%= @importable_count %> sem NCM)
+      <% end %>
+    </div>
+  </div>
+
+  <% if @import_motor %>
+    <div class="import-status form-section">
+      <div class="form-section-body">
+        <% if @import_running %>
+          <i class="fas fa-spinner fa-spin me-2"></i>Importação do Tiny em andamento (<%= @import_motor.step %>). Atualize a página para ver o progresso.
+        <% elsif @import_motor.step == 'error' %>
+          <i class="fas fa-exclamation-triangle me-2"></i>Última importação do Tiny parou: <%= @import_motor.link %>
+        <% else %>
+          <i class="fas fa-check-circle me-2"></i>Última importação do Tiny (<%= @import_motor.end_time&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %>): <%= @import_motor.link %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="table-card">
+    <%= form_with url: fiscal_products_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap align-items-center px-3 pb-3" do %>
+      <input type="text" name="q" value="<%= params[:q] %>" class="field-input" placeholder="Buscar por SKU ou nome..." style="max-width: 320px;">
+      <label class="text-main d-flex align-items-center gap-2 mb-0">
+        <input type="checkbox" name="missing" value="1" <%= 'checked' if params[:missing].present? %>> Só sem NCM
+      </label>
+      <button type="submit" class="btn-back"><i class="fas fa-search me-1"></i>Buscar</button>
+    <% end %>
+
+    <% if @products.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Produto</th>
+              <th>NCM</th>
+              <th>CEST</th>
+              <th>Origem</th>
+              <th>Unidade</th>
+              <th class="text-end"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @products.each do |product| %>
+              <tr>
+                <td class="text-main"><%= product.sku %></td>
+                <td class="text-muted-custom"><%= product.shopify_product_name %></td>
+                <td><input type="text" name="product[ncm]" form="product-<%= product.id %>" value="<%= product.ncm %>" class="field-input" maxlength="8" placeholder="8 dígitos" style="min-width: 110px;"></td>
+                <td><input type="text" name="product[cest]" form="product-<%= product.id %>" value="<%= product.cest %>" class="field-input" maxlength="7" placeholder="opcional" style="min-width: 100px;"></td>
+                <td><input type="number" name="product[origin]" form="product-<%= product.id %>" value="<%= product.origin %>" class="field-input" min="0" max="8" style="max-width: 80px;"></td>
+                <td><input type="text" name="product[commercial_unit]" form="product-<%= product.id %>" value="<%= product.commercial_unit %>" class="field-input" maxlength="6" style="max-width: 80px;"></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <button type="submit" form="product-<%= product.id %>" class="action-btn action-btn--edit" title="Salvar"><i class="fas fa-save"></i></button>
+                    <% if product.ncm.blank? && product.tiny_id? %>
+                      <%= button_to import_from_tiny_fiscal_product_path(product, q: params[:q], missing: params[:missing], page: params[:page]), method: :post,
+                                    class: "action-btn action-btn--edit", title: "Buscar do Tiny" do %><i class="fas fa-cloud-download-alt"></i><% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <%# Formulários fora da tabela (HTML válido); os inputs se ligam a eles pelo atributo form= %>
+      <% @products.each do |product| %>
+        <%= form_with model: product, url: fiscal_product_path(product, q: params[:q], missing: params[:missing], page: params[:page]), method: :patch, local: true, id: "product-#{product.id}" do |f| %><% end %>
+      <% end %>
+      <div class="px-3 py-3"><%= will_paginate @products, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-barcode fa-3x mb-3 d-block"></i>
+        <h5>Nenhum produto encontrado</h5>
+      </div>
+    <% end %>
+  </div>
+</div>

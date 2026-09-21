@@ -44,11 +44,26 @@ class TransferLocationsControllerTest < ActionDispatch::IntegrationTest
       name: 'CD Com Pedido', registration: '25.405.327/0001-74', street: 'Rua A',
       number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    B2bOrder.create!(kind: :stock_transfer, status: :draft, transfer_location: location, user: @admin)
+    order = B2bOrder.create!(kind: :stock_transfer, transfer_location: location, user: @admin)
+    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
 
     assert_no_difference 'TransferLocation.count' do
       delete transfer_location_path(location)
     end
     assert_redirected_to transfer_locations_path
+  end
+
+  test 'the IBGE city code can be saved on a transfer location' do
+    sign_in @admin
+    location = TransferLocation.create!(
+      name: 'CD IBGE', registration: '25.405.327/0001-74', street: 'Rua A',
+      number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
+    )
+
+    get edit_transfer_location_path(location)
+    assert_select 'input[name="transfer_location[city_ibge_code]"]'
+
+    patch transfer_location_path(location), params: { transfer_location: { city_ibge_code: '3106200' } }
+    assert_equal '3106200', location.reload.city_ibge_code
   end
 end

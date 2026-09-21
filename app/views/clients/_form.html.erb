@@ -110,6 +110,25 @@
     </div>
   </div>
 
+  <%# ── Dados fiscais (NF-e) ─────────────────────────────────────────────── %>
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-file-invoice me-2"></i>Dados fiscais</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Código IBGE do município</label>
+          <%= f.text_field :city_ibge_code, class: "field-input", maxlength: 7, placeholder: "3106200" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Indicador de IE</label>
+          <%= f.select :ie_indicator, [['1 - Contribuinte de ICMS', 1], ['2 - Isento de IE', 2], ['9 - Não contribuinte', 9]], {}, class: "field-input field-select" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <%# ── Ações ─────────────────────────────────────────────────────────────── %>
   <div class="form-actions">
     <%= f.submit client.new_record? ? "Cadastrar Cliente" : "Salvar Alterações",

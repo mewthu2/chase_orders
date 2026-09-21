@@ -15,6 +15,15 @@ body.sessions.new {
   min-height: 100vh;
   background-color: #121212;
 
+  overflow-x: hidden;
+
+  // O layout padrão (telas logadas) reserva 200vh e 6em de margem no topo do conteúdo.
+  // Aqui isso empurraria o card para baixo e criaria rolagem: a página de login ocupa
+  // exatamente a viewport, para o card ficar sempre centralizado.
+  > div { min-height: 100vh !important; min-height: 100dvh !important; }
+  .content-wrapper { margin-top: 0 !important; }
+  .container-xl { max-width: none; padding: 0; }
+
   .wrapper { width: 100% !important; margin-left: 0 !important; }
   .wrapper > section:not(.sem-menu) { margin-left: 0 !important; margin-top: 0 !important; }
 
@@ -23,6 +32,9 @@ body.sessions.new {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    min-height: 100dvh; // dvh: a barra de endereço do celular não descentraliza o card
+    padding: 1rem;      // margem lateral/vertical mínima em telas pequenas
+    box-sizing: border-box;
     position: relative;
     overflow: hidden;
   }
@@ -34,6 +46,7 @@ body.sessions.new {
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     padding: 2.5rem;
+    box-sizing: border-box;
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.1);
     animation: deviseFadeIn 0.8s ease-out;
@@ -128,7 +141,7 @@ body.sessions.new {
     .login-title { font-size: 1.5rem; }
   }
   @media (max-width: 576px) {
-    .login-card { padding: 1.5rem; margin: 1rem; }
+    .login-card { padding: 1.5rem; }
     .logo-image { width: 120px; }
     .login-title { font-size: 1.3rem; }
   }

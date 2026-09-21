@@ -98,7 +98,7 @@
 
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
   // Auto-dismiss alerts after 8 seconds (except error alerts)
   const alerts = document.querySelectorAll('.alert:not(.alert-danger)');
   
@@ -120,5 +120,5 @@ document.addEventListener('DOMContentLoaded', function() {
       alert.style.opacity = '0';
     });
   });
-});
+})();
 </script>

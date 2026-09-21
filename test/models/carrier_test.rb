@@ -46,7 +46,9 @@ class CarrierTest < ActiveSupport::TestCase
   test 'cannot be destroyed while it has b2b_orders' do
     carrier = Carrier.create!(valid_attrs)
     user = User.create!(name: 'Teste Carrier', email: 'teste_carrier@example.com', password: 'password123')
-    B2bOrder.create!(kind: :sale, status: :draft, carrier: carrier, user: user)
+    client = Client.create!(responsible_name: 'Cliente Carrier')
+    order = B2bOrder.create!(kind: :sale, carrier: carrier, user: user, client: client)
+    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
 
     refute carrier.destroy
     assert_includes carrier.errors[:base], 'Não é possível excluir o registro pois existem registros dependentes'

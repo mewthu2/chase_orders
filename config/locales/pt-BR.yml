@@ -1,0 +1,335 @@
+# Traduções padrão do Rails para português do Brasil + nomes dos modelos e atributos do Honey.
+pt-BR:
+  date:
+    abbr_day_names: [dom, seg, ter, qua, qui, sex, sáb]
+    abbr_month_names: [~, jan, fev, mar, abr, mai, jun, jul, ago, set, out, nov, dez]
+    day_names: [domingo, segunda-feira, terça-feira, quarta-feira, quinta-feira, sexta-feira, sábado]
+    month_names: [~, janeiro, fevereiro, março, abril, maio, junho, julho, agosto, setembro, outubro, novembro, dezembro]
+    order: [day, month, year]
+    formats:
+      default: "%d/%m/%Y"
+      short: "%d de %B"
+      long: "%d de %B de %Y"
+  time:
+    am: manhã
+    pm: tarde
+    formats:
+      default: "%a, %d de %B de %Y, %H:%M:%S %z"
+      short: "%d/%m %H:%M"
+      long: "%d de %B de %Y, %H:%M"
+  support:
+    array:
+      words_connector: ", "
+      two_words_connector: " e "
+      last_word_connector: " e "
+    select:
+      prompt: Por favor selecione
+  number:
+    format:
+      delimiter: "."
+      separator: ","
+      precision: 3
+      significant: false
+      strip_insignificant_zeros: false
+    currency:
+      format:
+        unit: R$
+        format: "%u %n"
+        delimiter: "."
+        separator: ","
+        precision: 2
+        significant: false
+        strip_insignificant_zeros: false
+    percentage:
+      format:
+        delimiter: "."
+        format: "%n%"
+    precision:
+      format:
+        delimiter: "."
+    human:
+      format:
+        delimiter: "."
+        precision: 3
+        significant: true
+        strip_insignificant_zeros: true
+      storage_units:
+        format: "%n %u"
+        units:
+          byte:
+            one: Byte
+            other: Bytes
+          kb: KB
+          mb: MB
+          gb: GB
+          tb: TB
+      decimal_units:
+        format: "%n %u"
+        units:
+          unit: ""
+          thousand: mil
+          million:
+            one: milhão
+            other: milhões
+          billion:
+            one: bilhão
+            other: bilhões
+          trillion:
+            one: trilhão
+            other: trilhões
+          quadrillion:
+            one: quatrilhão
+            other: quatrilhões
+  datetime:
+    distance_in_words:
+      half_a_minute: meio minuto
+      less_than_x_seconds:
+        one: menos de 1 segundo
+        other: menos de %{count} segundos
+      x_seconds:
+        one: 1 segundo
+        other: "%{count} segundos"
+      less_than_x_minutes:
+        one: menos de um minuto
+        other: menos de %{count} minutos
+      x_minutes:
+        one: 1 minuto
+        other: "%{count} minutos"
+      about_x_hours:
+        one: cerca de 1 hora
+        other: cerca de %{count} horas
+      x_days:
+        one: 1 dia
+        other: "%{count} dias"
+      about_x_months:
+        one: cerca de 1 mês
+        other: cerca de %{count} meses
+      x_months:
+        one: 1 mês
+        other: "%{count} meses"
+      about_x_years:
+        one: cerca de 1 ano
+        other: cerca de %{count} anos
+      over_x_years:
+        one: mais de 1 ano
+        other: mais de %{count} anos
+      almost_x_years:
+        one: quase 1 ano
+        other: quase %{count} anos
+    prompts:
+      year: Ano
+      month: Mês
+      day: Dia
+      hour: Hora
+      minute: Minuto
+      second: Segundos
+  helpers:
+    select:
+      prompt: Por favor selecione
+    submit:
+      create: Criar %{model}
+      update: Atualizar %{model}
+      submit: Salvar %{model}
+  errors:
+    format: "%{attribute} %{message}"
+    messages:
+      accepted: deve ser aceito
+      blank: não pode ficar em branco
+      present: deve ficar em branco
+      confirmation: não é igual a %{attribute}
+      empty: não pode ficar vazio
+      equal_to: deve ser igual a %{count}
+      even: deve ser par
+      exclusion: não está disponível
+      greater_than: deve ser maior que %{count}
+      greater_than_or_equal_to: deve ser maior ou igual a %{count}
+      in: deve estar em %{count}
+      inclusion: não está incluído na lista
+      invalid: não é válido
+      less_than: deve ser menor que %{count}
+      less_than_or_equal_to: deve ser menor ou igual a %{count}
+      model_invalid: "A validação falhou: %{errors}"
+      not_a_number: não é um número
+      not_an_integer: não é um número inteiro
+      odd: deve ser ímpar
+      other_than: deve ser diferente de %{count}
+      required: é obrigatório(a)
+      taken: já está em uso
+      too_long:
+        one: "é muito longo (máximo: 1 caractere)"
+        other: "é muito longo (máximo: %{count} caracteres)"
+      too_short:
+        one: "é muito curto (mínimo: 1 caractere)"
+        other: "é muito curto (mínimo: %{count} caracteres)"
+      wrong_length:
+        one: não possui o tamanho esperado (1 caractere)
+        other: não possui o tamanho esperado (%{count} caracteres)
+      not_saved:
+        one: "Não foi possível salvar %{resource}: 1 erro"
+        other: "Não foi possível salvar %{resource}: %{count} erros"
+  activerecord:
+    errors:
+      messages:
+        record_invalid: "A validação falhou: %{errors}"
+        restrict_dependent_destroy:
+          has_one: Não é possível excluir o registro pois existe um(a) %{record} dependente
+          has_many: Não é possível excluir o registro pois existem %{record} dependentes
+    models:
+      company: Empresa
+      fiscal_note: Nota fiscal
+      b2b_order: Pedido B2B
+      b2b_order_item: Item do pedido
+      client: Cliente
+      transfer_location: Local de transferência
+      carrier: Transportadora
+      product: Produto
+      user: Usuário
+      profile: Perfil
+    attributes:
+      company:
+        legal_name: Razão social
+        trade_name: Nome fantasia
+        cnpj: CNPJ
+        state_registration: Inscrição Estadual
+        municipal_registration: Inscrição Municipal
+        cnae: CNAE
+        tax_regime: Regime tributário
+        street: Rua
+        number: Número
+        complement: Complemento
+        neighbourhood: Bairro
+        city: Cidade
+        city_ibge_code: Código IBGE do município
+        state: UF
+        zip: CEP
+        phone: Telefone
+        email: E-mail
+        environment: Ambiente
+        nfe_series: Série
+        next_nfe_number: Próximo número
+        cfop_sale_in_state: CFOP venda (mesma UF)
+        cfop_sale_out_of_state: CFOP venda (outra UF)
+        cfop_transfer_in_state: CFOP transferência (mesma UF)
+        cfop_transfer_out_of_state: CFOP transferência (outra UF)
+        operation_nature_sale: Natureza da operação - venda
+        operation_nature_transfer: Natureza da operação - transferência
+        icms_situation: Situação tributária do ICMS
+        pis_cst: CST do PIS
+        cofins_cst: CST do COFINS
+        active: Ativa
+        certificate: Certificado
+        certificate_file: Arquivo do certificado
+        certificate_password: Senha do certificado
+      fiscal_note:
+        company: Empresa
+        b2b_order: Pedido
+        number: Número
+        series: Série
+        access_key: Chave de acesso
+        status: Status
+        total_value: Valor total
+      b2b_order:
+        client: Cliente
+        transfer_location: Local de destino
+        carrier: Transportadora
+        user: Usuário
+        kind: Tipo
+        status: Status
+        salesperson_name: Vendedor
+        price_list: Lista de preço
+        freight_value: Valor do frete
+        notes: Observações
+        shipping_street: Rua de entrega
+        shipping_number: Número de entrega
+        shipping_complement: Complemento de entrega
+        shipping_neighbourhood: Bairro de entrega
+        shipping_city: Cidade de entrega
+        shipping_state: UF de entrega
+        shipping_zip: CEP de entrega
+      b2b_order_item:
+        sku: SKU
+        name: Nome
+        quantity: Quantidade
+        price: Preço
+        discount: Desconto
+      client:
+        responsible_name: Nome do responsável
+        business_name: Razão social
+        registration: CPF/CNPJ
+        state_registration: Inscrição Estadual
+        municipal_registration: Inscrição Municipal
+        street: Rua
+        number: Número
+        neighbourhood: Bairro
+        city: Cidade
+        state: UF
+        zip: CEP
+        email: E-mail
+        phone: Telefone
+        city_ibge_code: Código IBGE do município
+        ie_indicator: Indicador de IE
+      transfer_location:
+        name: Nome
+        registration: CNPJ
+        state_registration: Inscrição Estadual
+        street: Rua
+        number: Número
+        complement: Complemento
+        neighbourhood: Bairro
+        city: Cidade
+        state: UF
+        zip: CEP
+        active: Ativo
+        city_ibge_code: Código IBGE do município
+      carrier:
+        name: Nome
+        registration: CNPJ
+        state_registration: Inscrição Estadual
+        street: Rua
+        number: Número
+        complement: Complemento
+        neighbourhood: Bairro
+        city: Cidade
+        state: UF
+        zip: CEP
+        phone: Telefone
+        email: E-mail
+        active: Ativa
+      product:
+        sku: SKU
+        shopify_product_name: Nome do produto
+        ncm: NCM
+        cest: CEST
+        origin: Origem
+        commercial_unit: Unidade
+        price: Preço
+        cost: Custo
+      user:
+        name: Nome
+        email: E-mail
+        password: Senha
+        password_confirmation: Confirmação da senha
+        current_password: Senha atual
+        remember_me: Lembrar de mim
+        profiles: Perfis
+      profile:
+        name: Nome
+  will_paginate:
+    previous_label: "&#8592; Anterior"
+    next_label: "Próximo &#8594;"
+    page_gap: "&hellip;"
+    container_aria_label: Paginação
+    page_aria_label: "Página %{page}"
+    previous_aria_label: Página anterior
+    next_aria_label: Próxima página
+    page_entries_info:
+      single_page:
+        zero: Nenhum(a) %{model} encontrado(a)
+        one: Exibindo 1 %{model}
+        other: Exibindo todos os %{count} %{model}
+      single_page_html:
+        zero: Nenhum(a) %{model} encontrado(a)
+        one: Exibindo <b>1</b> %{model}
+        other: Exibindo <b>todos os %{count}</b> %{model}
+      multi_page: Exibindo %{model} %{from} - %{to} de %{count} no total
+      multi_page_html: Exibindo %{model} <b>%{from}&nbsp;-&nbsp;%{to}</b> de <b>%{count}</b> no total

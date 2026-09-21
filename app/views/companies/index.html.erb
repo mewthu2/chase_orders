@@ -1,0 +1,75 @@
+<% content_for :title, "Empresas" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-building me-2"></i>Empresas</h1>
+      <p class="page-subtitle">Empresas emissoras de nota fiscal e seus certificados digitais</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @companies.size %> empresa(s)</span>
+      <%= link_to new_company_path, class: "btn-export" do %>
+        <i class="fas fa-plus me-2"></i>Nova Empresa
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Empresas</h5>
+    </div>
+
+    <% if @companies.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Razão social</th>
+              <th>CNPJ</th>
+              <th>Cidade/UF</th>
+              <th>Ambiente</th>
+              <th class="text-center">Certificado</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @companies.each do |company| %>
+              <tr>
+                <td class="text-main"><%= company.legal_name %></td>
+                <td class="text-muted-custom"><%= company.cnpj_formatted %></td>
+                <td class="text-muted-custom"><%= company.city %>/<%= company.state %></td>
+                <td class="text-muted-custom"><%= company.producao? ? 'Produção' : 'Homologação' %></td>
+                <td class="text-center"><%= certificate_badge(company) %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= company.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+                    <%= company.active? ? 'Ativa' : 'Inativa' %>
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_company_path(company), class: "action-btn action-btn--edit" do %>
+                      <i class="fas fa-pencil-alt"></i>
+                    <% end %>
+                    <%= button_to company_path(company), method: :delete, class: "action-btn action-btn--danger",
+                                  form: { data: { turbo_confirm: "Tem certeza que deseja excluir esta empresa?" } } do %>
+                      <i class="fas fa-trash"></i>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-building fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma empresa cadastrada</h5>
+        <%= link_to new_company_path, class: "btn-export" do %>
+          <i class="fas fa-plus me-1"></i>Nova Empresa
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

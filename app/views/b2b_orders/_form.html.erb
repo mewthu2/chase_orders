@@ -1,4 +1,5 @@
-<%= form_with model: @b2b_order, local: true, id: 'b2bOrderForm' do |form| %>
+<% transfers = @b2b_order.stock_transfer? %>
+<%= form_with model: @b2b_order, url: order_form_url(@b2b_order), local: true, id: 'b2bOrderForm' do |form| %>
   <% if @b2b_order.errors.any? %>
     <div class="form-error-box">
       <i class="fas fa-exclamation-triangle me-2"></i>
@@ -10,17 +11,23 @@
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do Pedido</h5></div>
     <div class="form-section-body">
       <div class="form-grid mb-3">
-        <div class="form-col-6 form-check">
-          <%= form.radio_button :kind, 'sale', id: 'kind_sale', checked: @b2b_order.sale? || @b2b_order.new_record? %>
-          <label class="form-check-label text-main" for="kind_sale">Pedido Comum</label>
-        </div>
-        <div class="form-col-6 form-check">
-          <%= form.radio_button :kind, 'stock_transfer', id: 'kind_stock_transfer', checked: @b2b_order.stock_transfer? %>
-          <label class="form-check-label text-main" for="kind_stock_transfer">Transferência de Estoque</label>
+        <% if @b2b_order.persisted? && @b2b_order.sale? %>
+          <div class="form-col-6">
+            <label class="field-label">Status</label>
+            <%= form.select :status, B2bOrder::STATUS_LABELS.map { |key, label| [label, key] }, { selected: @b2b_order.status }, { class: 'field-input' } %>
+            <% if @b2b_order.tiny_reference_id.blank? %>
+              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Pedido ainda não enviado ao Tiny: a mudança vale só no Honey.</span>
+            <% end %>
+          </div>
+        <% end %>
+        <div class="form-col-6">
+          <label class="field-label">Número</label>
+          <%= text_field_tag :number, (@b2b_order.persisted? ? @b2b_order.id : 'Gerado automaticamente'), class: 'field-input', readonly: true, disabled: true %>
         </div>
       </div>
 
       <div class="form-grid">
+        <% unless transfers %>
         <div class="form-col-6" id="clientSection">
           <label class="field-label">Cliente</label>
           <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
@@ -28,10 +35,22 @@
           <%= form.hidden_field :client_id, id: 'clientIdField' %>
         </div>
 
+        <div class="form-col-6">
+          <label class="field-label">Vendedor</label>
+          <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
+        </div>
+
+        <div class="form-col-6">
+          <label class="field-label">Lista de preço</label>
+          <%= form.select :price_list, options_for_select([['Padrão', 'standard'], ['Transferência', 'transfer']], @b2b_order.price_list), {}, { id: 'priceListSelect', class: 'field-input' } %>
+        </div>
+        <% else %>
         <div class="form-col-6" id="transferLocationSection">
           <label class="field-label">Local de Destino</label>
           <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
         </div>
+        <%= hidden_field_tag 'b2b_order[price_list]', 'transfer', id: 'priceListSelect' %>
+        <% end %>
 
         <div class="form-col-6">
           <label class="field-label">Forma de Envio</label>
@@ -46,7 +65,47 @@
           <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
+
+        <% unless transfers %>
+        <div class="form-col-12 form-check">
+          <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
+          <label class="form-check-label text-main" for="differentShippingAddressCheck">O endereço de entrega do cliente é diferente do endereço de cobrança</label>
+        </div>
+        <% end %>
       </div>
+
+      <% unless transfers %>
+      <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
+        <div class="form-col-6">
+          <label class="field-label">Rua</label>
+          <%= form.text_field :shipping_street, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Número</label>
+          <%= form.text_field :shipping_number, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Complemento</label>
+          <%= form.text_field :shipping_complement, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Bairro</label>
+          <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Cidade</label>
+          <%= form.text_field :shipping_city, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">UF</label>
+          <%= form.text_field :shipping_state, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">CEP</label>
+          <%= form.text_field :shipping_zip, class: 'field-input' %>
+        </div>
+      </div>
+      <% end %>
     </div>
   </div>
 
@@ -68,7 +127,7 @@
 
       <table class="orders-table" id="itemsTable">
         <thead>
-          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Estoque Correios B2B</th><th></th></tr>
+          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Desconto</th><th>Estoque Correios B2B</th><th></th></tr>
         </thead>
         <tbody id="itemsTableBody">
           <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
@@ -87,6 +146,7 @@
               <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input', readonly: true %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][quantity]", item.quantity, class: 'field-input' %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][price]", item.price, step: 0.01, class: 'field-input' %></td>
+              <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][discount]", item.discount, step: 0.01, min: 0, class: 'field-input' %></td>
               <td class="item-stock-cell" data-sku="<%= item.sku %>">-</td>
               <td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>
             </tr>
@@ -128,8 +188,7 @@
   </div>
 
   <div class="form-actions">
-    <button type="submit" name="b2b_order[status]" value="draft" class="btn-cancel">Salvar Rascunho</button>
-    <button type="submit" name="b2b_order[status]" value="saved" class="btn-submit">Salvar</button>
+    <button type="submit" class="btn-submit">Salvar</button>
   </div>
 <% end %>
 
@@ -139,14 +198,16 @@ document.addEventListener('DOMContentLoaded', function () {
   var itemIndex = <%= @b2b_order.b2b_order_items.size %>;
   var stockCache = {}; // sku -> quantity, preenchido pela busca do modal e reaproveitado na tabela
 
-  function toggleKindSections() {
-    var isSale = document.getElementById('kind_sale').checked;
-    document.getElementById('clientSection').style.display = isSale ? '' : 'none';
-    document.getElementById('transferLocationSection').style.display = isSale ? 'none' : '';
+  function currentPriceList() {
+    var select = document.getElementById('priceListSelect');
+    return select && select.value === 'transfer' ? 'transfer' : 'standard';
   }
-  document.getElementById('kind_sale').addEventListener('change', toggleKindSections);
-  document.getElementById('kind_stock_transfer').addEventListener('change', toggleKindSections);
-  toggleKindSections();
+
+  var addrCheck = document.getElementById('differentShippingAddressCheck');
+  var addrSection = document.getElementById('shippingAddressSection');
+  if (addrCheck) addrCheck.addEventListener('change', function () {
+    addrSection.style.display = addrCheck.checked ? '' : 'none';
+  });
 
   // Transportadora só faz sentido escolher quando a Forma de Envio é "Transportadora"
   function toggleCarrierSection() {
@@ -182,7 +243,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // for selecionado) antes da resposta chegar, a resposta antiga é descartada
   // em vez de sobrescrever a caixa de resultados já limpa/selecionada.
   var clientSearchGeneration = 0;
-  document.getElementById('clientSearchInput').addEventListener('input', function (e) {
+  var clientSearchInput = document.getElementById('clientSearchInput');
+  if (clientSearchInput) clientSearchInput.addEventListener('input', function (e) {
     clearTimeout(clientTimeout);
     var myGeneration = ++clientSearchGeneration;
     var q = e.target.value;
@@ -285,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '" readonly></td>' +
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
       '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
+      '<td><input type="number" step="0.01" min="0" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][discount]" value="0"></td>' +
       '<td class="item-stock-cell" data-sku="' + (sku || '') + '">-</td>' +
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);
@@ -379,7 +442,10 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.success) { alert(data.message); return; }
-        data.items.forEach(function (item) { addItemRow(item.sku, item.name, item.quantity, item.suggested_price || 0, item.image_url); });
+        data.items.forEach(function (item) {
+          var price = currentPriceList() === 'transfer' ? (item.retail_price || 0) : (item.suggested_price || 0);
+          addItemRow(item.sku, item.name, item.quantity, price, item.image_url);
+        });
       });
   });
 
@@ -479,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function () {
           pickerSelected[variant.sku] = {
             sku: variant.sku,
             name: product.name + ' - ' + variant.option,
-            price: variant.price || 0,
+            price: currentPriceList() === 'transfer' ? (variant.retail_price || 0) : (variant.price || 0),
             image_url: product.image_url
           };
         } else {

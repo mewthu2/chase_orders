@@ -2,24 +2,36 @@ require 'csv'
 
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
+  before_action :set_kind
   before_action :set_b2b_order, only: [:edit, :update, :transmit]
+  helper_method :order_kind, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for, :order_form_url
 
   def index
-    @b2b_orders = B2bOrder.includes(:client, :transfer_location).recent
-    @b2b_orders = @b2b_orders.where(status: params[:status]) if params[:status].present?
-    @b2b_orders = @b2b_orders.where(kind: params[:kind]) if params[:kind].present?
+    scope = B2bOrder.includes(:client, :transfer_location, :b2b_order_items).recent.where(kind: order_kind)
+
+    if params[:q].present?
+      q = "%#{params[:q]}%"
+      scope = scope.where(
+        'clients.responsible_name LIKE :q OR clients.business_name LIKE :q OR b2b_orders.tiny_reference_number LIKE :q OR b2b_orders.id = :id',
+        q: q, id: params[:q].to_i
+      ).references(:client)
+    end
+
+    @status_counts = scope.reorder(nil).group(:status).count
+    @b2b_orders = params[:status].present? ? scope.where(status: params[:status]) : scope
   end
 
   def new
-    @b2b_order = B2bOrder.new(kind: :sale)
+    @b2b_order = B2bOrder.new(kind: order_kind, price_list: order_kind == 'stock_transfer' ? :transfer : :standard)
   end
 
   def create
-    @b2b_order = B2bOrder.new(b2b_order_params)
+    @b2b_order = B2bOrder.new(b2b_order_params.merge(kind: order_kind))
     @b2b_order.user = current_user
 
     if @b2b_order.save
-      redirect_to b2b_orders_path, notice: 'Pedido salvo com sucesso.'
+      TransmitB2bOrderJob.perform_later(@b2b_order.id)
+      redirect_to orders_path_for(order_kind), notice: 'Pedido salvo e enviado para o Tiny.'
     else
       render :new, status: :unprocessable_entity
     end
@@ -28,21 +40,29 @@ class B2bOrdersController < ApplicationController
   def edit; end
 
   def update
-    if @b2b_order.update(b2b_order_params)
-      redirect_to b2b_orders_path, notice: 'Pedido atualizado com sucesso.'
+    @b2b_order.assign_attributes(b2b_order_params)
+    push_status = @b2b_order.status_changed? && @b2b_order.sale? && @b2b_order.tiny_reference_id.present?
+
+    if @b2b_order.save
+      flash_options = { notice: 'Pedido atualizado com sucesso.' }
+      if push_status
+        result = B2bTinyService.new.update_order_status(@b2b_order.tiny_reference_id, @b2b_order.status)
+        flash_options[:alert] = "Status salvo no Honey, mas o Tiny não aceitou a mudança: #{result[:error]}" unless result[:success]
+      end
+      redirect_to orders_path_for(order_kind), flash_options
     else
       render :edit, status: :unprocessable_entity
     end
   end
 
   def transmit
-    unless @b2b_order.transmittable?
-      redirect_to b2b_orders_path, alert: 'Este pedido não pode ser transmitido.'
+    unless @b2b_order.resendable?
+      redirect_to orders_path_for(order_kind), alert: 'Este pedido não pode ser reenviado.'
       return
     end
 
     TransmitB2bOrderJob.perform_later(@b2b_order.id)
-    redirect_to b2b_orders_path, notice: 'Pedido enviado para transmissão ao Tiny.'
+    redirect_to orders_path_for(order_kind), notice: 'Pedido reenviado para o Tiny.'
   end
 
   def shipping_methods
@@ -68,6 +88,7 @@ class B2bOrdersController < ApplicationController
       product = Product.find_by(sku: sku)
       { sku: sku, name: product&.shopify_product_name, quantity: quantity,
         suggested_price: suggested_price_for(product),
+        retail_price: product&.price.to_f,
         image_url: product ? image_url_for(product) : nil }
     end
 
@@ -101,7 +122,7 @@ class B2bOrdersController < ApplicationController
 
     products = token_search(query).limit(10)
 
-    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p) } } }
+    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p), retail_price: p.price.to_f } } }
   end
 
   # Modal "Selecionar Produtos" (estilo Shopify): agrupa os SKUs encontrados
@@ -121,7 +142,8 @@ class B2bOrdersController < ApplicationController
             id: v.id,
             sku: v.sku,
             option: v.option1.presence || v.sku,
-            price: suggested_price_for(v)
+            price: suggested_price_for(v),
+            retail_price: v.price.to_f
           }
         end
       }
@@ -234,15 +256,54 @@ class B2bOrdersController < ApplicationController
     { quantity: 0, status: 'error' }
   end
 
+  def set_kind
+    @order_kind = params[:order_kind]
+  end
+
+  def order_kind
+    @order_kind
+  end
+
+  def stock_transfer_screen?(kind = order_kind)
+    kind.to_s == 'stock_transfer'
+  end
+
+  def orders_path_for(kind = order_kind)
+    stock_transfer_screen?(kind) ? stock_transfers_path : b2b_orders_path
+  end
+
+  def new_order_path_for(kind = order_kind)
+    stock_transfer_screen?(kind) ? new_stock_transfer_path : new_b2b_order_path
+  end
+
+  def edit_order_path_for(order)
+    stock_transfer_screen?(order.kind) ? edit_stock_transfer_path(order) : edit_b2b_order_path(order)
+  end
+
+  def transmit_order_path_for(order)
+    stock_transfer_screen?(order.kind) ? transmit_stock_transfer_path(order) : transmit_b2b_order_path(order)
+  end
+
+  def order_form_url(order)
+    if stock_transfer_screen?(order.kind)
+      order.persisted? ? stock_transfer_path(order) : stock_transfers_path
+    else
+      order.persisted? ? b2b_order_path(order) : b2b_orders_path
+    end
+  end
+
   def set_b2b_order
-    @b2b_order = B2bOrder.find(params[:id])
+    @b2b_order = B2bOrder.where(kind: order_kind).find(params[:id])
   end
 
   def b2b_order_params
     params.require(:b2b_order).permit(
-      :kind, :status, :client_id, :transfer_location_id, :carrier_id, :carrier_name,
+      :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_paid_by, :freight_value, :notes,
-      b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :_destroy]
+      :salesperson_name, :status, :price_list, :different_shipping_address,
+      :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
+      :shipping_city, :shipping_state, :shipping_zip,
+      b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]
     )
   end
 end

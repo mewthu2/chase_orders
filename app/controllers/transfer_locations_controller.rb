@@ -46,7 +46,7 @@ class TransferLocationsController < ApplicationController
   def transfer_location_params
     params.require(:transfer_location).permit(
       :name, :registration, :state_registration, :street, :number,
-      :complement, :neighbourhood, :city, :state, :zip, :active
+      :complement, :neighbourhood, :city, :state, :zip, :active, :city_ibge_code
     )
   end
 end

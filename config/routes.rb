@@ -193,7 +193,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :b2b_orders do
+  # Atacado e transferência de estoque são telas separadas sobre o mesmo
+  # controller: o tipo do pedido vem do default da rota (order_kind), não do form.
+  resources :b2b_orders, defaults: { order_kind: 'sale' } do
     collection do
       get :shipping_methods
       post :parse_items_spreadsheet
@@ -203,6 +205,26 @@ Rails.application.routes.draw do
       get :search_client
       post :import_client
     end
+    member do
+      post :transmit
+    end
+  end
+
+  resources :companies, except: [:show]
+
+  resources :fiscal_products, only: [:index, :update] do
+    member { post :import_from_tiny }
+    collection { post :import_all_from_tiny }
+  end
+
+  resources :fiscal_notes, only: [:index, :show, :new, :create] do
+    member do
+      get :xml
+    end
+  end
+
+  resources :stock_transfers, controller: 'b2b_orders', defaults: { order_kind: 'stock_transfer' },
+                              only: [:index, :new, :create, :edit, :update] do
     member do
       post :transmit
     end

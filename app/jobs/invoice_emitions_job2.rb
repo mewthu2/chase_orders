@@ -66,7 +66,7 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
           )
         end
       else
-        attempt.update(error: "Unexpected response code: #{response.code}", status: :error)
+        attempt.update(error: "Código de resposta inesperado: #{response.code}", status: :error)
       end
     rescue StandardError => e
       attempt.update(error: e.message.first(100), status: :error)

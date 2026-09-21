@@ -10,7 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_20_231200) do
+  create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
   create_table "address_corrections", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "tiny_order_id", null: false
     t.string "endereco"
@@ -68,6 +96,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.decimal "price", precision: 10, scale: 2, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "discount", precision: 10, scale: 2, default: "0.0", null: false
     t.index ["b2b_order_id"], name: "index_b2b_order_items_on_b2b_order_id"
   end
 
@@ -88,6 +117,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "carrier_id"
+    t.string "salesperson_name"
+    t.integer "price_list", default: 0, null: false
+    t.boolean "different_shipping_address", default: false, null: false
+    t.string "shipping_street"
+    t.string "shipping_number"
+    t.string "shipping_complement"
+    t.string "shipping_neighbourhood"
+    t.string "shipping_city"
+    t.string "shipping_state"
+    t.string "shipping_zip"
+    t.string "tracking_code"
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
@@ -144,8 +184,50 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.string "phone"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "city_ibge_code"
+    t.integer "ie_indicator", default: 9, null: false
     t.index ["registration"], name: "index_clients_on_registration"
     t.index ["responsible_name"], name: "index_clients_on_responsible_name"
+  end
+
+  create_table "companies", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "legal_name", null: false
+    t.string "trade_name"
+    t.string "cnpj", null: false
+    t.string "state_registration"
+    t.string "municipal_registration"
+    t.string "cnae"
+    t.integer "tax_regime", default: 1, null: false
+    t.string "street", null: false
+    t.string "number", null: false
+    t.string "complement"
+    t.string "neighbourhood", null: false
+    t.string "city", null: false
+    t.string "city_ibge_code", null: false
+    t.string "state", null: false
+    t.string "zip", null: false
+    t.string "phone"
+    t.string "email"
+    t.integer "environment", default: 2, null: false
+    t.integer "nfe_series", default: 1, null: false
+    t.integer "next_nfe_number", default: 1, null: false
+    t.string "cfop_sale_in_state", default: "5102", null: false
+    t.string "cfop_sale_out_of_state", default: "6102", null: false
+    t.string "cfop_transfer_in_state", default: "5152", null: false
+    t.string "cfop_transfer_out_of_state", default: "6152", null: false
+    t.string "operation_nature_sale", default: "Venda de mercadoria", null: false
+    t.string "operation_nature_transfer", default: "Transferência de mercadoria", null: false
+    t.string "icms_situation", default: "102", null: false
+    t.string "pis_cst", default: "49", null: false
+    t.string "cofins_cst", default: "49", null: false
+    t.boolean "active", default: true, null: false
+    t.text "certificate_password"
+    t.datetime "certificate_expires_at"
+    t.string "certificate_subject"
+    t.string "certificate_cnpj"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cnpj"], name: "index_companies_on_cnpj", unique: true
   end
 
   create_table "customers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -219,6 +301,28 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.index ["needs_sync"], name: "index_discounts_on_needs_sync"
     t.index ["shopify_node_id"], name: "index_discounts_on_shopify_node_id", unique: true
     t.index ["starts_at"], name: "index_discounts_on_starts_at"
+  end
+
+  create_table "fiscal_notes", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "b2b_order_id"
+    t.integer "number", null: false
+    t.integer "series", null: false
+    t.string "access_key", limit: 44
+    t.integer "environment", default: 2, null: false
+    t.string "operation_nature"
+    t.string "cfop_summary"
+    t.integer "status", default: 0, null: false
+    t.string "protocol"
+    t.decimal "total_value", precision: 12, scale: 2, default: "0.0", null: false
+    t.text "error_message"
+    t.datetime "issued_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_order_id"], name: "index_fiscal_notes_on_b2b_order_id"
+    t.index ["company_id", "series", "number"], name: "index_fiscal_notes_on_company_id_and_series_and_number", unique: true
+    t.index ["company_id"], name: "index_fiscal_notes_on_company_id"
+    t.index ["status"], name: "index_fiscal_notes_on_status"
   end
 
   create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -521,6 +625,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.text "image_url"
     t.integer "stock_shopping_analia_franco"
     t.integer "stock_iguatemi_campinas"
+    t.string "ncm"
+    t.string "cest"
+    t.integer "origin", default: 0, null: false
+    t.string "commercial_unit", default: "UN", null: false
     t.index ["stock_eldorado_sp"], name: "index_products_on_stock_eldorado_sp"
     t.index ["stock_fortaleza_rio_mar"], name: "index_products_on_stock_fortaleza_rio_mar"
     t.index ["stock_porto_alegre_bourbon"], name: "index_products_on_stock_porto_alegre_bourbon"
@@ -623,6 +731,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "city_ibge_code"
   end
 
   create_table "user_profiles", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -663,6 +772,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "b2b_order_items", "b2b_orders"
   add_foreign_key "b2b_orders", "carriers"
   add_foreign_key "b2b_orders", "clients"
@@ -670,6 +781,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_16_000000) do
   add_foreign_key "b2b_orders", "users"
   add_foreign_key "campaign_users", "marketing_campaigns"
   add_foreign_key "campaign_users", "users"
+  add_foreign_key "fiscal_notes", "b2b_orders"
+  add_foreign_key "fiscal_notes", "companies"
   add_foreign_key "logs", "users"
   add_foreign_key "marketing_tasks", "marketing_campaigns"
   add_foreign_key "marketing_tasks", "users"

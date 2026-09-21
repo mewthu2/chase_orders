@@ -23,14 +23,6 @@
     </div>
   </div>
 
-  <%# ===== FLASH ===== %>
-  <% flash.each do |type, msg| %>
-    <div class="flash-msg flash-msg--<%= type == 'notice' ? 'success' : 'danger' %>">
-      <i class="fas fa-<%= type == 'notice' ? 'check-circle' : 'exclamation-triangle' %> me-2"></i>
-      <%= msg %>
-    </div>
-  <% end %>
-
   <%# ===== FILTRO / BUSCA ===== %>
   <div class="filters-panel">
     <div class="filter-section">

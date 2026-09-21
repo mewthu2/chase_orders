@@ -6,6 +6,9 @@ class Client < ApplicationRecord
                                      message: 'deve ser um CPF ou CNPJ válido',
                                      allow_blank: true }
 
+  validates :ie_indicator, inclusion: { in: [1, 2, 9] }
+  validates :city_ibge_code, format: { with: /\A\d{7}\z/, message: 'deve ter 7 dígitos' }, allow_blank: true
+
   def cnpj_formatted
     return registration if registration.blank?
 

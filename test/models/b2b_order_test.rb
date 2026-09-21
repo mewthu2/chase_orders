@@ -11,45 +11,80 @@ class B2bOrderTest < ActiveSupport::TestCase
     )
   end
 
-  test 'draft order does not require client, transfer_location or items' do
-    order = B2bOrder.new(kind: :sale, status: :draft, user: @user)
-    assert order.valid?
+  test 'status defaults to aberto' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client)
+    assert order.aberto?
   end
 
-  test 'sale order requires a client once not draft' do
-    order = B2bOrder.new(kind: :sale, status: :saved, user: @user)
+  test 'sale order requires a client' do
+    order = B2bOrder.new(kind: :sale, user: @user)
     order.b2b_order_items.build(sku: 'ABC', quantity: 1, price: 10)
     refute order.valid?
     assert_includes order.errors[:client], 'não pode ficar em branco'
   end
 
-  test 'stock_transfer order requires a transfer_location once not draft' do
-    order = B2bOrder.new(kind: :stock_transfer, status: :saved, user: @user)
+  test 'stock_transfer order requires a transfer_location' do
+    order = B2bOrder.new(kind: :stock_transfer, user: @user)
     order.b2b_order_items.build(sku: 'ABC', quantity: 1, price: 10)
     refute order.valid?
     assert_includes order.errors[:transfer_location], 'não pode ficar em branco'
   end
 
-  test 'non-draft order requires at least one item' do
-    order = B2bOrder.new(kind: :sale, status: :saved, user: @user, client: @client)
+  test 'order requires at least one item' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client)
     refute order.valid?
     assert_includes order.errors[:base], 'Pedido precisa ter pelo menos um item'
   end
 
-  test 'saved order is a valid full example' do
-    order = B2bOrder.new(kind: :sale, status: :saved, user: @user, client: @client)
+  test 'a fully filled sale order is valid' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client)
     order.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 2, price: 10.5)
     assert order.valid?
   end
 
-  test 'transmittable? is true only for saved or error' do
-    order = B2bOrder.new(kind: :sale, status: :draft, user: @user)
-    refute order.transmittable?
-    order.status = :saved
-    assert order.transmittable?
-    order.status = :error
-    assert order.transmittable?
-    order.status = :transmitted
-    refute order.transmittable?
+  test 'resendable? is true for any non-cancelled order without a tiny_reference_id' do
+    order = B2bOrder.new(kind: :sale, user: @user, status: :aberto)
+    assert order.resendable?
+
+    order.status = :dados_incompletos
+    assert order.resendable?
+
+    order.status = :cancelado
+    refute order.resendable?
+
+    order.status = :aberto
+    order.tiny_reference_id = '123'
+    refute order.resendable?
+  end
+
+  test 'total sums the line totals of all items' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client)
+    order.b2b_order_items.build(sku: 'A', quantity: 2, price: 10, discount: 1)
+    order.b2b_order_items.build(sku: 'B', quantity: 1, price: 5, discount: 0)
+    order.save!
+    assert_equal 23.0, order.total
+  end
+
+  test 'price_list defaults to standard' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client)
+    assert order.standard?
+  end
+
+  test 'different_shipping_address requires the shipping address fields' do
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client, different_shipping_address: true)
+    order.b2b_order_items.build(sku: 'A', quantity: 1, price: 10)
+    refute order.valid?
+    assert_includes order.errors[:shipping_street], 'não pode ficar em branco'
+    assert_includes order.errors[:shipping_zip], 'não pode ficar em branco'
+  end
+
+  test 'different_shipping_address is valid once all fields are filled' do
+    order = B2bOrder.new(
+      kind: :sale, user: @user, client: @client, different_shipping_address: true,
+      shipping_street: 'Rua X', shipping_number: '10', shipping_neighbourhood: 'Centro',
+      shipping_city: 'BH', shipping_state: 'MG', shipping_zip: '30000-000'
+    )
+    order.b2b_order_items.build(sku: 'A', quantity: 1, price: 10)
+    assert order.valid?
   end
 end

@@ -72,7 +72,7 @@ class ClientsController < ApplicationController
       :responsible_name, :business_name, :registration,
       :state_registration, :municipal_registration,
       :street, :neighbourhood, :number, :city, :state, :zip,
-      :email, :phone
+      :email, :phone, :city_ibge_code, :ie_indicator
     )
   end
 

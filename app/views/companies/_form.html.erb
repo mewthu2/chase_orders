@@ -1,0 +1,213 @@
+<%= form_with model: @company, local: true, multipart: true, class: 'needs-validation', novalidate: true do |form| %>
+  <% if @company.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @company.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-id-badge me-2"></i>Identificação</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Razão social <span class="required">*</span></label>
+          <%= form.text_field :legal_name, class: "field-input #{'field-input--error' if @company.errors[:legal_name].any?}", required: true %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Nome fantasia</label>
+          <%= form.text_field :trade_name, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">CNPJ <span class="required">*</span></label>
+          <%= form.text_field :cnpj, value: (@company.cnpj.present? ? @company.cnpj_formatted : nil), class: "field-input #{'field-input--error' if @company.errors[:cnpj].any?}", required: true, placeholder: "00.000.000/0000-00" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Inscrição Estadual</label>
+          <%= form.text_field :state_registration, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Inscrição Municipal</label>
+          <%= form.text_field :municipal_registration, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">CNAE</label>
+          <%= form.text_field :cnae, class: "field-input", maxlength: 7 %>
+        </div>
+        <div class="form-col-7">
+          <label class="field-label">Regime tributário <span class="required">*</span></label>
+          <%= form.select :tax_regime, Company::TAX_REGIMES.map { |code, label| ["#{code} - #{label}", code] }, {}, { class: "field-input" } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-map-marker-alt me-2"></i>Endereço</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Rua <span class="required">*</span></label>
+          <%= form.text_field :street, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">Número <span class="required">*</span></label>
+          <%= form.text_field :number, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Complemento</label>
+          <%= form.text_field :complement, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Bairro <span class="required">*</span></label>
+          <%= form.text_field :neighbourhood, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Cidade <span class="required">*</span></label>
+          <%= form.text_field :city, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">UF <span class="required">*</span></label>
+          <%= form.text_field :state, class: "field-input", required: true, maxlength: 2 %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">CEP <span class="required">*</span></label>
+          <%= form.text_field :zip, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Código IBGE do município <span class="required">*</span></label>
+          <%= form.text_field :city_ibge_code, class: "field-input #{'field-input--error' if @company.errors[:city_ibge_code].any?}", required: true, maxlength: 7, placeholder: "3106200" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Telefone</label>
+          <%= form.text_field :phone, class: "field-input" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">E-mail</label>
+          <%= form.text_field :email, class: "field-input" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-file-invoice me-2"></i>Emissão da NF-e</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Ambiente <span class="required">*</span></label>
+          <%= form.select :environment, [['Homologação (sem valor fiscal)', 'homologacao'], ['Produção', 'producao']], {}, { class: "field-input" } %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Série <span class="required">*</span></label>
+          <%= form.number_field :nfe_series, class: "field-input", min: 1 %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Próximo número <span class="required">*</span></label>
+          <%= form.number_field :next_nfe_number, class: "field-input", min: 1 %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Natureza da operação - venda</label>
+          <%= form.text_field :operation_nature_sale, class: "field-input" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Natureza da operação - transferência</label>
+          <%= form.text_field :operation_nature_transfer, class: "field-input" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-percent me-2"></i>CFOP e tributação padrão</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-3">
+          <label class="field-label">CFOP venda (mesma UF)</label>
+          <%= form.text_field :cfop_sale_in_state, class: "field-input", maxlength: 4 %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CFOP venda (outra UF)</label>
+          <%= form.text_field :cfop_sale_out_of_state, class: "field-input", maxlength: 4 %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CFOP transferência (mesma UF)</label>
+          <%= form.text_field :cfop_transfer_in_state, class: "field-input", maxlength: 4 %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CFOP transferência (outra UF)</label>
+          <%= form.text_field :cfop_transfer_out_of_state, class: "field-input", maxlength: 4 %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">ICMS (CSOSN/CST)</label>
+          <%= form.select :icms_situation, CompaniesHelper::ICMS_SITUATIONS, {}, { class: "field-input" } %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">PIS (CST)</label>
+          <%= form.select :pis_cst, CompaniesHelper::PIS_COFINS_CSTS, {}, { class: "field-input" } %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">COFINS (CST)</label>
+          <%= form.select :cofins_cst, CompaniesHelper::PIS_COFINS_CSTS, {}, { class: "field-input" } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-key me-2"></i>Certificado digital A1</h5>
+    </div>
+    <div class="form-section-body">
+      <% if @company.persisted? %>
+        <p class="text-muted-custom mb-3">
+          Situação atual: <%= certificate_badge(@company) %>
+          <% if @company.certificate_expires_at.present? %>
+            <span class="ms-2">Válido até <%= l(@company.certificate_expires_at.in_time_zone, format: '%d/%m/%Y') %></span>
+          <% end %>
+        </p>
+      <% end %>
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Arquivo do certificado (.pfx / .p12)</label>
+          <%= form.file_field :certificate_file, accept: '.pfx,.p12', class: "field-input" %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Senha do certificado</label>
+          <%= form.password_field :certificate_password, value: nil, autocomplete: 'new-password', class: "field-input #{'field-input--error' if @company.errors[:certificate_password].any?}" %>
+          <% if @company.persisted? %>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Deixe em branco para manter o certificado atual.</span>
+          <% end %>
+        </div>
+      </div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-lock me-1"></i>O arquivo fica em armazenamento privado e a senha é criptografada. O CNPJ do certificado precisa ser o mesmo da empresa.</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-toggle-on me-2"></i>Status</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-check form-switch">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+        <label class="form-check-label text-main fw-bold">Ativa</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@company.new_record? ? 'Criar Empresa' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", companies_path, class: "btn-cancel" %>
+  </div>
+<% end %>

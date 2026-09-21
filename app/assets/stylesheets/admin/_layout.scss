@@ -8,7 +8,18 @@
 // expensive duplication of all (repeated on every full-page response).
 
 // ---- flash messages ----
-.flash-messages-container { margin-bottom: 1.5rem; }
+.flash-messages-container {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1090;
+  width: 420px;
+  max-width: calc(100vw - 2rem);
+  display: flex;
+  flex-direction: column;
+  pointer-events: none; // o container vazio não pode bloquear cliques na página
+}
+.flash-messages-container .alert { pointer-events: auto; }
 .flash-messages-container .alert {
   border-radius: $radius-md;
   border-width: 1px;
@@ -43,11 +54,12 @@
 
 .alert.fade.show { animation: layoutSlideInDown 0.4s ease-out; }
 @keyframes layoutSlideInDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @media (max-width: 768px) {
+  .flash-messages-container { right: 1rem; bottom: 1rem; }
   .flash-messages-container .alert { padding: 0.875rem 1rem; }
   .alert-icon { width: 35px; height: 35px; }
   .alert-icon i { font-size: 1.1rem !important; }

@@ -1,0 +1,55 @@
+<% content_for :title, "Gerar Nota Fiscal" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>Gerar Nota Fiscal</h1>
+      <p class="page-subtitle"><%= @order.sale? ? 'Pedido de atacado' : 'Transferência de estoque' %> #<%= @order.id %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to(@order.stock_transfer? ? stock_transfers_path : b2b_orders_path, class: "btn-back") do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-clipboard-list me-2"></i>Resumo do pedido</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6"><label class="field-label"><%= @order.sale? ? 'Cliente' : 'Destino' %></label><div class="text-main"><%= @order.sale? ? @order.client&.display_name : @order.transfer_location&.name %></div></div>
+        <div class="form-col-3"><label class="field-label">Itens</label><div class="text-main"><%= @order.b2b_order_items.size %></div></div>
+        <div class="form-col-3"><label class="field-label">Total</label><div class="text-main"><%= number_to_currency(@order.total, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></div></div>
+      </div>
+    </div>
+  </div>
+
+  <% if @active_note %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      Este pedido já tem a nota <%= link_to "#{@active_note.number}/#{@active_note.series}", fiscal_note_path(@active_note) %> (<%= @active_note.status_label %>). Não é possível gerar outra enquanto ela estiver ativa.
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-building me-2"></i>Empresa emissora</h5></div>
+    <div class="form-section-body">
+      <% if @companies.any? %>
+        <%= form_with url: fiscal_notes_path, method: :post, local: true do %>
+          <%= hidden_field_tag :b2b_order_id, @order.id %>
+          <div class="form-grid">
+            <div class="form-col-6">
+              <label class="field-label">Empresa <span class="required">*</span></label>
+              <%= select_tag :company_id, options_for_select(@companies.map { |c| ["#{c.legal_name} - #{c.cnpj_formatted} (#{c.homologacao? ? 'homologação' : 'produção'})", c.id] }, params[:company_id]), class: 'field-input' %>
+            </div>
+          </div>
+          <p class="text-muted-custom mt-3"><i class="fas fa-info-circle me-1"></i>A nota é gerada e assinada com o certificado da empresa, mas <strong>não é transmitida à SEFAZ</strong>.</p>
+          <div class="form-actions">
+            <%= submit_tag 'Gerar nota fiscal', class: "btn-submit", disabled: @active_note.present? %>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="text-muted-custom mb-3">Nenhuma empresa ativa com certificado digital válido. Cadastre ou renove o certificado em Empresas.</p>
+        <%= link_to companies_path, class: "btn-export" do %><i class="fas fa-building me-2"></i>Ir para Empresas<% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

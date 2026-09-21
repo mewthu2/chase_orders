@@ -10,6 +10,9 @@ class MakeCsvDataJob < ApplicationJob
 
     motor = find_or_create_motor('Atualização dos pedidos')
     log_job('SyncOrdersSituationJob') { run_job_and_update_motor(motor) { SyncOrdersSituationJob.perform_now } }
+
+    motor = find_or_create_motor('Atualização de status dos pedidos B2B')
+    log_job('SyncB2bOrdersStatusJob') { run_job_and_update_motor(motor) { SyncB2bOrdersStatusJob.perform_now } }
   end
 
   private

@@ -1,0 +1,53 @@
+@import 'admin/variables';
+
+.status-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: $radius-md;
+  color: $text-muted;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.status-tab:hover { color: $text-primary; background: $bg-elevated; }
+.status-tab--active { color: $text-primary; background: $bg-elevated; border-color: $border-muted; }
+.status-tab-count { color: $text-faint; font-weight: 400; }
+.status-tab--more { border: 1px dashed $border-muted; }
+
+.status-tab-more-wrapper { position: relative; }
+.status-tab-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.25rem;
+  min-width: 200px;
+  background: $bg-elevated;
+  border: 1px solid $border-muted;
+  border-radius: $radius-md;
+  padding: 0.4rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  z-index: 20;
+}
+.status-tab-dropdown--open { display: flex; }
+.status-tab-dropdown .status-tab { justify-content: flex-start; }
+
+.status-pill--aberto { background: rgba(88, 166, 255, 0.12); color: $accent-blue-light; border: 1px solid $accent-blue; }
+.status-pill--aprovado { background: rgba(63, 185, 80, 0.15); color: $accent-green-light; border: 1px solid $accent-green; }
+.status-pill--preparando_envio { background: rgba(227, 179, 65, 0.15); color: $accent-yellow; border: 1px solid $accent-yellow-alt; }
+.status-pill--faturado { background: rgba(31, 111, 235, 0.15); color: $accent-blue-light; border: 1px solid $accent-blue; }
+.status-pill--pronto_para_envio { background: rgba(137, 87, 229, 0.15); color: #b392f0; border: 1px solid #8957e5; }
+.status-pill--enviado { background: rgba(63, 185, 80, 0.15); color: $accent-green-light; border: 1px solid $accent-green; }
+.status-pill--nao_entregue { background: rgba(248, 81, 73, 0.12); color: $accent-red-light; border: 1px solid $accent-red-light; }
+.status-pill--dados_incompletos { background: rgba(218, 54, 51, 0.12); color: $accent-red-soft; border: 1px solid $accent-red; }
+.status-pill--cancelado { background: rgba(139, 148, 158, 0.12); color: $text-muted; border: 1px solid $border-muted; }
+
+.form-col-12 { flex: 0 0 100%; }

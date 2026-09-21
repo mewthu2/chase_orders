@@ -1,55 +1,99 @@
-<% content_for :title, "Pedidos B2B" %>
+<% transfers = order_kind == 'stock_transfer' %>
+<% content_for :title, transfers ? "Transferências de Estoque" : "Pedidos de Atacado" %>
 
 <div class="users-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-handshake me-2"></i>Pedidos B2B</h1>
-      <p class="page-subtitle">Pedidos de venda comum e transferências de estoque</p>
+      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Transferências de Estoque' : 'Pedidos de Atacado' %></h1>
+      <p class="page-subtitle"><%= transfers ? 'Transferências de estoque para locais de destino' : 'Pedidos de venda no atacado' %></p>
     </div>
     <div class="header-actions">
       <span class="total-badge"><i class="fas fa-list me-1"></i><%= @b2b_orders.size %> pedido(s)</span>
-      <%= link_to new_b2b_order_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Novo Pedido<% end %>
+      <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-2"></i><%= transfers ? 'Nova Transferência' : 'Novo Pedido' %><% end %>
     </div>
   </div>
 
   <div class="table-card">
-    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Pedidos</h5></div>
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i><%= transfers ? 'Lista de Transferências' : 'Lista de Pedidos' %></h5></div>
 
-    <%= form_with url: b2b_orders_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
-      <%= select_tag :status, options_for_select([['Todos status', ''], ['Rascunho', 'draft'], ['Salvo', 'saved'], ['Transmitido', 'transmitted'], ['Erro', 'error']], params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
-      <%= select_tag :kind, options_for_select([['Todos tipos', ''], ['Pedido Comum', 'sale'], ['Transferência de Estoque', 'stock_transfer']], params[:kind]), class: 'field-input', onchange: 'this.form.submit()' %>
+    <% unless transfers %>
+    <%= form_with url: orders_path_for, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
+      <input type="text" name="q" value="<%= params[:q] %>" class="field-input" placeholder="Pesquise por cliente ou número..." style="max-width: 320px;">
+      <input type="hidden" name="status" value="<%= params[:status] %>">
+      <button type="submit" class="btn-back"><i class="fas fa-search me-1"></i>Buscar</button>
+    <% end %>
+
+    <div class="status-tabs px-3 pb-3" id="statusTabsRow">
+      <%= link_to b2b_orders_path(q: params[:q]), class: "status-tab #{'status-tab--active' if params[:status].blank?}", data: { status_key: '' } do %>
+        Todos <span class="status-tab-count"><%= @status_counts.values.sum %></span>
+      <% end %>
+      <% B2bOrder::STATUS_LABELS.each_key do |status_key| %>
+        <%= link_to b2b_orders_path(q: params[:q], status: status_key), class: "status-tab #{'status-tab--active' if params[:status] == status_key}", data: { status_key: status_key } do %>
+          <%= B2bOrder::STATUS_LABELS[status_key] %> <span class="status-tab-count"><%= @status_counts[status_key] || 0 %></span>
+        <% end %>
+      <% end %>
+      <div class="status-tab-more-wrapper" id="statusTabMoreWrapper" style="display: none;">
+        <button type="button" class="status-tab status-tab--more" id="moreStatusesToggle">mais <i class="fas fa-caret-down ms-1"></i></button>
+        <div class="status-tab-dropdown" id="statusTabDropdown"></div>
+      </div>
+    </div>
+
     <% end %>
 
     <% if @b2b_orders.any? %>
       <div class="table-responsive">
         <table class="orders-table">
           <thead>
+            <% if transfers %>
             <tr>
-              <th>#</th>
-              <th>Tipo</th>
+              <th>Nº</th>
+              <th>Data</th>
               <th>Destino</th>
+              <th class="text-end">Total</th>
+              <th>Nº Tiny</th>
               <th class="text-center">Status</th>
-              <th>Referência Tiny</th>
               <th class="text-end">Ações</th>
             </tr>
+            <% else %>
+            <tr>
+              <th>Nº</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>CNPJ/CPF</th>
+              <th class="text-end">Total</th>
+              <th>Nº pedido</th>
+              <th>Rastreamento</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+            <% end %>
           </thead>
           <tbody>
             <% @b2b_orders.each do |order| %>
               <tr>
                 <td class="text-main">#<%= order.id %></td>
-                <td><%= order.sale? ? 'Pedido Comum' : 'Transferência de Estoque' %></td>
-                <td class="text-muted-custom"><%= order.sale? ? order.client&.display_name : order.transfer_location&.name %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= order.transmitted? ? 'status-pill--active' : (order.error? ? 'status-pill--inactive' : '') %>">
-                    <%= { 'draft' => 'Rascunho', 'saved' => 'Salvo', 'transmitted' => 'Transmitido', 'error' => 'Erro' }[order.status] %>
-                  </span>
+                <td class="text-muted-custom"><%= order.created_at.strftime('%d/%m/%Y') %></td>
+                <td class="text-muted-custom"><%= transfers ? order.transfer_location&.name : order.client&.display_name %></td>
+                <% unless transfers %><td class="text-muted-custom"><%= order.client&.cnpj_formatted %></td><% end %>
+                <td class="text-end"><%= number_to_currency(order.total, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></td>
+                <td class="text-muted-custom">
+                  <%= order.tiny_reference_number.presence || '-' %>
+                  <% if order.tiny_reference_id.present? %>
+                    <%= link_to tiny_order_url(order), target: '_blank', title: 'Ver no Tiny', class: 'ms-1' do %><i class="fas fa-external-link-alt"></i><% end %>
+                  <% end %>
                 </td>
-                <td class="text-muted-custom"><%= order.tiny_reference_number.presence || '-' %></td>
+                <% unless transfers %><td class="text-muted-custom"><%= order.tracking_code.presence || '-' %></td><% end %>
+                <td class="text-center">
+                  <span class="status-pill status-pill--<%= order.status %>"><%= B2bOrder::STATUS_LABELS[order.status] %></span>
+                </td>
                 <td class="text-end">
                   <div class="table-actions">
-                    <%= link_to edit_b2b_order_path(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <% if order.transmittable? %>
-                      <%= button_to transmit_b2b_order_path(order), method: :post, class: "action-btn action-btn--edit", form: { data: { turbo_confirm: 'Transmitir este pedido para o Tiny?' } } do %>
+                    <%= link_to edit_order_path_for(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <% if current_user.can_access_screen?('fiscal_notes') %>
+                      <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
+                    <% end %>
+                    <% if order.resendable? %>
+                      <%= button_to transmit_order_path_for(order), method: :post, class: "action-btn action-btn--edit", form: { data: { turbo_confirm: 'Reenviar este pedido para o Tiny?' } } do %>
                         <i class="fas fa-paper-plane"></i>
                       <% end %>
                     <% end %>
@@ -63,9 +107,66 @@
     <% else %>
       <div class="empty-state">
         <i class="fas fa-handshake fa-3x mb-3 d-block"></i>
-        <h5>Nenhum pedido cadastrado</h5>
-        <%= link_to new_b2b_order_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Novo Pedido<% end %>
+        <h5><%= transfers ? 'Nenhuma transferência cadastrada' : 'Nenhum pedido cadastrado' %></h5>
+        <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-1"></i><%= transfers ? 'Nova Transferência' : 'Novo Pedido' %><% end %>
       </div>
     <% end %>
   </div>
 </div>
+
+<% unless transfers %>
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var row = document.getElementById('statusTabsRow');
+  var moreWrapper = document.getElementById('statusTabMoreWrapper');
+  var moreToggle = document.getElementById('moreStatusesToggle');
+  var moreDropdown = document.getElementById('statusTabDropdown');
+  var tabs = Array.prototype.slice.call(row.querySelectorAll('.status-tab[data-status-key]'));
+
+  function recalcStatusTabs() {
+    moreDropdown.classList.remove('status-tab-dropdown--open');
+    tabs.forEach(function (tab) { row.insertBefore(tab, moreWrapper); });
+    moreDropdown.innerHTML = '';
+    moreWrapper.style.display = 'none';
+
+    var rowWidth = row.clientWidth;
+    var totalWidth = tabs.reduce(function (sum, tab) { return sum + tab.offsetWidth + 8; }, 0);
+    if (totalWidth <= rowWidth) return;
+
+    moreWrapper.style.display = '';
+    var budget = rowWidth - moreWrapper.offsetWidth - 8;
+    var usedWidth = 0;
+
+    tabs.forEach(function (tab) {
+      var tabWidth = tab.offsetWidth + 8;
+      if (usedWidth + tabWidth <= budget) {
+        usedWidth += tabWidth;
+      } else {
+        moreDropdown.appendChild(tab);
+      }
+    });
+  }
+
+  function debounce(fn, wait) {
+    var timeout;
+    return function () {
+      clearTimeout(timeout);
+      timeout = setTimeout(fn, wait);
+    };
+  }
+
+  moreToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    moreDropdown.classList.toggle('status-tab-dropdown--open');
+  });
+  document.addEventListener('click', function (e) {
+    if (!moreWrapper.contains(e.target)) moreDropdown.classList.remove('status-tab-dropdown--open');
+  });
+
+  window.addEventListener('resize', debounce(recalcStatusTabs, 150));
+  recalcStatusTabs();
+});
+</script>
+<% end %>
+<% end %>

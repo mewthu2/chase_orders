@@ -1,9 +1,10 @@
-<% content_for :title, "Novo Pedido B2B" %>
+<% transfers = order_kind == 'stock_transfer' %>
+<% content_for :title, transfers ? "Nova Transferência de Estoque" : "Novo Pedido de Atacado" %>
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left"><h1 class="page-title"><i class="fas fa-handshake me-2"></i>Novo Pedido B2B</h1></div>
+    <div class="header-left"><h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Nova Transferência de Estoque' : 'Novo Pedido de Atacado' %></h1></div>
     <div class="header-actions">
-      <%= link_to b2b_orders_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>
   </div>
   <%= render 'form' %>

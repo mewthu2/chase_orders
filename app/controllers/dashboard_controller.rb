@@ -890,7 +890,7 @@ class DashboardController < ApplicationController
 
     if tiny_order_id.blank?
       redirect_to order_correios_tracking_dashboard_index_path,
-                  alert: 'Tiny Order ID is required.'
+                  alert: 'O ID do pedido no Tiny é obrigatório.'
       return
     end
 
@@ -899,18 +899,18 @@ class DashboardController < ApplicationController
 
       if attempts.empty?
         redirect_to order_correios_tracking_dashboard_index_path,
-                    alert: "No attempts found for Tiny Order ID #{tiny_order_id}."
+                    alert: "Nenhuma tentativa encontrada para o pedido #{tiny_order_id}."
         return
       end
 
       deleted_count = attempts.delete_all
 
       redirect_to order_correios_tracking_dashboard_index_path,
-                  notice: "Order #{tiny_order_id} successfully removed from queue. #{deleted_count} attempt(s) deleted."
+                  notice: "Pedido #{tiny_order_id} removido da fila com sucesso. #{deleted_count} tentativa(s) excluída(s)."
     rescue StandardError => e
       Rails.logger.error "Error deleting order from queue: #{e.message}"
       redirect_to order_correios_tracking_dashboard_index_path,
-                  alert: "Error deleting order from queue: #{e.message}"
+                  alert: "Erro ao remover o pedido da fila: #{e.message}"
     end
   end
 

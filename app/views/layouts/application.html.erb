@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
   <head>
     <title><%= content_for?(:title) ? "#{yield(:title)} - Honey.Chase - Painel Administrativo" : 'Honey.Chase - Painel Administrativo' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -45,6 +45,8 @@
         <%= render 'layouts/partials/footer' %>
       <% end %>
     </div>
+
+    <%= render 'layouts/partials/messages' %>
 
     <%= yield :scripts %>
     

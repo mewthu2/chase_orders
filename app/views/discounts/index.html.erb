@@ -36,7 +36,6 @@
     <% end %>
   </div>
 
-  <%= render 'layouts/partials/messages' %>
 
   <%# ===== ESTATÍSTICAS RÁPIDAS — apenas para admins ou profile_id == 1 ===== %>
   <% if current_user&.admin? || current_user&.profile_id == 1 %>

@@ -1,0 +1,72 @@
+<% content_for :title, "Notas Fiscais" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>Notas Fiscais</h1>
+      <p class="page-subtitle">NF-e geradas pelo Honey (a transmissão à SEFAZ ainda não está ligada)</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @fiscal_notes.total_entries %> nota(s)</span>
+      <%= link_to fiscal_products_path, class: "btn-back" do %><i class="fas fa-barcode me-1"></i>Dados fiscais dos produtos<% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <%= form_with url: fiscal_notes_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
+      <%= select_tag :status, options_for_select([['Todos status', '']] + FiscalNote::STATUS_LABELS.map { |key, label| [label, key] }, params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
+      <%= select_tag :company_id, options_for_select([['Todas empresas', '']] + @companies.map { |c| [c.legal_name, c.id] }, params[:company_id]), class: 'field-input', onchange: 'this.form.submit()' %>
+    <% end %>
+
+    <% if @fiscal_notes.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nº / Série</th>
+              <th>Emitida em</th>
+              <th>Empresa</th>
+              <th>Pedido</th>
+              <th class="text-end">Valor</th>
+              <th>Ambiente</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @fiscal_notes.each do |note| %>
+              <tr>
+                <td class="text-main"><%= note.number %> / <%= note.series %></td>
+                <td class="text-muted-custom"><%= (note.issued_at || note.created_at).in_time_zone.strftime('%d/%m/%Y %H:%M') %></td>
+                <td class="text-muted-custom"><%= note.company.legal_name %></td>
+                <td class="text-muted-custom">
+                  <% if fiscal_note_order_path(note) %>
+                    <%= link_to "##{note.b2b_order_id}", fiscal_note_order_path(note) %>
+                  <% else %>-<% end %>
+                </td>
+                <td class="text-end"><%= number_to_currency(note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></td>
+                <td class="text-muted-custom"><%= note.producao? ? 'Produção' : 'Homologação' %></td>
+                <td class="text-center"><%= fiscal_note_status_pill(note) %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to fiscal_note_path(note), class: "action-btn action-btn--edit", title: "Detalhes" do %><i class="fas fa-eye"></i><% end %>
+                    <% if note.xml_available? %>
+                      <%= link_to xml_fiscal_note_path(note), class: "action-btn action-btn--edit", title: "Baixar XML" do %><i class="fas fa-download"></i><% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-3 py-3"><%= will_paginate @fiscal_notes, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-file-invoice fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma nota fiscal gerada</h5>
+        <p class="text-muted-custom">Use o ícone de nota fiscal na lista de pedidos para gerar.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

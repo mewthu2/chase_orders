@@ -34,19 +34,6 @@
     </div>
   </div>
 
-  <%# ===== FLASH ===== %>
-  <% if flash[:notice] %>
-    <div class="flash-msg flash-msg--success">
-      <i class="fas fa-check-circle me-2"></i><%= flash[:notice] %>
-    </div>
-  <% end %>
-
-  <% if flash[:alert] %>
-    <div class="flash-msg flash-msg--danger">
-      <i class="fas fa-exclamation-triangle me-2"></i><%= flash[:alert] %>
-    </div>
-  <% end %>
-
   <% if @planner_order.error_message.present? %>
     <div class="flash-msg flash-msg--danger">
       <i class="fas fa-exclamation-triangle me-2"></i>

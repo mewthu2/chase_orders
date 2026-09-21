@@ -64,6 +64,11 @@
           <label class="field-label">CEP <span class="required">*</span></label>
           <%= form.text_field :zip, class: "field-input", required: true %>
         </div>
+        <div class="form-col-4">
+          <label class="field-label">Código IBGE do município</label>
+          <%= form.text_field :city_ibge_code, class: "field-input #{'field-input--error' if @transfer_location.errors[:city_ibge_code].any?}", maxlength: 7, placeholder: "3106200" %>
+          <span class="text-muted-custom d-block mt-1">Necessário para emitir nota fiscal.</span>
+        </div>
       </div>
     </div>
   </div>

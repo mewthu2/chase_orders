@@ -36,6 +36,11 @@ Rails.application.configure do
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test
 
+  # Chaves fixas só para teste (produção/dev usam as variáveis de ambiente).
+  config.active_record.encryption.primary_key = 'test-primary-key-0123456789abcdef'
+  config.active_record.encryption.deterministic_key = 'test-deterministic-key-0123456789ab'
+  config.active_record.encryption.key_derivation_salt = 'test-key-derivation-salt-0123456789'
+
   config.action_mailer.perform_caching = false
 
   # Tell Action Mailer not to deliver emails to the real world.

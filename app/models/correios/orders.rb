@@ -17,7 +17,7 @@ module Correios::Orders
     end
     attempt.update(data)
   rescue ActiveRecord::ValueTooLong
-    attempt.update(error: "Oversized Value for #{data.keys.join(', ')}", status: :error)
+    attempt.update(error: "Valor grande demais para #{data.keys.join(', ')}", status: :error)
   end
 
   def create_orders(params, attempt)
@@ -61,7 +61,7 @@ module Correios::Orders
       destinatario: {
         nome: params[:nome],
         logradouro: params[:endereco],
-        numeroEndereco: params[:numero],
+        numeroEndereco: params[:numero].to_s.gsub(/\D/, '').first(6).presence || 'S/N',
         complemento: params[:complemento].to_s.first(60),
         bairro: params[:bairro],
         cep: params[:cep],

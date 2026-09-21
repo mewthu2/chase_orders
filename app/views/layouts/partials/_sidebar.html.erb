@@ -42,21 +42,25 @@
           </div>
         </div>
 
-        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') || current_user&.can_access_screen?('carriers') %>
+        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
               <div class="nav-group-title">
                 <i class="fas fa-handshake"></i>
-                <span class="nav-text">Pedidos</span>
+                <span class="nav-text">Pedidos B2B</span>
               </div>
               <i class="fas fa-chevron-right collapse-icon" id="pedidosB2bIcon"></i>
             </div>
             <div class="nav-group-dropdown" id="pedidosB2bDropdown">
               <div class="dropdown-content">
                 <% if current_user&.can_access_screen?('b2b_orders') %>
-                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders'}" do %>
+                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] != 'stock_transfer'}" do %>
                     <i class="fas fa-file-invoice-dollar"></i>
-                    <span>Pedidos B2B</span>
+                    <span>Pedidos de Atacado</span>
+                  <% end %>
+                  <%= link_to stock_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'stock_transfer'}" do %>
+                    <i class="fas fa-dolly"></i>
+                    <span>Transferências de Estoque</span>
                   <% end %>
                 <% end %>
                 <% if current_user&.can_access_screen?('transfer_locations') %>
@@ -69,6 +73,18 @@
                   <%= link_to carriers_path, class: "dropdown-link #{'active' if controller_name == 'carriers'}" do %>
                     <i class="fas fa-truck"></i>
                     <span>Transportadoras</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('companies') %>
+                  <%= link_to companies_path, class: "dropdown-link #{'active' if controller_name == 'companies'}" do %>
+                    <i class="fas fa-building"></i>
+                    <span>Empresas</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('fiscal_notes') %>
+                  <%= link_to fiscal_notes_path, class: "dropdown-link #{'active' if controller_name == 'fiscal_notes'}" do %>
+                    <i class="fas fa-file-invoice"></i>
+                    <span>Notas Fiscais</span>
                   <% end %>
                 <% end %>
               </div>
