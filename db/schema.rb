@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_21_030000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_21_050000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -722,8 +722,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_030000) do
     t.datetime "withdrawn_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "reverted_at"
+    t.string "reversal_adjustment_id"
+    t.bigint "reverted_by_id"
     t.index ["location_id"], name: "index_stock_withdrawal_items_on_location_id"
     t.index ["product_id"], name: "index_stock_withdrawal_items_on_product_id"
+    t.index ["reverted_by_id"], name: "index_stock_withdrawal_items_on_reverted_by_id"
     t.index ["stock_withdrawal_id", "product_id", "location_id"], name: "idx_withdrawal_items_unique_product_location", unique: true
     t.index ["stock_withdrawal_id"], name: "index_stock_withdrawal_items_on_stock_withdrawal_id"
   end
@@ -839,6 +843,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_030000) do
   add_foreign_key "stock_withdrawal_items", "locations"
   add_foreign_key "stock_withdrawal_items", "products"
   add_foreign_key "stock_withdrawal_items", "stock_withdrawals"
+  add_foreign_key "stock_withdrawal_items", "users", column: "reverted_by_id"
   add_foreign_key "stock_withdrawals", "users"
   add_foreign_key "user_profiles", "profiles"
   add_foreign_key "user_profiles", "users"

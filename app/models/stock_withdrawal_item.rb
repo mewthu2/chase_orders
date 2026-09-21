@@ -2,16 +2,17 @@ class StockWithdrawalItem < ApplicationRecord
   belongs_to :stock_withdrawal, inverse_of: :items
   belongs_to :product
   belongs_to :location
+  belongs_to :reverted_by, class_name: 'User', optional: true
 
-  enum :status, { pending: 0, done: 1, failed: 2 }
+  enum :status, { pending: 0, done: 1, failed: 2, reverted: 3 }
 
   validates :quantity, numericality: { only_integer: true, greater_than: 0 }
   validate :product_must_be_linked_to_shopify
   validate :not_duplicated_in_memory
 
-  # Linha já retirada do Shopify: não pode mais ser alterada nem refeita.
+  # Linha que já passou pelo Shopify (retirada ou revertida): não pode mais ser alterada nem refeita.
   def locked?
-    done?
+    done? || reverted?
   end
 
   private

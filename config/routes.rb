@@ -124,6 +124,9 @@ Rails.application.routes.draw do
   resources :stock_correction_items, only: [:update, :destroy]
 
   resources :stock_withdrawals do
+    resources :items, controller: 'stock_withdrawal_items', only: [] do
+      member { post :revert }
+    end
     member { post :complete }
     collection do
       get :search_product

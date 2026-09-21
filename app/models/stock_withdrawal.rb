@@ -18,14 +18,15 @@ class StockWithdrawal < ApplicationRecord
   STALE_PROCESSING_AFTER = 10.minutes
 
   STATUS_LABELS = {
-    'draft' => 'Rascunho', 'processing' => 'Processando', 'completed' => 'Concluída', 'partially_failed' => 'Concluída com falhas'
+    'draft' => 'Rascunho', 'processing' => 'Processando', 'completed' => 'Concluída', 'partially_failed' => 'Concluída com falhas',
+    'partially_completed' => 'Parcialmente concluída', 'reverted' => 'Revertida'
   }.freeze
 
   belongs_to :user
   has_many :items, class_name: 'StockWithdrawalItem', dependent: :destroy, inverse_of: :stock_withdrawal, validate: false, autosave: true
   has_many :locations, -> { distinct }, through: :items
 
-  enum :status, { draft: 0, processing: 1, completed: 2, partially_failed: 3 }
+  enum :status, { draft: 0, processing: 1, completed: 2, partially_failed: 3, partially_completed: 4, reverted: 5 }
 
   validates :withdrawal_date, presence: true
   validates :reason, inclusion: { in: REASONS.keys }
@@ -45,17 +46,36 @@ class StockWithdrawal < ApplicationRecord
   end
 
   def editable_items
-    items.reject(&:done?)
+    items.reject(&:locked?)
   end
 
   def locked_items
-    items.select(&:done?)
+    items.select(&:locked?)
   end
 
-  # Pode ser excluída em qualquer status, menos enquanto está sendo processada agora.
-  # Excluir NÃO devolve estoque ao Shopify: o que já foi retirado lá continua retirado.
+  # Recalcula o status a partir das linhas. Linha com falha/pendente mantém "concluída com falhas"
+  # (para não esconder o que falta retirar); sem pendências: tudo retirado = concluída; parte
+  # revertida = parcialmente concluída; tudo revertido = revertida.
+  def refresh_status!
+    lines = items.reload.to_a
+    new_status =
+      if lines.any? { |line| line.pending? || line.failed? } then :partially_failed
+      elsif lines.all?(&:done?) then :completed
+      elsif lines.any?(&:done?) then :partially_completed
+      else :reverted
+      end
+
+    attrs = { status: new_status }
+    attrs[:completed_at] = Time.current if new_status == :completed && completed_at.nil?
+    attrs[:completed_at] = nil if new_status == :partially_failed
+    update!(attrs)
+    self
+  end
+
+  # Só rascunho pode ser excluído. Depois de integrada com o Shopify a retirada fica como registro
+  # e o caminho para desfazer é reverter as linhas (devolve o estoque), nunca excluir.
   def deletable?
-    !processing? || stale_processing?
+    draft?
   end
 
   # Concluir (ou tentar de novo as falhas) só vale para rascunho e para o que terminou com falhas.

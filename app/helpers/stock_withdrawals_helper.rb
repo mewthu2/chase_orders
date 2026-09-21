@@ -1,9 +1,10 @@
 module StockWithdrawalsHelper
   STATUS_PILLS = {
-    'draft' => '', 'processing' => '', 'completed' => 'status-pill--active', 'partially_failed' => 'status-pill--inactive'
+    'draft' => '', 'processing' => '', 'completed' => 'status-pill--active', 'partially_failed' => 'status-pill--inactive',
+    'partially_completed' => '', 'reverted' => 'status-pill--inactive'
   }.freeze
   ITEM_STATUS = {
-    'pending' => ['Pendente', ''], 'done' => ['Retirado', 'status-pill--active'], 'failed' => ['Falhou', 'status-pill--inactive']
+    'pending' => ['Pendente', ''], 'done' => ['Retirado', 'status-pill--active'], 'failed' => ['Falhou', 'status-pill--inactive'], 'reverted' => ['Revertido', '']
   }.freeze
 
   def withdrawal_status_pill(withdrawal)

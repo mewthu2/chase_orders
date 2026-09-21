@@ -184,299 +184,48 @@ class StockWithdrawalsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, withdrawal.reload.items.count
   end
 
-  test 'a completed or partially failed withdrawal can be deleted, with a warning that Shopify stock is not restored' do
-    %i[completed partially_failed].each do |status|
-      withdrawal = draft
-      withdrawal.update_columns(status: StockWithdrawal.statuses[status])
-
-      assert_difference ['StockWithdrawal.count', 'StockWithdrawalItem.count'], -1 do
-        delete stock_withdrawal_path(withdrawal)
-      end
-
-      assert_redirected_to stock_withdrawals_path
-      follow_redirect!
-      assert_select '.flash-messages-container .alert', text: /NÃO foi devolvido/
-    end
-  end
-
-  test 'deleting a draft does not need the Shopify warning' do
+  test 'a draft can be deleted without any Shopify warning' do
     withdrawal = draft
 
     delete stock_withdrawal_path(withdrawal)
 
     follow_redirect!
     assert_select '.flash-messages-container .alert-success', text: /Rascunho.*excluído/
-    assert_select '.flash-messages-container .alert', text: /NÃO foi devolvido/, count: 0
   end
 
-  test 'deleting a withdrawal that was already processed is recorded in the audit log and never calls Shopify' do
-    withdrawal = draft(items: [[@a, @lagoa, 2], [@a, @bh, 3]])
-    withdrawal.update_columns(status: StockWithdrawal.statuses[:completed])
-    levels, adjust = stub_shopify
+  test 'once integrated with Shopify a withdrawal can no longer be deleted, in any status' do
+    %i[processing completed partially_failed partially_completed reverted].each do |status|
+      withdrawal = draft
+      withdrawal.update_columns(status: StockWithdrawal.statuses[status], updated_at: 30.minutes.ago)
 
-    assert_difference 'Log.count', 1 do
-      delete stock_withdrawal_path(withdrawal)
-    end
+      assert_no_difference ['StockWithdrawal.count', 'StockWithdrawalItem.count'] do
+        delete stock_withdrawal_path(withdrawal)
+      end
 
-    log = Log.last
-    assert_equal 'stock_withdrawal', log.resource_type
-    assert_equal 'delete', log.action_type
-    assert_equal @admin, log.user
-    assert_equal 'completed', log.details_parsed['status']
-    assert_equal 5, log.details_parsed['total_quantity']
-    assert_not_requested levels
-    assert_not_requested adjust
-  end
-
-  test 'a withdrawal being processed right now cannot be deleted' do
-    withdrawal = draft
-    withdrawal.update_columns(status: StockWithdrawal.statuses[:processing], updated_at: 1.minute.ago)
-
-    assert_no_difference 'StockWithdrawal.count' do
-      delete stock_withdrawal_path(withdrawal)
-    end
-
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-danger', text: /processamento/
-  end
-
-  test 'a stale processing withdrawal can be deleted' do
-    withdrawal = draft
-    withdrawal.update_columns(status: StockWithdrawal.statuses[:processing], updated_at: 11.minutes.ago)
-
-    assert_difference 'StockWithdrawal.count', -1 do
-      delete stock_withdrawal_path(withdrawal)
+      assert_redirected_to stock_withdrawal_path(withdrawal)
+      follow_redirect!
+      assert_select '.flash-messages-container .alert-danger', text: /integrada com o Shopify.*Reverter/m
     end
   end
 
-  test 'the delete button shows for every status except processing, with a stronger confirmation once processed' do
+  test 'the delete button only exists for drafts, in the list and on the page' do
     pending = draft
-    done = draft(items: [[@b, @bh, 1]])
-    done.update_columns(status: StockWithdrawal.statuses[:completed])
-    busy = draft(items: [[@a, @bh, 1]])
-    busy.update_columns(status: StockWithdrawal.statuses[:processing], updated_at: 1.minute.ago)
+    others = %i[completed partially_failed partially_completed reverted processing].map do |status|
+      withdrawal = draft(items: [[@b, @bh, 1]])
+      withdrawal.update_columns(status: StockWithdrawal.statuses[status], updated_at: 1.minute.ago)
+      withdrawal
+    end
 
     get stock_withdrawals_path
-    assert_select "form[action='#{stock_withdrawal_path(pending)}'][data-turbo-confirm]"
-    assert_select "form[action='#{stock_withdrawal_path(done)}'][data-turbo-confirm*='NÃO devolve']"
-    assert_select "form[action='#{stock_withdrawal_path(busy)}']", count: 0
+    assert_select "form[action='#{stock_withdrawal_path(pending)}'][method=post] input[name=_method][value=delete]", count: 1
+    others.each { |w| assert_select "form[action='#{stock_withdrawal_path(w)}'] input[name=_method][value=delete]", count: 0, message: "lista: #{w.status}" }
 
-    get stock_withdrawal_path(done)
-    assert_select "form[action='#{stock_withdrawal_path(done)}'][data-turbo-confirm*='NÃO devolve']"
-  end
-
-  test 'a draft can be destroyed' do
-    withdrawal = draft
-
-    assert_difference 'StockWithdrawal.count', -1 do
-      delete stock_withdrawal_path(withdrawal)
+    get stock_withdrawal_path(pending)
+    assert_select "form[action='#{stock_withdrawal_path(pending)}'] input[name=_method][value=delete]", count: 1
+    others.each do |w|
+      get stock_withdrawal_path(w)
+      assert_select "form[action='#{stock_withdrawal_path(w)}'] input[name=_method][value=delete]", count: 0, message: "página: #{w.status}"
     end
-    assert_redirected_to stock_withdrawals_path
-  end
-
-  test 'complete withdraws from Shopify right away and shows the result' do
-    withdrawal = draft(items: [[@a, @lagoa, 2]])
-    levels, adjust = stub_shopify
-
-    assert_no_enqueued_jobs do
-      post complete_stock_withdrawal_path(withdrawal)
-    end
-
-    assert_requested levels
-    assert_requested adjust, times: 1
-    assert withdrawal.reload.completed?
-    assert_redirected_to stock_withdrawal_path(withdrawal)
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-success', text: /Retirada concluída/
-    assert_select 'tbody', text: /Retirado/
-  end
-
-  test 'complete with a failing line reports it and lets you try again' do
-    withdrawal = draft(items: [[@a, @lagoa, 20]])
-    stub_shopify # disponível 10 < 20
-
-    post complete_stock_withdrawal_path(withdrawal)
-
-    assert withdrawal.reload.partially_failed?
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-danger', text: /falhas/i
-    assert_select 'tbody', text: /Estoque insuficiente/
-    assert_select "form[action='#{complete_stock_withdrawal_path(withdrawal)}']", text: /Tentar novamente/
-  end
-
-  test 'complete on an already completed withdrawal is refused and Shopify is not called' do
-    withdrawal = draft
-    withdrawal.update_columns(status: StockWithdrawal.statuses[:completed])
-    levels, adjust = stub_shopify
-
-    post complete_stock_withdrawal_path(withdrawal)
-
-    assert_redirected_to stock_withdrawal_path(withdrawal)
-    assert_not_requested levels
-    assert_not_requested adjust
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-danger'
-  end
-
-  test 'show asks for confirmation before withdrawing and explains there is no undo' do
-    withdrawal = draft
-
-    get stock_withdrawal_path(withdrawal)
-
-    assert_select "form[action='#{complete_stock_withdrawal_path(withdrawal)}'][data-turbo-confirm*='desfazer']"
-  end
-
-  test 'search_product returns only products linked to Shopify, with photo, and no stale local stock' do
-
-    get search_product_stock_withdrawals_path, params: { query: 'camiseta' }
-    json = JSON.parse(response.body)
-
-    assert_equal ['SKU-A'], json['products'].map { |p| p['sku'] }
-    assert_equal 'https://cdn.example.com/a.png', json['products'].first['image_url']
-    refute_includes json['products'].first.keys, 'stock', 'o estoque vem ao vivo do Shopify (live_stock), não do banco local'
-
-    get search_product_stock_withdrawals_path, params: { query: 'SEM-ID' }
-    assert_empty JSON.parse(response.body)['products']
-  end
-
-  # ---- estoque ao vivo do Shopify (por produto x location marcada) ----
-
-  def live(products: [@a, @b], locations: [@lagoa, @bh])
-    get live_stock_stock_withdrawals_path, params: { product_ids: products.map(&:id), location_ids: locations.map(&:id) }
-    JSON.parse(response.body)
-  end
-
-  def stub_levels_only(available)
-    stub_request(:get, LEVELS_URL).to_return do |request|
-      query = Addressable::URI.parse(request.uri).query_values
-      location = query['location_ids']
-      raise 'falha simulada' if available[location] == :error
-
-      rows = query['inventory_item_ids'].split(',').filter_map do |id|
-        next unless available[location]&.key?(id)
-
-        { inventory_item_id: id.to_i, location_id: location.to_i, available: available[location][id] }
-      end
-      { body: { inventory_levels: rows }.to_json, headers: { 'Content-Type' => 'application/json' } }
-    end
-  end
-
-  test 'live_stock returns the real Shopify availability per product and per selected location' do
-    stub_levels_only('111' => { '9001' => 10, '9002' => 4 }, '222' => { '9001' => 25 })
-
-    json = live
-
-    assert json['success']
-    assert_equal 10, json['stock'][@a.id.to_s][@lagoa.id.to_s]
-    assert_equal 4, json['stock'][@b.id.to_s][@lagoa.id.to_s]
-    assert_equal 25, json['stock'][@a.id.to_s][@bh.id.to_s]
-    assert_nil json['stock'][@b.id.to_s][@bh.id.to_s], 'não estocado na location = null, nunca 0'
-  end
-
-  test 'it uses the value from Shopify, not the stale local column' do
-    @a.update!(stock_lagoa_seca: '999')
-    stub_levels_only('111' => { '9001' => 3 })
-
-    assert_equal 3, live(products: [@a], locations: [@lagoa])['stock'][@a.id.to_s][@lagoa.id.to_s]
-  end
-
-  test 'only the selected locations are queried, one Shopify read per location' do
-    levels = stub_levels_only('111' => { '9001' => 10, '9002' => 1 }, '222' => { '9001' => 2 })
-
-    live(locations: [@lagoa])
-    assert_requested levels, times: 1
-
-    live(locations: [@lagoa, @bh])
-    assert_requested levels, times: 3
-  end
-
-  test 'a Shopify failure in one location does not break the others and is reported for that location' do
-    stub_levels_only('111' => { '9001' => 10 }, '222' => :error)
-
-    json = live(products: [@a])
-
-    assert json['success']
-    assert_equal 10, json['stock'][@a.id.to_s][@lagoa.id.to_s]
-    assert_nil json['stock'][@a.id.to_s][@bh.id.to_s]
-    assert json['errors'][@bh.id.to_s].present?
-    refute_includes json['errors'].keys, @lagoa.id.to_s
-  end
-
-  test 'an untracked item in a location comes back as null' do
-    stub_levels_only('111' => { '9001' => nil })
-
-    assert_nil live(products: [@a], locations: [@lagoa])['stock'][@a.id.to_s][@lagoa.id.to_s]
-  end
-
-  test 'a location without a Shopify id is reported as an error' do
-    orphan = Location.create!(slug: 'nova', name: 'Nova', shopify_location_id: nil)
-    levels = stub_levels_only({})
-
-    json = live(products: [@a], locations: [orphan])
-
-    assert_match(/sem ID do Shopify/, json['errors'][orphan.id.to_s])
-    assert_not_requested levels
-  end
-
-  test 'products not linked to Shopify are ignored' do
-    stub_levels_only('111' => { '9001' => 10 })
-
-    json = live(products: [@a, @unlinked], locations: [@lagoa])
-
-    assert_equal [@a.id.to_s], json['stock'].keys
-  end
-
-  test 'it returns the product photo: the stored one directly, the missing one looked up in Shopify' do
-    @b.update!(image_url: nil)
-    stub_levels_only('111' => { '9001' => 10, '9002' => 4 })
-    lookups = []
-
-    Shopify::Products.stub(:update_product_with_shopify_id, ->(product) { lookups << [:id, product.sku]; product.update!(shopify_product_id: '55') }) do
-      Shopify::Products.stub(:update_product_with_image_url, ->(product) { lookups << [:image, product.sku]; product.update!(image_url: 'https://cdn.example.com/b.png') }) do
-        json = live(locations: [@lagoa])
-
-        assert_equal 'https://cdn.example.com/a.png', json['images'][@a.id.to_s]
-        assert_equal 'https://cdn.example.com/b.png', json['images'][@b.id.to_s]
-      end
-    end
-    assert_equal [[:id, 'SKU-B'], [:image, 'SKU-B']], lookups, 'só o produto sem foto vai ao Shopify buscar a imagem'
-  end
-
-  test 'a failure looking up the photo does not break the live stock' do
-    @a.update!(image_url: nil)
-    stub_levels_only('111' => { '9001' => 10 })
-
-    Shopify::Products.stub(:update_product_with_shopify_id, ->(_product) { raise 'Shopify fora do ar' }) do
-      json = live(products: [@a], locations: [@lagoa])
-
-      assert json['success']
-      assert_equal 10, json['stock'][@a.id.to_s][@lagoa.id.to_s]
-      assert_nil json['images'][@a.id.to_s]
-    end
-  end
-
-  test 'live_stock without products or locations returns empty results and does not call Shopify' do
-    levels = stub_levels_only({})
-
-    get live_stock_stock_withdrawals_path
-    json = JSON.parse(response.body)
-
-    assert json['success']
-    assert_empty json['stock']
-    assert_not_requested levels
-  end
-
-  test 'live_stock requires the stock_withdrawals permission' do
-    profile = Profile.create!(name: 'Sem Live')
-    user = User.create!(name: 'Sem Live', email: 'sem_live@example.com', password: 'password123')
-    user.profiles << profile
-    levels = stub_levels_only('111' => { '9001' => 10 })
-    sign_in user
-
-    get live_stock_stock_withdrawals_path, params: { product_ids: [@a.id], location_ids: [@lagoa.id] }
-
-    assert_redirected_to root_path
-    assert_not_requested levels
   end
 
   # ---- retirada com falhas: editar e retirar as linhas não concluídas ----
@@ -658,5 +407,156 @@ class StockWithdrawalsControllerTest < ActionDispatch::IntegrationTest
     3.times { many_failed_withdrawal }
 
     assert_operator sql_count('locations') { get stock_withdrawals_path }, :<=, 1
+  end
+
+  # ---- reverter uma linha já retirada (devolve o estoque no Shopify) ----
+
+  def completed_withdrawal(items: [[@a, @lagoa, 2], [@b, @bh, 3]])
+    withdrawal = draft(items: items)
+    withdrawal.items.each { |item| item.update!(status: :done, available_before: 10, withdrawn_at: Time.current) }
+    withdrawal.update_columns(status: StockWithdrawal.statuses[:completed], completed_at: Time.current)
+    withdrawal
+  end
+
+  def stub_revert(user_errors: [])
+    @revert_calls = []
+    stub_request(:post, GRAPHQL_URL).to_return do |request|
+      @revert_calls << JSON.parse(request.body)['variables']['input']
+      data = { inventoryAdjustQuantities: { userErrors: user_errors, inventoryAdjustmentGroup: user_errors.empty? ? { id: 'gid://shopify/InventoryAdjustmentGroup/9' } : nil } }
+      { body: { data: data }.to_json, headers: { 'Content-Type' => 'application/json' } }
+    end
+  end
+
+  test 'reverting a done line returns the stock in Shopify and leaves the withdrawal partially completed' do
+    withdrawal = completed_withdrawal
+    item = withdrawal.items.first
+    stub_revert
+
+    post revert_stock_withdrawal_item_path(withdrawal, item)
+
+    assert_redirected_to stock_withdrawal_path(withdrawal)
+    assert_equal 2, @revert_calls.first['changes'].first['delta']
+    assert item.reload.reverted?
+    assert withdrawal.reload.partially_completed?
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /SKU-A revertida.*2 unidade\(s\).*Lagoa Seca/m
+    assert_select '.page-subtitle', text: /Parcialmente concluída/
+  end
+
+  test 'reverting the last done line makes the withdrawal reverted' do
+    withdrawal = completed_withdrawal(items: [[@a, @lagoa, 2]])
+    stub_revert
+
+    post revert_stock_withdrawal_item_path(withdrawal, withdrawal.items.first)
+
+    assert withdrawal.reload.reverted?
+  end
+
+  test 'a rejection from Shopify keeps the line as done and shows the real message' do
+    withdrawal = completed_withdrawal
+    stub_revert(user_errors: [{ field: %w[input], message: 'Item não rastreado' }])
+
+    post revert_stock_withdrawal_item_path(withdrawal, withdrawal.items.first)
+
+    assert withdrawal.items.first.reload.done?
+    assert withdrawal.reload.completed?
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /Item não rastreado/
+  end
+
+  test 'a line that is not done cannot be reverted and Shopify is not called' do
+    withdrawal = draft
+    stub = stub_revert
+
+    post revert_stock_withdrawal_item_path(withdrawal, withdrawal.items.first)
+
+    assert_not_requested stub
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /já foi retirada/
+  end
+
+  test 'the same line cannot be reverted twice' do
+    withdrawal = completed_withdrawal
+    item = withdrawal.items.first
+    stub = stub_revert
+
+    post revert_stock_withdrawal_item_path(withdrawal, item)
+    post revert_stock_withdrawal_item_path(withdrawal, item)
+
+    assert_requested stub, times: 1
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger'
+  end
+
+  test 'a line of another withdrawal is not found' do
+    withdrawal = completed_withdrawal
+    other = completed_withdrawal(items: [[@b, @lagoa, 1]])
+    stub = stub_revert
+
+    post revert_stock_withdrawal_item_path(withdrawal, other.items.first)
+
+    assert_response :not_found
+    assert_not_requested stub
+  end
+
+  test 'reverting requires the stock_withdrawals permission' do
+    withdrawal = completed_withdrawal
+    profile = Profile.create!(name: 'Sem Reverter')
+    user = User.create!(name: 'Sem Reverter', email: 'sem_revert@example.com', password: 'password123')
+    user.profiles << profile
+    stub = stub_revert
+    sign_in user
+
+    post revert_stock_withdrawal_item_path(withdrawal, withdrawal.items.first)
+
+    assert_redirected_to root_path
+    assert_not_requested stub
+    assert withdrawal.items.first.reload.done?
+  end
+
+  test 'the show page has a revert button on each done line only, with a confirmation, and marks reverted lines' do
+    withdrawal = completed_withdrawal(items: [[@a, @lagoa, 2], [@b, @bh, 3], [@a, @bh, 1]])
+    done_a, reverted, done_b = withdrawal.items.to_a
+    reverted.update!(status: :reverted, reverted_at: Time.current)
+    withdrawal.update_columns(status: StockWithdrawal.statuses[:partially_completed])
+
+    get stock_withdrawal_path(withdrawal)
+
+    [done_a, done_b].each do |item|
+      assert_select "form[action='#{revert_stock_withdrawal_item_path(withdrawal, item)}'][data-turbo-confirm*='devolv']", count: 1
+    end
+    assert_select "form[action='#{revert_stock_withdrawal_item_path(withdrawal, reverted)}']", count: 0
+    assert_select 'tbody', text: /Revertido/
+    assert_select '.page-subtitle', text: /Parcialmente concluída/
+  end
+
+  test 'a draft shows no revert button (nothing was withdrawn yet)' do
+    withdrawal = draft
+
+    get stock_withdrawal_path(withdrawal)
+
+    assert_select "form[action*='/revert']", count: 0
+  end
+
+  test 'the list shows the partially completed and reverted statuses' do
+    partial = completed_withdrawal
+    partial.update_columns(status: StockWithdrawal.statuses[:partially_completed])
+    reverted = completed_withdrawal(items: [[@b, @lagoa, 1]])
+    reverted.update_columns(status: StockWithdrawal.statuses[:reverted])
+
+    get stock_withdrawals_path
+    assert_select 'tbody', text: /Parcialmente concluída/
+    assert_select 'tbody', text: /Revertida/
+
+    get stock_withdrawals_path(status: 'partially_completed')
+    assert_select 'tbody tr', count: 1
+  end
+
+  test 'the show page with reverted lines does not query products or locations line by line' do
+    withdrawal = completed_withdrawal(items: [[@a, @lagoa, 1], [@b, @lagoa, 2], [@a, @bh, 3], [@b, @bh, 4]])
+    withdrawal.items.each { |item| item.update!(status: :reverted, reverted_at: Time.current) }
+
+    assert_operator sql_count('products') { get stock_withdrawal_path(withdrawal) }, :<=, 1
+    assert_operator sql_count('locations') { get stock_withdrawal_path(withdrawal) }, :<=, 1
   end
 end

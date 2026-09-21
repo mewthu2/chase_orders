@@ -95,19 +95,15 @@ class StockWithdrawalTest < ActiveSupport::TestCase
     end
   end
 
-  test 'deletable? is true for every status except a run in progress (a stale run does not count)' do
+  test 'only a draft can be deleted; once integrated with Shopify the way back is reverting the lines' do
     withdrawal = build_withdrawal
     withdrawal.save!
 
-    %i[draft completed partially_failed].each do |status|
+    assert withdrawal.deletable?
+    %i[processing completed partially_failed partially_completed reverted].each do |status|
       withdrawal.status = status
-      assert withdrawal.deletable?, "#{status} deveria poder ser excluída"
+      refute withdrawal.deletable?, "#{status} não pode ser excluída"
     end
-
-    withdrawal.update_columns(status: StockWithdrawal.statuses[:processing], updated_at: 1.minute.ago)
-    refute withdrawal.reload.deletable?
-    withdrawal.update_columns(updated_at: 11.minutes.ago)
-    assert withdrawal.reload.deletable?
   end
 
   test 'once lines were withdrawn only the notes stay editable in the header (date and reason are locked)' do
@@ -130,5 +126,49 @@ class StockWithdrawalTest < ActiveSupport::TestCase
     refute failed.locked?
     assert_equal [failed], withdrawal.editable_items.to_a
     assert_equal [done], withdrawal.locked_items.to_a
+  end
+
+  test 'refresh_status! derives the status from the lines' do
+    withdrawal = build_withdrawal(items: [[@product, @lagoa, 1], [@product, @bh, 1]])
+    withdrawal.save!
+    first, second = withdrawal.items.to_a
+
+    first.update!(status: :done)
+    second.update!(status: :failed)
+    assert_equal 'partially_failed', withdrawal.refresh_status!.status
+
+    second.update!(status: :done)
+    assert_equal 'completed', withdrawal.reload.refresh_status!.status
+    assert_not_nil withdrawal.completed_at
+
+    first.update!(status: :reverted)
+    assert_equal 'partially_completed', withdrawal.reload.refresh_status!.status
+
+    second.update!(status: :reverted)
+    assert_equal 'reverted', withdrawal.reload.refresh_status!.status
+  end
+
+  test 'a reverted line is locked and not editable, like a done one' do
+    withdrawal = build_withdrawal
+    withdrawal.save!
+    withdrawal.items.first.update!(status: :reverted)
+
+    assert withdrawal.items.first.locked?
+    assert_empty withdrawal.reload.editable_items
+    assert_equal 1, withdrawal.locked_items.size
+  end
+
+  test 'partially completed and reverted withdrawals are neither editable, processable nor deletable' do
+    withdrawal = build_withdrawal
+    withdrawal.save!
+
+    %i[partially_completed reverted].each do |status|
+      withdrawal.status = status
+      refute withdrawal.editable?, status
+      refute withdrawal.processable?, status
+      refute withdrawal.deletable?, status
+    end
+    assert_equal 'Parcialmente concluída', StockWithdrawal::STATUS_LABELS['partially_completed']
+    assert_equal 'Revertida', StockWithdrawal::STATUS_LABELS['reverted']
   end
 end

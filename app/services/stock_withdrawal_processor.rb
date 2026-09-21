@@ -115,13 +115,11 @@ class StockWithdrawalProcessor
   end
 
   def finish!
-    items = @withdrawal.items.reload
-    failed = items.count(&:failed?)
-    pending = items.count(&:pending?)
-    status = failed.zero? && pending.zero? ? :completed : :partially_failed
-    @withdrawal.update!(status: status, completed_at: (status == :completed ? Time.current : nil))
-    log_completion(items.count(&:done?), failed + pending)
-    Summary.new(done: items.count(&:done?), failed: failed + pending)
+    @withdrawal.refresh_status!
+    items = @withdrawal.items
+    failed = items.count { |item| item.failed? || item.pending? }
+    log_completion(items.count(&:done?), failed)
+    Summary.new(done: items.count(&:done?), failed: failed)
   end
 
   def log_completion(done, failed)

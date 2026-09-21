@@ -46,26 +46,17 @@ class StockWithdrawalsController < ApplicationController
     end
   end
 
-  # Rascunhos e retiradas já processadas podem ser excluídos; só a que está sendo processada agora não.
-  # Excluir não devolve o estoque retirado no Shopify (o histórico de lá permanece), por isso vai para o log.
+  # Só rascunho pode ser excluído. Depois de integrada com o Shopify a retirada fica como registro;
+  # para desfazer, reverte-se cada linha retirada (devolve o estoque no Shopify).
   def destroy
     unless @withdrawal.deletable?
-      redirect_to stock_withdrawal_path(@withdrawal), alert: 'Esta retirada está em processamento agora e não pode ser excluída. Aguarde alguns minutos.'
+      redirect_to stock_withdrawal_path(@withdrawal),
+                  alert: 'Esta retirada já foi integrada com o Shopify e não pode ser excluída. Para desfazer, use "Reverter" nas linhas retiradas.'
       return
     end
 
-    was_draft = @withdrawal.draft?
-    snapshot = { status: @withdrawal.status, total_quantity: @withdrawal.total_quantity, items: @withdrawal.items.size, reference: @withdrawal.reference_uri }
     @withdrawal.destroy
-
-    if was_draft
-      redirect_to stock_withdrawals_path, notice: 'Rascunho de retirada excluído.'
-    else
-      LogService.create_log(user: current_user, resource_type: 'stock_withdrawal', action_type: 'delete',
-                            resource_name: "Retirada ##{@withdrawal.id}", resource_id: @withdrawal.id, details: snapshot, request: request)
-      redirect_to stock_withdrawals_path,
-                  notice: "Retirada ##{@withdrawal.id} excluída. O estoque já retirado no Shopify NÃO foi devolvido (o histórico do inventário lá continua)."
-    end
+    redirect_to stock_withdrawals_path, notice: 'Rascunho de retirada excluído.'
   end
 
   # Retira do Shopify na hora (sem fila). Em "Tentar novamente" só as linhas pendentes/com falha são enviadas.
