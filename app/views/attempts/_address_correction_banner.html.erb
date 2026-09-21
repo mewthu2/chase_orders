@@ -1,0 +1,23 @@
+<%# Aviso de correção de endereço do pedido (a correção vale para o que o Honey envia; a nota é emitida pelo Tiny). %>
+<% awaiting = correction.awaiting_tiny_fix? %>
+<div class="alert alert-<%= awaiting ? 'warning' : 'info' %> address-correction-banner mb-4">
+  <h6 class="mb-1"><i class="fas fa-map-marker-alt me-2"></i>Endereço corrigido no Honey</h6>
+  <p class="mb-1"><strong><%= correction.summary %></strong></p>
+  <small class="d-block">A correção vale para o que o Honey envia (pedido dos Correios). A nota fiscal é emitida pelo Tiny com o endereço que ele guardou, e o Honey não consegue alterá-la pela API.</small>
+
+  <% if awaiting %>
+    <hr>
+    <p class="mb-1"><strong><i class="fas fa-hourglass-half me-1"></i>Aguardando correção da nota no Tiny</strong></p>
+    <p class="mb-2">
+      O Tiny recusou a emissão: <em><%= correction.awaiting_tiny_fix_message %></em><br>
+      Corrija o endereço da nota no Tiny
+      <% if invoice_id.present? %>(<%= link_to 'abrir a nota', nota_fiscal_edit_url(invoice_id), target: '_blank', rel: 'noopener' %>)<% end %>
+      com os valores acima e depois clique no botão. Enquanto isso o Honey não tenta emitir esta nota de novo.
+    </p>
+    <%= button_to mark_tiny_fixed_attempts_path, method: :post, params: { tiny_order_id: correction.tiny_order_id },
+                  class: 'btn btn-warning btn-sm',
+                  form: { data: { turbo_confirm: 'Você já corrigiu o endereço da nota no Tiny? O Honey vai tentar emitir a nota agora.' } } do %>
+      <i class="fas fa-check me-1"></i>Já corrigi no Tiny
+    <% end %>
+  <% end %>
+</div>

@@ -200,6 +200,7 @@ class DashboardController < ApplicationController
                               .distinct(:order_correios_id)
 
     @job_running = b2b_job_running?(:emission_invoice)
+    preload_address_corrections(@invoice_emition)
   end
 
   def run_invoice_emition
@@ -234,6 +235,7 @@ class DashboardController < ApplicationController
     @invoice_emition = @invoice_emition.where(is_transportadora: @filter_transportadora == 'outra') if @filter_transportadora.present?
 
     @job_running = b2b_job_running?(:emission_invoice_tiny2)
+    preload_address_corrections(@invoice_emition)
   end
 
   def run_invoice_emition_b2b
@@ -946,8 +948,17 @@ class DashboardController < ApplicationController
     )
   end
 
+  # Pedido aguardando correção da nota no Tiny: o modal do "emitir agora" mostra o link da nota e o que digitar.
+  def tiny_fix_json(attempt)
+    correction = AddressCorrection.for(attempt.tiny_order_id)
+    return unless correction&.awaiting_tiny_fix?
+
+    { nota_url: view_context.nota_fiscal_edit_url(attempt.id_nota_fiscal), instructions: correction.fix_instructions, tiny_order_id: correction.tiny_order_id }
+  end
+
   def attempt_result_json(attempt)
     {
+      tiny_fix: tiny_fix_json(attempt),
       success: attempt.status == 'success',
       id: attempt.id,
       kinds: attempt.kinds,
@@ -1365,6 +1376,26 @@ class DashboardController < ApplicationController
     end
   end
 
+  # Uma consulta só para as correções de endereço dos pedidos listados (evita uma por linha).
+  def preload_address_corrections(attempts)
+    ids = attempts.map { |attempt| attempt.tiny_order_id.to_s }.reject(&:blank?).uniq
+    @address_corrections = AddressCorrection.where(tiny_order_id: ids).index_by(&:tiny_order_id)
+  end
+
+  # Marca cada linha do relatório com o estado da correção de endereço do pedido, para a tela exibir o selo.
+  def annotate_address_corrections(result)
+    rows = Array(result[:attention])
+    return result if rows.empty?
+
+    corrections = AddressCorrection.where(tiny_order_id: rows.map { |row| row[:tiny_order_id].to_s }).index_by(&:tiny_order_id)
+    annotated = rows.map do |row|
+      correction = corrections[row[:tiny_order_id].to_s]
+      state = correction && (correction.awaiting_tiny_fix? ? 'awaiting' : 'corrected')
+      row.merge(address_correction: state)
+    end
+    result.merge(attention: annotated)
+  end
+
   def pipeline_status_payload(period)
     raw = $redis.get(FetchCorreiosPipelineReportJob.result_key(period))
 
@@ -1372,7 +1403,7 @@ class DashboardController < ApplicationController
       result = JSON.parse(raw, symbolize_names: true)
       return { status: 'error', error: result[:error] } if result[:error]
 
-      return result.merge(status: 'done')
+      return annotate_address_corrections(result).merge(status: 'done')
     end
 
     processing_key = FetchCorreiosPipelineReportJob.processing_key(period)

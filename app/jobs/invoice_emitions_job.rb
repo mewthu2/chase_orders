@@ -1,4 +1,6 @@
 class InvoiceEmitionsJob < ActiveJob::Base
+  include InvoiceEmissionAddressHold
+
   def perform(param, att, marker_id = nil)
     # return unless ScheduleUtils.within_schedule?
 
@@ -22,7 +24,10 @@ class InvoiceEmitionsJob < ActiveJob::Base
     @invoice_emition = Attempt.where(kinds: :create_correios_order, status: :success)
                               .where.not(order_correios_id: successful_ids)
                               .distinct(:order_correios_id)
+    held = held_tiny_order_ids
     @invoice_emition.each do |att|
+      next if held.include?(att.tiny_order_id.to_s) # aguardando correção da nota no Tiny
+
       one_emission(att)
     end
   end
@@ -49,6 +54,12 @@ class InvoiceEmitionsJob < ActiveJob::Base
             status: error_message == 'Nota Fiscal localizada, porém apenas notas pendentes ou rejeitadas podem ser enviadas' ? :success : :error
           )
 
+          if attempt.error?
+            hold_on_address_error(attempt, att, error_message)
+          else
+            release_hold_if_any(att)
+          end
+
         elsif body.include?('A nota fiscal não foi enviada')
           attempt.update(
             order_correios_id: att.order_correios_id,
@@ -58,6 +69,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
             message: response.message.to_s.first(100),
             status: :error
           )
+          hold_on_address_error(attempt, att, body)
 
         else
           attempt.update(
@@ -67,6 +79,7 @@ class InvoiceEmitionsJob < ActiveJob::Base
             status_code: response.code,
             status: :success
           )
+          release_hold_if_any(att)
         end
 
       else

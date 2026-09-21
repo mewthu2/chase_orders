@@ -98,6 +98,12 @@
                         <i class="fas fa-ban"></i>
                       <% end %>
                     <% end %>
+                    <% if order_deletable?(order) %>
+                      <%= button_to order.stock_transfer? ? stock_transfer_path(order) : b2b_order_path(order), method: :delete, class: "action-btn action-btn--danger", title: 'Excluir pedido',
+                                    form: { data: { turbo_confirm: "Excluir o pedido ##{order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey." } } do %>
+                        <i class="fas fa-trash"></i>
+                      <% end %>
+                    <% end %>
                     <% if order.resendable? %>
                       <%= button_to transmit_order_path_for(order), method: :post, class: "action-btn action-btn--edit", form: { data: { turbo_confirm: 'Reenviar este pedido para o Tiny?' } } do %>
                         <i class="fas fa-paper-plane"></i>

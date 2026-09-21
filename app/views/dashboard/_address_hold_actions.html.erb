@@ -1,0 +1,17 @@
+<%# Pedido aguardando a correção da nota no Tiny: mostra o que digitar e permite avisar o Honey ali mesmo. %>
+<div class="address-hold-actions alert alert-warning py-2 px-2 mt-2 mb-0 text-start" style="max-width: 260px; white-space: normal;">
+  <div class="small fw-bold"><i class="fas fa-hourglass-half me-1"></i>Aguardando correção da nota no Tiny</div>
+  <div class="small mb-2"><%= correction.fix_instructions %></div>
+  <div class="d-flex flex-wrap gap-1">
+    <% if att.id_nota_fiscal.present? %>
+      <%= link_to nota_fiscal_edit_url(att.id_nota_fiscal), target: '_blank', rel: 'noopener', class: 'btn btn-sm btn-outline-dark', title: 'Abrir a nota no Tiny' do %>
+        <i class="fas fa-external-link-alt me-1"></i>Abrir nota
+      <% end %>
+    <% end %>
+    <%= button_to mark_tiny_fixed_attempts_path, method: :post, params: { tiny_order_id: correction.tiny_order_id, return_to: return_to },
+                  class: 'btn btn-sm btn-warning',
+                  form: { class: 'd-inline', data: { turbo_confirm: 'Você já corrigiu o endereço da nota no Tiny? O Honey vai tentar emitir a nota agora.' } } do %>
+      <i class="fas fa-check me-1"></i>Já corrigi no Tiny
+    <% end %>
+  </div>
+</div>

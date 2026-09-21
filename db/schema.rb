@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_21_050000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_21_070000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -50,6 +50,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_050000) do
     t.string "uf"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "awaiting_tiny_fix_at"
+    t.text "awaiting_tiny_fix_message"
+    t.datetime "tiny_fixed_at"
+    t.index ["awaiting_tiny_fix_at"], name: "index_address_corrections_on_awaiting_tiny_fix_at"
     t.index ["tiny_order_id"], name: "index_address_corrections_on_tiny_order_id", unique: true
   end
 

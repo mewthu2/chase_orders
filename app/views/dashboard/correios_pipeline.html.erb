@@ -121,6 +121,12 @@ document.addEventListener('DOMContentLoaded', function () {
         ? '<span class="badge bg-danger">Erro</span>'
         : '<span class="badge bg-warning text-dark">Parado</span>';
 
+      const correctionBadge = row.address_correction === 'awaiting'
+        ? '<span class="badge bg-warning text-dark address-correction-badge" title="O Tiny recusou o endereço da nota. Corrija a nota no Tiny e use Já corrigi no Tiny.">Aguardando correção da nota no Tiny</span>'
+        : (row.address_correction === 'corrected'
+          ? '<span class="badge bg-info text-dark address-correction-badge" title="Há uma correção de endereço no Honey para este pedido.">Endereço corrigido</span>'
+          : '');
+
       const actionCell = row.attempt_id
         ? `<a href="/attempts/reprocess?attempt_id=${row.attempt_id}"
               class="btn btn-sm btn-outline-warning"
@@ -136,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
               <i class="fas fa-paperclip"></i>
             </a>
           </td>
-          <td class="text-center fw-bold text-white">${row.tiny_order_id}</td>
+          <td class="text-center fw-bold text-white">${row.tiny_order_id} ${correctionBadge}</td>
           <td class="text-center">${STAGE_LABEL[row.current_stage]}</td>
           <td class="text-center">${reasonBadge}</td>
           <td class="text-start" style="max-width:360px; white-space:normal;">${row.message || '—'}</td>

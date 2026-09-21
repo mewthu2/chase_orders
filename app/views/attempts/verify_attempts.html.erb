@@ -25,6 +25,10 @@
     </div>
   </div>
 
+  <% if @address_correction %>
+    <%= render 'attempts/address_correction_banner', correction: @address_correction, invoice_id: @address_correction_invoice_id %>
+  <% end %>
+
   <%# ===== PAINEL DE FILTROS ===== %>
   <div class="collapse mb-4" id="filtersCollapse">
     <div class="filters-panel">
@@ -205,6 +209,7 @@
                       <button type="button" class="btn-copy-cell" data-copy-value="<%= attempt.tiny_order_id %>" title="Copiar ID do pedido">
                         <i class="fas fa-copy"></i>
                       </button>
+                      <%= address_correction_badge(@address_corrections[attempt.tiny_order_id.to_s]) %>
                     </span>
                     <button class="btn btn-sm btn-outline-primary mt-1"
                             onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= attempt.tiny_order_id %>', '_blank');"

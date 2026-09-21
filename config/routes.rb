@@ -158,6 +158,7 @@ Rails.application.routes.draw do
       get :download_xml
       get :bairro_lookup
       post :fix_bairro
+      post :mark_tiny_fixed
     end
   end
 
@@ -236,7 +237,7 @@ Rails.application.routes.draw do
   end
 
   resources :stock_transfers, controller: 'b2b_orders', defaults: { order_kind: 'stock_transfer' },
-                              only: [:index, :new, :create, :edit, :update] do
+                              only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
       post :transmit
     end

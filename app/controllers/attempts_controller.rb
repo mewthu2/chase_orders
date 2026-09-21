@@ -21,6 +21,7 @@ class AttemptsController < ApplicationController
 
     @attempts = @attempts.order(created_at: :desc)
                          .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+    preload_address_corrections
   end
 
   def verify_attempts
@@ -33,6 +34,8 @@ class AttemptsController < ApplicationController
         @attempts = @attempts.limit(20)
                              .order(created_at: :desc)
                              .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
+        preload_address_corrections
+        load_address_correction_banner
       end
       format.json do
         attempts = @attempts.order(created_at: :desc)
@@ -115,6 +118,29 @@ class AttemptsController < ApplicationController
     render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
+  # "Já corrigi no Tiny": o usuário corrigiu a nota no Tiny (a API não permite ao Honey fazer isso).
+  # Libera o pedido da espera e tenta emitir a nota de novo, mostrando o resultado na hora.
+  def mark_tiny_fixed
+    tiny_order_id = params[:tiny_order_id].to_s
+    back = mark_tiny_fixed_return_path(tiny_order_id)
+    correction = AddressCorrection.for(tiny_order_id)
+
+    if correction.nil?
+      return redirect_to(back, alert: 'Não há correção de endereço registrada para este pedido.')
+    elsif !correction.awaiting_tiny_fix?
+      return redirect_to(back, alert: 'Este pedido não está aguardando correção da nota no Tiny.')
+    end
+
+    correction.release!
+    invoice_attempt = Attempt.where(tiny_order_id: tiny_order_id, kinds: %i[emission_invoice emission_invoice_tiny2])
+                             .where.not(id_nota_fiscal: nil).order(:created_at).last
+    return redirect_to(back, notice: 'Marcado como corrigido. A emissão automática tentará enviar a nota de novo.') unless invoice_attempt
+
+    job = invoice_attempt.kinds == 'emission_invoice_tiny2' ? InvoiceEmitionsJob2 : InvoiceEmitionsJob
+    result = job.new.one_emission(invoice_attempt)
+    redirect_to back, **mark_tiny_fixed_flash(result, correction.reload)
+  end
+
   def download_xml
     attempt = Attempt.find(params[:id])
 
@@ -160,6 +186,37 @@ class AttemptsController < ApplicationController
   end
 
   private
+
+  # Volta para a tela de onde o usuário clicou (só destinos conhecidos, nada de URL vinda do formulário).
+  def mark_tiny_fixed_return_path(tiny_order_id)
+    case params[:return_to]
+    when 'invoice_emition' then invoice_emition_dashboard_index_path
+    when 'invoice_emition_b2b' then invoice_emition_b2b_dashboard_index_path
+    else verify_attempts_attempts_path(tiny_order_id: tiny_order_id)
+    end
+  end
+
+  def mark_tiny_fixed_flash(result, correction)
+    return { notice: 'Nota enviada com sucesso no Tiny.' } if result.success?
+    return { alert: "O Tiny ainda recusou o endereço da nota: #{result.message}" } if correction.awaiting_tiny_fix?
+
+    { alert: "O Tiny recusou a nota: #{result.message.presence || result.error.presence || 'motivo não informado'}" }
+  end
+
+  # Uma consulta só para as correções dos pedidos da página (evita uma consulta por linha).
+  def preload_address_corrections
+    ids = @attempts.map { |attempt| attempt.tiny_order_id.to_s }.reject(&:blank?).uniq
+    @address_corrections = AddressCorrection.where(tiny_order_id: ids).index_by(&:tiny_order_id)
+  end
+
+  def load_address_correction_banner
+    return if params[:tiny_order_id].blank?
+
+    @address_correction = AddressCorrection.for(params[:tiny_order_id])
+    return unless @address_correction
+
+    @address_correction_invoice_id = Attempt.where(tiny_order_id: params[:tiny_order_id]).where.not(id_nota_fiscal: nil).order(:created_at).last&.id_nota_fiscal
+  end
 
   def bairro_fix_token(attempt)
     attempt.kinds == 'create_correios_order_tiny2' ? ENV.fetch('TOKEN_TINY2_PRODUCTION') : ENV.fetch('TOKEN_TINY3_PRODUCTION')

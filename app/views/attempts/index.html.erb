@@ -265,6 +265,7 @@
                   <% if attempt.tiny_order_id.present? %>
                     <div class="d-flex align-items-center justify-content-center gap-2">
                       <span class="badge bg-dark"><%= attempt.tiny_order_id %></span>
+                      <%= address_correction_badge(@address_corrections[attempt.tiny_order_id.to_s]) %>
                       <a href="<%= ENV.fetch('TINY_SELLS_URL', '#') %>#edit/<%= attempt.tiny_order_id %>"
                          target="_blank" class="btn btn-sm btn-primary" title="Ver no Tiny">
                         <i class="fas fa-external-link-alt"></i>

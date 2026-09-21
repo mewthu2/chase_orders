@@ -3,8 +3,8 @@ require 'csv'
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny]
-  helper_method :order_kind, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for, :order_form_url
+  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy]
+  helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for, :order_form_url
 
   def index
     scope = B2bOrder.includes(:client, :transfer_location, :b2b_order_items).recent.where(kind: order_kind)
@@ -19,6 +19,7 @@ class B2bOrdersController < ApplicationController
 
     @status_counts = scope.reorder(nil).group(:status).count
     @b2b_orders = params[:status].present? ? scope.where(status: params[:status]) : scope
+    @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: @b2b_orders.map(&:id)).pluck(:b2b_order_id).to_set
   end
 
   def new
@@ -63,6 +64,23 @@ class B2bOrdersController < ApplicationController
 
     kind, message = send_to_tiny(@b2b_order)
     redirect_to orders_path_for(order_kind), kind => message
+  end
+
+  # Exclui pedido que não está no Tiny. Pedido já enviado precisa ser cancelado no Tiny antes
+  # (o que desvincula do Honey); pedido com nota fiscal ativa também não é excluído.
+  def destroy
+    unless @b2b_order.deletable?
+      redirect_to orders_path_for(order_kind), alert: undeletable_message(@b2b_order)
+      return
+    end
+
+    snapshot = { kind: @b2b_order.kind, status: @b2b_order.status, total: @b2b_order.total.to_f, items: @b2b_order.b2b_order_items.size,
+                 client: @b2b_order.client&.display_name, transfer_location: @b2b_order.transfer_location&.name }
+    id = @b2b_order.id
+    @b2b_order.destroy!
+    LogService.create_log(user: current_user, resource_type: 'b2b_order', action_type: 'delete',
+                          resource_name: "Pedido B2B ##{id}", resource_id: id, details: snapshot, request: request)
+    redirect_to orders_path_for(order_kind), notice: "Pedido ##{id} excluído."
   end
 
   # A API do Tiny não permite excluir pedido (só alterar a situação). Então cancelamos o pedido lá,
@@ -296,6 +314,15 @@ class B2bOrdersController < ApplicationController
     [:alert, "#{order.stock_transfer? ? 'Transferência' : 'Pedido'} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
   end
 
+  def undeletable_message(order)
+    if order.tiny_reference_id.present?
+      number = order.tiny_reference_number.presence || order.tiny_reference_id
+      "O pedido já está no Tiny (nº #{number}) e não pode ser excluído. Use \"Cancelar no Tiny\" para desvinculá-lo; depois ele poderá ser excluído."
+    else
+      'Este pedido tem uma nota fiscal ativa e não pode ser excluído.'
+    end
+  end
+
   def unlink_from_tiny(order, number)
     tiny_id = order.tiny_reference_id
     order.update!(tiny_reference_id: nil, tiny_reference_number: nil, status: :aberto, error_message: nil)
@@ -317,6 +344,13 @@ class B2bOrdersController < ApplicationController
   # Atacado usa sempre a lista Padrão; a lista Transferência só existe na tela de transferência.
   def price_list_for(kind)
     kind.to_s == 'stock_transfer' ? :transfer : :standard
+  end
+
+  # Na lista usa o conjunto de pedidos com nota ativa (uma consulta só) em vez de consultar por pedido.
+  def order_deletable?(order)
+    return order.deletable? unless @order_ids_with_active_note
+
+    order.tiny_reference_id.blank? && !@order_ids_with_active_note.include?(order.id)
   end
 
   def stock_transfer_screen?(kind = order_kind)

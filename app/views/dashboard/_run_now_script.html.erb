@@ -65,6 +65,17 @@
     document.getElementById('runNowIdNotaFiscal').textContent = data.id_nota_fiscal || '-';
     document.getElementById('runNowTracking').textContent = data.tracking || '-';
 
+    var tinyFixWrap = document.getElementById('runNowTinyFixWrap');
+    if (tinyFixWrap) {
+      if (data.tiny_fix) {
+        document.getElementById('runNowTinyFixText').textContent = data.tiny_fix.instructions;
+        document.getElementById('runNowTinyFixLink').href = data.tiny_fix.nota_url;
+        tinyFixWrap.style.display = 'block';
+      } else {
+        tinyFixWrap.style.display = 'none';
+      }
+    }
+
     if (data.message) {
       document.getElementById('runNowMessage').textContent = data.message;
       document.getElementById('runNowMessageWrap').style.display = 'block';

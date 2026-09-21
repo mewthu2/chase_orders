@@ -44,6 +44,12 @@ class B2bOrder < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
 
+  # Só dá para excluir pedido que não está no Tiny (sem referência) e sem nota fiscal ativa.
+  # Se já foi enviado, o caminho é "Cancelar no Tiny" (que desvincula) e depois excluir.
+  def deletable?
+    tiny_reference_id.blank? && !FiscalNote.active_for?(self)
+  end
+
   def resendable?
     !cancelado? && tiny_reference_id.blank?
   end

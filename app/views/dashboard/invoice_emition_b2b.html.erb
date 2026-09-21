@@ -217,6 +217,11 @@
                       <td class="text-center">
                         <div class="d-flex flex-column align-items-center">
                           <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
+                          <%= address_correction_badge(@address_corrections[att.tiny_order_id.to_s]) %>
+                          <% held = @address_corrections[att.tiny_order_id.to_s] %>
+                          <% if held&.awaiting_tiny_fix? %>
+                            <%= render 'dashboard/address_hold_actions', att: att, correction: held, return_to: 'invoice_emition_b2b' %>
+                          <% end %>
                           <button class="btn btn-sm btn-primary mt-1"
                                   onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= att.tiny_order_id %>', '_blank');"
                                   title="Ver no Tiny">
