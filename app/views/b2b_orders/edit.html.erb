@@ -7,6 +7,12 @@
       <p class="page-subtitle">#<%= @b2b_order.id %></p>
     </div>
     <div class="header-actions">
+      <% if @b2b_order.sale? && @b2b_order.tiny_reference_id.present? %>
+        <%= button_to cancel_in_tiny_b2b_order_path(@b2b_order), method: :post, class: "btn-back",
+                      form: { data: { turbo_confirm: "Cancelar o pedido nº #{@b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
+          <i class="fas fa-ban me-1"></i>Cancelar no Tiny
+        <% end %>
+      <% end %>
       <% if current_user.can_access_screen?('fiscal_notes') %>
         <%= link_to new_fiscal_note_path(b2b_order_id: @b2b_order.id), class: "btn-export" do %><i class="fas fa-file-invoice me-2"></i>Gerar nota fiscal<% end %>
       <% end %>

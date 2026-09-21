@@ -86,7 +86,7 @@ class LocaleTest < ActionDispatch::IntegrationTest
     admin.profiles << Profile.find(Profile::ADMIN)
     sign_in admin
 
-    [new_company_path, companies_path, fiscal_notes_path, fiscal_products_path, b2b_orders_path, stock_transfers_path].each do |path|
+    [new_company_path, companies_path, fiscal_notes_path, fiscal_products_path, b2b_orders_path, stock_transfers_path, stock_withdrawals_path, new_stock_withdrawal_path].each do |path|
       get path
       assert_response :success
       assert_no_match(/translation missing|translation_missing/i, response.body, "Missing translation in #{path}")

@@ -1,0 +1,69 @@
+<% content_for :title, "Retirada de Estoque" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-dolly-flatbed me-2"></i>Retirada de Estoque</h1>
+      <p class="page-subtitle">Retiradas de estoque das locations, lançadas direto no Shopify (com histórico do inventário)</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @withdrawals.total_entries %> retirada(s)</span>
+      <%= link_to new_stock_withdrawal_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Retirada<% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <%= form_with url: stock_withdrawals_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
+      <%= select_tag :status, options_for_select([['Todos status', '']] + StockWithdrawal::STATUS_LABELS.map { |key, label| [label, key] }, params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
+    <% end %>
+
+    <% if @withdrawals.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Data</th>
+              <th>Motivo</th>
+              <th>Locations</th>
+              <th class="text-end">Qtde total</th>
+              <th>Criada por</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @withdrawals.each do |withdrawal| %>
+              <tr>
+                <td class="text-main">#<%= withdrawal.id %></td>
+                <td class="text-muted-custom"><%= withdrawal.withdrawal_date.strftime('%d/%m/%Y') %></td>
+                <td class="text-muted-custom"><%= withdrawal.reason_label %></td>
+                <td class="text-muted-custom"><%= withdrawal.items.map { |item| item.location.name }.uniq.to_sentence %></td>
+                <td class="text-end"><%= withdrawal.items.sum(&:quantity) %></td>
+                <td class="text-muted-custom"><%= withdrawal.user&.name %></td>
+                <td class="text-center"><%= withdrawal_status_pill(withdrawal) %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to stock_withdrawal_path(withdrawal), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
+                    <% if withdrawal.editable? %>
+                      <%= link_to edit_stock_withdrawal_path(withdrawal), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
+                      <%= button_to stock_withdrawal_path(withdrawal), method: :delete, class: "action-btn action-btn--danger", title: "Excluir rascunho",
+                                    form: { data: { turbo_confirm: "Excluir este rascunho de retirada?" } } do %><i class="fas fa-trash"></i><% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-3 py-3"><%= will_paginate @withdrawals, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-dolly-flatbed fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma retirada cadastrada</h5>
+        <%= link_to new_stock_withdrawal_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Nova Retirada<% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

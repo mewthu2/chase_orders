@@ -9,8 +9,9 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
   end
 
   test 'updates the status of sale orders that already have a tiny_reference_id' do
-    order = B2bOrder.create!(kind: :sale, user: @user, client: @client, status: :aberto, tiny_reference_id: '111')
-    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 10)
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client, status: :aberto, tiny_reference_id: '111')
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
+    order.save!
 
     stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php')
       .with(query: hash_including({ 'id' => '111' }))
@@ -24,8 +25,9 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
   end
 
   test 'ignores orders without a tiny_reference_id' do
-    order = B2bOrder.create!(kind: :sale, user: @user, client: @client, status: :aberto)
-    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 10)
+    order = B2bOrder.new(kind: :sale, user: @user, client: @client, status: :aberto)
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
+    order.save!
 
     SyncB2bOrdersStatusJob.perform_now
 
@@ -38,8 +40,9 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
       name: 'CD Sync', registration: '25.405.327/0001-74', street: 'Rua Sync',
       number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    order = B2bOrder.create!(kind: :stock_transfer, user: @user, transfer_location: location, status: :aberto, tiny_reference_id: '222')
-    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 10)
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: location, status: :aberto, tiny_reference_id: '222')
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
+    order.save!
 
     SyncB2bOrdersStatusJob.perform_now
 

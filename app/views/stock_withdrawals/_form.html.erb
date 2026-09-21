@@ -1,0 +1,190 @@
+<%= form_with model: @withdrawal, url: (@withdrawal.persisted? ? stock_withdrawal_path(@withdrawal) : stock_withdrawals_path), local: true, id: 'withdrawalForm' do |form| %>
+  <% if @withdrawal.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% @withdrawal.errors.full_messages.uniq.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-clipboard-list me-2"></i>Dados da retirada</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Data <span class="required">*</span></label>
+          <%= form.date_field :withdrawal_date, class: 'field-input', required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Motivo <span class="required">*</span></label>
+          <%= form.select :reason, StockWithdrawal::REASONS.map { |key, label| [label, key] }, {}, { class: 'field-input' } %>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Aparece no histórico do inventário do Shopify.</span>
+        </div>
+        <div class="form-col-12">
+          <label class="field-label">Observações</label>
+          <%= form.text_area :notes, rows: 2, class: 'field-input' %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-map-marker-alt me-2"></i>De quais locations vai retirar?</h5></div>
+    <div class="form-section-body">
+      <div class="d-flex flex-wrap gap-3">
+        <% @locations.each do |location| %>
+          <label class="text-main d-flex align-items-center gap-2 mb-0">
+            <input type="checkbox" class="location-check" name="location_ids[]" value="<%= location.id %>" <%= 'checked' if @selected_location_ids.include?(location.id) %>>
+            <%= location.name %>
+          </label>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
+    <div class="form-section-body">
+      <div class="position-relative mb-3" style="max-width: 460px;">
+        <input type="text" id="productSearchInput" class="field-input" placeholder="Buscar produto por SKU ou nome..." autocomplete="off">
+        <div id="productSearchResults" class="list-group mt-2"></div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="orders-table" id="itemsTable">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <% @locations.each do |location| %>
+                <th class="loc-col text-center" data-location-id="<%= location.id %>" style="display: none;"><%= location.name %></th>
+              <% end %>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+      <p id="itemsHint" class="text-muted-custom mt-2"><i class="fas fa-info-circle me-1"></i>Marque as locations acima, busque os produtos e informe a quantidade a retirar em cada uma. Nada é retirado do Shopify até você concluir a retirada.</p>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit 'Salvar rascunho', class: 'btn-submit' %>
+    <%= link_to 'Cancelar', stock_withdrawals_path, class: 'btn-cancel' %>
+  </div>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var LOCATIONS = <%= raw json_escape(@locations.map { |l| { id: l.id.to_s, name: l.name, slug: l.slug } }.to_json) %>;
+  var initialRows = <%= raw json_escape(@rows.to_json) %>;
+  var counter = 0;
+  var body = document.getElementById('itemsBody');
+  var hint = document.getElementById('itemsHint');
+
+  function checkedLocationIds() {
+    return Array.prototype.slice.call(document.querySelectorAll('.location-check:checked')).map(function (c) { return c.value; });
+  }
+
+  // Mostra só as colunas das locations marcadas; células das desmarcadas são desabilitadas (não vão no envio).
+  function applyColumns() {
+    var checked = checkedLocationIds();
+    document.querySelectorAll('.loc-col, .loc-cell').forEach(function (el) {
+      var on = checked.indexOf(el.dataset.locationId) !== -1;
+      el.style.display = on ? '' : 'none';
+      el.querySelectorAll('input').forEach(function (input) { input.disabled = !on; });
+    });
+  }
+
+  function cell(product, location) {
+    var td = document.createElement('td');
+    td.className = 'loc-cell text-center';
+    td.dataset.locationId = location.id;
+    var stock = product.stock && product.stock[location.slug];
+    var idx = counter++;
+    var prefix = 'stock_withdrawal[items][' + idx + ']';
+    td.innerHTML =
+      '<input type="hidden" name="' + prefix + '[product_id]" value="' + product.id + '">' +
+      '<input type="hidden" name="' + prefix + '[location_id]" value="' + location.id + '">' +
+      '<input type="number" min="1" step="1" name="' + prefix + '[quantity]" class="field-input" style="max-width: 90px; margin: 0 auto;" placeholder="0">' +
+      '<small class="text-muted-custom d-block">estoque: ' + (stock === null || stock === undefined ? '-' : stock) + '</small>';
+    return td;
+  }
+
+  function addRow(product, quantities) {
+    if (body.querySelector('tr[data-product-id="' + product.id + '"]')) return;
+    var tr = document.createElement('tr');
+    tr.dataset.productId = product.id;
+    var first = document.createElement('td');
+    first.innerHTML = '<span class="text-main"></span><small class="text-muted-custom d-block"></small>';
+    first.querySelector('.text-main').textContent = product.sku;
+    first.querySelector('small').textContent = product.name || '';
+    tr.appendChild(first);
+    LOCATIONS.forEach(function (location) {
+      var td = cell(product, location);
+      var q = quantities && quantities[location.id];
+      if (q) td.querySelector('input[type=number]').value = q;
+      tr.appendChild(td);
+    });
+    var remove = document.createElement('td');
+    remove.innerHTML = '<button type="button" class="action-btn action-btn--danger" title="Remover"><i class="fas fa-trash"></i></button>';
+    remove.querySelector('button').addEventListener('click', function () { tr.remove(); toggleHint(); });
+    tr.appendChild(remove);
+    body.appendChild(tr);
+    applyColumns();
+    toggleHint();
+  }
+
+  function toggleHint() { hint.style.display = body.children.length ? 'none' : ''; }
+
+  document.querySelectorAll('.location-check').forEach(function (check) {
+    check.addEventListener('change', function () {
+      if (!check.checked) {
+        document.querySelectorAll('.loc-cell[data-location-id="' + check.value + '"] input[type=number]').forEach(function (i) { i.value = ''; });
+      }
+      applyColumns();
+    });
+  });
+
+  // Busca de produtos (só os vinculados ao Shopify)
+  var searchInput = document.getElementById('productSearchInput');
+  var results = document.getElementById('productSearchResults');
+  var timer;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = searchInput.value.trim();
+    if (!q) { results.innerHTML = ''; return; }
+    timer = setTimeout(function () {
+      fetch('<%= search_product_stock_withdrawals_path %>?query=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          results.innerHTML = '';
+          (data.products || []).forEach(function (product) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action';
+            item.textContent = product.sku + ' - ' + (product.name || '');
+            item.addEventListener('click', function () {
+              addRow(product);
+              results.innerHTML = '';
+              searchInput.value = '';
+              searchInput.focus();
+            });
+            results.appendChild(item);
+          });
+          if (!(data.products || []).length) {
+            var empty = document.createElement('div');
+            empty.className = 'list-group-item';
+            empty.textContent = 'Nenhum produto vinculado ao Shopify encontrado.';
+            results.appendChild(empty);
+          }
+        });
+    }, 300);
+  });
+
+  initialRows.forEach(function (row) { addRow(row, row.quantities); });
+  applyColumns();
+  toggleHint();
+});
+</script>
+<% end %>

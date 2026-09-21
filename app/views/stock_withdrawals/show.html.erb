@@ -1,0 +1,74 @@
+<% content_for :title, "Retirada ##{@withdrawal.id}" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-dolly-flatbed me-2"></i>Retirada #<%= @withdrawal.id %></h1>
+      <p class="page-subtitle"><%= withdrawal_status_pill(@withdrawal) %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to stock_withdrawals_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <% if @withdrawal.editable? %>
+        <%= link_to edit_stock_withdrawal_path(@withdrawal), class: "btn-back" do %><i class="fas fa-pencil-alt me-1"></i>Editar<% end %>
+      <% end %>
+      <% if @withdrawal.processable? %>
+        <%= button_to complete_stock_withdrawal_path(@withdrawal), method: :post, class: "btn-export",
+                      form: { data: { turbo_confirm: "Retirar #{@withdrawal.items.reject(&:done?).sum(&:quantity)} unidade(s) do estoque do Shopify agora? A retirada é lançada no histórico do inventário e não há como desfazer automaticamente." } } do %>
+          <i class="fas fa-check me-2"></i><%= @withdrawal.partially_failed? ? 'Tentar novamente' : 'Concluir e retirar do Shopify' %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-info-circle me-2"></i>Dados da retirada</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-3"><label class="field-label">Data</label><div class="text-main"><%= @withdrawal.withdrawal_date.strftime('%d/%m/%Y') %></div></div>
+        <div class="form-col-3"><label class="field-label">Motivo (histórico do Shopify)</label><div class="text-main"><%= @withdrawal.reason_label %></div></div>
+        <div class="form-col-3"><label class="field-label">Criada por</label><div class="text-main"><%= @withdrawal.user&.name %></div></div>
+        <div class="form-col-3"><label class="field-label">Concluída em</label><div class="text-main"><%= @withdrawal.completed_at ? @withdrawal.completed_at.in_time_zone.strftime('%d/%m/%Y %H:%M') : '-' %></div></div>
+        <div class="form-col-12"><label class="field-label">Referência no Shopify</label><div class="text-main"><%= @withdrawal.persisted? ? @withdrawal.reference_uri : '-' %></div></div>
+        <% if @withdrawal.notes.present? %>
+          <div class="form-col-12"><label class="field-label">Observações</label><div class="text-main"><%= @withdrawal.notes %></div></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-boxes me-2"></i>Itens (<%= @withdrawal.total_quantity %> unidade(s))</h5></div>
+    <div class="table-responsive">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th>Location</th>
+            <th class="text-end">Qtde</th>
+            <th class="text-end">Disponível antes</th>
+            <th class="text-center">Status</th>
+            <th>Detalhe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @withdrawal.items.sort_by { |item| [item.product.sku.to_s, item.location.name] }.each do |item| %>
+            <tr>
+              <td class="text-main"><%= item.product.sku %></td>
+              <td class="text-muted-custom"><%= item.product.shopify_product_name %></td>
+              <td class="text-muted-custom"><%= item.location.name %></td>
+              <td class="text-end"><%= item.quantity %></td>
+              <td class="text-end text-muted-custom"><%= item.available_before || '-' %></td>
+              <td class="text-center"><%= withdrawal_item_pill(item) %></td>
+              <td class="text-muted-custom">
+                <% if item.error_message.present? %><%= item.error_message %>
+                <% elsif item.withdrawn_at %>Retirado em <%= item.withdrawn_at.in_time_zone.strftime('%d/%m %H:%M') %>
+                <% else %>-<% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+<% content_for :title, "Editar Retirada de Estoque" %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-dolly-flatbed me-2"></i>Editar Retirada de Estoque</h1>
+      <p class="page-subtitle">#<%= @withdrawal.id %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to stock_withdrawals_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

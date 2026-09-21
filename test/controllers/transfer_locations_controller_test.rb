@@ -44,8 +44,9 @@ class TransferLocationsControllerTest < ActionDispatch::IntegrationTest
       name: 'CD Com Pedido', registration: '25.405.327/0001-74', street: 'Rua A',
       number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    order = B2bOrder.create!(kind: :stock_transfer, transfer_location: location, user: @admin)
-    order.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
+    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: @admin)
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
+    order.save!
 
     assert_no_difference 'TransferLocation.count' do
       delete transfer_location_path(location)

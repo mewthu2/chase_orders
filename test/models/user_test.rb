@@ -2,7 +2,7 @@ require 'test_helper'
 
 class UserTest < ActiveSupport::TestCase
   test 'admin can access any screen regardless of profile permissions' do
-    admin = User.new(name: 'Admin', email: 'admin@example.com', password: 'password123')
+    admin = User.create!(name: 'Admin', email: 'admin@example.com', password: 'password123') # salvo: admin? consulta os perfis no banco
     admin.profiles << Profile.find(Profile::ADMIN)
     assert admin.can_access_screen?('marketing_tasks')
   end

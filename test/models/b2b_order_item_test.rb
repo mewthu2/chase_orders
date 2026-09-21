@@ -4,7 +4,9 @@ class B2bOrderItemTest < ActiveSupport::TestCase
   def setup
     @user = User.create!(name: 'Teste Item', email: 'teste_item@example.com', password: 'password123')
     @client = Client.create!(responsible_name: 'Cliente Item')
-    @order = B2bOrder.create!(kind: :sale, user: @user, client: @client)
+    @order = B2bOrder.new(kind: :sale, user: @user, client: @client)
+    @order.b2b_order_items.build(sku: 'BASE', quantity: 1, price: 1)
+    @order.save!
   end
 
   test 'discount defaults to zero' do

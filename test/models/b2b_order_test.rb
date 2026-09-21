@@ -87,4 +87,21 @@ class B2bOrderTest < ActiveSupport::TestCase
     order.b2b_order_items.build(sku: 'A', quantity: 1, price: 10)
     assert order.valid?
   end
+
+  test 'freight_service only accepts the Correios Log services (or blank)' do
+    base = { kind: :sale, user: @user, client: @client }
+    B2bOrder::FREIGHT_SERVICES.each do |service|
+      order = B2bOrder.new(base.merge(freight_service: service))
+      order.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 1, price: 1)
+      assert order.valid?, "#{service} deveria ser válido: #{order.errors.full_messages.to_sentence}"
+    end
+    blank = B2bOrder.new(base.merge(freight_service: ''))
+    blank.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 1, price: 1)
+    assert blank.valid?
+
+    invalid = B2bOrder.new(base.merge(freight_service: 'FOGUETE EXPRESS'))
+    invalid.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 1, price: 1)
+    refute invalid.valid?
+    assert_equal %w[SEDEX\ CORREIOS\ LOG+ PAC\ CORREIOS\ LOG+ SEDEX\ HOJE\ LOG+], B2bOrder::FREIGHT_SERVICES
+  end
 end

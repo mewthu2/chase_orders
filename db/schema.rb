@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_20_231200) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_21_030000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -128,6 +128,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_20_231200) do
     t.string "shipping_state"
     t.string "shipping_zip"
     t.string "tracking_code"
+    t.string "freight_service"
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
@@ -709,6 +710,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_20_231200) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "stock_withdrawal_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "stock_withdrawal_id", null: false
+    t.bigint "product_id", null: false
+    t.bigint "location_id", null: false
+    t.integer "quantity", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "available_before"
+    t.text "error_message"
+    t.string "shopify_adjustment_id"
+    t.datetime "withdrawn_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["location_id"], name: "index_stock_withdrawal_items_on_location_id"
+    t.index ["product_id"], name: "index_stock_withdrawal_items_on_product_id"
+    t.index ["stock_withdrawal_id", "product_id", "location_id"], name: "idx_withdrawal_items_unique_product_location", unique: true
+    t.index ["stock_withdrawal_id"], name: "index_stock_withdrawal_items_on_stock_withdrawal_id"
+  end
+
+  create_table "stock_withdrawals", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.date "withdrawal_date", null: false
+    t.string "reason", default: "shrinkage", null: false
+    t.text "notes"
+    t.integer "status", default: 0, null: false
+    t.bigint "user_id", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_stock_withdrawals_on_status"
+    t.index ["user_id"], name: "index_stock_withdrawals_on_user_id"
+  end
+
   create_table "tiny2_order_reviews", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "tiny_order_id", null: false
     t.integer "status", null: false
@@ -804,6 +836,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_20_231200) do
   add_foreign_key "stock_correction_items", "stock_corrections"
   add_foreign_key "stock_corrections", "locations"
   add_foreign_key "stock_corrections", "users"
+  add_foreign_key "stock_withdrawal_items", "locations"
+  add_foreign_key "stock_withdrawal_items", "products"
+  add_foreign_key "stock_withdrawal_items", "stock_withdrawals"
+  add_foreign_key "stock_withdrawals", "users"
   add_foreign_key "user_profiles", "profiles"
   add_foreign_key "user_profiles", "users"
 end

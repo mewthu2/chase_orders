@@ -26,4 +26,29 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{companies_path}']", count: 0
     assert_select "a[href='#{fiscal_notes_path}']", count: 0
   end
+
+  test 'the Produtos group links to stock withdrawals only for users with that permission' do
+    sign_in @admin
+    get b2b_orders_path
+    assert_select "a[href='#{stock_withdrawals_path}']", text: /Retirada de Estoque/
+
+    profile = Profile.create!(name: 'So Controle')
+    profile.update!(screen_keys: ['stock_corrections'])
+    user = User.create!(name: 'So Controle', email: 'so_controle@example.com', password: 'password123')
+    user.profiles << profile
+    sign_in user
+    get stock_corrections_path
+    assert_select "a[href='#{stock_corrections_path}']"
+    assert_select "a[href='#{stock_withdrawals_path}']", count: 0
+
+    only_withdrawals = Profile.create!(name: 'So Retirada')
+    only_withdrawals.update!(screen_keys: ['stock_withdrawals'])
+    user2 = User.create!(name: 'So Retirada', email: 'so_retirada@example.com', password: 'password123')
+    user2.profiles << only_withdrawals
+    sign_in user2
+    get stock_withdrawals_path
+    assert_response :success
+    assert_select "a[href='#{stock_withdrawals_path}']"
+    assert_select "a[href='#{stock_corrections_path}']", count: 0
+  end
 end

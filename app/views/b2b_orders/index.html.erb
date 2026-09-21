@@ -92,6 +92,12 @@
                     <% if current_user.can_access_screen?('fiscal_notes') %>
                       <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
                     <% end %>
+                    <% if order.sale? && order.tiny_reference_id.present? %>
+                      <%= button_to cancel_in_tiny_b2b_order_path(order), method: :post, class: "action-btn action-btn--danger", title: 'Cancelar no Tiny e liberar reenvio',
+                                    form: { data: { turbo_confirm: "Cancelar o pedido nº #{order.tiny_reference_number.presence || order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
+                        <i class="fas fa-ban"></i>
+                      <% end %>
+                    <% end %>
                     <% if order.resendable? %>
                       <%= button_to transmit_order_path_for(order), method: :post, class: "action-btn action-btn--edit", form: { data: { turbo_confirm: 'Reenviar este pedido para o Tiny?' } } do %>
                         <i class="fas fa-paper-plane"></i>

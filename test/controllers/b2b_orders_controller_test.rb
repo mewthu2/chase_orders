@@ -10,6 +10,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     ENV['CORREIOS_ESTOQUE'] = 'https://correios-log.example.com/estoque/'
     ENV['CORREIOS_CARTAO_POSTAGEM_2'] = 'fake-cartao-2'
     ENV['TOKEN_LOG_PRODUCTION2'] = 'fake-token-2'
+    ENV['TOKEN_TINY2_PRODUCTION'] = 'fake-token-tiny2'
   end
 
   test 'user without b2b_orders access is redirected' do
@@ -24,10 +25,8 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'index counts orders per status regardless of the active status filter' do
     sign_in @admin
-    aberto = B2bOrder.create!(kind: :sale, user: @admin, client: @client, status: :aberto)
-    aberto.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
-    aprovado = B2bOrder.create!(kind: :sale, user: @admin, client: @client, status: :aprovado)
-    aprovado.b2b_order_items.create!(sku: 'SKU2', quantity: 1, price: 1)
+    build_order(status: :aberto)
+    build_order(status: :aprovado)
 
     get b2b_orders_path(status: 'aberto')
 
@@ -42,20 +41,29 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
   test 'index searches by client name' do
     sign_in @admin
     other_client = Client.create!(responsible_name: 'Outro Cliente Completamente Diferente')
-    match = B2bOrder.create!(kind: :sale, user: @admin, client: @client)
-    match.b2b_order_items.create!(sku: 'SKU1', quantity: 1, price: 1)
-    miss = B2bOrder.create!(kind: :sale, user: @admin, client: other_client)
-    miss.b2b_order_items.create!(sku: 'SKU2', quantity: 1, price: 1)
+    build_order
+    build_order(client: other_client)
 
     get b2b_orders_path(q: @client.responsible_name)
 
     assert_select 'tbody tr', count: 1
   end
 
-  test 'admin can create a sale order with client and items, which auto-enqueues transmission' do
-    sign_in @admin
+  PEDIDO_URL = 'https://api.tiny.com.br/api2/pedido.incluir.php'.freeze
 
-    assert_enqueued_with(job: TransmitB2bOrderJob) do
+  def stub_tiny_pedido_ok(id: '111', numero: '222')
+    stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: id, numero: numero } } } }.to_json)
+  end
+
+  def stub_tiny_pedido_error(message)
+    stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status_processamento: '2', status: 'Erro', registros: { registro: { status: 'Erro', erros: [{ erro: message }] } } } }.to_json)
+  end
+
+  test 'admin creates a sale order and it is sent to Tiny right away, synchronously' do
+    sign_in @admin
+    stub = stub_tiny_pedido_ok
+
+    assert_no_enqueued_jobs do
       assert_difference 'B2bOrder.count', 1 do
         post b2b_orders_path, params: { b2b_order: {
           kind: 'sale', client_id: @client.id,
@@ -63,9 +71,46 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
         } }
       end
     end
+
+    assert_requested stub
     order = B2bOrder.last
     assert order.aberto?
+    assert_equal '111', order.tiny_reference_id
     assert_equal 1, order.b2b_order_items.count
+    assert_redirected_to b2b_orders_path
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny.*222/
+  end
+
+  test 'when Tiny rejects a new order it is still saved and the real Tiny error is shown' do
+    sign_in @admin
+    stub_tiny_pedido_error('Cliente: CPF/CNPJ inválido')
+
+    assert_difference 'B2bOrder.count', 1 do
+      post b2b_orders_path, params: { b2b_order: {
+        client_id: @client.id, b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
+      } }
+    end
+
+    order = B2bOrder.last
+    assert order.dados_incompletos?
+    assert_equal 'Cliente: CPF/CNPJ inválido', order.error_message
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /Cliente: CPF\/CNPJ inválido/
+  end
+
+  test 'an unexpected failure while sending is reported instead of a 500' do
+    sign_in @admin
+    stub_request(:post, PEDIDO_URL).to_timeout
+
+    post b2b_orders_path, params: { b2b_order: {
+      client_id: @client.id, b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
+    } }
+
+    assert_redirected_to b2b_orders_path
+    assert B2bOrder.last.dados_incompletos?
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger'
   end
 
   test 'admin can create a sale order with the new form fields and a per-item discount' do
@@ -73,13 +118,13 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference 'B2bOrder.count', 1 do
       post b2b_orders_path, params: { b2b_order: {
-        kind: 'sale', client_id: @client.id, salesperson_name: 'Fulano', price_list: 'transfer',
+        kind: 'sale', client_id: @client.id, salesperson_name: 'Fulano',
         b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10, discount: 1 }]
       } }
     end
     order = B2bOrder.last
     assert_equal 'Fulano', order.salesperson_name
-    assert order.transfer?
+    assert order.standard?
     assert_equal 1.0, order.b2b_order_items.first.discount
   end
 
@@ -98,16 +143,37 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
 
-    assert_no_enqueued_jobs only: TransmitB2bOrderJob do
-      post transmit_b2b_order_path(order)
-    end
+    stub = stub_tiny_pedido_ok
+
+    post transmit_b2b_order_path(order)
     assert_redirected_to b2b_orders_path
+    assert_not_requested stub
 
     order.update!(status: :aberto, tiny_reference_id: nil)
 
-    assert_enqueued_with(job: TransmitB2bOrderJob, args: [order.id]) do
+    assert_no_enqueued_jobs do
       post transmit_b2b_order_path(order)
     end
+    assert_requested stub
+    assert_equal '111', order.reload.tiny_reference_id
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny/
+  end
+
+  test 'resending shows the real Tiny error and keeps the order resendable' do
+    sign_in @admin
+    order = build_order(status: :dados_incompletos)
+    stub_tiny_pedido_error('Item LEG-838-M não encontrado')
+
+    post transmit_b2b_order_path(order)
+
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /Item LEG-838-M não encontrado/
+    assert order.reload.resendable?
+
+    stub_tiny_pedido_ok(id: '333', numero: '444')
+    post transmit_b2b_order_path(order)
+    assert_equal '333', order.reload.tiny_reference_id
   end
 
   def build_order(**attrs)
@@ -164,7 +230,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'search_product does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
-    Product.create!(sku: 'SKU-COR', shopify_product_name: 'Produto Correios')
+    Product.create!(sku: 'SKU-COR', shopify_product_name: 'Produto Correios', image_url: 'https://img.example.com/produto.png')
 
     get search_product_b2b_orders_path, params: { query: 'SKU-COR' }
     json = JSON.parse(response.body)
@@ -179,7 +245,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'product_stock returns stock from the Correios API for a known SKU' do
     sign_in @admin
-    Product.create!(sku: 'SKU-COR2', shopify_product_name: 'Produto Correios 2')
+    Product.create!(sku: 'SKU-COR2', shopify_product_name: 'Produto Correios 2', image_url: 'https://img.example.com/produto.png')
 
     stub_request(:get, 'https://correios-log.example.com/estoque/SKU-COR2/estoque')
       .to_return(status: 200, body: { disponivel: 3 }.to_json)
@@ -205,7 +271,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'search_product also returns the plain retail price alongside the suggested one' do
     sign_in @admin
-    Product.create!(sku: 'SKU-RET', shopify_product_name: 'Produto Retail', price: '100')
+    Product.create!(sku: 'SKU-RET', shopify_product_name: 'Produto Retail', price: '100', image_url: 'https://img.example.com/produto.png')
 
     get search_product_b2b_orders_path, params: { query: 'SKU-RET' }
     json = JSON.parse(response.body)
@@ -217,7 +283,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'parse_items_spreadsheet also returns the plain retail price' do
     sign_in @admin
-    Product.create!(sku: 'SKU-RET-CSV', shopify_product_name: 'Produto Retail CSV', price: '50')
+    Product.create!(sku: 'SKU-RET-CSV', shopify_product_name: 'Produto Retail CSV', price: '50', image_url: 'https://img.example.com/produto.png')
 
     csv_content = "SKU,Quantidade\nSKU-RET-CSV,1\n"
     file = Rack::Test::UploadedFile.new(StringIO.new(csv_content), 'text/csv', original_filename: 'items.csv')
@@ -230,7 +296,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'parse_items_spreadsheet does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
-    Product.create!(sku: 'SKU-CSV', shopify_product_name: 'Produto CSV')
+    Product.create!(sku: 'SKU-CSV', shopify_product_name: 'Produto CSV', image_url: 'https://img.example.com/produto.png')
 
     csv_content = "SKU,Quantidade\nSKU-CSV,2\n"
     file = Rack::Test::UploadedFile.new(StringIO.new(csv_content), 'text/csv', original_filename: 'items.csv')

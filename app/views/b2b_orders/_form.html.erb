@@ -40,16 +40,11 @@
           <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
         </div>
 
-        <div class="form-col-6">
-          <label class="field-label">Lista de preço</label>
-          <%= form.select :price_list, options_for_select([['Padrão', 'standard'], ['Transferência', 'transfer']], @b2b_order.price_list), {}, { id: 'priceListSelect', class: 'field-input' } %>
-        </div>
         <% else %>
         <div class="form-col-6" id="transferLocationSection">
           <label class="field-label">Local de Destino</label>
           <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
         </div>
-        <%= hidden_field_tag 'b2b_order[price_list]', 'transfer', id: 'priceListSelect' %>
         <% end %>
 
         <div class="form-col-6">
@@ -58,6 +53,12 @@
             <option value="">Carregando...</option>
           </select>
           <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
+        </div>
+
+        <%# Correios Log precisa de um serviço (forma_frete no Tiny); o fluxo dos Correios do Honey depende do nome exato. %>
+        <div class="form-col-6" id="freightServiceSection" style="display: none;">
+          <label class="field-label">Serviço de frete (Correios Log)</label>
+          <%= form.select :freight_service, B2bOrder::FREIGHT_SERVICES, { include_blank: 'Selecione...' }, { id: 'freightServiceSelect', class: 'field-input', disabled: true } %>
         </div>
 
         <div class="form-col-6" id="carrierSection" style="display: none;">
@@ -198,9 +199,10 @@ document.addEventListener('DOMContentLoaded', function () {
   var itemIndex = <%= @b2b_order.b2b_order_items.size %>;
   var stockCache = {}; // sku -> quantity, preenchido pela busca do modal e reaproveitado na tabela
 
+  // A lista de preço é fixa por tela: atacado = padrão, transferência = transferência.
+  var PRICE_LIST = '<%= @b2b_order.stock_transfer? ? 'transfer' : 'standard' %>';
   function currentPriceList() {
-    var select = document.getElementById('priceListSelect');
-    return select && select.value === 'transfer' ? 'transfer' : 'standard';
+    return PRICE_LIST;
   }
 
   var addrCheck = document.getElementById('differentShippingAddressCheck');
@@ -217,6 +219,18 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('carrierSection').style.display = isCarrier ? '' : 'none';
   }
 
+  // O serviço de frete só existe para Correios Log (tipo de logística 5 no Tiny). Fica desabilitado
+  // (não vai no envio) quando a forma escolhida é outra.
+  function toggleFreightService() {
+    var select = document.getElementById('shippingMethodSelect');
+    var selectedOption = select.options[select.selectedIndex];
+    var isCorreiosLog = !!selectedOption && selectedOption.dataset.logisticsType === '5';
+    var freightSelect = document.getElementById('freightServiceSelect');
+    document.getElementById('freightServiceSection').style.display = isCorreiosLog ? '' : 'none';
+    freightSelect.disabled = !isCorreiosLog;
+    if (!isCorreiosLog) freightSelect.value = '';
+  }
+
   // Forma de Envio via AJAX (lista vem do Tiny)
   fetch('<%= shipping_methods_b2b_orders_path %>')
     .then(function (r) { return r.json(); })
@@ -227,14 +241,17 @@ document.addEventListener('DOMContentLoaded', function () {
         var opt = document.createElement('option');
         opt.value = m.method;
         opt.textContent = m.name;
+        opt.dataset.logisticsType = m.logistics_type || '';
         if (m.method === '<%= @b2b_order.carrier_shipping_method %>') opt.selected = true;
         select.appendChild(opt);
       });
       toggleCarrierSection();
+      toggleFreightService();
     });
   document.getElementById('shippingMethodSelect').addEventListener('change', function (e) {
     document.getElementById('carrierMethodField').value = e.target.value;
     toggleCarrierSection();
+    toggleFreightService();
   });
 
   // Cliente via AJAX (busca no Honey e no Tiny ao mesmo tempo)

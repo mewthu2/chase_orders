@@ -38,7 +38,9 @@ class TransferLocationTest < ActiveSupport::TestCase
   test 'cannot be destroyed while it has b2b_orders' do
     location = TransferLocation.create!(valid_attrs)
     user = User.create!(name: 'Teste TL', email: 'teste_tl@example.com', password: 'password123')
-    B2bOrder.create!(kind: :stock_transfer, transfer_location: location, user: user)
+    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: user)
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
+    order.save!
 
     refute location.destroy
     assert_includes location.errors[:base], 'Não é possível excluir o registro pois existem registros dependentes'

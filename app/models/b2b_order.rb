@@ -17,6 +17,10 @@ class B2bOrder < ApplicationRecord
   enum :price_list, { standard: 0, transfer: 1 }
   enum :freight_paid_by, { shipper: 0, recipient: 1 }
 
+  # Serviços de frete do Correios Log (forma_frete no Tiny). O fluxo dos Correios do Honey
+  # (CreateCorreiosLogOrdersJob2) só aceita exatamente estes nomes.
+  FREIGHT_SERVICES = ['SEDEX CORREIOS LOG+', 'PAC CORREIOS LOG+', 'SEDEX HOJE LOG+'].freeze
+
   STATUS_LABELS = {
     'aberto' => 'Aberto', 'aprovado' => 'Aprovado', 'preparando_envio' => 'Preparando Envio',
     'faturado' => 'Faturado', 'pronto_para_envio' => 'Pronto para Envio', 'enviado' => 'Enviado',
@@ -31,6 +35,7 @@ class B2bOrder < ApplicationRecord
     'Dados Incompletos' => 'dados_incompletos'
   }.freeze
 
+  validates :freight_service, inclusion: { in: FREIGHT_SERVICES }, allow_blank: true
   validates :client, presence: true, if: :sale?
   validates :transfer_location, presence: true, if: :stock_transfer?
   validates :shipping_street, :shipping_number, :shipping_neighbourhood, :shipping_city,

@@ -3,7 +3,7 @@ require 'csv'
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit]
+  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny]
   helper_method :order_kind, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for, :order_form_url
 
   def index
@@ -22,16 +22,16 @@ class B2bOrdersController < ApplicationController
   end
 
   def new
-    @b2b_order = B2bOrder.new(kind: order_kind, price_list: order_kind == 'stock_transfer' ? :transfer : :standard)
+    @b2b_order = B2bOrder.new(kind: order_kind, price_list: price_list_for(order_kind))
   end
 
   def create
-    @b2b_order = B2bOrder.new(b2b_order_params.merge(kind: order_kind))
+    @b2b_order = B2bOrder.new(b2b_order_params.merge(kind: order_kind, price_list: price_list_for(order_kind)))
     @b2b_order.user = current_user
 
     if @b2b_order.save
-      TransmitB2bOrderJob.perform_later(@b2b_order.id)
-      redirect_to orders_path_for(order_kind), notice: 'Pedido salvo e enviado para o Tiny.'
+      kind, message = send_to_tiny(@b2b_order, saved: true)
+      redirect_to orders_path_for(order_kind), kind => message
     else
       render :new, status: :unprocessable_entity
     end
@@ -61,8 +61,29 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    TransmitB2bOrderJob.perform_later(@b2b_order.id)
-    redirect_to orders_path_for(order_kind), notice: 'Pedido reenviado para o Tiny.'
+    kind, message = send_to_tiny(@b2b_order)
+    redirect_to orders_path_for(order_kind), kind => message
+  end
+
+  # A API do Tiny não permite excluir pedido (só alterar a situação). Então cancelamos o pedido lá,
+  # desvinculamos do Honey e deixamos o pedido pronto para ser reenviado como um pedido novo.
+  # O cancelado continua existindo no Tiny e pode ser excluído manualmente por lá.
+  def cancel_in_tiny
+    if @b2b_order.tiny_reference_id.blank?
+      redirect_to orders_path_for(order_kind), alert: 'Este pedido não foi enviado ao Tiny; não há o que cancelar.'
+      return
+    end
+
+    number = @b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id
+    result = B2bTinyService.new.update_order_status(@b2b_order.tiny_reference_id, 'cancelado')
+
+    if result[:success]
+      unlink_from_tiny(@b2b_order, number)
+      redirect_to orders_path_for(order_kind),
+                  notice: "Pedido nº #{number} cancelado no Tiny. Este pedido foi liberado para reenvio (o cancelado continua no Tiny e pode ser excluído por lá)."
+    else
+      redirect_to orders_path_for(order_kind), alert: "O Tiny não cancelou o pedido nº #{number}: #{result[:error]}"
+    end
   end
 
   def shipping_methods
@@ -256,12 +277,46 @@ class B2bOrdersController < ApplicationController
     { quantity: 0, status: 'error' }
   end
 
+  # O envio ao Tiny é SEMPRE síncrono (perform_now): o resultado aparece na hora, sem depender de
+  # fila/worker, e o pedido não fica preso atrás de outros jobs. Devolve [tipo_do_flash, mensagem].
+  def send_to_tiny(order, saved: false)
+    TransmitB2bOrderJob.perform_now(order.id)
+    order.reload
+    label = order.stock_transfer? ? 'Transferência' : 'Pedido'
+
+    if order.tiny_reference_id.present?
+      number = order.tiny_reference_number.presence || order.tiny_reference_id
+      [:notice, "#{label} #{saved ? 'salvo e ' : ''}enviado ao Tiny (nº #{number})."]
+    else
+      [:alert, "#{label} #{saved ? 'salvo, mas o' : 'não enviado: o'} Tiny não aceitou: #{order.error_message.presence || 'motivo não informado'}"]
+    end
+  rescue StandardError => e
+    Rails.logger.error "B2bOrdersController#send_to_tiny (#{order.id}): #{e.class} #{e.message}"
+    order.reload.update_columns(status: B2bOrder.statuses[:dados_incompletos], error_message: e.message.to_s.first(255)) unless order.tiny_reference_id.present?
+    [:alert, "#{order.stock_transfer? ? 'Transferência' : 'Pedido'} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
+  end
+
+  def unlink_from_tiny(order, number)
+    tiny_id = order.tiny_reference_id
+    order.update!(tiny_reference_id: nil, tiny_reference_number: nil, status: :aberto, error_message: nil)
+    LogService.create_log(
+      user: current_user, resource_type: 'b2b_order', action_type: 'cancel_in_tiny',
+      resource_name: "Pedido B2B ##{order.id}", resource_id: order.id,
+      details: { tiny_reference_id: tiny_id, tiny_reference_number: number }, request: request
+    )
+  end
+
   def set_kind
     @order_kind = params[:order_kind]
   end
 
   def order_kind
     @order_kind
+  end
+
+  # Atacado usa sempre a lista Padrão; a lista Transferência só existe na tela de transferência.
+  def price_list_for(kind)
+    kind.to_s == 'stock_transfer' ? :transfer : :standard
   end
 
   def stock_transfer_screen?(kind = order_kind)
@@ -299,8 +354,8 @@ class B2bOrdersController < ApplicationController
   def b2b_order_params
     params.require(:b2b_order).permit(
       :client_id, :transfer_location_id, :carrier_id, :carrier_name,
-      :carrier_shipping_method, :freight_paid_by, :freight_value, :notes,
-      :salesperson_name, :status, :price_list, :different_shipping_address,
+      :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,
+      :salesperson_name, :status, :different_shipping_address,
       :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
       :shipping_city, :shipping_state, :shipping_zip,
       b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]

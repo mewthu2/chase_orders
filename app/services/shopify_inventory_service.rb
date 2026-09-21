@@ -13,6 +13,14 @@ class ShopifyInventoryService
     new.check_inventory_level(product, location)
   end
 
+  def self.available_quantities(location_id, inventory_item_ids)
+    new.available_quantities(location_id, inventory_item_ids)
+  end
+
+  def self.adjust_available(**args)
+    new.adjust_available(**args)
+  end
+
   def initialize
     @session = ShopifyAPI::Auth::Session.new(
       shop: 'chasebrasil.myshopify.com',
@@ -119,6 +127,60 @@ class ShopifyInventoryService
       committed: 0,
       incoming: 0
     }
+  end
+
+  # Disponível ("available") de vários itens numa location do Shopify, em lote.
+  # Devolve { 'inventory_item_id' => quantidade }; item sem nível nessa location não aparece,
+  # e item não rastreado vem com nil. Erros de rede/API sobem para quem chamou decidir.
+  def available_quantities(location_id, inventory_item_ids)
+    ids = Array(inventory_item_ids).map { |id| inventory_item_numeric_id(id) }.uniq
+    ids.each_slice(50).each_with_object({}) do |slice, result|
+      response = rest_client.get(path: 'inventory_levels.json',
+                                 query: { inventory_item_ids: slice.join(','), location_ids: location_id, limit: 250 })
+      (response.body['inventory_levels'] || []).each { |level| result[level['inventory_item_id'].to_s] = level['available'] }
+    end
+  end
+
+  ADJUST_QUANTITIES_MUTATION = <<~GRAPHQL
+    mutation inventoryAdjustQuantities($input: InventoryAdjustQuantitiesInput!) {
+      inventoryAdjustQuantities(input: $input) {
+        userErrors {
+          field
+          message
+        }
+        inventoryAdjustmentGroup {
+          id
+        }
+      }
+    }
+  GRAPHQL
+
+  # Ajusta (soma delta ao) disponível de vários itens numa location, deixando registro no histórico
+  # do inventário do Shopify com o motivo e a referência. A operação é atômica: se um item for
+  # recusado, nenhum é alterado. changes: [{ inventory_item_id:, delta: }] (delta negativo = retirada).
+  # Devolve { success: true, adjustment_id: } ou { success: false, error: }.
+  def adjust_available(location_id:, changes:, reason:, reference_uri:)
+    variables = {
+      input: {
+        reason: reason,
+        name: 'available',
+        referenceDocumentUri: reference_uri,
+        changes: changes.map do |change|
+          { inventoryItemId: inventory_item_gid(change[:inventory_item_id]), locationId: "gid://shopify/Location/#{location_id}", delta: change[:delta] }
+        end
+      }
+    }
+
+    response = graphql_client.query(query: ADJUST_QUANTITIES_MUTATION, variables: variables)
+    return { success: false, error: "Erro GraphQL: #{Array(response.body['errors']).map { |e| e.is_a?(Hash) ? e['message'] : e }.join(', ')}" } if response.body['errors'].present?
+
+    payload = response.body.dig('data', 'inventoryAdjustQuantities') || {}
+    user_errors = payload['userErrors']
+    return { success: false, error: user_errors.map { |e| e['message'] }.join(', ') } if user_errors.present?
+
+    { success: true, adjustment_id: payload.dig('inventoryAdjustmentGroup', 'id') }
+  rescue StandardError => e
+    { success: false, error: "Erro ao ajustar no Shopify: #{e.message}" }
   end
 
   def list_locations

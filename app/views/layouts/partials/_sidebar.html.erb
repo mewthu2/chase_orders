@@ -282,7 +282,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('stock_corrections') %>
+        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
               <div class="nav-group-title">
@@ -293,9 +293,17 @@
             </div>
             <div class="nav-group-dropdown" id="produtosDropdown">
               <div class="dropdown-content">
-                <%= link_to stock_corrections_path, class: "dropdown-link #{'active' if controller_name == 'stock_corrections'}" do %>
-                  <i class="fas fa-warehouse"></i>
-                  <span>Controle de Estoque</span>
+                <% if current_user&.can_access_screen?('stock_corrections') %>
+                  <%= link_to stock_corrections_path, class: "dropdown-link #{'active' if controller_name == 'stock_corrections'}" do %>
+                    <i class="fas fa-warehouse"></i>
+                    <span>Controle de Estoque</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('stock_withdrawals') %>
+                  <%= link_to stock_withdrawals_path, class: "dropdown-link #{'active' if controller_name == 'stock_withdrawals'}" do %>
+                    <i class="fas fa-dolly-flatbed"></i>
+                    <span>Retirada de Estoque</span>
+                  <% end %>
                 <% end %>
               </div>
             </div>

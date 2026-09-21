@@ -122,6 +122,11 @@ Rails.application.routes.draw do
   end
   
   resources :stock_correction_items, only: [:update, :destroy]
+
+  resources :stock_withdrawals do
+    member { post :complete }
+    collection { get :search_product }
+  end
   
   resources :available_locations
 
@@ -207,6 +212,7 @@ Rails.application.routes.draw do
     end
     member do
       post :transmit
+      post :cancel_in_tiny
     end
   end
 

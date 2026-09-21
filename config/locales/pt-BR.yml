@@ -172,8 +172,8 @@ pt-BR:
       messages:
         record_invalid: "A validação falhou: %{errors}"
         restrict_dependent_destroy:
-          has_one: Não é possível excluir o registro pois existe um(a) %{record} dependente
-          has_many: Não é possível excluir o registro pois existem %{record} dependentes
+          has_one: Não é possível excluir o registro pois existe um registro dependente
+          has_many: Não é possível excluir o registro pois existem registros dependentes
     models:
       company: Empresa
       fiscal_note: Nota fiscal
@@ -185,6 +185,8 @@ pt-BR:
       product: Produto
       user: Usuário
       profile: Perfil
+      stock_withdrawal: Retirada de estoque
+      stock_withdrawal_item: Item da retirada
     attributes:
       company:
         legal_name: Razão social
@@ -314,6 +316,17 @@ pt-BR:
         profiles: Perfis
       profile:
         name: Nome
+      stock_withdrawal:
+        withdrawal_date: Data
+        reason: Motivo
+        notes: Observações
+        status: Status
+        items: Itens
+      stock_withdrawal_item:
+        product: Produto
+        location: Location
+        quantity: Quantidade
+        status: Status
   will_paginate:
     previous_label: "&#8592; Anterior"
     next_label: "Próximo &#8594;"
