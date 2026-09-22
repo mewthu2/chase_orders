@@ -1,0 +1,126 @@
+<% content_for :title, "Transferência ##{@transfer.id}" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-exchange-alt me-2"></i>Transferência #<%= @transfer.id %></h1>
+      <p class="page-subtitle"><%= transfer_status_pill(@transfer) %></p>
+    </div>
+    <div class="header-actions">
+      <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <% if @transfer.editable? %>
+        <%= link_to edit_internal_transfer_path(@transfer), class: "btn-back" do %><i class="fas fa-pencil-alt me-1"></i>Editar<% end %>
+      <% end %>
+      <% if @transfer.deletable? %>
+        <%= button_to internal_transfer_path(@transfer), method: :delete, class: "btn-back",
+                      form: { data: { turbo_confirm: "Excluir esta transferência?" } } do %>
+          <i class="fas fa-trash me-1"></i>Excluir
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-info-circle me-2"></i>Dados da transferência</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4"><label class="field-label">Minha loja é (destino)</label><div class="text-main"><%= @transfer.destination_location.name %></div></div>
+        <div class="form-col-4"><label class="field-label">Solicitante</label><div class="text-main"><%= @transfer.requested_by&.name %></div></div>
+        <div class="form-col-4"><label class="field-label">Criada em</label><div class="text-main"><%= @transfer.created_at.in_time_zone.strftime('%d/%m/%Y %H:%M') %></div></div>
+        <% if @transfer.notes.present? %>
+          <div class="form-col-12"><label class="field-label">Observações</label><div class="text-main"><%= @transfer.notes %></div></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <% @transfer.shipments.each do |shipment| %>
+    <div class="table-card mb-3">
+      <div class="table-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="table-card-title"><i class="fas fa-store me-2"></i>De <%= shipment.origin_location.name %> <%= shipment_status_pill(shipment) %></h5>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <% if shipment.reservable? && can_manage_origin?(shipment) %>
+            <%= button_to reserve_internal_transfer_shipment_path(@transfer, shipment), method: :post, class: "btn-export",
+                          form: { data: { turbo_confirm: "Reservar os itens desta remessa? Isso debita o estoque de #{shipment.origin_location.name} no Shopify agora." } } do %>
+              <i class="fas fa-lock me-1"></i><%= shipment.items.any?(&:failed?) ? 'Tentar reservar de novo' : 'Reservar' %>
+            <% end %>
+          <% end %>
+
+          <% if (shipment.sendable? || shipment.enviado?) && can_manage_origin?(shipment) %>
+            <%= form_with url: ship_internal_transfer_shipment_path(@transfer, shipment), method: :post, local: true, class: 'd-flex align-items-center gap-2' do %>
+              <input type="text" name="tracking_code" value="<%= shipment.tracking_code %>" class="field-input" placeholder="Código de rastreio" style="max-width: 180px;">
+              <button type="submit" class="btn-export"><i class="fas fa-truck me-1"></i><%= shipment.sendable? ? 'Marcar como enviada' : 'Salvar rastreio' %></button>
+            <% end %>
+          <% end %>
+
+          <% if shipment.receivable? && can_manage_destination?(@transfer) %>
+            <%= button_to receive_internal_transfer_shipment_path(@transfer, shipment), method: :post, class: "btn-export",
+                          form: { data: { turbo_confirm: "Confirmar recebimento? Isso credita o estoque de #{@transfer.destination_location.name} no Shopify agora." } } do %>
+              <i class="fas fa-check me-1"></i>Recebido
+            <% end %>
+          <% end %>
+
+          <% if shipment.cancellable? && can_cancel_shipment?(shipment) %>
+            <% confirm = shipment.returns_stock_on_cancel? ? "Cancelar esta remessa? O estoque debitado em #{shipment.origin_location.name} será devolvido no Shopify." : 'Cancelar esta remessa?' %>
+            <%= button_to cancel_internal_transfer_shipment_path(@transfer, shipment), method: :post, class: "btn-back",
+                          form: { data: { turbo_confirm: confirm } } do %>
+              <i class="fas fa-ban me-1"></i>Cancelar
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Produto</th>
+              <th class="text-end">Qtde</th>
+              <th class="text-center">Status</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% shipment.items.each do |item| %>
+              <tr>
+                <td class="text-main"><%= item.product.sku %></td>
+                <td class="text-muted-custom"><%= item.product.shopify_product_name %></td>
+                <td class="text-end"><%= item.quantity %></td>
+                <td class="text-center"><%= status_pill_for_item(item) %></td>
+                <td class="text-muted-custom">
+                  <% if item.error_message.present? %><%= item.error_message %>
+                  <% elsif item.received? %>Recebido em <%= item.received_at&.in_time_zone&.strftime('%d/%m %H:%M') %>
+                  <% elsif item.reserved? %>Reservado em <%= item.reserved_at&.in_time_zone&.strftime('%d/%m %H:%M') %>
+                  <% elsif item.cancelled? %>Cancelado
+                  <% else %>-<% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <% if shipment.tracking_code.present? %>
+        <div class="px-3 pb-3 text-muted-custom"><i class="fas fa-truck me-1"></i>Rastreio: <strong><%= shipment.tracking_code %></strong></div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="table-card internal-transfer-timeline">
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-history me-2"></i>Histórico</h5></div>
+    <div class="px-3 py-3">
+      <% if @transfer.events.recent.any? %>
+        <ul class="list-unstyled mb-0">
+          <% @transfer.events.recent.each do |event| %>
+            <li class="mb-2">
+              <span class="text-main"><%= event.action_label %></span>
+              <span class="text-muted-custom">— <%= event.message %></span>
+              <small class="text-muted-custom d-block"><%= event.user&.name || 'Sistema' %> em <%= event.created_at.in_time_zone.strftime('%d/%m/%Y %H:%M') %></small>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-muted-custom mb-0">Nenhum evento registrado.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

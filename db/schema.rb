@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_21_070000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -328,6 +328,72 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_070000) do
     t.index ["company_id", "series", "number"], name: "index_fiscal_notes_on_company_id_and_series_and_number", unique: true
     t.index ["company_id"], name: "index_fiscal_notes_on_company_id"
     t.index ["status"], name: "index_fiscal_notes_on_status"
+  end
+
+  create_table "internal_transfer_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "internal_transfer_id", null: false
+    t.bigint "internal_transfer_shipment_id"
+    t.bigint "user_id"
+    t.string "action", null: false
+    t.text "message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["internal_transfer_id"], name: "index_internal_transfer_events_on_internal_transfer_id"
+    t.index ["internal_transfer_shipment_id"], name: "idx_on_internal_transfer_shipment_id_8854cee26a"
+    t.index ["user_id"], name: "index_internal_transfer_events_on_user_id"
+  end
+
+  create_table "internal_transfer_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "internal_transfer_shipment_id", null: false
+    t.bigint "product_id", null: false
+    t.integer "quantity", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "available_before"
+    t.text "error_message"
+    t.string "reserve_adjustment_id"
+    t.string "receive_adjustment_id"
+    t.datetime "reserved_at"
+    t.datetime "received_at"
+    t.datetime "cancelled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["internal_transfer_shipment_id", "product_id"], name: "idx_transfer_items_unique_product", unique: true
+    t.index ["internal_transfer_shipment_id"], name: "index_internal_transfer_items_on_internal_transfer_shipment_id"
+    t.index ["product_id"], name: "index_internal_transfer_items_on_product_id"
+  end
+
+  create_table "internal_transfer_shipments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "internal_transfer_id", null: false
+    t.bigint "origin_location_id", null: false
+    t.integer "status", default: 0, null: false
+    t.string "tracking_code"
+    t.bigint "reserved_by_id"
+    t.bigint "sent_by_id"
+    t.bigint "received_by_id"
+    t.bigint "cancelled_by_id"
+    t.datetime "reserved_at"
+    t.datetime "sent_at"
+    t.datetime "received_at"
+    t.datetime "cancelled_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cancelled_by_id"], name: "index_internal_transfer_shipments_on_cancelled_by_id"
+    t.index ["internal_transfer_id", "origin_location_id"], name: "idx_transfer_shipments_unique_origin", unique: true
+    t.index ["internal_transfer_id"], name: "index_internal_transfer_shipments_on_internal_transfer_id"
+    t.index ["origin_location_id"], name: "index_internal_transfer_shipments_on_origin_location_id"
+    t.index ["received_by_id"], name: "index_internal_transfer_shipments_on_received_by_id"
+    t.index ["reserved_by_id"], name: "index_internal_transfer_shipments_on_reserved_by_id"
+    t.index ["sent_by_id"], name: "index_internal_transfer_shipments_on_sent_by_id"
+  end
+
+  create_table "internal_transfers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "destination_location_id", null: false
+    t.bigint "requested_by_id", null: false
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["destination_location_id"], name: "index_internal_transfers_on_destination_location_id"
+    t.index ["requested_by_id"], name: "index_internal_transfers_on_requested_by_id"
   end
 
   create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -823,6 +889,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_070000) do
   add_foreign_key "campaign_users", "users"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
+  add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
+  add_foreign_key "internal_transfer_events", "internal_transfers"
+  add_foreign_key "internal_transfer_events", "users"
+  add_foreign_key "internal_transfer_items", "internal_transfer_shipments"
+  add_foreign_key "internal_transfer_items", "products"
+  add_foreign_key "internal_transfer_shipments", "internal_transfers"
+  add_foreign_key "internal_transfer_shipments", "locations", column: "origin_location_id"
+  add_foreign_key "internal_transfer_shipments", "users", column: "cancelled_by_id"
+  add_foreign_key "internal_transfer_shipments", "users", column: "received_by_id"
+  add_foreign_key "internal_transfer_shipments", "users", column: "reserved_by_id"
+  add_foreign_key "internal_transfer_shipments", "users", column: "sent_by_id"
+  add_foreign_key "internal_transfers", "locations", column: "destination_location_id"
+  add_foreign_key "internal_transfers", "users", column: "requested_by_id"
   add_foreign_key "logs", "users"
   add_foreign_key "marketing_tasks", "marketing_campaigns"
   add_foreign_key "marketing_tasks", "users"

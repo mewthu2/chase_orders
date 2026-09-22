@@ -1,0 +1,67 @@
+<% content_for :title, "Transferência Interna" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-exchange-alt me-2"></i>Transferência Interna</h1>
+      <p class="page-subtitle">Transferências de estoque entre lojas, lançadas direto no Shopify (com histórico do inventário)</p>
+    </div>
+    <div class="header-actions">
+      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @transfers.total_entries %> transferência(s)</span>
+      <%= link_to new_internal_transfer_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Transferência<% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <% if @transfers.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Destino</th>
+              <th>Origens</th>
+              <th class="text-end">Qtde total</th>
+              <th>Solicitante</th>
+              <th class="text-center">Status</th>
+              <th></th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @transfers.each do |transfer| %>
+              <tr>
+                <td class="text-main">#<%= transfer.id %></td>
+                <td class="text-muted-custom"><%= transfer.destination_location.name %></td>
+                <td class="text-muted-custom"><%= transfer.shipments.map { |shipment| "#{shipment.origin_location.name} (#{shipment.status_label})" }.to_sentence %></td>
+                <td class="text-end"><%= transfer.total_quantity %></td>
+                <td class="text-muted-custom"><%= transfer.requested_by&.name %></td>
+                <td class="text-center"><%= transfer_status_pill(transfer) %></td>
+                <td class="text-center"><%= action_needed_badge(transfer) %></td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
+                    <% if transfer.editable? %>
+                      <%= link_to edit_internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <% end %>
+                    <% if transfer.deletable? %>
+                      <%= button_to internal_transfer_path(transfer), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",
+                                    form: { data: { turbo_confirm: "Excluir esta transferência?" } } do %><i class="fas fa-trash"></i><% end %>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-3 py-3"><%= will_paginate @transfers, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+    <% else %>
+      <div class="empty-state">
+        <i class="fas fa-exchange-alt fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma transferência cadastrada</h5>
+        <%= link_to new_internal_transfer_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Nova Transferência<% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

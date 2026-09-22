@@ -187,6 +187,9 @@ pt-BR:
       profile: Perfil
       stock_withdrawal: Retirada de estoque
       stock_withdrawal_item: Item da retirada
+      internal_transfer: Transferência interna
+      internal_transfer_shipment: Remessa
+      internal_transfer_item: Item da remessa
     attributes:
       company:
         legal_name: Razão social
@@ -325,6 +328,20 @@ pt-BR:
       stock_withdrawal_item:
         product: Produto
         location: Location
+        quantity: Quantidade
+        status: Status
+      internal_transfer:
+        destination_location: Loja de destino
+        requested_by: Solicitante
+        notes: Observações
+        shipments: Remessas
+      internal_transfer_shipment:
+        internal_transfer: Transferência
+        origin_location: Loja de origem
+        status: Status
+        tracking_code: Código de rastreio
+      internal_transfer_item:
+        product: Produto
         quantity: Quantidade
         status: Status
   will_paginate:

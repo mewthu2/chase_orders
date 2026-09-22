@@ -134,6 +134,21 @@ Rails.application.routes.draw do
     end
   end
   
+  resources :internal_transfers do
+    resources :shipments, controller: 'internal_transfer_shipments', only: [] do
+      member do
+        post :reserve
+        post :ship
+        post :receive
+        post :cancel
+      end
+    end
+    collection do
+      get :search_product
+      get :live_stock
+    end
+  end
+
   resources :available_locations
 
   resources :motors, only: [:index]

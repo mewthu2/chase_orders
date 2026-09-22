@@ -1,0 +1,262 @@
+require 'test_helper'
+require 'webmock/minitest'
+
+class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
+  GRAPHQL_URL = 'https://chasebrasil.myshopify.com/admin/api/2025-01/graphql.json'.freeze
+  LEVELS_URL = %r{\Ahttps://chasebrasil\.myshopify\.com/admin/api/2025-01/inventory_levels\.json}
+
+  def setup
+    ENV['CHASE_ORDERS_TOKEN'] = 'fake-shopify-token'
+    @admin = User.create!(name: 'Admin', email: 'admin_it@example.com', password: 'password123')
+    @admin.profiles << Profile.find(Profile::ADMIN)
+    @lagoa = Location.create!(slug: 'lagoa_seca', name: 'Lagoa Seca', shopify_location_id: '111')
+    @bh = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '222')
+    @a = Product.create!(sku: 'SKU-A', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001', image_url: 'https://cdn.example.com/a.png')
+    @b = Product.create!(sku: 'SKU-B', shopify_product_name: 'Calça', shopify_inventory_item_id: '9002', image_url: 'https://cdn.example.com/b.png')
+    sign_in @admin
+  end
+
+  def manager_profile
+    @manager_profile ||= Profile.create!(name: 'Gerente IT').tap { |p| p.update!(screen_keys: ['internal_transfers']) }
+  end
+
+  def gerente_lagoa
+    user = User.create!(name: 'Gerente Lagoa', email: 'gerente_lagoa_it@example.com', password: 'password123', allowed_locations: ['lagoa_seca'])
+    user.profiles << manager_profile
+    user
+  end
+
+  def build_transfer(items: [[@bh, @a, 2]], destination: @lagoa, requester: @admin)
+    transfer = InternalTransfer.new(destination_location: destination, requested_by: requester)
+    items.group_by { |origin, _, _| origin }.each do |origin, group|
+      shipment = transfer.shipments.build(origin_location: origin)
+      group.each { |_, product, qty| shipment.items.build(product: product, quantity: qty) }
+    end
+    transfer.save!
+    transfer
+  end
+
+  test 'user without the internal_transfers permission is redirected' do
+    profile = Profile.create!(name: 'Sem Transferencia')
+    user = User.create!(name: 'Sem Acesso', email: 'sem_it@example.com', password: 'password123')
+    user.profiles << profile
+    sign_in user
+
+    get internal_transfers_path
+    assert_redirected_to root_path
+  end
+
+  test 'a manager with a single store sees it fixed as "Minha loja é" and cannot choose another' do
+    sign_in gerente_lagoa
+
+    get new_internal_transfer_path
+
+    assert_response :success
+    assert_select 'select[name="internal_transfer[destination_location_id]"]', count: 0
+    assert_includes response.body, 'Minha loja é'
+    assert_includes response.body, 'Lagoa Seca'
+    assert_select "input[name='internal_transfer[destination_location_id]'][value='#{@lagoa.id}']"
+  end
+
+  test 'an admin chooses the destination store from a select' do
+    get new_internal_transfer_path
+
+    assert_select 'select[name="internal_transfer[destination_location_id]"] option', minimum: 2
+  end
+
+  test 'the destination store cannot be picked as an origin' do
+    get new_internal_transfer_path(destination_location_id: @lagoa.id)
+
+    assert_select "input[name='location_ids[]'][value='#{@lagoa.id}']", count: 0
+    assert_select "input[name='location_ids[]'][value='#{@bh.id}']"
+  end
+
+  test 'create groups items from the same origin into a single shipment' do
+    assert_difference 'InternalTransfer.count', 1 do
+      assert_difference 'InternalTransferShipment.count', 1 do
+        post internal_transfers_path, params: { internal_transfer: {
+          destination_location_id: @lagoa.id,
+          items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '2' },
+                   '1' => { product_id: @b.id, location_id: @bh.id, quantity: '1' } }
+        } }
+      end
+    end
+
+    transfer = InternalTransfer.last
+    assert_equal @admin, transfer.requested_by
+    assert_equal 1, transfer.shipments.count
+    assert_equal 2, transfer.shipments.first.items.count
+    assert transfer.shipments.first.aberto?
+    assert_redirected_to internal_transfer_path(transfer)
+  end
+
+  test 'create opens one shipment per distinct origin store' do
+    rj = Location.create!(slug: 'rj', name: 'RJ', shopify_location_id: '333')
+
+    post internal_transfers_path, params: { internal_transfer: {
+      destination_location_id: @lagoa.id,
+      items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '2' },
+               '1' => { product_id: @b.id, location_id: rj.id, quantity: '1' } }
+    } }
+
+    transfer = InternalTransfer.last
+    assert_equal 2, transfer.shipments.count
+    assert_equal [@bh, rj].map(&:id).sort, transfer.shipments.map(&:origin_location_id).sort
+  end
+
+  test 'a manager can only request transfers to her own store' do
+    outra = Location.create!(slug: 'rj', name: 'RJ', shopify_location_id: '333')
+    sign_in gerente_lagoa
+
+    post internal_transfers_path, params: { internal_transfer: {
+      destination_location_id: outra.id,
+      items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '1' } }
+    } }
+
+    assert_response :unprocessable_entity
+    assert_no_difference('InternalTransfer.count') { }
+  end
+
+  test 'create without items re-renders with the error' do
+    assert_no_difference 'InternalTransfer.count' do
+      post internal_transfers_path, params: { internal_transfer: { destination_location_id: @lagoa.id, items: {} } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select '.form-error-box', text: /pelo menos um item/
+  end
+
+  test 'a product not linked to Shopify is refused with its SKU' do
+    unlinked = Product.create!(sku: 'SEM-ID', shopify_product_name: 'Sem vínculo')
+
+    assert_no_difference 'InternalTransfer.count' do
+      post internal_transfers_path, params: { internal_transfer: {
+        destination_location_id: @lagoa.id, items: { '0' => { product_id: unlinked.id, location_id: @bh.id, quantity: '1' } }
+      } }
+    end
+
+    assert_select '.form-error-box', text: /SEM-ID/
+  end
+
+  test 'index lists transfers and highlights the ones needing action from the current store' do
+    rj = Location.create!(slug: 'rj', name: 'RJ', shopify_location_id: '333')
+    sp = Location.create!(slug: 'eldorado_sp', name: 'Eldorado SP', shopify_location_id: '444')
+    visible = build_transfer # destino Lagoa Seca, origem BH
+    visible.shipments.first.update!(status: :enviado) # aguardando a gerente de Lagoa Seca receber
+    build_transfer(items: [[rj, @b, 1]], destination: sp) # outra transferência, sem relação com Lagoa Seca
+
+    sign_in gerente_lagoa
+    get internal_transfers_path
+
+    assert_response :success
+    assert_select 'tbody tr', count: 1
+    assert_select '.action-needed-badge', minimum: 1
+  end
+
+  test 'the index and show pages do not query products or locations line by line' do
+    rj = Location.create!(slug: 'rj', name: 'RJ', shopify_location_id: '333')
+    3.times { build_transfer(items: [[@bh, @a, 1], [rj, @b, 1]], destination: @lagoa) }
+
+    products = 0
+    counter = ->(*, payload) { products += 1 if payload[:sql].match?(/FROM `products`/) }
+    ActiveSupport::Notifications.subscribed(counter, 'sql.active_record') { get internal_transfers_path }
+    assert_operator products, :<=, 1
+
+    transfer = build_transfer(items: [[@bh, @a, 1], [rj, @b, 1]], destination: @lagoa)
+    products = 0
+    ActiveSupport::Notifications.subscribed(counter, 'sql.active_record') { get internal_transfer_path(transfer) }
+    assert_operator products, :<=, 1
+  end
+
+  test 'show renders the timeline with events' do
+    transfer = build_transfer
+    InternalTransferEvent.create!(internal_transfer: transfer, user: @admin, action: 'created', message: 'Transferência criada.')
+
+    get internal_transfer_path(transfer)
+
+    assert_select '.internal-transfer-timeline', text: /Transferência criada/
+  end
+
+  test 'a fully open transfer can be edited and deleted; once a shipment moves, it cannot' do
+    transfer = build_transfer
+
+    get edit_internal_transfer_path(transfer)
+    assert_response :success
+
+    transfer.shipments.first.update!(status: :reservado)
+    get edit_internal_transfer_path(transfer)
+    assert_redirected_to internal_transfer_path(transfer)
+
+    assert_no_difference 'InternalTransfer.count' do
+      delete internal_transfer_path(transfer)
+    end
+  end
+
+  test 'deleting a fully open transfer removes it' do
+    transfer = build_transfer
+
+    assert_difference 'InternalTransfer.count', -1 do
+      delete internal_transfer_path(transfer)
+    end
+    assert_redirected_to internal_transfers_path
+  end
+
+  test 'Correios Log is not offered as a destination or an origin store' do
+    log = Location.create!(slug: 'log+', name: 'Correios Log +', shopify_location_id: '999')
+
+    get new_internal_transfer_path
+    assert_select "input[name='location_ids[]'][value='#{log.id}']", count: 0
+    refute_includes response.body, 'Correios Log'
+
+    sign_in gerente_lagoa
+    get new_internal_transfer_path
+    refute_includes response.body, 'Correios Log'
+  end
+
+  test 'Correios Log cannot be picked as the destination, even by an admin sending the id directly' do
+    log = Location.create!(slug: 'log+', name: 'Correios Log +', shopify_location_id: '999')
+
+    assert_no_difference 'InternalTransfer.count' do
+      post internal_transfers_path, params: { internal_transfer: {
+        destination_location_id: log.id, items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '1' } }
+      } }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test 'an item aimed at Correios Log as origin is silently dropped, even if sent directly' do
+    log = Location.create!(slug: 'log+', name: 'Correios Log +', shopify_location_id: '999')
+
+    post internal_transfers_path, params: { internal_transfer: {
+      destination_location_id: @lagoa.id,
+      items: { '0' => { product_id: @a.id, location_id: log.id, quantity: '1' },
+               '1' => { product_id: @b.id, location_id: @bh.id, quantity: '1' } }
+    } }
+
+    transfer = InternalTransfer.last
+    assert_equal [@bh.id], transfer.shipments.map(&:origin_location_id)
+  end
+
+  test 'search_product only returns products linked to Shopify, with photo' do
+    Product.create!(sku: 'SEM-ID', shopify_product_name: 'Sem vínculo')
+
+    get search_product_internal_transfers_path, params: { query: 'camiseta' }
+    json = JSON.parse(response.body)
+
+    assert_equal ['SKU-A'], json['products'].map { |p| p['sku'] }
+    assert_equal 'https://cdn.example.com/a.png', json['products'].first['image_url']
+  end
+
+  test 'live_stock returns the real Shopify availability for the selected origin stores' do
+    stub_request(:get, LEVELS_URL).to_return do |request|
+      query = Addressable::URI.parse(request.uri).query_values
+      rows = query['inventory_item_ids'].split(',').map { |id| { inventory_item_id: id.to_i, location_id: query['location_ids'].to_i, available: 7 } }
+      { body: { inventory_levels: rows }.to_json, headers: { 'Content-Type' => 'application/json' } }
+    end
+
+    get live_stock_internal_transfers_path, params: { product_ids: [@a.id], location_ids: [@bh.id] }
+    json = JSON.parse(response.body)
+
+    assert_equal 7, json['stock'][@a.id.to_s][@bh.id.to_s]
+  end
+end

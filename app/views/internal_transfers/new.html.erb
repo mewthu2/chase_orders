@@ -1,0 +1,12 @@
+<% content_for :title, "Nova Transferência Interna" %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-exchange-alt me-2"></i>Nova Transferência Interna</h1>
+    </div>
+    <div class="header-actions">
+      <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

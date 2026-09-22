@@ -1,0 +1,279 @@
+<%= form_with model: @transfer, url: (@transfer.persisted? ? internal_transfer_path(@transfer) : internal_transfers_path), local: true, id: 'internalTransferForm' do |form| %>
+  <% if @transfer.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% @transfer.errors.full_messages.uniq.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-store me-2"></i>Minha loja é</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <% if @my_locations.size <= 1 %>
+            <p class="text-main fs-5 mb-0"><strong>Minha loja é:</strong> <%= @my_locations.first&.name || 'nenhuma loja disponível' %></p>
+            <%= hidden_field_tag 'internal_transfer[destination_location_id]', @my_locations.first&.id %>
+          <% else %>
+            <label class="field-label">Minha loja é (destino) <span class="required">*</span></label>
+            <%= select_tag 'internal_transfer[destination_location_id]', options_for_select(@my_locations.map { |l| [l.name, l.id] }, @transfer.destination_location_id),
+                          { id: 'destinationSelect', class: 'field-input', include_blank: 'Selecione...' } %>
+          <% end %>
+        </div>
+        <div class="form-col-12">
+          <label class="field-label">Observações</label>
+          <%= form.text_area :notes, rows: 2, class: 'field-input' %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-map-marker-alt me-2"></i>De quais lojas vai puxar os itens?</h5></div>
+    <div class="form-section-body">
+      <div class="d-flex flex-wrap gap-3">
+        <% @origin_locations.each do |location| %>
+          <label class="text-main d-flex align-items-center gap-2 mb-0">
+            <input type="checkbox" class="location-check" name="location_ids[]" value="<%= location.id %>" <%= 'checked' if @selected_location_ids.include?(location.id) %>>
+            <%= location.name %>
+          </label>
+        <% end %>
+      </div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>A loja de destino não pode ser escolhida como origem.</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
+    <div class="form-section-body">
+      <div class="position-relative mb-3" style="max-width: 460px;">
+        <input type="text" id="productSearchInput" class="field-input" placeholder="Buscar produto por SKU ou nome..." autocomplete="off">
+        <div id="productSearchResults" class="list-group mt-2"></div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="orders-table" id="itemsTable">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <% @origin_locations.each do |location| %>
+                <th class="loc-col text-center" data-location-id="<%= location.id %>" style="display: none;"><%= location.name %></th>
+              <% end %>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
+      <p id="itemsHint" class="text-muted-custom mt-2"><i class="fas fa-info-circle me-1"></i>Marque as lojas de origem acima, busque os produtos e informe a quantidade a puxar de cada uma. Nada é debitado no Shopify até a loja de origem reservar.</p>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@transfer.persisted? ? 'Salvar alterações' : 'Criar transferência'), class: 'btn-submit' %>
+    <%= link_to 'Cancelar', internal_transfers_path, class: 'btn-cancel' %>
+  </div>
+<% end %>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var LOCATIONS = <%= raw json_escape(@origin_locations.map { |l| { id: l.id.to_s, name: l.name, slug: l.slug } }.to_json) %>;
+  var initialRows = <%= raw json_escape(@rows.to_json) %>;
+  var LIVE_URL = '<%= live_stock_internal_transfers_path %>';
+  var counter = 0;
+  var body = document.getElementById('itemsBody');
+  var hint = document.getElementById('itemsHint');
+
+  function checkedLocationIds() {
+    return Array.prototype.slice.call(document.querySelectorAll('.location-check:checked')).map(function (c) { return c.value; });
+  }
+
+  // Mostra só as colunas das lojas de origem marcadas; células das desmarcadas são desabilitadas (não vão no envio).
+  function applyColumns() {
+    var checked = checkedLocationIds();
+    document.querySelectorAll('.loc-col, .loc-cell').forEach(function (el) {
+      var on = checked.indexOf(el.dataset.locationId) !== -1;
+      el.style.display = on ? '' : 'none';
+      el.querySelectorAll('input').forEach(function (input) { input.disabled = !on; });
+    });
+  }
+
+  function renderLive(td) {
+    var live = td.querySelector('.live-stock');
+    var input = td.querySelector('input[type=number]');
+    var state = td.dataset.state;
+    var available = td.dataset.available === undefined ? null : parseInt(td.dataset.available, 10);
+    var over = state === 'ok' && input.value !== '' && parseInt(input.value, 10) > available;
+
+    input.classList.toggle('field-input--error', over);
+    live.classList.toggle('text-danger', over);
+    if (state === 'loading') live.textContent = 'Shopify: consultando…';
+    else if (state === 'ok') live.textContent = over ? 'Acima do disponível (' + available + ')' : 'Shopify: ' + available + ' disponível';
+    else if (state === 'none') live.textContent = 'Shopify: não estocado aqui';
+    else if (state === 'error') live.textContent = 'Shopify: indisponível';
+    else live.textContent = 'Shopify: —';
+  }
+
+  function cell(product, location) {
+    var td = document.createElement('td');
+    td.className = 'loc-cell text-center';
+    td.dataset.locationId = location.id;
+    td.dataset.state = 'idle';
+    var idx = counter++;
+    var prefix = 'internal_transfer[items][' + idx + ']';
+    td.innerHTML =
+      '<input type="hidden" name="' + prefix + '[product_id]" value="' + product.id + '">' +
+      '<input type="hidden" name="' + prefix + '[location_id]" value="' + location.id + '">' +
+      '<input type="number" min="1" step="1" name="' + prefix + '[quantity]" class="field-input" style="max-width: 90px; margin: 0 auto;" placeholder="0">' +
+      '<small class="live-stock text-muted-custom d-block"></small>';
+    td.querySelector('input[type=number]').addEventListener('input', function () { renderLive(td); });
+    renderLive(td);
+    return td;
+  }
+
+  function photoHtml(url) {
+    if (url) return '<img src="' + url + '" alt="" class="rounded border border-secondary" style="width: 44px; height: 44px; object-fit: cover;" loading="lazy">';
+    return '<span class="rounded border border-secondary d-flex align-items-center justify-content-center text-muted-custom" style="width: 44px; height: 44px;"><i class="fas fa-image"></i></span>';
+  }
+
+  function setPhoto(tr, url) {
+    if (url) tr.querySelector('.product-photo').innerHTML = photoHtml(url);
+  }
+
+  function addRow(product, quantities) {
+    if (body.querySelector('tr[data-product-id="' + product.id + '"]')) return;
+    var tr = document.createElement('tr');
+    tr.dataset.productId = product.id;
+    var first = document.createElement('td');
+    first.innerHTML =
+      '<div class="d-flex align-items-center gap-2">' +
+        '<div class="product-photo">' + photoHtml(product.image_url) + '</div>' +
+        '<div><span class="text-main product-sku"></span><small class="text-muted-custom d-block product-name"></small></div>' +
+      '</div>';
+    first.querySelector('.product-sku').textContent = product.sku;
+    first.querySelector('.product-name').textContent = product.name || '';
+    tr.appendChild(first);
+    LOCATIONS.forEach(function (location) {
+      var td = cell(product, location);
+      var q = quantities && quantities[location.id];
+      if (q) td.querySelector('input[type=number]').value = q;
+      tr.appendChild(td);
+    });
+    var remove = document.createElement('td');
+    remove.innerHTML = '<button type="button" class="action-btn action-btn--danger" title="Remover"><i class="fas fa-trash"></i></button>';
+    remove.querySelector('button').addEventListener('click', function () { tr.remove(); toggleHint(); });
+    tr.appendChild(remove);
+    body.appendChild(tr);
+    applyColumns();
+    toggleHint();
+    return tr;
+  }
+
+  function toggleHint() { hint.style.display = body.children.length ? 'none' : ''; }
+
+  // Estoque REAL do Shopify (e foto) das linhas informadas, nas lojas de origem informadas.
+  function loadLive(rows, locationIds) {
+    if (!rows.length || !locationIds.length) return;
+    var params = new URLSearchParams();
+    rows.forEach(function (tr) { params.append('product_ids[]', tr.dataset.productId); });
+    locationIds.forEach(function (id) { params.append('location_ids[]', id); });
+
+    function eachCell(fn) {
+      rows.forEach(function (tr) {
+        locationIds.forEach(function (lid) {
+          var td = tr.querySelector('.loc-cell[data-location-id="' + lid + '"]');
+          if (td) fn(tr, td, lid);
+        });
+      });
+    }
+
+    eachCell(function (tr, td) { td.dataset.state = 'loading'; renderLive(td); });
+
+    fetch(LIVE_URL + '?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        rows.forEach(function (tr) { setPhoto(tr, data.images && data.images[tr.dataset.productId]); });
+        eachCell(function (tr, td, lid) {
+          var input = td.querySelector('input[type=number]');
+          var pid = tr.dataset.productId;
+          var error = data.errors && data.errors[lid];
+          var value = data.stock && data.stock[pid] ? data.stock[pid][lid] : null;
+          delete td.dataset.available;
+          input.removeAttribute('max');
+          if (error) {
+            td.dataset.state = 'error';
+            td.querySelector('.live-stock').title = error;
+          } else if (value === null || value === undefined) {
+            td.dataset.state = 'none';
+          } else {
+            td.dataset.state = 'ok';
+            td.dataset.available = value;
+            input.max = value;
+          }
+          renderLive(td);
+        });
+      })
+      .catch(function () {
+        eachCell(function (tr, td) { td.dataset.state = 'error'; renderLive(td); });
+      });
+  }
+
+  function allRows() { return Array.prototype.slice.call(body.querySelectorAll('tr[data-product-id]')); }
+
+  document.querySelectorAll('.location-check').forEach(function (check) {
+    check.addEventListener('change', function () {
+      if (!check.checked) {
+        document.querySelectorAll('.loc-cell[data-location-id="' + check.value + '"] input[type=number]').forEach(function (i) { i.value = ''; });
+      }
+      applyColumns();
+      if (check.checked) loadLive(allRows(), [check.value]);
+    });
+  });
+
+  // Busca de produtos (só os vinculados ao Shopify)
+  var searchInput = document.getElementById('productSearchInput');
+  var results = document.getElementById('productSearchResults');
+  var timer;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(timer);
+    var q = searchInput.value.trim();
+    if (!q) { results.innerHTML = ''; return; }
+    timer = setTimeout(function () {
+      fetch('<%= search_product_internal_transfers_path %>?query=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          results.innerHTML = '';
+          (data.products || []).forEach(function (product) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action d-flex align-items-center gap-2';
+            item.innerHTML = '<span class="result-photo"></span><span class="result-text"></span>';
+            item.querySelector('.result-photo').innerHTML = photoHtml(product.image_url);
+            item.querySelector('.result-text').textContent = product.sku + ' - ' + (product.name || '');
+            item.addEventListener('click', function () {
+              var tr = addRow(product);
+              if (tr) loadLive([tr], checkedLocationIds());
+              results.innerHTML = '';
+              searchInput.value = '';
+              searchInput.focus();
+            });
+            results.appendChild(item);
+          });
+          if (!(data.products || []).length) {
+            var empty = document.createElement('div');
+            empty.className = 'list-group-item';
+            empty.textContent = 'Nenhum produto vinculado ao Shopify encontrado.';
+            results.appendChild(empty);
+          }
+        });
+    }, 300);
+  });
+
+  initialRows.forEach(function (row) { addRow(row, row.quantities); });
+  applyColumns();
+  toggleHint();
+  loadLive(allRows(), checkedLocationIds());
+});
+</script>
+<% end %>

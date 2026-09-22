@@ -282,7 +282,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') %>
+        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
               <div class="nav-group-title">
@@ -303,6 +303,12 @@
                   <%= link_to stock_withdrawals_path, class: "dropdown-link #{'active' if controller_name == 'stock_withdrawals'}" do %>
                     <i class="fas fa-dolly-flatbed"></i>
                     <span>Retirada de Estoque</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('internal_transfers') %>
+                  <%= link_to internal_transfers_path, class: "dropdown-link #{'active' if controller_name == 'internal_transfers'}" do %>
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Transferência Interna</span>
                   <% end %>
                 <% end %>
               </div>

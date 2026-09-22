@@ -16,7 +16,8 @@ class Screen
     fiscal_notes:           'Notas Fiscais',
     planner_orders:         'Planejador',
     stock_corrections:      'Controle de Estoque',
-    stock_withdrawals:      'Retirada de Estoque'
+    stock_withdrawals:      'Retirada de Estoque',
+    internal_transfers:     'Transferência Interna'
   }.freeze
 
   # Agrupamento espelhando o menu lateral — usado na tela de Perfis pra
@@ -27,7 +28,7 @@ class Screen
     'Correios B2C' => %i[dashboard_correios],
     'Correios B2B' => %i[dashboard_correios_b2b],
     'Planejador'   => %i[planner_orders],
-    'Produtos'     => %i[stock_corrections stock_withdrawals],
+    'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers],
     'Outros'       => %i[discounts logs marketing_campaigns marketing_tasks users_management]
   }.freeze
 
