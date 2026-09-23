@@ -385,20 +385,20 @@ module Shopify::Products
 
   def list_all_products(function)
     response = client_shopify_rest.get(path: 'products', query: { limit: 150 })
-    process_inventory_items(response)
 
     case function
     when 'create_update_shopify_products'
       loop do
+        update_or_create_by_product_data(response.body['products'])
+        process_inventory_items(response)
+
         next_page_info = response.next_page_info
         break unless next_page_info
 
         response = client_shopify_rest.get(path: 'products', query: { limit: 150, page_info: next_page_info })
-
-        update_or_create_by_product_data(response.body['products'])
-
-        process_inventory_items(response)
       end
+    else
+      process_inventory_items(response)
     end
   end
 
