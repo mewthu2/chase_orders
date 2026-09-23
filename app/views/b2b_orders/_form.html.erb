@@ -113,6 +113,12 @@
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
     <div class="form-section-body">
+      <% if transfers %>
+      <div class="form-hint-box">
+        <i class="fas fa-info-circle"></i>
+        <div>O estoque disponível para o abastecimento das lojas sai do Correios B2B.</div>
+      </div>
+      <% end %>
       <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
         <button type="button" class="btn-export" data-bs-toggle="modal" data-bs-target="#productPickerModal">
           <i class="fas fa-plus me-1"></i>Adicionar Produtos

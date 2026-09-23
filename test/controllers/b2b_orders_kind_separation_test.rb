@@ -53,7 +53,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
 
     assert_select 'tbody tr', count: 1
     assert_select 'tbody', text: /CD Separado/
-    assert_select 'h1', /Transferências/
+    assert_select 'h1', /Abastecimento/
     assert_select '.status-tabs', count: 0
   end
 
@@ -61,7 +61,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     get b2b_orders_path
 
     assert_select "a[href='#{b2b_orders_path}']", text: /Pedidos de Atacado/
-    assert_select "a[href='#{stock_transfers_path}']", text: /Transferências de Estoque/
+    assert_select "a[href='#{stock_transfers_path}']", text: /Abastecimento Lojas/
   end
 
   test 'creating through stock_transfers forces the stock_transfer kind and returns to its list' do

@@ -1,9 +1,9 @@
 <% transfers = order_kind == 'stock_transfer' %>
-<% content_for :title, transfers ? "Editar Transferência de Estoque" : "Editar Pedido de Atacado" %>
+<% content_for :title, transfers ? "Editar Abastecimento Lojas" : "Editar Pedido de Atacado" %>
 <div class="users-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Editar Transferência de Estoque' : 'Editar Pedido de Atacado' %></h1>
+      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Editar Abastecimento Lojas' : 'Editar Pedido de Atacado' %></h1>
       <p class="page-subtitle">#<%= @b2b_order.id %></p>
     </div>
     <div class="header-actions">

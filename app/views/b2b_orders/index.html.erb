@@ -1,20 +1,29 @@
 <% transfers = order_kind == 'stock_transfer' %>
-<% content_for :title, transfers ? "Transferências de Estoque" : "Pedidos de Atacado" %>
+<% content_for :title, transfers ? "Abastecimento Lojas" : "Pedidos de Atacado" %>
 
 <div class="users-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Transferências de Estoque' : 'Pedidos de Atacado' %></h1>
-      <p class="page-subtitle"><%= transfers ? 'Transferências de estoque para locais de destino' : 'Pedidos de venda no atacado' %></p>
+      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Abastecimento Lojas' : 'Pedidos de Atacado' %></h1>
+      <p class="page-subtitle"><%= transfers ? 'Transferências de estoque para abastecer as lojas' : 'Pedidos de venda no atacado' %></p>
     </div>
     <div class="header-actions">
       <span class="total-badge"><i class="fas fa-list me-1"></i><%= @b2b_orders.size %> pedido(s)</span>
-      <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-2"></i><%= transfers ? 'Nova Transferência' : 'Novo Pedido' %><% end %>
+      <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-2"></i><%= transfers ? 'Novo Abastecimento' : 'Novo Pedido' %><% end %>
     </div>
   </div>
 
+  <% if transfers %>
+  <div class="form-hint-box mx-3 mt-3">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <strong>Atenção:</strong> o estoque utilizado no abastecimento das lojas sai do Correios B2B.
+    </div>
+  </div>
+  <% end %>
+
   <div class="table-card">
-    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i><%= transfers ? 'Lista de Transferências' : 'Lista de Pedidos' %></h5></div>
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i><%= transfers ? 'Lista de Abastecimentos' : 'Lista de Pedidos' %></h5></div>
 
     <% unless transfers %>
     <%= form_with url: orders_path_for, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
@@ -119,8 +128,8 @@
     <% else %>
       <div class="empty-state">
         <i class="fas fa-handshake fa-3x mb-3 d-block"></i>
-        <h5><%= transfers ? 'Nenhuma transferência cadastrada' : 'Nenhum pedido cadastrado' %></h5>
-        <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-1"></i><%= transfers ? 'Nova Transferência' : 'Novo Pedido' %><% end %>
+        <h5><%= transfers ? 'Nenhum abastecimento cadastrado' : 'Nenhum pedido cadastrado' %></h5>
+        <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-1"></i><%= transfers ? 'Novo Abastecimento' : 'Novo Pedido' %><% end %>
       </div>
     <% end %>
   </div>

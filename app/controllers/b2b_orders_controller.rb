@@ -300,7 +300,7 @@ class B2bOrdersController < ApplicationController
   def send_to_tiny(order, saved: false)
     TransmitB2bOrderJob.perform_now(order.id)
     order.reload
-    label = order.stock_transfer? ? 'Transferência' : 'Pedido'
+    label = order.stock_transfer? ? 'Abastecimento' : 'Pedido'
 
     if order.tiny_reference_id.present?
       number = order.tiny_reference_number.presence || order.tiny_reference_id
@@ -311,7 +311,7 @@ class B2bOrdersController < ApplicationController
   rescue StandardError => e
     Rails.logger.error "B2bOrdersController#send_to_tiny (#{order.id}): #{e.class} #{e.message}"
     order.reload.update_columns(status: B2bOrder.statuses[:dados_incompletos], error_message: e.message.to_s.first(255)) unless order.tiny_reference_id.present?
-    [:alert, "#{order.stock_transfer? ? 'Transferência' : 'Pedido'} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
+    [:alert, "#{order.stock_transfer? ? 'Abastecimento' : 'Pedido'} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
   end
 
   def undeletable_message(order)

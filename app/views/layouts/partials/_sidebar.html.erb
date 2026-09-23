@@ -58,10 +58,6 @@
                     <i class="fas fa-file-invoice-dollar"></i>
                     <span>Pedidos de Atacado</span>
                   <% end %>
-                  <%= link_to stock_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'stock_transfer'}" do %>
-                    <i class="fas fa-dolly"></i>
-                    <span>Transferências de Estoque</span>
-                  <% end %>
                 <% end %>
                 <% if current_user&.can_access_screen?('transfer_locations') %>
                   <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
@@ -282,7 +278,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') %>
+        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') || current_user&.can_access_screen?('b2b_orders') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
               <div class="nav-group-title">
@@ -309,6 +305,12 @@
                   <%= link_to internal_transfers_path, class: "dropdown-link #{'active' if controller_name == 'internal_transfers'}" do %>
                     <i class="fas fa-exchange-alt"></i>
                     <span>Transferência Interna</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('b2b_orders') %>
+                  <%= link_to stock_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'stock_transfer'}" do %>
+                    <i class="fas fa-dolly"></i>
+                    <span>Abastecimento Lojas</span>
                   <% end %>
                 <% end %>
               </div>
