@@ -132,6 +132,13 @@
         </label>
       </div>
       <span class="text-muted-custom d-block mt-1">Controle se o usuário pode fazer login no sistema</span>
+      <% if current_user.admin? %>
+        <div class="form-check form-switch mt-3">
+          <%= form.check_box :ticket_notifications_enabled, class: 'form-check-input', role: 'switch' %>
+          <label class="form-check-label text-main fw-bold">Receber notificações de chamados por e-mail</label>
+        </div>
+        <span class="text-muted-custom d-block mt-1">Desligado: a pessoa continua vendo os chamados no sistema, mas não recebe e-mails</span>
+      <% end %>
     </div>
   </div>
 

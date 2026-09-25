@@ -1,0 +1,10 @@
+<%# locals: (ticket:) %>
+Chamado #<%= ticket.id %>: <%= ticket.title %>
+Setor: <%= ticket.sector&.name || '—' %>
+Responsabilidade: <%= ticket.ticket_responsability.name %>
+Status: <%= ticket.status_label %>
+Prazo de resposta: <%= ticket_due_text(ticket) %>
+Aguardando: <%= ticket.waiting_on_label || '—' %>
+Aberto por: <%= ticket.requester.name %> em <%= ticket_datetime(ticket.created_at) %>
+Responsáveis notificados: <%= ticket.responsibles.map(&:name).to_sentence.presence || '—' %>
+Acompanhantes: <%= ticket.followers.map(&:name).to_sentence.presence || '—' %>

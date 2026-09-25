@@ -2,6 +2,8 @@ class Profile < ApplicationRecord
   has_many :user_profiles, dependent: :destroy
   has_many :users, through: :user_profiles
   has_many :screen_permissions, dependent: :destroy
+  has_many :profile_ticket_sectors, dependent: :destroy
+  has_many :ticket_sectors, through: :profile_ticket_sectors
 
   validates :name, presence: true
 

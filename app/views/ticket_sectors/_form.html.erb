@@ -1,0 +1,39 @@
+<%= form_with model: @sector, local: true do |form| %>
+  <% if @sector.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @sector.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-building me-2"></i>Dados do Setor</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-12">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name, class: "field-input", required: true, placeholder: "Ex.: Lojas, Financeiro, TI" %>
+        </div>
+        <div class="form-col-12">
+          <label class="field-label">Descrição</label>
+          <%= form.text_area :description, class: "field-input", rows: 3 %>
+        </div>
+      </div>
+      <div class="form-check form-switch mt-3">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+        <label class="form-check-label text-main fw-bold">Ativo (suas responsabilidades aparecem ao abrir chamado)</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@sector.new_record? ? 'Criar Setor' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", ticket_sectors_path, class: "btn-cancel" %>
+  </div>
+<% end %>

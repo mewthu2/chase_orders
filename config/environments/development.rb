@@ -43,7 +43,9 @@ Rails.application.configure do
   # Show full error reports.
   config.consider_all_requests_local = true
   
-  config.active_job.queue_adapter = :sidekiq
+  # O REDIS_URL do .env é o mesmo da produção: com :sidekiq, o que o dev enfileira roda no
+  # worker do Heroku com o código deployado. Em dev os jobs rodam aqui mesmo, em memória.
+  config.active_job.queue_adapter = :async
   # Enable server timing
   config.server_timing = true
 

@@ -1,0 +1,17 @@
+CHASE · Central de Chamados
+<%= @hero_emoji %> <%= @hero_title %> — Chamado #<%= @ticket.id %> · <%= @ticket.ticket_responsability.name %>
+==========================================
+
+<%= yield %>
+
+------------------------------------------
+Quem está neste chamado: <%= @ticket.participants.map { |p| "#{p.user.name} (#{p.role_label})" }.join(', ') %>
+
+💡 Dica: <%= @tip %>
+
+Ver chamado: <%= ticket_url(@ticket) %>
+Meus chamados: <%= root_url %>
+Abrir novo chamado: <%= new_ticket_url %>
+
+Feito com 💛 pelo time Chase
+Você recebeu este e-mail porque é <%= @role_label %> no chamado #<%= @ticket.id %>. Para pausar esses avisos, peça a um administrador.

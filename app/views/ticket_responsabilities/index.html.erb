@@ -1,0 +1,61 @@
+<% content_for :title, "Responsabilidades" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-sitemap me-2"></i>Responsabilidades</h1>
+      <p class="page-subtitle">Áreas que recebem chamados, com seus responsáveis e prazo de resposta</p>
+    </div>
+    <div class="header-actions">
+      <%= link_to new_ticket_responsability_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Responsabilidade<% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <% if @responsabilities.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Setor</th>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th class="text-center">Prazo de resposta</th>
+              <th>Responsáveis</th>
+              <th class="text-center">Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @responsabilities.each do |responsability| %>
+              <tr>
+                <td class="text-muted-custom"><%= responsability.ticket_sector&.name || '—' %></td>
+                <td class="text-main"><%= responsability.name %></td>
+                <td class="text-muted-custom"><%= truncate(responsability.description, length: 90) %></td>
+                <td class="text-center"><%= responsability.response_time_label %></td>
+                <td class="text-muted-custom"><%= responsability.users.map(&:name).sort.to_sentence %></td>
+                <td class="text-center">
+                  <span class="status-pill <%= responsability.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
+                    <%= responsability.active? ? 'Ativa' : 'Inativa' %>
+                  </span>
+                </td>
+                <td class="text-end">
+                  <div class="table-actions">
+                    <%= link_to edit_ticket_responsability_path(responsability), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <%= button_to ticket_responsability_path(responsability), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",
+                                  form: { onsubmit: "return confirm('Excluir esta responsabilidade?')" } do %><i class="fas fa-trash"></i><% end %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="ticket-empty">
+        <i class="fas fa-sitemap"></i>
+        <p>Nenhuma responsabilidade cadastrada ainda.</p>
+      </div>
+    <% end %>
+  </div>
+</div>

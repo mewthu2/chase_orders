@@ -1,0 +1,19 @@
+<%# locals: (ticket:) %>
+<%# Linha do tempo do status: Aberto → Em andamento → Resolvido → Fechado %>
+<% steps = [['Aberto', '📬'], ['Em andamento', '🛠️'], ['Resolvido', '✅'], ['Fechado', '🔒']] %>
+<% current = { 'awaiting_responsible' => 0, 'awaiting_requester' => 0, 'in_progress' => 1, 'resolved' => 2, 'closed' => 3 }.fetch(ticket.status, 0) %>
+<% color = ticket.overdue? ? TicketsHelper::OVERDUE_COLOR : ticket_status_color(ticket.status) %>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;">
+  <tr>
+    <% steps.each_with_index do |(label, emoji), index| %>
+      <% state = index < current ? 'done' : (index == current ? 'current' : 'todo') %>
+      <td align="center" width="25%" class="progress-step progress-step--<%= state %>" style="padding:0 2px;vertical-align:top;">
+        <div style="height:4px;border-radius:4px;margin:0 0 10px;background:<%= state == 'todo' ? '#e5e7eb' : (state == 'done' ? '#3fb950' : color) %>;"></div>
+        <div class="dot" style="display:inline-block;width:34px;height:34px;line-height:34px;border-radius:50%;font-size:16px;
+             background:<%= state == 'todo' ? '#f3f4f6' : (state == 'done' ? '#dcfce7' : color) %>;
+             <%= 'box-shadow:0 0 0 4px rgba(0,0,0,.06);' if state == 'current' %>"><%= state == 'done' ? '✔️' : emoji %></div>
+        <div style="margin-top:6px;font-size:12px;font-weight:<%= state == 'current' ? 700 : 500 %>;color:<%= state == 'todo' ? '#9ca3af' : '#111827' %>;"><%= label %></div>
+      </td>
+    <% end %>
+  </tr>
+</table>

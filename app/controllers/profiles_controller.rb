@@ -46,6 +46,8 @@ class ProfilesController < ApplicationController
   end
 
   def profile_params
-    params.require(:profile).permit(:name, :description, :active, screen_keys: [])
+    permitted = params.require(:profile).permit(:name, :description, :active, screen_keys: [], ticket_sector_ids: [])
+    # Admin sempre abre chamado para todos os setores (User#visible_ticket_sector_ids).
+    @profile&.id == Profile::ADMIN ? permitted.except(:ticket_sector_ids) : permitted
   end
 end

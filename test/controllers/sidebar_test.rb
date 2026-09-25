@@ -51,4 +51,42 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{stock_withdrawals_path}']"
     assert_select "a[href='#{stock_corrections_path}']", count: 0
   end
+
+  test 'the Chamados group gives every user their tickets and a way to open one' do
+    user = User.create!(name: 'Comum Menu', email: 'comum_menu@example.com', password: 'password123')
+    sign_in user
+    get root_path
+
+    assert_select '.nav-group-title .nav-text', text: 'Chamados'
+    assert_select '#chamadosDropdown' do
+      assert_select "a[href='#{root_path}']", text: /Meus chamados/
+      assert_select "a[href='#{new_ticket_path}']", text: /Abrir chamado/
+      assert_select "a[href='#{root_path(scope: 'all', status: 'all')}']", count: 0
+      assert_select "a[href='#{ticket_responsabilities_path}']", count: 0
+    end
+  end
+
+  test 'admins also get all tickets and the responsabilities screen under Chamados' do
+    sign_in @admin
+    get root_path
+
+    assert_select '#chamadosDropdown' do
+      assert_select "a[href='#{root_path(scope: 'all', status: 'all')}']", text: /Todos os chamados/
+      assert_select "a[href='#{ticket_responsabilities_path}']", text: /Responsabilidades/
+    end
+    assert_select '#usuariosDropdown a', text: /Responsabilidades/, count: 0
+  end
+
+  test 'Chamados menu shows sectors to admins and the sector list to supervisors' do
+    sign_in @admin
+    get root_path
+    assert_select "#chamadosDropdown a[href='#{ticket_sectors_path}']", text: /Setores/
+
+    supervisor = User.create!(name: 'Supervisor Menu', email: 'supervisor_menu@example.com', password: 'password123')
+    supervisor.profiles << Profile.create!(name: 'Supervisores', ticket_sectors: [TicketSector.create!(name: 'Lojas Menu')])
+    sign_in supervisor
+    get root_path
+    assert_select "#chamadosDropdown a[href='#{root_path(scope: 'sectors', status: 'all')}']", text: /Chamados dos meus setores/
+    assert_select "#chamadosDropdown a[href='#{ticket_sectors_path}']", count: 0
+  end
 end

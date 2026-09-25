@@ -258,6 +258,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :ticket_sectors, except: [:show]
+  resources :ticket_responsabilities, except: [:show]
+  resources :tickets, only: [:new, :create, :show, :destroy] do
+    resources :ticket_messages, only: [:create], path: 'messages'
+    resources :ticket_participants, only: [:create], path: 'participants'
+  end
+
   resources :users do
     member do
       patch :toggle_admin

@@ -15,6 +15,48 @@
         </div>
 
         <div class="nav-item nav-group-collapsible">
+          <div class="nav-group-header-collapsible" onclick="toggleChamados()">
+            <div class="nav-group-title">
+              <i class="fas fa-ticket-alt"></i>
+              <span class="nav-text">Chamados</span>
+            </div>
+            <i class="fas fa-chevron-right collapse-icon" id="chamadosIcon"></i>
+          </div>
+          <div class="nav-group-dropdown" id="chamadosDropdown">
+            <div class="dropdown-content">
+              <%= link_to root_path, class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope].blank?}" do %>
+                <i class="fas fa-inbox"></i>
+                <span>Meus chamados</span>
+              <% end %>
+              <%= link_to new_ticket_path, class: "dropdown-link #{'active' if controller_name == 'tickets' && action_name.in?(%w[new create])}" do %>
+                <i class="fas fa-plus-circle"></i>
+                <span>Abrir chamado</span>
+              <% end %>
+              <% if !current_user&.admin? && current_user&.visible_ticket_sector_ids&.any? %>
+                <%= link_to root_path(scope: 'sectors', status: 'all'), class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope] == 'sectors'}" do %>
+                  <i class="fas fa-building"></i>
+                  <span>Chamados dos meus setores</span>
+                <% end %>
+              <% end %>
+              <% if current_user&.admin? %>
+                <%= link_to root_path(scope: 'all', status: 'all'), class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope] == 'all'}" do %>
+                  <i class="fas fa-list-ul"></i>
+                  <span>Todos os chamados</span>
+                <% end %>
+                <%= link_to ticket_sectors_path, class: "dropdown-link #{'active' if controller_name == 'ticket_sectors'}" do %>
+                  <i class="fas fa-building"></i>
+                  <span>Setores</span>
+                <% end %>
+                <%= link_to ticket_responsabilities_path, class: "dropdown-link #{'active' if controller_name == 'ticket_responsabilities'}" do %>
+                  <i class="fas fa-sitemap"></i>
+                  <span>Responsabilidades</span>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <div class="nav-item nav-group-collapsible">
           <div class="nav-group-header-collapsible" onclick="toggleUsuarios()">
             <div class="nav-group-title">
               <i class="fas fa-users"></i>
@@ -389,6 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
       { id: "correiosB2bDropdown",   header: '[onclick="toggleCorreiosB2b()"]'    },
       { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]'       },
+      { id: "chamadosDropdown",      header: '[onclick="toggleChamados()"]'       },
       { id: "pedidosB2bDropdown",    header: '[onclick="togglePedidosB2b()"]'     },
       { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]'  },
       { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]'       },
@@ -443,6 +486,10 @@ function toggleCorreios() {
 
 function toggleCorreiosB2b() {
   toggleDropdown("correiosB2bDropdown", "correiosB2bIcon", '[onclick="toggleCorreiosB2b()"]')
+}
+
+function toggleChamados() {
+  toggleDropdown("chamadosDropdown", "chamadosIcon", '[onclick="toggleChamados()"]')
 }
 
 function toggleUsuarios() {

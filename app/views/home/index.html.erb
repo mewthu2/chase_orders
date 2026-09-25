@@ -1,3 +1,108 @@
-<div class="container-fluid py-4">
-  <% title 'Dashboard' %>
+<% title 'Chamados' %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-ticket-alt me-2"></i><%= @scopes[@scope] %></h1>
+      <p class="page-subtitle">
+        <%= { 'mine' => 'Chamados que você abriu, pelos quais é responsável ou que acompanha',
+              'sectors' => 'Todos os chamados dos setores liberados para o seu perfil',
+              'all' => 'Todos os chamados de todos os setores' }[@scope] %>
+      </p>
+    </div>
+    <div class="header-actions">
+      <%= link_to new_ticket_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Abrir chamado<% end %>
+    </div>
+  </div>
+
+  <% cards = [
+       [:waiting_me, 'Aguardando você', 'fa-bell', '#e3b341', 'waiting_me'],
+       [:waiting_others, 'Aguardando outros', 'fa-hourglass-half', '#58a6ff', 'waiting_others'],
+       [:overdue, 'Vencidos', 'fa-exclamation-triangle', '#f85149', 'overdue'],
+       [:resolved_week, 'Resolvidos (7 dias)', 'fa-check-circle', '#3fb950', 'resolved_week']
+     ] %>
+  <div class="row g-3 mb-4">
+    <% cards.each do |key, label, icon, color, filter| %>
+      <div class="col-6 col-md-3">
+        <%= link_to root_path(request.query_parameters.merge('status' => filter).except('page')), class: "ticket-stat", data: { counter: key } do %>
+          <div class="stat-card" style="border-left: 3px solid <%= color %>;">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="ticket-stat__label"><%= label %></span>
+              <i class="fas <%= icon %>" style="color: <%= color %>;"></i>
+            </div>
+            <div class="stat-value" style="color: <%= color %>;"><%= @counters[key] %></div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="table-card">
+    <%= form_with url: root_path, method: :get, local: true, class: "ticket-filters d-flex gap-2 flex-wrap px-3 pb-3" do %>
+      <%= select_tag :status, options_for_select([['Abertos', 'open'], ['Aguardando você', 'waiting_me'], ['Aguardando outros', 'waiting_others'], ['Vencidos', 'overdue'], ['Resolvidos (7 dias)', 'resolved_week']] +
+                                                   Ticket::STATUS_LABELS.map { |key, label| [label, key] } + [['Todos', 'all']], @status_filter),
+                     class: 'field-input', onchange: 'this.form.submit()' %>
+      <%= select_tag :ticket_responsability_id, options_from_collection_for_select(@responsabilities, :id, :name, params[:ticket_responsability_id]),
+                     include_blank: 'Todas as responsabilidades', class: 'field-input', onchange: 'this.form.submit()' %>
+      <%= select_tag :role, options_for_select(TicketParticipant::ROLE_LABELS.map { |key, label| ["Sou #{label.downcase}", key] }, params[:role]),
+                     include_blank: 'Qualquer papel', class: 'field-input', onchange: 'this.form.submit()' %>
+      <% if @sectors.any? %>
+        <%= select_tag :ticket_sector_id, options_from_collection_for_select(@sectors, :id, :name, params[:ticket_sector_id]),
+                       include_blank: 'Todos os setores', class: 'field-input', onchange: 'this.form.submit()' %>
+      <% end %>
+      <% if @scopes.size > 1 %>
+        <%= select_tag :scope, options_for_select(@scopes.invert.to_a, @scope), class: 'field-input', onchange: 'this.form.submit()' %>
+      <% end %>
+    <% end %>
+
+    <% if @tickets.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Título</th>
+              <th>Setor</th>
+              <th>Responsabilidade</th>
+              <th>Solicitante</th>
+              <th class="text-center">Status</th>
+              <th>Prazo</th>
+              <th>Última atividade</th>
+              <% if current_user.admin? %><th class="text-end">Ações</th><% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @tickets.each do |ticket| %>
+              <tr class="<%= 'ticket-row--overdue' if ticket.overdue? %> <%= 'ticket-row--soon' if ticket.due_soon? %>">
+                <td class="text-main">#<%= ticket.id %></td>
+                <td>
+                  <%= link_to ticket.title, ticket_path(ticket), class: "text-main fw-semibold" %>
+                  <% if @waiting_on_me_ids.include?(ticket.id) %><span class="ticket-your-turn">sua vez</span><% end %>
+                </td>
+                <td class="text-muted-custom"><%= ticket.sector&.name || '—' %></td>
+                <td class="text-muted-custom"><%= ticket.ticket_responsability.name %></td>
+                <td class="text-muted-custom"><%= ticket.requester.name %></td>
+                <td class="text-center"><%= ticket_status_badge(ticket) %></td>
+                <td class="<%= ticket_due_class(ticket) %>"><%= ticket.open? ? ticket_due_text(ticket) : '—' %></td>
+                <td class="text-muted-custom"><%= ticket_datetime(ticket.last_activity_at || ticket.created_at) %></td>
+                <% if current_user.admin? %>
+                  <td class="text-end">
+                    <%= button_to ticket_path(ticket), method: :delete, class: "action-btn action-btn--danger", title: "Excluir chamado",
+                                  form: { onsubmit: "return confirm('Excluir o chamado ##{ticket.id}? Mensagens e anexos também serão apagados.')" } do %><i class="fas fa-trash"></i><% end %>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-3 py-3"><%= will_paginate @tickets, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+    <% else %>
+      <div class="ticket-empty">
+        <i class="fas fa-inbox"></i>
+        <p>Nenhum chamado por aqui.</p>
+        <%= link_to 'Abrir um chamado', new_ticket_path, class: "btn-export" %>
+      </div>
+    <% end %>
+  </div>
 </div>

@@ -1,0 +1,124 @@
+<% content_for :title, "Abrir Chamado" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-ticket-alt me-2"></i>Abrir Chamado</h1>
+      <p class="page-subtitle">Os responsáveis da área escolhida recebem um e-mail na hora</p>
+    </div>
+  </div>
+
+  <% if @responsabilities.empty? %>
+    <div class="table-card">
+      <div class="ticket-empty">
+        <i class="fas fa-lock"></i>
+        <% only_me = @sector_responsabilities.select { |r| r.users.select(&:active?) == [current_user] } %>
+        <% if only_me.any? %>
+          <p>
+            <%= only_me.map(&:name).to_sentence %> só
+            <%= only_me.one? ? 'tem' : 'têm' %> você como responsável, então não há quem atender o chamado.
+            <%= current_user.admin? ? 'Adicione outra pessoa' : 'Peça a um administrador para adicionar outra pessoa' %> em Chamados → Responsabilidades.
+          </p>
+        <% elsif current_user.admin? || current_user.visible_ticket_sector_ids.any? %>
+          <p>Nenhuma responsabilidade ativa com responsável cadastrada<%= ' nos seus setores' unless current_user.admin? %>. Cadastre em Chamados → Responsabilidades.</p>
+        <% else %>
+          <p>Seu perfil não tem nenhum setor liberado para abrir chamados. Peça a um administrador para liberar em Perfis e Permissões.</p>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+  <%= form_with model: @ticket, local: true, multipart: true do |form| %>
+    <% if @ticket.errors.any? %>
+      <div class="form-error-box">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <ul class="mb-0 mt-1">
+          <% @ticket.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5 class="form-section-title"><i class="fas fa-sitemap me-2"></i>Para quem é o chamado?</h5>
+      </div>
+      <div class="form-section-body">
+        <div class="form-grid">
+          <div class="form-col-6">
+            <label class="field-label">Responsabilidade <span class="required">*</span></label>
+            <%= form.select :ticket_responsability_id,
+                  @responsabilities.group_by { |r| r.ticket_sector.name }.sort.to_h.transform_values { |list|
+                    list.map { |r| [r.name, r.id, { data: { description: r.description.to_s, deadline: r.response_time_label, users: r.users.select(&:active?).map(&:name).sort.to_sentence } }] }
+                  },
+                  { include_blank: 'Selecione...' }, class: "field-input", required: true, id: "ticketResponsability" %>
+          </div>
+          <div class="form-col-6">
+            <div class="ticket-resp-info" id="ticketRespInfo" hidden>
+              <div><i class="fas fa-clock me-1"></i>Prazo de resposta: <strong data-field="deadline"></strong></div>
+              <div><i class="fas fa-user-check me-1"></i>Responsáveis: <strong data-field="users"></strong></div>
+              <div class="text-muted-custom mt-1" data-field="description"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5 class="form-section-title"><i class="fas fa-pen me-2"></i>Detalhes</h5>
+      </div>
+      <div class="form-section-body">
+        <div class="form-grid">
+          <div class="form-col-12">
+            <label class="field-label">Título <span class="required">*</span></label>
+            <%= form.text_field :title, class: "field-input", required: true, maxlength: 150, placeholder: "Resumo do problema" %>
+          </div>
+          <div class="form-col-12">
+            <label class="field-label">Descrição <span class="required">*</span></label>
+            <%= form.text_area :description, class: "field-input", rows: 6, required: true, placeholder: "Explique o que aconteceu, onde e desde quando" %>
+          </div>
+          <div class="form-col-12">
+            <label class="field-label">Prints e arquivos</label>
+            <%= render 'tickets/attachments_field', form: form, field_id: 'ticketAttachments' %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5 class="form-section-title"><i class="fas fa-user-friends me-2"></i>Chamar pessoas para acompanhar (opcional)</h5>
+      </div>
+      <div class="form-section-body">
+        <%= select_tag 'ticket[follower_ids][]', options_from_collection_for_select(@users, :id, :name, params.dig(:ticket, :follower_ids)),
+                       multiple: true, size: 6, class: "field-input" %>
+        <span class="text-muted-custom d-block mt-1">Segure Ctrl (ou Cmd) para escolher mais de uma pessoa</span>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <%= form.submit 'Abrir Chamado', class: "btn-submit" %>
+      <%= link_to "Cancelar", root_path, class: "btn-cancel" %>
+    </div>
+  <% end %>
+  <% end %>
+</div>
+
+<script>
+  (function () {
+    var select = document.getElementById('ticketResponsability');
+    var info = document.getElementById('ticketRespInfo');
+    if (!select) return;
+    function update() {
+      var option = select.options[select.selectedIndex];
+      if (!option || !option.value) { info.hidden = true; return; }
+      ['deadline', 'users', 'description'].forEach(function (key) {
+        info.querySelector('[data-field="' + key + '"]').textContent = option.dataset[key] || '';
+      });
+      info.hidden = false;
+    }
+    select.addEventListener('change', update);
+    update();
+  })();
+</script>

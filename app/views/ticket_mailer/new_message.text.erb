@@ -1,0 +1,13 @@
+Olá, <%= @recipient.name %>!
+
+<%= @author == @recipient ? 'Você' : @author&.name %> interagiu no chamado #<%= @ticket.id %>.
+<% if @message.status_changed? %>Status: <%= Ticket.status_label(@message.status_from_name) %> → <%= Ticket.status_label(@message.status_to_name) %>
+<% end %>
+<%= @message.status_to_name == 'resolved' ? 'Solução' : 'Mensagem' %>:
+<%= @message.body %>
+<% if @message.attachments.any? %>(<%= pluralize(@message.attachments.count, 'anexo', plural: 'anexos') %> — veja no chamado)
+<% end %>
+
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+
+Responder: <%= ticket_url(@ticket, anchor: "message-#{@message.id}") %>

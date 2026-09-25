@@ -1,0 +1,16 @@
+<%# locals: (attachments:) %>
+<% if attachments.attached? %>
+  <div class="ticket-attachments">
+    <% attachments.each do |file| %>
+      <% if file.image? %>
+        <a href="<%= rails_blob_path(file, disposition: 'inline') %>" class="ticket-attachments__thumb" data-ticket-lightbox title="<%= file.filename %>">
+          <img src="<%= rails_blob_path(file, disposition: 'inline') %>" alt="<%= file.filename %>" loading="lazy">
+        </a>
+      <% else %>
+        <a href="<%= rails_blob_path(file, disposition: 'inline') %>" class="ticket-attachments__file" target="_blank" rel="noopener">
+          <i class="fas fa-file-pdf me-1"></i><%= file.filename %>
+        </a>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

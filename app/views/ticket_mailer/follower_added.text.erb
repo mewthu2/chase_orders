@@ -1,0 +1,10 @@
+Olá, <%= @recipient.name %>!
+
+<%= @added_by.name %> chamou você para acompanhar este chamado. Você receberá um e-mail a cada nova interação.
+
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+
+Descrição:
+<%= @ticket.description %>
+
+Ver chamado: <%= ticket_url(@ticket) %>

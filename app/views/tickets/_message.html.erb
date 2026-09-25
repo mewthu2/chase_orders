@@ -1,0 +1,28 @@
+<%# locals: (message:, ticket:) %>
+<% if message.event? %>
+  <div class="ticket-event" id="message-<%= message.id %>">
+    <i class="fas fa-user-plus me-2"></i><%= message.body %>
+    <span class="ticket-event__time"><%= ticket_datetime(message.created_at) %></span>
+  </div>
+<% else %>
+  <% role = TicketParticipant::ROLE_LABELS[ticket.role_of(message.user)] %>
+  <div class="ticket-msg <%= 'ticket-msg--requester' if message.user_id == ticket.requester_id %>" id="message-<%= message.id %>">
+    <div class="ticket-msg__header">
+      <span class="ticket-msg__author"><%= message.user&.name %></span>
+      <% if role %><span class="ticket-msg__role"><%= role %></span><% end %>
+      <span class="ticket-msg__time"><%= ticket_datetime(message.created_at) %></span>
+    </div>
+    <% if message.status_changed? %>
+      <div class="ticket-msg__status">
+        <%= ticket_status_badge(message.status_from_name) %> <i class="fas fa-arrow-right mx-1"></i> <%= ticket_status_badge(message.status_to_name) %>
+      </div>
+    <% end %>
+    <% if message.body.present? %>
+      <div class="ticket-msg__body <%= 'ticket-msg__body--solution' if message.status_to_name == 'resolved' %>">
+        <% if message.status_to_name == 'resolved' %><strong class="d-block mb-1"><i class="fas fa-check-circle me-1"></i>Solução</strong><% end %>
+        <%= simple_format(message.body) %>
+      </div>
+    <% end %>
+    <%= render 'tickets/attachments', attachments: message.attachments %>
+  </div>
+<% end %>

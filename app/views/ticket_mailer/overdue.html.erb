@@ -1,0 +1,13 @@
+<% content_for :preheader, "O chamado ##{@ticket.id} passou do prazo de resposta" %>
+<p style="margin:0 0 12px;font-size:16px;">Olá, <strong><%= @recipient.name %></strong>! <span class="wave">👋</span></p>
+<div style="margin:0 0 20px;padding:14px 18px;border-radius:10px;background:#fef2f2;border-left:4px solid #da3633;color:#7f1d1d;">
+  O prazo de resposta deste chamado venceu em <strong><%= ticket_datetime(@ticket.due_at) %></strong>
+  (<%= "vencido há #{ticket_duration_words(Time.current - @ticket.due_at)}" %>).
+  <% if @ticket.waiting_on?(@recipient) %>
+    <br><strong>A resposta está pendente com você.</strong>
+  <% else %>
+    <br>A resposta está pendente com: <strong><%= @ticket.waiting_on_users.map(&:name).to_sentence %></strong>.
+  <% end %>
+</div>
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+<%= render 'ticket_mailer/button', url: ticket_url(@ticket), label: 'Responder agora' %>

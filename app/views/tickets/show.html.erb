@@ -1,0 +1,149 @@
+<% content_for :title, "Chamado ##{@ticket.id}" %>
+
+<div class="users-container ticket-page">
+  <div class="page-header">
+    <div class="header-left">
+      <p class="page-subtitle mb-1">
+        <%= link_to root_path, class: "text-muted-custom" do %><i class="fas fa-arrow-left me-1"></i>Chamados<% end %>
+        · #<%= @ticket.id %> · <%= @ticket.ticket_responsability.name %>
+      </p>
+      <h1 class="page-title"><%= @ticket.title %></h1>
+    </div>
+    <div class="header-actions">
+      <%= ticket_status_badge(@ticket) %>
+      <% if current_user.admin? %>
+        <%= button_to ticket_path(@ticket), method: :delete, class: "action-btn action-btn--danger", title: "Excluir chamado",
+                      form: { class: "d-inline", onsubmit: "return confirm('Excluir o chamado ##{@ticket.id}? Mensagens e anexos também serão apagados.')" } do %><i class="fas fa-trash"></i><% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="ticket-layout">
+    <div class="ticket-main">
+      <div class="ticket-deadline <%= ticket_due_class(@ticket) %>">
+        <% if @ticket.open? %>
+          <i class="fas fa-hourglass-half me-2"></i>
+          Aguardando <strong><%= @ticket.waiting_on_label %></strong> · prazo <strong><%= ticket_due_text(@ticket) %></strong>
+        <% else %>
+          <i class="fas fa-check-circle me-2"></i><%= @ticket.status_label %>
+          em <%= ticket_datetime(@ticket.resolved? ? @ticket.resolved_at : @ticket.closed_at || @ticket.updated_at) %>
+        <% end %>
+      </div>
+
+      <% if @ticket.resolved? && @ticket.solution.present? %>
+        <div class="ticket-solution">
+          <strong class="d-block mb-1"><i class="fas fa-check-circle me-1"></i>Solução</strong>
+          <%= simple_format(@ticket.solution) %>
+        </div>
+      <% end %>
+
+      <div class="ticket-msg ticket-msg--requester ticket-msg--opening">
+        <div class="ticket-msg__header">
+          <span class="ticket-msg__author"><%= @ticket.requester.name %></span>
+          <span class="ticket-msg__role">Solicitante</span>
+          <span class="ticket-msg__time">abriu em <%= ticket_datetime(@ticket.created_at) %></span>
+        </div>
+        <div class="ticket-msg__body"><%= simple_format(@ticket.description) %></div>
+        <%= render 'tickets/attachments', attachments: @ticket.attachments %>
+      </div>
+
+      <% @messages.each do |message| %>
+        <%= render 'tickets/message', message: message, ticket: @ticket %>
+      <% end %>
+
+      <div class="form-section ticket-reply">
+        <div class="form-section-header">
+          <h5 class="form-section-title"><i class="fas fa-reply me-2"></i>Adicionar interação</h5>
+        </div>
+        <div class="form-section-body">
+          <%= form_with model: @message, url: ticket_ticket_messages_path(@ticket), local: true, multipart: true do |form| %>
+            <% if @message.errors.any? %>
+              <div class="form-error-box">
+                <i class="fas fa-exclamation-triangle me-2"></i><%= @message.errors.full_messages.to_sentence %>
+              </div>
+            <% end %>
+            <% statuses = @ticket.allowed_statuses_for(current_user) %>
+            <% if statuses.any? %>
+              <label class="field-label">Alterar status</label>
+              <%# TicketMessage não tem atributo status — por isso select_tag e não form.select %>
+              <%= select_tag 'ticket_message[status]',
+                             options_for_select(statuses.map { |s| [Ticket.status_label(s), s] }, params.dig(:ticket_message, :status)),
+                             include_blank: 'Manter o status atual', class: "field-input mb-3", id: "ticketMessageStatus" %>
+            <% end %>
+            <label class="field-label" id="ticketMessageBodyLabel">Mensagem</label>
+            <%= form.text_area :body, class: "field-input", rows: 4, id: "ticketMessageBody",
+                               value: params.dig(:ticket_message, :body), placeholder: "Escreva sua resposta" %>
+            <div class="mt-3">
+              <%= render 'tickets/attachments_field', form: form, field_id: 'messageAttachments' %>
+            </div>
+            <div class="form-actions">
+              <%= form.submit 'Enviar', class: "btn-submit" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <aside class="ticket-side">
+      <div class="ticket-side__card">
+        <h6>Detalhes</h6>
+        <dl>
+          <dt>Setor</dt><dd><%= @ticket.sector&.name || '—' %></dd>
+          <dt>Responsabilidade</dt><dd><%= @ticket.ticket_responsability.name %></dd>
+          <dt>Prazo por resposta</dt><dd><%= @ticket.ticket_responsability.response_time_label %></dd>
+          <dt>Aberto em</dt><dd><%= ticket_datetime(@ticket.created_at) %></dd>
+        </dl>
+      </div>
+
+      <div class="ticket-side__card">
+        <h6>Participantes</h6>
+        <% @ticket.participants.sort_by { |p| [TicketParticipant.roles[p.role], p.user.name] }.each do |participant| %>
+          <div class="ticket-person">
+            <span class="ticket-person__name"><%= participant.user.name %></span>
+            <span class="ticket-person__role ticket-person__role--<%= participant.role %>"><%= participant.role_label %></span>
+          </div>
+        <% end %>
+
+        <% if @available_users.any? %>
+          <%= form_with url: ticket_ticket_participants_path(@ticket), local: true, class: "mt-3" do %>
+            <label class="field-label">Chamar pessoa</label>
+            <div class="d-flex gap-2">
+              <%= select_tag :user_id, options_from_collection_for_select(@available_users, :id, :name), class: "field-input", required: true, include_blank: 'Selecione...' %>
+              <%= button_tag type: 'submit', class: "btn-submit", title: "Chamar" do %><i class="fas fa-user-plus"></i><% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<dialog class="ticket-lightbox" id="ticketLightbox">
+  <button type="button" class="ticket-lightbox__close" aria-label="Fechar">&times;</button>
+  <img alt="">
+</dialog>
+
+<script>
+  (function () {
+    var status = document.getElementById('ticketMessageStatus');
+    var body = document.getElementById('ticketMessageBody');
+    var label = document.getElementById('ticketMessageBodyLabel');
+    function update() {
+      var resolving = status && status.value === 'resolved';
+      label.innerHTML = resolving ? 'Solução <span class="required">*</span>' : 'Mensagem';
+      body.required = resolving;
+      body.placeholder = resolving ? 'Descreva o que foi feito para resolver' : 'Escreva sua resposta';
+    }
+    if (status) { status.addEventListener('change', update); update(); }
+
+    var lightbox = document.getElementById('ticketLightbox');
+    document.querySelectorAll('[data-ticket-lightbox]').forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        lightbox.querySelector('img').src = link.href;
+        lightbox.showModal();
+      });
+    });
+    lightbox.addEventListener('click', function () { lightbox.close(); });
+  })();
+</script>

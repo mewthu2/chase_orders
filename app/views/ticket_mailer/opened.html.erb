@@ -1,0 +1,15 @@
+<% content_for :preheader, "#{@ticket.requester.name} abriu um chamado para #{@ticket.ticket_responsability.name}" %>
+<p style="margin:0 0 12px;font-size:16px;">Olá, <strong><%= @recipient.name %></strong>! <span class="wave">👋</span></p>
+<p style="margin:0 0 20px;color:#374151;">
+  <% if @ticket.requester?(@recipient) %>
+    Seu chamado foi aberto com sucesso. Os responsáveis abaixo já foram notificados e têm até
+    <strong><%= ticket_datetime(@ticket.due_at) %></strong> para responder.
+  <% else %>
+    <strong><%= @ticket.requester.name %></strong> abriu um chamado para <strong><%= @ticket.ticket_responsability.name %></strong>
+    e você foi notificado(a) como <strong><%= @role_label %></strong>. O prazo para a resposta é
+    <strong><%= ticket_datetime(@ticket.due_at) %></strong>.
+  <% end %>
+</p>
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+<%= render 'ticket_mailer/content', title: 'Descrição', body: @ticket.description, attachments_count: @ticket.attachments.count %>
+<%= render 'ticket_mailer/button', url: ticket_url(@ticket), label: 'Ver chamado' %>

@@ -80,6 +80,44 @@
     </div>
   </div>
 
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-ticket-alt me-2"></i>Setores de Chamados</h5>
+    </div>
+    <div class="form-section-body">
+      <% sectors = TicketSector.ordered %>
+      <% if @profile.id == Profile::ADMIN %>
+        <span class="text-muted-custom d-block">
+          <i class="fas fa-crown me-1"></i>
+          Administradores abrem chamados para todos os setores — não precisa marcar nenhum.
+        </span>
+      <% else %>
+      <%= hidden_field_tag 'profile[ticket_sector_ids][]', '', id: nil %>
+      <% if sectors.any? %>
+        <div class="form-grid">
+          <% sectors.each do |sector| %>
+            <div class="form-col-4">
+              <div class="form-check">
+                <%= check_box_tag 'profile[ticket_sector_ids][]', sector.id, @profile.ticket_sector_ids.include?(sector.id),
+                                  { class: 'form-check-input', id: "ticket_sector_#{sector.id}" } %>
+                <label class="form-check-label text-main" for="ticket_sector_<%= sector.id %>">
+                  <%= sector.name %><% unless sector.active? %> <span class="text-muted-custom">(inativo)</span><% end %>
+                </label>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <span class="text-muted-custom d-block">Nenhum setor cadastrado ainda — cadastre em Chamados → Setores.</span>
+      <% end %>
+      <span class="text-muted-custom d-block mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        Usuários deste perfil só abrem chamados para as responsabilidades desses setores e enxergam todos os chamados deles. Administradores veem todos os setores.
+      </span>
+      <% end %>
+    </div>
+  </div>
+
   <div class="form-actions">
     <%= form.submit (@profile.new_record? ? 'Criar Perfil' : 'Salvar Alterações'), class: "btn-submit" %>
     <%= link_to "Cancelar", profiles_path, class: "btn-cancel" %>

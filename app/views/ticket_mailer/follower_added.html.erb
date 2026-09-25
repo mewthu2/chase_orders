@@ -1,0 +1,9 @@
+<% content_for :preheader, "#{@added_by.name} pediu para você acompanhar o chamado ##{@ticket.id}" %>
+<p style="margin:0 0 12px;font-size:16px;">Olá, <strong><%= @recipient.name %></strong>! <span class="wave">👋</span></p>
+<p style="margin:0 0 20px;color:#374151;">
+  <strong><%= @added_by.name %></strong> chamou você para acompanhar este chamado.
+  A partir de agora você receberá um e-mail a cada nova interação e pode responder direto pelo sistema.
+</p>
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+<%= render 'ticket_mailer/content', title: 'Descrição', body: @ticket.description, attachments_count: @ticket.attachments.count %>
+<%= render 'ticket_mailer/button', url: ticket_url(@ticket), label: 'Ver chamado' %>

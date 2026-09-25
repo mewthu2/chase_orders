@@ -1,0 +1,10 @@
+<%# locals: (title:, body:, attachments_count: 0, highlight: false) %>
+<div style="margin:0 0 20px;padding:16px 18px;border-radius:10px;background:<%= highlight ? '#ecfdf5' : '#f9fafb' %>;border-left:4px solid <%= highlight ? '#238636' : '#d1d5db' %>;">
+  <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;"><%= title %></div>
+  <% if body.present? %>
+    <div style="font-size:15px;color:#1f2937;"><%= simple_format(body, {}, wrapper_tag: 'div') %></div>
+  <% end %>
+  <% if attachments_count.positive? %>
+    <div style="margin-top:10px;font-size:13px;color:#4b5563;">📎 <%= pluralize(attachments_count, 'anexo', plural: 'anexos') %> — veja no chamado</div>
+  <% end %>
+</div>

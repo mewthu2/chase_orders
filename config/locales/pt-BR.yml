@@ -191,6 +191,21 @@ pt-BR:
       internal_transfer_shipment: Remessa
       internal_transfer_item: Item da remessa
     attributes:
+      ticket:
+        title: Título
+        description: Descrição
+        attachments: Anexos
+        ticket_responsability: Responsabilidade
+        requester: Solicitante
+      ticket_message:
+        body: Mensagem
+        attachments: Anexos
+      ticket_responsability:
+        name: Nome
+        description: Descrição
+        response_time_hours: Prazo de resposta (horas)
+        users: Responsáveis
+        active: Ativa
       company:
         legal_name: Razão social
         trade_name: Nome fantasia

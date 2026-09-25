@@ -82,7 +82,7 @@ class UsersController < ApplicationController
   end
 
   def admin_user_params
-    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation, :active, profile_ids: [])
+    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation, :active, :ticket_notifications_enabled, profile_ids: [])
   end
 
   def user_self_params

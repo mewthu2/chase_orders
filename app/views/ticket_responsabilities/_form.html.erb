@@ -1,0 +1,72 @@
+<%= form_with model: @responsability, local: true do |form| %>
+  <% if @responsability.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @responsability.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-sitemap me-2"></i>Dados da Responsabilidade</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Setor <span class="required">*</span></label>
+          <%= form.collection_select :ticket_sector_id, TicketSector.ordered, :id, :name, { include_blank: 'Selecione...' }, class: "field-input", required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name, class: "field-input", required: true, placeholder: "Ex.: Suporte TI" %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Prazo de resposta (horas) <span class="required">*</span></label>
+          <%= form.number_field :response_time_hours, class: "field-input", min: 1, step: 1, required: true %>
+          <span class="text-muted-custom d-block mt-1">Tempo que cada lado tem para responder a cada interação (24 = 1 dia)</span>
+        </div>
+        <div class="form-col-12">
+          <label class="field-label">Descrição</label>
+          <%= form.text_area :description, class: "field-input", rows: 3, placeholder: "Quando abrir chamado para esta área?" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-user-check me-2"></i>Responsáveis <span class="required">*</span></h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <%= form.collection_check_boxes :user_ids, User.active.order(:name), :id, :name do |box| %>
+          <div class="form-col-4">
+            <div class="form-check">
+              <%= box.check_box class: 'form-check-input' %>
+              <%= box.label class: 'form-check-label text-main' %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Todos recebem e-mail quando um chamado é aberto nesta área</span>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-body">
+      <div class="form-check form-switch">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+        <label class="form-check-label text-main fw-bold">Ativa (aparece ao abrir chamado)</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@responsability.new_record? ? 'Criar Responsabilidade' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", ticket_responsabilities_path, class: "btn-cancel" %>
+  </div>
+<% end %>

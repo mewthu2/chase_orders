@@ -63,6 +63,7 @@
               <th class="text-center">Produto</th>
               <th class="text-center">Quantidade Necessária</th>
               <th class="text-center">Estoque Correios B2C</th>
+              <th class="text-center">Estoque Correios B2B</th>
               <th class="text-center">Pedidos Afetados</th>
               <th class="text-center">Attempts</th>
             </tr>
@@ -88,7 +89,10 @@
                   </span>
                 </td>
 
-                <td class="text-center item-stock-cell-b2c" data-sku="<%= item[:product_code] %>">
+                <td class="text-center item-stock-cell" data-sku="<%= item[:product_code] %>" data-b2b="0">
+                  <i class="fas fa-spinner fa-spin text-muted-custom"></i>
+                </td>
+                <td class="text-center item-stock-cell" data-sku="<%= item[:product_code] %>" data-b2b="1">
                   <i class="fas fa-spinner fa-spin text-muted-custom"></i>
                 </td>
 
@@ -339,36 +343,58 @@
         });
       }
 
-      // Estoque Correios B2C: consulta um produto de cada vez, com uma pequena
+      // Estoque Correios B2C e B2B: consulta um produto de cada vez, com uma pequena
       // pausa entre cada um, pra não travar a tela disparando tudo de uma vez.
+      // A tela não recarrega inteira (são muitas requisições): só o estoque é
+      // reconsultado, 60s depois de terminar a rodada anterior e com a aba visível.
       (function () {
-        var queue = Array.prototype.slice.call(document.querySelectorAll('.item-stock-cell-b2c'));
+        var STOCK_REFRESH_MS = 60000;
 
-        function processNext() {
-          var cell = queue.shift();
-          if (!cell) return;
-
-          var sku = cell.dataset.sku;
-          if (!sku) { processNext(); return; }
-
-          fetch('<%= stockend_dashboard_index_path %>?item_code=' + encodeURIComponent(sku))
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              if (data && data.disponivel !== undefined && data.disponivel !== null) {
-                cell.innerHTML = '<span class="fw-bold ' + (data.disponivel > 0 ? 'text-success' : 'text-danger') + '">' + data.disponivel + '</span>';
-              } else {
-                cell.innerHTML = '<span class="text-muted-custom">-</span>';
-              }
-            })
-            .catch(function () {
-              cell.innerHTML = '<span class="text-danger">erro</span>';
-            })
-            .finally(function () {
-              setTimeout(processNext, 200);
-            });
+        // O DataTables tira do DOM as linhas de outras páginas; pega pela API.
+        function stockCells() {
+          if ($.fn.DataTable.isDataTable('#summaryTable')) {
+            return $($('#summaryTable').DataTable().rows().nodes()).find('.item-stock-cell').get();
+          }
+          return Array.prototype.slice.call(document.querySelectorAll('.item-stock-cell'));
         }
 
-        processNext();
+        function runRound() {
+          if (document.visibilityState !== 'visible') {
+            setTimeout(runRound, STOCK_REFRESH_MS);
+            return;
+          }
+
+          var queue = stockCells();
+
+          function processNext() {
+            var cell = queue.shift();
+            if (!cell) { setTimeout(runRound, STOCK_REFRESH_MS); return; }
+
+            var sku = cell.dataset.sku;
+            if (!sku) { processNext(); return; }
+
+            fetch('<%= stockend_dashboard_index_path %>?item_code=' + encodeURIComponent(sku) + (cell.dataset.b2b === '1' ? '&b2b=1' : ''))
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                if (data && data.disponivel !== undefined && data.disponivel !== null) {
+                  cell.innerHTML = '<span class="fw-bold ' + (data.disponivel > 0 ? 'text-success' : 'text-danger') + '">' + data.disponivel + '</span>';
+                } else {
+                  cell.innerHTML = '<span class="text-muted-custom">-</span>';
+                }
+              })
+              .catch(function () {
+                // Numa atualização, mantém o último valor em vez de trocar por erro.
+                if (cell.querySelector('.fa-spinner')) cell.innerHTML = '<span class="text-danger">erro</span>';
+              })
+              .finally(function () {
+                setTimeout(processNext, 200);
+              });
+          }
+
+          processNext();
+        }
+
+        runRound();
       })();
 
       const tooltipTriggerList = [].slice.call(
@@ -378,12 +404,6 @@
       tooltipTriggerList.map(function(tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
-
-      setInterval(function() {
-        if (document.visibilityState === 'visible') {
-          location.reload();
-        }
-      }, 60000);
     });
   </script>
 <% end %>

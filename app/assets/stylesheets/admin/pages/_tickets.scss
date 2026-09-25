@@ -1,0 +1,122 @@
+// ---- Sistema de chamados: painel, página do chamado, anexos ----
+// Cada partial importa suas dependências (config/assets.rb pré-compila todos os .scss).
+@import 'admin/variables';
+
+.ticket-status {
+  display: inline-block; padding: 3px 10px; border-radius: $radius-pill;
+  font-size: 0.75rem; font-weight: 600; color: #fff; white-space: nowrap;
+}
+.ticket-status--awaiting_responsible { background: $accent-yellow-alt; }
+.ticket-status--awaiting_requester   { background: $accent-blue; }
+.ticket-status--in_progress          { background: #8957e5; }
+.ticket-status--resolved             { background: $accent-green; }
+.ticket-status--closed               { background: $border-muted; color: $text-secondary; }
+
+.ticket-stat { text-decoration: none; display: block; }
+.ticket-stat .stat-card { background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-md; padding: 16px; }
+.ticket-stat .stat-value { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+.ticket-stat__label { color: $text-muted; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.ticket-row--overdue td:first-child { box-shadow: inset 3px 0 0 $accent-red-light; }
+.ticket-row--soon td:first-child { box-shadow: inset 3px 0 0 $accent-yellow; }
+.ticket-due--overdue { color: $accent-red-light !important; font-weight: 600; }
+.ticket-due--soon { color: $accent-yellow !important; font-weight: 600; }
+.ticket-your-turn {
+  margin-left: 6px; padding: 1px 8px; border-radius: $radius-pill; font-size: 0.7rem; font-weight: 700;
+  background: rgba(227, 179, 65, 0.15); color: $accent-yellow; text-transform: uppercase;
+}
+
+.ticket-filters { padding-top: 1rem; }
+.ticket-filters .field-input { width: auto; flex: 1 1 200px; max-width: 280px; }
+
+.ticket-empty { text-align: center; padding: 3rem 1rem; color: $text-muted; }
+.ticket-empty i { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+
+.ticket-resp-info {
+  background: $bg-canvas; border: 1px solid $border-muted; border-radius: $radius-md;
+  padding: 12px 14px; color: $text-secondary; font-size: 0.9rem; line-height: 1.7;
+}
+
+// Página do chamado
+.ticket-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.25rem; }
+@media (max-width: 992px) { .ticket-layout { grid-template-columns: 1fr; } }
+
+.ticket-deadline {
+  background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-md;
+  padding: 12px 16px; margin-bottom: 1rem; color: $text-secondary;
+}
+.ticket-deadline.ticket-due--overdue { border-color: $accent-red; background: rgba(218, 54, 51, 0.08); }
+.ticket-deadline.ticket-due--soon { border-color: $accent-yellow-alt; background: rgba(210, 153, 34, 0.08); }
+
+.ticket-solution {
+  background: rgba(35, 134, 54, 0.1); border: 1px solid $accent-green; border-radius: $radius-md;
+  padding: 14px 16px; margin-bottom: 1rem; color: $text-primary;
+}
+
+.ticket-msg {
+  background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-md;
+  padding: 14px 16px; margin-bottom: 0.9rem; color: $text-secondary;
+}
+.ticket-msg--requester { border-left: 3px solid $accent-blue-light; }
+.ticket-msg--opening { background: $bg-elevated; }
+.ticket-msg__header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ticket-msg__author { color: $text-primary; font-weight: 600; }
+.ticket-msg__role { font-size: 0.72rem; color: $text-muted; border: 1px solid $border-muted; border-radius: $radius-pill; padding: 0 8px; }
+.ticket-msg__time { margin-left: auto; font-size: 0.78rem; color: $text-faint; }
+.ticket-msg__status { margin-bottom: 8px; color: $text-muted; }
+.ticket-msg__body p:last-child { margin-bottom: 0; }
+.ticket-msg__body--solution { border-left: 3px solid $accent-green-light; padding-left: 10px; }
+
+.ticket-event { text-align: center; color: $text-muted; font-size: 0.85rem; margin: 0.5rem 0 1rem; }
+.ticket-event__time { margin-left: 6px; color: $text-faint; }
+
+.ticket-side__card {
+  background: $bg-surface; border: 1px solid $border-default; border-radius: $radius-md;
+  padding: 14px 16px; margin-bottom: 1rem; color: $text-secondary;
+}
+.ticket-side__card h6 { color: $text-primary; font-weight: 700; margin-bottom: 10px; }
+.ticket-side__card dt { color: $text-muted; font-size: 0.78rem; font-weight: 600; }
+.ticket-side__card dd { margin-bottom: 8px; }
+.ticket-person { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid $border-default; }
+.ticket-person:last-of-type { border-bottom: 0; }
+.ticket-person__name { color: $text-primary; }
+.ticket-person__role { font-size: 0.72rem; padding: 1px 8px; border-radius: $radius-pill; background: $border-muted; color: $text-secondary; }
+.ticket-person__role--requester { background: rgba(88, 166, 255, 0.15); color: $accent-blue-light; }
+.ticket-person__role--responsible { background: rgba(63, 185, 80, 0.15); color: $accent-green-light; }
+
+// Anexos
+.ticket-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ticket-attachments__thumb img {
+  width: 96px; height: 72px; object-fit: cover; border-radius: $radius-sm; border: 1px solid $border-muted;
+  transition: transform 0.15s ease;
+}
+.ticket-attachments__thumb img:hover { transform: scale(1.04); }
+.ticket-attachments__file {
+  display: inline-flex; align-items: center; padding: 6px 10px; border-radius: $radius-sm;
+  border: 1px solid $border-muted; color: $accent-blue-light; text-decoration: none; font-size: 0.85rem;
+}
+
+.ticket-dropzone { position: relative; border: 1px dashed $border-muted; border-radius: $radius-md; padding: 14px; background: $bg-canvas; }
+.ticket-dropzone.is-dragging { border-color: $accent-blue-light; background: rgba(88, 166, 255, 0.06); }
+.ticket-dropzone__input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ticket-dropzone__label { display: block; cursor: pointer; color: $text-secondary; margin: 0; }
+.ticket-dropzone__label small { display: block; color: $text-faint; margin-top: 4px; }
+.ticket-dropzone__label kbd { background: $bg-elevated; border: 1px solid $border-muted; color: $text-primary; font-size: 0.75rem; }
+.ticket-dropzone__previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ticket-dropzone__item {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 96px; font-size: 0.7rem; color: $text-muted; text-align: center; word-break: break-all;
+}
+.ticket-dropzone__item img { width: 96px; height: 72px; object-fit: cover; border-radius: $radius-sm; }
+.ticket-dropzone__item i { font-size: 2rem; color: $accent-red-light; padding: 18px 0; }
+.ticket-dropzone__remove {
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
+  border: 0; background: $accent-red; color: #fff; line-height: 20px; font-size: 14px; padding: 0;
+}
+
+.ticket-lightbox { border: 0; padding: 0; background: transparent; max-width: 92vw; max-height: 92vh; }
+.ticket-lightbox::backdrop { background: rgba(0, 0, 0, 0.8); }
+.ticket-lightbox img { max-width: 92vw; max-height: 88vh; border-radius: $radius-md; display: block; }
+.ticket-lightbox__close {
+  position: fixed; top: 16px; right: 24px; border: 0; background: transparent; color: #fff; font-size: 2rem;
+}

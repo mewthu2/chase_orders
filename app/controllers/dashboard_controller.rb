@@ -593,35 +593,7 @@ class DashboardController < ApplicationController
       order_data['pedido']['id'].to_s
     end
 
-    stock_error_message = 'Produto(s) informado(s) não existe(m) no estoque:'
-
-    stock_error_attempts = Attempt.where(
-      kinds: :create_correios_order,
-      tiny_order_id: pending_order_ids,
-      created_at: 1.month.ago..Time.current
-    )
-    .where.not(message: [nil, ''])
-    .where(
-      'message LIKE ?',
-      "#{ActiveRecord::Base.sanitize_sql_like(stock_error_message)}%"
-    )
-    .order(updated_at: :desc)
-
-    # A lista de SKUs sem estoque de um pedido muda a cada nova tentativa (o job
-    # roda periodicamente), então olhamos só a tentativa mais recente de cada
-    # pedido — uma tentativa antiga pode citar um SKU que já não falta mais.
-    latest_attempt_by_order = {}
-
-    stock_error_attempts.each do |attempt|
-      tiny_order_id = attempt.tiny_order_id.to_s.presence ||
-                      extract_attempt_param(attempt.params.to_s, :pedido_id) ||
-                      extract_attempt_param(attempt.params.to_s, :invoice)
-
-      next if tiny_order_id.blank?
-      next if latest_attempt_by_order.key?(tiny_order_id)
-
-      latest_attempt_by_order[tiny_order_id] = attempt
-    end
+    latest_attempt_by_order = latest_stock_error_attempts_by_order(:create_correios_order, pending_order_ids)
 
     unique_items_by_order_and_product = {}
 
@@ -629,10 +601,7 @@ class DashboardController < ApplicationController
       attempt_params = attempt.params.to_s
       order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
 
-      missing_product_codes = extract_missing_stock_product_codes(
-        attempt.message,
-        stock_error_message
-      )
+      missing_product_codes = extract_missing_stock_product_codes(attempt.message)
 
       missing_product_codes.each do |product_code|
         quantity = extract_item_quantity_from_attempt_params(
@@ -676,7 +645,7 @@ class DashboardController < ApplicationController
       .sort_by { |item| -item[:total_quantity] }
 
     @stats = {
-      total_attempts: stock_error_attempts.count,
+      total_attempts: latest_attempt_by_order.size,
       total_items: @missing_stock_items.count,
       total_products: @missing_stock_summary.count,
       total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
@@ -726,35 +695,7 @@ class DashboardController < ApplicationController
       order_data['pedido']['id'].to_s
     end
 
-    stock_error_message = 'Produto(s) informado(s) não existe(m) no estoque:'
-
-    stock_error_attempts = Attempt.where(
-      kinds: :create_correios_order_tiny2,
-      tiny_order_id: pending_order_ids,
-      created_at: 1.month.ago..Time.current
-    )
-    .where.not(message: [nil, ''])
-    .where(
-      'message LIKE ?',
-      "#{ActiveRecord::Base.sanitize_sql_like(stock_error_message)}%"
-    )
-    .order(updated_at: :desc)
-
-    # A lista de SKUs sem estoque de um pedido muda a cada nova tentativa (o job
-    # roda periodicamente), então olhamos só a tentativa mais recente de cada
-    # pedido — uma tentativa antiga pode citar um SKU que já não falta mais.
-    latest_attempt_by_order = {}
-
-    stock_error_attempts.each do |attempt|
-      tiny_order_id = attempt.tiny_order_id.to_s.presence ||
-                      extract_attempt_param(attempt.params.to_s, :pedido_id) ||
-                      extract_attempt_param(attempt.params.to_s, :invoice)
-
-      next if tiny_order_id.blank?
-      next if latest_attempt_by_order.key?(tiny_order_id)
-
-      latest_attempt_by_order[tiny_order_id] = attempt
-    end
+    latest_attempt_by_order = latest_stock_error_attempts_by_order(:create_correios_order_tiny2, pending_order_ids)
 
     unique_items_by_order_and_product = {}
 
@@ -762,10 +703,7 @@ class DashboardController < ApplicationController
       attempt_params = attempt.params.to_s
       order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
 
-      missing_product_codes = extract_missing_stock_product_codes(
-        attempt.message,
-        stock_error_message
-      )
+      missing_product_codes = extract_missing_stock_product_codes(attempt.message)
 
       missing_product_codes.each do |product_code|
         quantity = extract_item_quantity_from_attempt_params(
@@ -809,7 +747,7 @@ class DashboardController < ApplicationController
       .sort_by { |item| -item[:total_quantity] }
 
     @stats = {
-      total_attempts: stock_error_attempts.count,
+      total_attempts: latest_attempt_by_order.size,
       total_items: @missing_stock_items.count,
       total_products: @missing_stock_summary.count,
       total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
@@ -1053,15 +991,39 @@ class DashboardController < ApplicationController
     value.respond_to?(:strftime) ? value.strftime('%d/%m/%Y %H:%M') : value.to_s
   end
 
-  def extract_missing_stock_product_codes(message, stock_error_message)
-    message.to_s
-           .split(stock_error_message, 2)
-           .last
-           .to_s
-           .split(/[,\s]+/)
-           .map { |code| code.gsub(/[^\w\-.]/, '') }
-           .reject(&:blank?)
-           .uniq
+  CORREIOS_MISSING_STOCK_MESSAGE = 'Produto(s) informado(s) não existe(m) no estoque:'.freeze
+  # Ex.: "Foi soliciatado 4 do item TAI-1546-P, mas o estoque e de apenas: 3."
+  CORREIOS_INSUFFICIENT_STOCK_REGEX = /Foi solici\w*\s+[\d.,]+\s+do item\s+([\w\-.]+),\s*mas o estoque/i
+
+  # Tentativa mais recente de cada pedido, considerando TODAS as falhas (não só
+  # as de estoque) — só entra na lista se essa última tentativa for de estoque.
+  # Assim, um pedido cujo erro mudou não fica preso a um erro de estoque antigo.
+  def latest_stock_error_attempts_by_order(kind, tiny_order_ids)
+    latest_ids = Attempt.where(
+      kinds: kind,
+      tiny_order_id: tiny_order_ids,
+      created_at: 1.month.ago..Time.current
+    ).group(:tiny_order_id).maximum(:id).values
+
+    Attempt.where(id: latest_ids)
+           .select { |attempt| extract_missing_stock_product_codes(attempt.message).any? }
+           .index_by { |attempt| attempt.tiny_order_id.to_s }
+  end
+
+  def extract_missing_stock_product_codes(message)
+    message = message.to_s
+
+    if message.include?(CORREIOS_MISSING_STOCK_MESSAGE)
+      message.split(CORREIOS_MISSING_STOCK_MESSAGE, 2)
+             .last
+             .to_s
+             .split(/[,;\s]+/)
+             .map { |code| code.gsub(/[^\w\-.]/, '') }
+             .reject(&:blank?)
+             .uniq
+    else
+      message.scan(CORREIOS_INSUFFICIENT_STOCK_REGEX).flatten.uniq
+    end
   end
 
   def extract_attempt_param(attempt_params, key)

@@ -1,0 +1,8 @@
+Olá, <%= @recipient.name %>!
+
+O prazo de resposta do chamado #<%= @ticket.id %> venceu em <%= ticket_datetime(@ticket.due_at) %> (vencido há <%= ticket_duration_words(Time.current - @ticket.due_at) %>).
+Pendente com: <%= @ticket.waiting_on_users.map(&:name).to_sentence %>
+
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+
+Responder: <%= ticket_url(@ticket) %>

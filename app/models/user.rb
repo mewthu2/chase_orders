@@ -90,6 +90,17 @@ class User < ApplicationRecord
     (profile_ids & [Profile::ADMIN_MARKETING, Profile::AGENT_MARKETING]).any?
   end
 
+  def ticket_notifications?
+    active? && ticket_notifications_enabled? && email.present?
+  end
+
+  # Setores de chamados que o usuário enxerga: admin vê todos; os demais, os liberados nos seus perfis.
+  def visible_ticket_sector_ids
+    return TicketSector.pluck(:id) if admin?
+
+    ProfileTicketSector.where(profile_id: profile_ids).distinct.pluck(:ticket_sector_id)
+  end
+
   def can_access_screen?(screen_key)
     admin? || profiles.any? { |p| p.can_access?(screen_key.to_s) }
   end

@@ -1,0 +1,13 @@
+Olá, <%= @recipient.name %>!
+
+<% if @ticket.requester?(@recipient) %>Seu chamado foi aberto e os responsáveis foram notificados.<% else %><%= @ticket.requester.name %> abriu um chamado para <%= @ticket.ticket_responsability.name %> e você foi notificado(a) como <%= @role_label %>.<% end %>
+
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+
+Descrição:
+<%= @ticket.description %>
+<% if @ticket.attachments.any? %>
+(<%= pluralize(@ticket.attachments.count, 'anexo', plural: 'anexos') %> — veja no chamado)
+<% end %>
+
+Ver chamado: <%= ticket_url(@ticket) %>

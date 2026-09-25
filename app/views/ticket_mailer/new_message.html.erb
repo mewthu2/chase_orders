@@ -1,0 +1,27 @@
+<% content_for :preheader, "#{@author&.name}: #{@message.body.to_s.truncate(90)}" %>
+<p style="margin:0 0 12px;font-size:16px;">Olá, <strong><%= @recipient.name %></strong>! <span class="wave">👋</span></p>
+<p style="margin:0 0 20px;color:#374151;">
+  <strong><%= @author == @recipient ? 'Você' : @author&.name %></strong> interagiu no chamado <strong>#<%= @ticket.id %></strong>.
+  <% if @message.status_changed? %>
+    O status mudou de <strong><%= Ticket.status_label(@message.status_from_name) %></strong>
+    para <strong style="color:<%= ticket_status_color(@message.status_to_name) %>;"><%= Ticket.status_label(@message.status_to_name) %></strong>.
+  <% end %>
+  <% if @ticket.open? %>
+    Aguardando: <strong><%= @ticket.waiting_on_label %></strong>, com prazo até <strong><%= ticket_datetime(@ticket.due_at) %></strong>.
+  <% end %>
+</p>
+<% resolved = @message.status_to_name == 'resolved' %>
+<%= render 'ticket_mailer/content', title: resolved ? 'Solução' : "Mensagem de #{@author&.name}", body: @message.body,
+                                     attachments_count: @message.attachments.count, highlight: resolved %>
+<%= render 'ticket_mailer/summary', ticket: @ticket %>
+<% if @recent.any? %>
+  <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin:0 0 8px;">Histórico recente</div>
+  <% @recent.each do |item| %>
+    <div style="margin:0 0 10px;padding:10px 14px;border-radius:8px;background:#f9fafb;font-size:13px;color:#4b5563;">
+      <strong style="color:#111827;"><%= item.user&.name || 'Sistema' %></strong>
+      <span style="color:#9ca3af;"> · <%= ticket_datetime(item.created_at) %></span><br>
+      <%= item.body.to_s.truncate(220) %>
+    </div>
+  <% end %>
+<% end %>
+<%= render 'ticket_mailer/button', url: ticket_url(@ticket, anchor: "message-#{@message.id}"), label: 'Responder no chamado' %>

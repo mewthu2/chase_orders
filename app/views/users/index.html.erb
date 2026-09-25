@@ -80,6 +80,9 @@
                   <span class="status-pill <%= user.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
                     <%= user.active? ? 'Ativo' : 'Inativo' %>
                   </span>
+                  <% unless user.ticket_notifications_enabled? %>
+                    <i class="fas fa-bell-slash ms-1 text-muted-custom" title="Sem e-mails de chamados"></i>
+                  <% end %>
                 </td>
                 <td>
                   <% if user.admin? %>

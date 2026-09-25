@@ -1,0 +1,86 @@
+<%# locals: (form:, field_id:) %>
+<div class="ticket-dropzone" id="<%= field_id %>-zone">
+  <%= form.file_field :attachments, multiple: true, id: field_id, class: "ticket-dropzone__input",
+                      accept: HasTicketAttachments::ALLOWED_CONTENT_TYPES.join(',') %>
+  <label for="<%= field_id %>" class="ticket-dropzone__label">
+    <i class="fas fa-paperclip me-2"></i>Arraste prints aqui, clique para escolher ou cole com <kbd>Ctrl</kbd>+<kbd>V</kbd>
+    <small>PNG, JPG, GIF, WEBP ou PDF · até 10 MB cada · máx. 10 arquivos</small>
+  </label>
+  <div class="ticket-dropzone__previews" id="<%= field_id %>-previews"></div>
+</div>
+
+<script>
+  (function () {
+    var input = document.getElementById('<%= field_id %>');
+    var zone = document.getElementById('<%= field_id %>-zone');
+    var previews = document.getElementById('<%= field_id %>-previews');
+    var files = [];
+
+    function sync() {
+      var transfer = new DataTransfer();
+      files.forEach(function (file) { transfer.items.add(file); });
+      input.files = transfer.files;
+      render();
+    }
+
+    function add(list) {
+      Array.prototype.forEach.call(list, function (file) { files.push(file); });
+      sync();
+    }
+
+    function render() {
+      previews.innerHTML = '';
+      files.forEach(function (file, index) {
+        var item = document.createElement('div');
+        item.className = 'ticket-dropzone__item';
+        if (file.type.indexOf('image/') === 0) {
+          var img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          item.appendChild(img);
+        } else {
+          var icon = document.createElement('i');
+          icon.className = 'fas fa-file-pdf';
+          item.appendChild(icon);
+        }
+        var name = document.createElement('span');
+        name.textContent = file.name;
+        item.appendChild(name);
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'ticket-dropzone__remove';
+        remove.title = 'Remover';
+        remove.innerHTML = '&times;';
+        remove.addEventListener('click', function () { files.splice(index, 1); sync(); });
+        item.appendChild(remove);
+        previews.appendChild(item);
+      });
+    }
+
+    input.addEventListener('change', function () {
+      files = files.concat(Array.prototype.slice.call(input.files).filter(function (f) { return files.indexOf(f) === -1; }));
+      sync();
+    });
+
+    ['dragenter', 'dragover'].forEach(function (type) {
+      zone.addEventListener(type, function (event) { event.preventDefault(); zone.classList.add('is-dragging'); });
+    });
+    ['dragleave', 'drop'].forEach(function (type) {
+      zone.addEventListener(type, function (event) { event.preventDefault(); zone.classList.remove('is-dragging'); });
+    });
+    zone.addEventListener('drop', function (event) { add(event.dataTransfer.files); });
+
+    // Ctrl+V de um print em qualquer campo do formulário. Se o clipboard também traz texto
+    // (células do Excel, trecho do Word), deixa colar o texto normalmente.
+    input.form.addEventListener('paste', function (event) {
+      var pasted = event.clipboardData && event.clipboardData.files;
+      if (!pasted || !pasted.length) return;
+      var types = Array.prototype.slice.call(event.clipboardData.types || []);
+      if (types.indexOf('text/plain') !== -1 || types.indexOf('text/html') !== -1) return;
+      event.preventDefault();
+      add(Array.prototype.map.call(pasted, function (file, i) {
+        var ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        return new File([file], 'print-' + Date.now() + '-' + i + '.' + ext, { type: file.type });
+      }));
+    });
+  })();
+</script>

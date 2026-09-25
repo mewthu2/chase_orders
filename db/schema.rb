@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -705,6 +705,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
     t.index ["stock_porto_alegre_bourbon"], name: "index_products_on_stock_porto_alegre_bourbon"
   end
 
+  create_table "profile_ticket_sectors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "profile_id", null: false
+    t.bigint "ticket_sector_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["profile_id", "ticket_sector_id"], name: "index_profile_ticket_sectors_on_profile_and_sector", unique: true
+    t.index ["profile_id"], name: "index_profile_ticket_sectors_on_profile_id"
+    t.index ["ticket_sector_id"], name: "index_profile_ticket_sectors_on_ticket_sector_id"
+  end
+
   create_table "profiles", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "description"
@@ -815,6 +825,81 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
     t.index ["user_id"], name: "index_stock_withdrawals_on_user_id"
   end
 
+  create_table "ticket_messages", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "ticket_id", null: false
+    t.bigint "user_id"
+    t.integer "kind", default: 0, null: false
+    t.text "body"
+    t.integer "status_from"
+    t.integer "status_to"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ticket_id"], name: "index_ticket_messages_on_ticket_id"
+    t.index ["user_id"], name: "index_ticket_messages_on_user_id"
+  end
+
+  create_table "ticket_participants", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "ticket_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "role", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ticket_id", "user_id"], name: "index_ticket_participants_on_ticket_id_and_user_id", unique: true
+    t.index ["ticket_id"], name: "index_ticket_participants_on_ticket_id"
+    t.index ["user_id"], name: "index_ticket_participants_on_user_id"
+  end
+
+  create_table "ticket_responsabilities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.integer "response_time_hours", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "ticket_sector_id"
+    t.index ["name"], name: "index_ticket_responsabilities_on_name", unique: true
+    t.index ["ticket_sector_id"], name: "index_ticket_responsabilities_on_ticket_sector_id"
+  end
+
+  create_table "ticket_responsability_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "ticket_responsability_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ticket_responsability_id", "user_id"], name: "index_ticket_resp_users_on_resp_and_user", unique: true
+    t.index ["ticket_responsability_id"], name: "index_ticket_responsability_users_on_ticket_responsability_id"
+    t.index ["user_id"], name: "index_ticket_responsability_users_on_user_id"
+  end
+
+  create_table "ticket_sectors", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_ticket_sectors_on_name", unique: true
+  end
+
+  create_table "tickets", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "title", null: false
+    t.text "description", null: false
+    t.bigint "ticket_responsability_id", null: false
+    t.bigint "requester_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "due_at"
+    t.datetime "overdue_notified_at"
+    t.text "solution"
+    t.datetime "resolved_at"
+    t.datetime "closed_at"
+    t.datetime "last_activity_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["due_at"], name: "index_tickets_on_due_at"
+    t.index ["requester_id"], name: "index_tickets_on_requester_id"
+    t.index ["status"], name: "index_tickets_on_status"
+    t.index ["ticket_responsability_id"], name: "index_tickets_on_ticket_responsability_id"
+  end
+
   create_table "tiny2_order_reviews", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "tiny_order_id", null: false
     t.integer "status", null: false
@@ -872,6 +957,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
     t.datetime "updated_at", null: false
     t.boolean "active", default: true, null: false
     t.json "allowed_locations"
+    t.boolean "ticket_notifications_enabled", default: true, null: false
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
@@ -918,6 +1004,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
   add_foreign_key "planner_orders", "users"
   add_foreign_key "product_updates", "products"
   add_foreign_key "product_updates", "users"
+  add_foreign_key "profile_ticket_sectors", "profiles"
+  add_foreign_key "profile_ticket_sectors", "ticket_sectors"
   add_foreign_key "screen_permissions", "profiles"
   add_foreign_key "stock_correction_items", "products"
   add_foreign_key "stock_correction_items", "stock_corrections"
@@ -928,6 +1016,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_21_090000) do
   add_foreign_key "stock_withdrawal_items", "stock_withdrawals"
   add_foreign_key "stock_withdrawal_items", "users", column: "reverted_by_id"
   add_foreign_key "stock_withdrawals", "users"
+  add_foreign_key "ticket_messages", "tickets"
+  add_foreign_key "ticket_messages", "users"
+  add_foreign_key "ticket_participants", "tickets"
+  add_foreign_key "ticket_participants", "users"
+  add_foreign_key "ticket_responsabilities", "ticket_sectors"
+  add_foreign_key "ticket_responsability_users", "ticket_responsabilities"
+  add_foreign_key "ticket_responsability_users", "users"
+  add_foreign_key "tickets", "ticket_responsabilities"
+  add_foreign_key "tickets", "users", column: "requester_id"
   add_foreign_key "user_profiles", "profiles"
   add_foreign_key "user_profiles", "users"
 end
