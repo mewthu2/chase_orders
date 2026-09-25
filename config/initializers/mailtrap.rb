@@ -2,6 +2,7 @@
 # só expõe MAILTRAP_API_TOKEN; as credenciais SMTP vêm da API do Mailtrap (primeira inbox).
 # Em dev, sem o token no .env, fica o SMTP local de config/environments/development.rb.
 # Atenção: é um sandbox — os e-mails ficam na inbox do Mailtrap e não chegam aos usuários.
+# Com MAILTRAP_SENDING_TOKEN definido, usa o Email Sending (envio real) no lugar do sandbox.
 require 'rest-client'
 require 'json'
 
@@ -30,7 +31,20 @@ if Rails.env.production? || Rails.env.development?
     self.default_url_options = { host: ENV.fetch('APP_HOST', 'localhost'), protocol: 'https' } if Rails.env.production?
 
     token = ENV['MAILTRAP_API_TOKEN']
-    if token.present?
+    sending_token = ENV['MAILTRAP_SENDING_TOKEN']
+    if sending_token.present?
+      # Email Sending (envio real): exige o domínio do MAILER_FROM verificado no Mailtrap.
+      self.delivery_method = :smtp
+      self.smtp_settings = {
+        user_name: 'api',
+        password: sending_token,
+        address: 'live.smtp.mailtrap.io',
+        domain: ENV['MAILER_FROM'].to_s.split('@').last.presence || 'localhost',
+        port: 587,
+        authentication: :plain,
+        enable_starttls_auto: true
+      }
+    elsif token.present?
       begin
         self.delivery_method = :smtp
         self.smtp_settings = MailtrapSandbox.smtp_settings(token)

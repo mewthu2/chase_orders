@@ -20,6 +20,13 @@ class TicketNotifierTest < ActiveSupport::TestCase
 
   def delivered_to = ActionMailer::Base.deliveries.flat_map(&:to).sort
 
+  test 'nothing is sent while ticket e-mails are disabled' do
+    ENV['TICKET_EMAILS_ENABLED'] = nil
+    assert_no_enqueued_emails { TicketNotifier.ticket_opened(@ticket) }
+  ensure
+    ENV['TICKET_EMAILS_ENABLED'] = 'true'
+  end
+
   test 'opened goes to every participant that accepts notifications' do
     perform_enqueued_jobs { TicketNotifier.ticket_opened(@ticket) }
     assert_equal [@requester.email, @responsible.email].sort, delivered_to

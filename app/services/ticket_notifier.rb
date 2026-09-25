@@ -1,6 +1,11 @@
 # Decide quem recebe cada e-mail de chamado. Só notifica quem está ativo, com e-mail e com
 # as notificações de chamado ligadas (o admin desliga na edição do usuário).
+# Os e-mails só saem com TICKET_EMAILS_ENABLED=true (desligados até termos envio real configurado).
 class TicketNotifier
+  def self.enabled?
+    ENV['TICKET_EMAILS_ENABLED'] == 'true'
+  end
+
   def self.ticket_opened(ticket)
     recipients(ticket).each { |user| deliver(:opened, ticket: ticket, recipient: user) }
   end
@@ -33,6 +38,8 @@ class TicketNotifier
   private_class_method :recipients
 
   def self.deliver(action, **params)
+    return unless enabled?
+
     TicketMailer.with(**params).public_send(action).deliver_later
   end
   private_class_method :deliver

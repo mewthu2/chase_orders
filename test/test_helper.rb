@@ -1,5 +1,6 @@
 ENV['RAILS_ENV'] ||= 'test'
 require_relative '../config/environment'
+ENV['TICKET_EMAILS_ENABLED'] = 'true'
 require 'rails/test_help'
 
 class ActiveSupport::TestCase
