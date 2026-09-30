@@ -85,7 +85,7 @@ module Tiny::Products
       end
 
       sleep(0.5)
-    rescue StandardErrore => e
+    rescue StandardError => e
       Rails.logger.error "Erro ao atualizar custo do produto #{product.id}: #{e.message}"
       next
     end
