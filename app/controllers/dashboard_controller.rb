@@ -159,17 +159,17 @@ class DashboardController < ApplicationController
 
     pending_order_ids = @send_xml.map(&:tiny_order_id).compact
 
-    @last_errors = {}
-    Attempt.where(kinds: :send_xml_tiny2, status: [:fail, :error], tiny_order_id: pending_order_ids)
-           .where.not(message: [nil, ''])
-           .group_by(&:tiny_order_id).each do |order_id, attempts|
-             last = attempts.max_by(&:updated_at)
-             @last_errors[order_id.to_s] = {
-               message: last.message,
-               status: last.status,
-               updated_at: last.updated_at
-             }
-           end
+    # Busca só a última tentativa com erro de cada pedido, sem as colunas de
+    # texto pesadas (xml_nota/requisition) — carregar tudo estourava o timeout.
+    latest_error_ids = Attempt.where(kinds: :send_xml_tiny2, status: [:fail, :error], tiny_order_id: pending_order_ids)
+                              .where.not(message: [nil, ''])
+                              .group(:tiny_order_id).maximum(:id).values
+
+    @last_errors = Attempt.where(id: latest_error_ids)
+                          .select(:id, :tiny_order_id, :message, :status, :updated_at)
+                          .to_h do |last|
+                            [last.tiny_order_id.to_s, { message: last.message, status: last.status, updated_at: last.updated_at }]
+                          end
 
     @job_running = b2b_job_running?(:send_xml_tiny2)
   end
