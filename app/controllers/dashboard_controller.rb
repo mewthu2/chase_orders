@@ -16,6 +16,9 @@ class DashboardController < ApplicationController
   # tiver a permissão B2C ou a B2B.
   SHARED_CORREIOS_ACTIONS = %i[stockend tracking stuck_orders search_product].freeze
 
+  # Janela de pedidos/tentativas exibidos nas telas Correios B2B.
+  B2B_ORDERS_LOOKBACK = 8.weeks
+
   guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS
   guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS
   before_action :authorize_correios_dashboard!, only: SHARED_CORREIOS_ACTIONS
@@ -387,13 +390,13 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create_b2b
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
     orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order_tiny2,
       status: :success,
-      created_at: 1.month.ago..Time.current
+      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
     ).pluck(:tiny_order_id).map(&:to_s)
 
     orders = orders.reject do |order_data|
@@ -428,13 +431,13 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create_queue_b2b
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order_tiny2,
       status: :success,
-      created_at: 1.month.ago..Time.current
+      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
     ).pluck(:tiny_order_id).map(&:to_s)
 
     order_ids = @orders.map { |order_data| order_data['pedido']['id'].to_s }
@@ -450,7 +453,7 @@ class DashboardController < ApplicationController
     relevant_attempts = Attempt.where(
       kinds: :create_correios_order_tiny2,
       tiny_order_id: pending_order_ids,
-      created_at: 1.month.ago..Time.current
+      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
     ).order(:created_at)
 
     queue_attempts = []
@@ -671,7 +674,7 @@ class DashboardController < ApplicationController
       'preparando_envio',
       ENV.fetch('TOKEN_TINY2_PRODUCTION'),
       '',
-      4.weeks.ago.strftime('%d/%m/%Y')
+      B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y')
     )
 
     @orders = @orders_response&.dig('pedidos') || []
@@ -679,7 +682,7 @@ class DashboardController < ApplicationController
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order_tiny2,
       status: :success,
-      created_at: 1.month.ago..Time.current
+      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
     ).pluck(:tiny_order_id).map(&:to_s)
 
     @pending_orders = @orders.reject do |order_data|
