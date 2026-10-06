@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_06_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -330,6 +330,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
     t.index ["status"], name: "index_fiscal_notes_on_status"
   end
 
+  create_table "internal_transfer_configs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "approver_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["approver_id"], name: "index_internal_transfer_configs_on_approver_id"
+  end
+
   create_table "internal_transfer_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "internal_transfer_id", null: false
     t.bigint "internal_transfer_shipment_id"
@@ -392,8 +399,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "approval_status", default: 0, null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.text "rejection_reason"
     t.index ["destination_location_id"], name: "index_internal_transfers_on_destination_location_id"
     t.index ["requested_by_id"], name: "index_internal_transfers_on_requested_by_id"
+    t.index ["reviewed_by_id"], name: "index_internal_transfers_on_reviewed_by_id"
   end
 
   create_table "locations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -975,6 +987,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
   add_foreign_key "campaign_users", "users"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
+  add_foreign_key "internal_transfer_configs", "users", column: "approver_id"
   add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
   add_foreign_key "internal_transfer_events", "internal_transfers"
   add_foreign_key "internal_transfer_events", "users"
@@ -988,6 +1001,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_130000) do
   add_foreign_key "internal_transfer_shipments", "users", column: "sent_by_id"
   add_foreign_key "internal_transfers", "locations", column: "destination_location_id"
   add_foreign_key "internal_transfers", "users", column: "requested_by_id"
+  add_foreign_key "internal_transfers", "users", column: "reviewed_by_id"
   add_foreign_key "logs", "users"
   add_foreign_key "marketing_tasks", "marketing_campaigns"
   add_foreign_key "marketing_tasks", "users"

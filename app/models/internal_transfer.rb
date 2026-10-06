@@ -1,16 +1,26 @@
 # Transferência interna entre lojas (locations do Shopify). Tem uma loja de destino ("Minha
 # loja é: ..."); os itens são agrupados por loja de origem em uma remessa (InternalTransferShipment)
 # por origem, cada uma com o próprio andamento, código de rastreio e ajuste de estoque no Shopify.
+# Nasce aguardando aprovação do aprovador configurado (InternalTransferConfig): só depois de
+# aprovada as remessas podem ser reservadas. O recebimento não passa por aprovação.
 class InternalTransfer < ApplicationRecord
-  STATUS_LABELS = { 'aberto' => 'Aberta', 'em_andamento' => 'Em andamento', 'concluida' => 'Concluída', 'cancelada' => 'Cancelada' }.freeze
+  class NotPending < StandardError; end
+
+  STATUS_LABELS = {
+    'aguardando_aprovacao' => 'Aguardando aprovação', 'reprovada' => 'Reprovada',
+    'aberto' => 'Aberta', 'em_andamento' => 'Em andamento', 'concluida' => 'Concluída', 'cancelada' => 'Cancelada'
+  }.freeze
 
   belongs_to :destination_location, class_name: 'Location'
   belongs_to :requested_by, class_name: 'User'
+  belongs_to :reviewed_by, class_name: 'User', optional: true
   has_many :shipments, class_name: 'InternalTransferShipment', dependent: :destroy, inverse_of: :internal_transfer, autosave: true
   has_many :events, class_name: 'InternalTransferEvent', dependent: :destroy
 
   validate :must_have_items
   validate :shipments_are_valid
+
+  enum :approval_status, { pendente: 0, aprovada: 1, reprovada: 2 }, prefix: :approval
 
   scope :recent, -> { order(created_at: :desc) }
 
@@ -28,6 +38,9 @@ class InternalTransfer < ApplicationRecord
   end
 
   def overall_status
+    return 'aguardando_aprovacao' if approval_pendente?
+    return 'reprovada' if approval_reprovada?
+
     statuses = shipments.map(&:status)
     return 'aberto' if statuses.all? { |status| status == 'aberto' }
     return 'cancelada' if statuses.all? { |status| status == 'cancelado' }
@@ -40,18 +53,47 @@ class InternalTransfer < ApplicationRecord
     STATUS_LABELS[overall_status]
   end
 
-  # Só dá para editar ou excluir enquanto nenhuma remessa saiu do estado inicial.
+  # Só dá para editar ou excluir enquanto nenhuma remessa saiu do estado inicial (e não foi reprovada).
   def editable?
-    shipments.all?(&:aberto?)
+    !approval_reprovada? && shipments.all?(&:aberto?)
   end
 
   def deletable?
     editable?
   end
 
+  # Aprova: libera as remessas para serem reservadas na origem.
+  def approve!(user)
+    with_lock do
+      raise NotPending, 'Esta transferência não está aguardando aprovação.' unless approval_pendente?
+
+      update!(approval_status: :aprovada, reviewed_by: user, reviewed_at: Time.current)
+    end
+    events.create!(user: user, action: 'approved', message: 'Transferência aprovada. As lojas de origem já podem reservar os itens.')
+  end
+
+  # Reprova: cancela todas as remessas. Como nada foi reservado antes da aprovação, não há
+  # estoque a devolver no Shopify.
+  def reject!(user, reason: nil)
+    now = Time.current
+    with_lock do
+      raise NotPending, 'Esta transferência não está aguardando aprovação.' unless approval_pendente?
+
+      update!(approval_status: :reprovada, reviewed_by: user, reviewed_at: now, rejection_reason: reason.presence)
+      shipments.each do |shipment|
+        shipment.items.each { |item| item.update!(status: :cancelled, cancelled_at: now) }
+        shipment.update!(status: :cancelado, cancelled_at: now, cancelled_by: user)
+      end
+    end
+    events.create!(user: user, action: 'rejected', message: "Transferência reprovada#{": #{reason}" if reason.present?}.")
+  end
+
   # A location de `user` participa como origem (com algo a reservar/enviar) ou como destino
-  # (com algo a receber)? Usado para destacar "Aguardando sua ação" na lista.
-  def my_action_needed?(user)
+  # (com algo a receber), ou `user` é o aprovador e há aprovação pendente? Usado para destacar
+  # "Aguardando sua ação" na lista.
+  def my_action_needed?(user, approver_id: InternalTransferConfig.approver_id)
+    return user.id == approver_id if approval_pendente?
+
     shipments.any? do |shipment|
       (shipment.reservable? && user_can?(user, shipment.origin_location)) ||
         (shipment.sendable? && user_can?(user, shipment.origin_location)) ||

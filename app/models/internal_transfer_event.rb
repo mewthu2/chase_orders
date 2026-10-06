@@ -1,7 +1,7 @@
 # Linha do tempo de uma transferência interna: quem fez o quê, em qual remessa, e quando.
 class InternalTransferEvent < ApplicationRecord
   ACTION_LABELS = {
-    'created' => 'Transferência criada', 'reserved' => 'Itens reservados', 'reservation_failed' => 'Falha ao reservar',
+    'created' => 'Transferência criada', 'approved' => 'Aprovada', 'updated' => 'Editada', 'rejected' => 'Reprovada', 'reserved' => 'Itens reservados', 'reservation_failed' => 'Falha ao reservar',
     'shipped' => 'Marcada como enviada', 'received' => 'Recebida', 'cancelled' => 'Cancelada'
   }.freeze
 

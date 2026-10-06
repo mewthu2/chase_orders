@@ -20,6 +20,8 @@
     </div>
   </div>
 
+  <%= render 'approval', transfer: @transfer, approver: @approver %>
+
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-info-circle me-2"></i>Dados da transferência</h5></div>
     <div class="form-section-body">
@@ -108,9 +110,10 @@
   <div class="table-card internal-transfer-timeline">
     <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-history me-2"></i>Histórico</h5></div>
     <div class="px-3 py-3">
-      <% if @transfer.events.recent.any? %>
+      <% events = @transfer.events.sort_by(&:created_at).reverse # usa o preload (scope .recent faria nova query) %>
+      <% if events.any? %>
         <ul class="list-unstyled mb-0">
-          <% @transfer.events.recent.each do |event| %>
+          <% events.each do |event| %>
             <li class="mb-2">
               <span class="text-main"><%= event.action_label %></span>
               <span class="text-muted-custom">— <%= event.message %></span>

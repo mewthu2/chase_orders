@@ -467,14 +467,35 @@ function toggleDropdown(dropdownId, iconId, buttonSelector) {
     if (i !== icon) i.classList.remove("rotated")
   })
 
-  if (button && dropdown) {
-    const rect = button.getBoundingClientRect()
-    dropdown.style.left = rect.left + "px"
-  }
+  if (button && dropdown) positionDropdown(dropdown, button)
 
   dropdown.classList.toggle("show")
   icon.classList.toggle("rotated")
 }
+
+// Alinha o dropdown ao botão, mas sempre dentro da tela: se passar da borda direita, encosta
+// nela; se não couber na largura, encolhe (o conteúdo vira uma coluna).
+var DROPDOWN_GUTTER = 8
+
+function positionDropdown(dropdown, button) {
+  const viewport = document.documentElement.clientWidth
+  dropdown.style.maxWidth = viewport - DROPDOWN_GUTTER * 2 + "px"
+  dropdown.style.minWidth = Math.min(280, viewport - DROPDOWN_GUTTER * 2) + "px"
+
+  const width = dropdown.offsetWidth
+  const left = button.getBoundingClientRect().left
+  const maxLeft = viewport - width - DROPDOWN_GUTTER
+  dropdown.style.left = Math.max(DROPDOWN_GUTTER, Math.min(left, maxLeft)) + "px"
+}
+
+function repositionOpenDropdown() {
+  const dropdown = document.querySelector(".nav-group-dropdown.show")
+  const button = dropdown?.previousElementSibling
+  if (dropdown && button) positionDropdown(dropdown, button)
+}
+
+window.addEventListener("resize", repositionOpenDropdown)
+document.getElementById("navCarousel")?.addEventListener("scroll", repositionOpenDropdown)
 
 function toggleCRM() {
   toggleDropdown("crmDropdown", "crmIcon", '[onclick="toggleCRM()"]')

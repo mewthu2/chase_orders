@@ -17,7 +17,7 @@ class InternalTransferReservationProcessorTest < ActiveSupport::TestCase
   end
 
   def shipment_with(items)
-    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester)
+    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester, approval_status: :aprovada)
     shipment = transfer.shipments.build(origin_location: @origin)
     items.each { |product, quantity| shipment.items.build(product: product, quantity: quantity) }
     transfer.save!
@@ -142,7 +142,7 @@ class InternalTransferReservationProcessorTest < ActiveSupport::TestCase
 
   test 'an origin without a Shopify id fails all lines instead of guessing a location' do
     orphan = Location.create!(slug: 'nova', name: 'Nova', shopify_location_id: nil)
-    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester)
+    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester, approval_status: :aprovada)
     shipment = transfer.shipments.build(origin_location: orphan)
     shipment.items.build(product: @a, quantity: 1)
     transfer.save!

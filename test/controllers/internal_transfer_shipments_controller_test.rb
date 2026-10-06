@@ -28,7 +28,7 @@ class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   def build_transfer(quantity: 2, status: :aberto)
-    transfer = InternalTransfer.new(destination_location: @lagoa, requested_by: @requester)
+    transfer = InternalTransfer.new(destination_location: @lagoa, requested_by: @requester, approval_status: :aprovada)
     shipment = transfer.shipments.build(origin_location: @bh)
     shipment.items.build(product: @product, quantity: quantity)
     transfer.save!
@@ -168,5 +168,16 @@ class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
     post reserve_internal_transfer_shipment_path(other_transfer.internal_transfer, shipment)
 
     assert_response :not_found
+  end
+
+  test 'reserving a shipment of a transfer still waiting for approval is refused' do
+    shipment = build_transfer
+    shipment.internal_transfer.update!(approval_status: :pendente)
+
+    post reserve_internal_transfer_shipment_path(shipment.internal_transfer, shipment)
+
+    assert_redirected_to internal_transfer_path(shipment.internal_transfer)
+    assert_match(/não pode ser reservada/, flash[:alert])
+    assert shipment.reload.aberto?
   end
 end

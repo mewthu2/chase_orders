@@ -1,0 +1,46 @@
+<% if transfer.approval_pendente? %>
+  <div class="approval-card approval-card--pending mb-3">
+    <div class="approval-card-icon"><i class="fas fa-hourglass-half"></i></div>
+    <div class="approval-card-body">
+      <h5 class="approval-card-title">Aguardando aprovação</h5>
+      <% if approver %>
+        <p class="mb-0">Nada é reservado nas lojas de origem até <strong><%= approver.name %></strong> aprovar esta transferência.</p>
+      <% else %>
+        <p class="mb-0">Nenhum aprovador configurado. <% if current_user.admin? %><%= link_to 'Configurar aprovador', edit_internal_transfer_config_path %><% else %>Peça a um admin para configurar.<% end %></p>
+      <% end %>
+
+      <% if approver? %>
+        <div class="approval-card-actions">
+          <%= button_to approve_internal_transfer_path(transfer), method: :post, class: "btn-export",
+                        form: { data: { turbo_confirm: 'Aprovar esta transferência? As lojas de origem poderão reservar os itens.' } } do %>
+            <i class="fas fa-check me-1"></i>Aprovar
+          <% end %>
+          <%= form_with url: reject_internal_transfer_path(transfer), method: :post, local: true, class: 'd-flex align-items-center gap-2 flex-wrap',
+                        data: { turbo_confirm: 'Reprovar esta transferência? Todas as remessas serão canceladas.' } do %>
+            <input type="text" name="rejection_reason" class="field-input" placeholder="Motivo (opcional)" style="max-width: 260px;">
+            <button type="submit" class="btn-back"><i class="fas fa-times me-1"></i>Reprovar</button>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% elsif transfer.approval_reprovada? %>
+  <div class="approval-card approval-card--rejected mb-3">
+    <div class="approval-card-icon"><i class="fas fa-times-circle"></i></div>
+    <div class="approval-card-body">
+      <h5 class="approval-card-title">Reprovada</h5>
+      <p class="mb-0">
+        Por <strong><%= transfer.reviewed_by&.name || '-' %></strong> em <%= transfer.reviewed_at&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %>.
+        <% if transfer.rejection_reason.present? %>Motivo: <%= transfer.rejection_reason %><% end %>
+      </p>
+    </div>
+  </div>
+<% elsif transfer.reviewed_by %>
+  <div class="approval-card approval-card--approved mb-3">
+    <div class="approval-card-icon"><i class="fas fa-check-circle"></i></div>
+    <div class="approval-card-body">
+      <h5 class="approval-card-title">Aprovada</h5>
+      <p class="mb-0">Por <strong><%= transfer.reviewed_by.name %></strong> em <%= transfer.reviewed_at&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %>.</p>
+    </div>
+  </div>
+<% end %>

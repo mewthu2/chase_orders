@@ -5,7 +5,7 @@ class InternalTransferItemTest < ActiveSupport::TestCase
     @user = User.create!(name: 'Solicitante', email: 'solicitante_item@example.com', password: 'password123')
     @destination = Location.create!(slug: 'lagoa_seca', name: 'Lagoa Seca', shopify_location_id: '1')
     @origin = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '2')
-    @transfer = InternalTransfer.new(destination_location: @destination, requested_by: @user)
+    @transfer = InternalTransfer.new(destination_location: @destination, requested_by: @user, approval_status: :aprovada)
     @shipment = @transfer.shipments.build(origin_location: @origin)
   end
 

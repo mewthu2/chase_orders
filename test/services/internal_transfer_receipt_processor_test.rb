@@ -16,7 +16,7 @@ class InternalTransferReceiptProcessorTest < ActiveSupport::TestCase
   end
 
   def sent_shipment(items)
-    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester)
+    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @requester, approval_status: :aprovada)
     shipment = transfer.shipments.build(origin_location: @origin)
     items.each { |product, quantity| shipment.items.build(product: product, quantity: quantity) }
     transfer.save!

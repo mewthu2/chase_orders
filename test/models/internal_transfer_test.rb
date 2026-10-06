@@ -10,7 +10,7 @@ class InternalTransferTest < ActiveSupport::TestCase
   end
 
   def build_transfer(items: [[@origin_a, @product, 2]], **attrs)
-    transfer = InternalTransfer.new({ destination_location: @destination, requested_by: @user }.merge(attrs))
+    transfer = InternalTransfer.new({ destination_location: @destination, requested_by: @user, approval_status: :aprovada }.merge(attrs))
     items.group_by { |origin, _, _| origin }.each do |origin, group|
       shipment = transfer.shipments.build(origin_location: origin)
       group.each { |_, product, qty| shipment.items.build(product: product, quantity: qty) }
@@ -107,5 +107,51 @@ class InternalTransferTest < ActiveSupport::TestCase
     assert transfer.my_action_needed?(origin_manager)   # reservar a de RJ
     assert transfer.my_action_needed?(destination_manager) # receber a de BH
     refute transfer.my_action_needed?(unrelated_manager)
+  end
+
+  test 'a new transfer waits for approval and its shipments cannot be reserved until approved' do
+    transfer = InternalTransfer.new(destination_location: @destination, requested_by: @user)
+    transfer.shipments.build(origin_location: @origin_a).items.build(product: @product, quantity: 2)
+    transfer.save!
+
+    assert transfer.approval_pendente?
+    assert_equal 'aguardando_aprovacao', transfer.overall_status
+    assert transfer.editable?
+    refute transfer.shipments.first.reservable?
+
+    approver = User.create!(name: 'Aprovador', email: 'aprovador_m@example.com', password: 'password123')
+    transfer.approve!(approver)
+
+    assert transfer.reload.approval_aprovada?
+    assert_equal approver, transfer.reviewed_by
+    assert transfer.shipments.first.reservable?
+    assert_equal 'approved', transfer.events.last.action
+  end
+
+  test 'reject! cancels every shipment and item and blocks edits' do
+    transfer = build_transfer(items: [[@origin_a, @product, 2], [@origin_b, @product, 3]], approval_status: :pendente)
+    transfer.save!
+    approver = User.create!(name: 'Aprovador', email: 'aprovador_r@example.com', password: 'password123')
+
+    transfer.reject!(approver, reason: 'Sem necessidade')
+    transfer.reload
+
+    assert transfer.approval_reprovada?
+    assert_equal 'Sem necessidade', transfer.rejection_reason
+    assert_equal 'reprovada', transfer.overall_status
+    assert transfer.shipments.all?(&:cancelado?)
+    assert transfer.shipments.flat_map(&:items).all?(&:cancelled?)
+    refute transfer.editable?
+    assert_raises(InternalTransfer::NotPending) { transfer.approve!(approver) }
+  end
+
+  test 'my_action_needed? while pending flags only the approver' do
+    transfer = build_transfer(approval_status: :pendente)
+    transfer.save!
+    approver = User.create!(name: 'Aprovador', email: 'aprovador_a@example.com', password: 'password123')
+    origin_manager = User.create!(name: 'Gerente BH', email: 'gerente_bh_a@example.com', password: 'password123', allowed_locations: ['bh_shopping'])
+
+    assert transfer.my_action_needed?(approver, approver_id: approver.id)
+    refute transfer.my_action_needed?(origin_manager, approver_id: approver.id)
   end
 end

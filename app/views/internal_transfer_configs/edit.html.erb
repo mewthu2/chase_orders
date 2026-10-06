@@ -1,0 +1,34 @@
+<% content_for :title, "Configurar Transferências" %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-cog me-2"></i>Configurar Transferências</h1>
+      <p class="page-subtitle">Toda transferência interna precisa ser aprovada antes de as lojas de origem reservarem os itens</p>
+    </div>
+    <div class="header-actions">
+      <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+
+  <%= form_with model: @config, url: internal_transfer_config_path, method: :patch, local: true do |form| %>
+    <div class="form-section">
+      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-user-check me-2"></i>Aprovador</h5></div>
+      <div class="form-section-body">
+        <div class="form-grid">
+          <div class="form-col-6">
+            <label class="field-label">Quem aprova as transferências</label>
+            <%= form.select :approver_id, options_from_collection_for_select(@users, :id, :name, @config.approver_id),
+                            { include_blank: 'Ninguém (transferências ficam paradas)' }, class: 'field-input' %>
+            <small class="text-muted-custom d-block mt-2">As transferências que estão aguardando passam para o novo aprovador.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <%= form.submit 'Salvar', class: 'btn-submit' %>
+      <%= link_to 'Cancelar', internal_transfers_path, class: 'btn-cancel' %>
+    </div>
+  <% end %>
+</div>

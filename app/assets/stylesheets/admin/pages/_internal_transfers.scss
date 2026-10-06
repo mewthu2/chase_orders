@@ -1,0 +1,65 @@
+// ---- Transferência interna: aprovação ----
+// Cada partial importa suas dependências (config/assets.rb pré-compila todos os .scss).
+@import 'admin/variables';
+
+@keyframes approval-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(227, 179, 65, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(227, 179, 65, 0); }
+}
+@keyframes approval-hourglass {
+  0%, 80% { transform: rotate(0deg); }
+  100%    { transform: rotate(180deg); }
+}
+@keyframes approval-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.approval-pending-pill { animation: approval-pulse 2s ease-in-out infinite; }
+
+.approval-card {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 16px 20px; border-radius: $radius-md; border: 1px solid $border-default;
+  background: $bg-surface; position: relative; overflow: hidden;
+
+  &::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; }
+}
+.approval-card-icon {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+}
+.approval-card-title { margin: 0 0 4px; font-weight: 700; }
+.approval-card-body { flex: 1 1 auto; min-width: 0; }
+.approval-card-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+
+.approval-card--pending {
+  background: linear-gradient(110deg, rgba(227, 179, 65, 0.10), rgba(227, 179, 65, 0.02) 60%);
+  border-color: rgba(227, 179, 65, 0.45);
+  &::before { background: $accent-yellow; }
+  .approval-card-icon { background: rgba(227, 179, 65, 0.15); color: $accent-yellow; animation: approval-pulse 2s ease-in-out infinite; }
+  .approval-card-icon i { animation: approval-hourglass 2.4s ease-in-out infinite; }
+  .approval-card-title { color: $accent-yellow; }
+}
+.approval-card--approved {
+  border-color: rgba(63, 185, 80, 0.4);
+  &::before { background: $accent-green-light; }
+  .approval-card-icon { background: rgba(63, 185, 80, 0.15); color: $accent-green-light; animation: approval-pop 0.5s ease-out; }
+  .approval-card-title { color: $accent-green-light; }
+}
+.approval-card--rejected {
+  border-color: rgba(248, 81, 73, 0.4);
+  &::before { background: $accent-red-light; }
+  .approval-card-icon { background: rgba(248, 81, 73, 0.12); color: $accent-red-light; animation: approval-pop 0.5s ease-out; }
+  .approval-card-title { color: $accent-red-light; }
+}
+
+.approval-banner {
+  padding: 10px 16px; border-radius: $radius-md;
+  &--warning { background: rgba(227, 179, 65, 0.12); border: 1px solid $accent-yellow-alt; color: $accent-yellow; }
+  a { color: inherit; font-weight: 700; margin-left: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .approval-pending-pill, .approval-card-icon, .approval-card-icon i { animation: none !important; }
+}

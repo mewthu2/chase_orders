@@ -134,7 +134,12 @@ Rails.application.routes.draw do
     end
   end
   
+  resource :internal_transfer_config, only: [:edit, :update]
   resources :internal_transfers do
+    member do
+      post :approve
+      post :reject
+    end
     resources :shipments, controller: 'internal_transfer_shipments', only: [] do
       member do
         post :reserve

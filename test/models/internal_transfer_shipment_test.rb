@@ -6,7 +6,7 @@ class InternalTransferShipmentTest < ActiveSupport::TestCase
     @destination = Location.create!(slug: 'lagoa_seca', name: 'Lagoa Seca', shopify_location_id: '1')
     @origin = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '2')
     @product = Product.create!(sku: 'SKU-1', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001')
-    @transfer = InternalTransfer.new(destination_location: @destination, requested_by: @user)
+    @transfer = InternalTransfer.new(destination_location: @destination, requested_by: @user, approval_status: :aprovada)
     @shipment = @transfer.shipments.build(origin_location: @origin)
     @shipment.items.build(product: @product, quantity: 2)
     @transfer.save!

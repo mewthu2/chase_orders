@@ -27,7 +27,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   def build_transfer(items: [[@bh, @a, 2]], destination: @lagoa, requester: @admin)
-    transfer = InternalTransfer.new(destination_location: destination, requested_by: requester)
+    transfer = InternalTransfer.new(destination_location: destination, requested_by: requester, approval_status: :aprovada)
     items.group_by { |origin, _, _| origin }.each do |origin, group|
       shipment = transfer.shipments.build(origin_location: origin)
       group.each { |_, product, qty| shipment.items.build(product: product, quantity: qty) }
@@ -87,6 +87,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, transfer.shipments.count
     assert_equal 2, transfer.shipments.first.items.count
     assert transfer.shipments.first.aberto?
+    assert transfer.approval_pendente?
     assert_redirected_to internal_transfer_path(transfer)
   end
 
@@ -258,5 +259,100 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
 
     assert_equal 7, json['stock'][@a.id.to_s][@bh.id.to_s]
+  end
+
+  def pending_transfer
+    transfer = build_transfer
+    transfer.update!(approval_status: :pendente)
+    transfer
+  end
+
+  def aprovador
+    user = User.create!(name: 'Aprovador', email: 'aprovador_it@example.com', password: 'password123', allowed_locations: ['eldorado_sp'])
+    user.profiles << Profile.create!(name: 'Sem Transferencia IT')
+    InternalTransferConfig.current.update!(approver: user)
+    user
+  end
+
+  test 'only an admin can open the approver configuration' do
+    get edit_internal_transfer_config_path
+    assert_response :success
+
+    sign_in gerente_lagoa
+    get edit_internal_transfer_config_path
+    assert_redirected_to root_path
+  end
+
+  test 'an admin sets the approver' do
+    user = User.create!(name: 'Qualquer', email: 'qualquer_it@example.com', password: 'password123')
+
+    patch internal_transfer_config_path, params: { internal_transfer_config: { approver_id: user.id } }
+
+    assert_redirected_to internal_transfers_path
+    assert_equal user, InternalTransferConfig.current.approver
+  end
+
+  test 'the approver sees pending transfers and approves them even without the screen in the profile' do
+    transfer = pending_transfer
+    sign_in aprovador
+
+    get internal_transfers_path
+    assert_response :success
+    assert_includes response.body, "##{transfer.id}"
+    assert_includes response.body, 'Aguardando sua ação'
+
+    get internal_transfer_path(transfer)
+    assert_select 'button', text: /Aprovar/
+
+    post approve_internal_transfer_path(transfer)
+    assert_redirected_to internal_transfer_path(transfer)
+    assert transfer.reload.approval_aprovada?
+
+    get new_internal_transfer_path
+    assert_redirected_to root_path
+  end
+
+  test 'the approver rejects with a reason and every shipment is cancelled' do
+    transfer = pending_transfer
+    sign_in aprovador
+
+    post reject_internal_transfer_path(transfer), params: { rejection_reason: 'Estoque baixo' }
+
+    transfer.reload
+    assert transfer.approval_reprovada?
+    assert_equal 'Estoque baixo', transfer.rejection_reason
+    assert transfer.shipments.all?(&:cancelado?)
+  end
+
+  test 'someone other than the approver cannot approve, not even an admin' do
+    transfer = pending_transfer
+    aprovador
+
+    post approve_internal_transfer_path(transfer)
+
+    assert_redirected_to internal_transfer_path(transfer)
+    assert transfer.reload.approval_pendente?
+  end
+
+  test 'a pending transfer shows no reserve button' do
+    transfer = pending_transfer
+    get internal_transfer_path(transfer)
+
+    assert_includes response.body, 'Aguardando aprovação'
+    assert_select 'button', text: /Reservar/, count: 0
+  end
+
+  test 'editing an approved transfer sends it back to approval' do
+    transfer = build_transfer
+
+    patch internal_transfer_path(transfer), params: { internal_transfer: {
+      destination_location_id: @lagoa.id, items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '5' } }
+    } }
+
+    assert_redirected_to internal_transfer_path(transfer)
+    transfer.reload
+    assert transfer.approval_pendente?
+    assert_nil transfer.reviewed_by
+    refute transfer.shipments.first.reservable?
   end
 end

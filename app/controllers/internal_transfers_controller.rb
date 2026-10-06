@@ -2,18 +2,27 @@
 # ("Minha loja é: ...") e reúne itens de várias lojas de origem; cada origem vira uma remessa
 # (InternalTransferShipment) com o próprio andamento.
 class InternalTransfersController < ApplicationController
-  guard_screen :internal_transfers
+  # O aprovador precisa ver e aprovar/reprovar mesmo sem a tela liberada no perfil.
+  APPROVER_ACTIONS = %w[index show approve reject].freeze
+
+  guard_screen :internal_transfers, unless: -> { approver? && APPROVER_ACTIONS.include?(action_name) }
 
   # Correios Log + é uma location de logística do Shopify, sem gerente para reservar/receber:
   # não entra como origem nem como destino de uma transferência entre lojas.
   EXCLUDED_LOCATION_SLUGS = ['log+'].freeze
-  before_action :set_transfer, only: [:show, :edit, :update, :destroy]
+  before_action :set_transfer, only: [:show, :edit, :update, :destroy, :approve, :reject]
   before_action :require_editable, only: [:edit, :update]
+  before_action :require_approver, only: [:approve, :reject]
+  helper_method :approver?
 
   def index
-    scope = InternalTransfer.includes(:destination_location, shipments: :origin_location).recent
+    scope = InternalTransfer.includes(:destination_location, shipments: [:origin_location, :items]).recent
     scope = scope_for_user(scope) unless current_user.admin?
+    @approver = InternalTransferConfig.current.approver
     @transfers = scope.paginate(page: params[:page], per_page: 20)
+    # Só o nome do solicitante: pré-carregar os User faria o Bullet confundir o current_user (quando
+    # ele também é solicitante) com um N+1 de profiles.
+    @requester_names = User.where(id: @transfers.map(&:requested_by_id).uniq).pluck(:id, :name).to_h
   end
 
   def new
@@ -34,14 +43,16 @@ class InternalTransfersController < ApplicationController
 
     if @transfer.save
       log_event(@transfer, action: 'created', message: "Transferência criada para #{@transfer.destination_location.name} (#{@transfer.total_quantity} unidade(s)).")
-      redirect_to internal_transfer_path(@transfer), notice: 'Transferência criada. Cada loja de origem precisa reservar os itens dela.'
+      redirect_to internal_transfer_path(@transfer), notice: 'Transferência criada. Ela precisa ser aprovada antes de as lojas de origem reservarem os itens.'
     else
       prepare_form
       render :new, status: :unprocessable_entity
     end
   end
 
-  def show; end
+  def show
+    @approver = InternalTransferConfig.current.approver
+  end
 
   def edit
     prepare_form
@@ -51,9 +62,13 @@ class InternalTransfersController < ApplicationController
     @transfer.assign_attributes(header_params)
     @transfer.shipments.each(&:mark_for_destruction)
     build_shipments(@transfer)
+    # Mudou o que foi aprovado: precisa de nova aprovação.
+    reapproval = @transfer.approval_aprovada?
+    @transfer.assign_attributes(approval_status: :pendente, reviewed_by: nil, reviewed_at: nil) if reapproval
 
     if @transfer.save
-      redirect_to internal_transfer_path(@transfer), notice: 'Transferência atualizada.'
+      log_event(@transfer, action: 'updated', message: 'Transferência editada; volta a aguardar aprovação.') if reapproval
+      redirect_to internal_transfer_path(@transfer), notice: reapproval ? 'Transferência atualizada. Ela volta a aguardar aprovação.' : 'Transferência atualizada.'
     else
       prepare_form
       render :edit, status: :unprocessable_entity
@@ -69,6 +84,20 @@ class InternalTransfersController < ApplicationController
 
     @transfer.destroy
     redirect_to internal_transfers_path, notice: 'Transferência excluída.'
+  end
+
+  def approve
+    @transfer.approve!(current_user)
+    redirect_to internal_transfer_path(@transfer), notice: 'Transferência aprovada. As lojas de origem já podem reservar os itens.'
+  rescue InternalTransfer::NotPending => e
+    redirect_to internal_transfer_path(@transfer), alert: e.message
+  end
+
+  def reject
+    @transfer.reject!(current_user, reason: params[:rejection_reason].to_s.strip)
+    redirect_to internal_transfer_path(@transfer), notice: 'Transferência reprovada.'
+  rescue InternalTransfer::NotPending => e
+    redirect_to internal_transfer_path(@transfer), alert: e.message
   end
 
   def search_product
@@ -132,13 +161,24 @@ class InternalTransfersController < ApplicationController
     scope = case action_name
             when 'show'
               InternalTransfer.includes(:destination_location, :requested_by, events: :user,
-                                        shipments: [:origin_location, :reserved_by, :sent_by, :received_by, :cancelled_by, items: :product])
+                                        shipments: [:origin_location, { items: :product }])
             when 'edit', 'update'
               InternalTransfer.includes(shipments: :items)
             else
               InternalTransfer
             end
     @transfer = scope.find(params[:id])
+  end
+
+  def approver?
+    @approver_flag = current_user.id == InternalTransferConfig.approver_id if @approver_flag.nil?
+    @approver_flag
+  end
+
+  def require_approver
+    return if approver?
+
+    redirect_to internal_transfer_path(@transfer), alert: 'Só o aprovador configurado pode aprovar ou reprovar transferências.'
   end
 
   def require_editable
@@ -167,13 +207,13 @@ class InternalTransfersController < ApplicationController
     Location.where.not(slug: EXCLUDED_LOCATION_SLUGS)
   end
 
-  # Só pedidos em que a location (por slug) participa, como origem ou destino.
+  # Só pedidos em que a location (por slug) participa, como origem ou destino; o aprovador vê
+  # também todos os que aguardam aprovação.
   def scope_for_user(scope)
     slugs = current_user.allowed_location_keys
-    return scope.none if slugs.empty?
-
-    ids = slugs.flat_map { |slug| InternalTransfer.involving_location_slug(slug).ids }.uniq
-    scope.where(id: ids)
+    ids = slugs.flat_map { |slug| InternalTransfer.involving_location_slug(slug).ids }
+    ids += InternalTransfer.approval_pendente.ids if approver?
+    scope.where(id: ids.uniq)
   end
 
   # Cada célula da grade (produto x loja de origem) vira um item; célula em branco é ignorada.

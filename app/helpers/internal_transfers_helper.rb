@@ -1,5 +1,8 @@
 module InternalTransfersHelper
-  TRANSFER_STATUS_PILLS = { 'aberto' => '', 'em_andamento' => '', 'concluida' => 'status-pill--active', 'cancelada' => 'status-pill--inactive' }.freeze
+  TRANSFER_STATUS_PILLS = {
+    'aguardando_aprovacao' => 'status-pill--preparando_envio approval-pending-pill', 'reprovada' => 'status-pill--inactive',
+    'aberto' => '', 'em_andamento' => '', 'concluida' => 'status-pill--active', 'cancelada' => 'status-pill--inactive'
+  }.freeze
   SHIPMENT_STATUS_PILLS = {
     'aberto' => '', 'reservado' => '', 'enviado' => '', 'recebido' => 'status-pill--active', 'cancelado' => 'status-pill--inactive'
   }.freeze
@@ -22,9 +25,16 @@ module InternalTransfersHelper
   end
 
   def action_needed_badge(transfer)
-    return unless transfer.my_action_needed?(current_user)
+    return unless transfer.my_action_needed?(current_user, approver_id: internal_transfer_approver_id)
 
     content_tag(:span, 'Aguardando sua ação', class: 'badge bg-warning text-dark action-needed-badge')
+  end
+
+  # Lido uma vez por requisição (a lista chama para cada linha).
+  def internal_transfer_approver_id
+    return @internal_transfer_approver_id if defined?(@internal_transfer_approver_id)
+
+    @internal_transfer_approver_id = InternalTransferConfig.approver_id
   end
 
   # Quem gerencia a loja de origem (ou admin) pode reservar/enviar aquela remessa.

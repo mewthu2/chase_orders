@@ -23,7 +23,10 @@ class InternalTransferShipment < ApplicationRecord
   end
 
   # Reservar: vale para abrir a remessa e também para tentar de novo os itens que falharam.
+  # Só depois que a transferência foi aprovada.
   def reservable?
+    return false unless internal_transfer.approval_aprovada?
+
     aberto? || (items.any?(&:failed?) && !recebido? && !cancelado?)
   end
 
