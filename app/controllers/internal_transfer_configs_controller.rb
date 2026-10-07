@@ -1,15 +1,14 @@
-# Configuração das transferências internas (só admin): quem é o aprovador.
+# Configuração das transferências internas (só admin): quem são os aprovadores.
 class InternalTransferConfigsController < ApplicationController
   before_action :admin_only!
 
   def edit
-    @config = InternalTransferConfig.current
     @users = User.order(:name)
+    @approver_ids = InternalTransferApprover.user_ids
   end
 
   def update
-    @config = InternalTransferConfig.current
-    @config.update!(approver_id: params.require(:internal_transfer_config)[:approver_id].presence)
+    InternalTransferApprover.replace_with!(Array(params[:approver_ids]).compact_blank)
     redirect_to internal_transfers_path, notice: 'Configuração das transferências salva.'
   end
 end

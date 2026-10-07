@@ -84,7 +84,7 @@
           </div>
         </div>
 
-        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') %>
+        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
               <div class="nav-group-title">
@@ -96,15 +96,13 @@
             <div class="nav-group-dropdown" id="pedidosB2bDropdown">
               <div class="dropdown-content">
                 <% if current_user&.can_access_screen?('b2b_orders') %>
-                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] != 'stock_transfer'}" do %>
+                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'sale'}" do %>
                     <i class="fas fa-file-invoice-dollar"></i>
                     <span>Pedidos de Atacado</span>
                   <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('transfer_locations') %>
-                  <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
-                    <i class="fas fa-warehouse"></i>
-                    <span>Locais de Transferência</span>
+                  <%= link_to b2c_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'b2c_transfer'}" do %>
+                    <i class="fas fa-random"></i>
+                    <span>Transferência B2B → B2C</span>
                   <% end %>
                 <% end %>
                 <% if current_user&.can_access_screen?('carriers') %>
@@ -320,7 +318,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') || current_user&.can_access_screen?('b2b_orders') %>
+        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') || current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
               <div class="nav-group-title">
@@ -353,6 +351,12 @@
                   <%= link_to stock_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'stock_transfer'}" do %>
                     <i class="fas fa-dolly"></i>
                     <span>Abastecimento Lojas</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('transfer_locations') %>
+                  <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
+                    <i class="fas fa-warehouse"></i>
+                    <span>Locais de Transferência</span>
                   <% end %>
                 <% end %>
               </div>

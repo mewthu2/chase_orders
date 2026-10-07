@@ -1,4 +1,3 @@
-<% transfers = @b2b_order.stock_transfer? %>
 <%= form_with model: @b2b_order, url: order_form_url(@b2b_order), local: true, id: 'b2bOrderForm' do |form| %>
   <% if @b2b_order.errors.any? %>
     <div class="form-error-box">
@@ -11,7 +10,7 @@
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do Pedido</h5></div>
     <div class="form-section-body">
       <div class="form-grid mb-3">
-        <% if @b2b_order.persisted? && @b2b_order.sale? %>
+        <% if @b2b_order.persisted? && @b2b_order.tiny_order? %>
           <div class="form-col-6">
             <label class="field-label">Status</label>
             <%= form.select :status, B2bOrder::STATUS_LABELS.map { |key, label| [label, key] }, { selected: @b2b_order.status }, { class: 'field-input' } %>
@@ -27,7 +26,7 @@
       </div>
 
       <div class="form-grid">
-        <% unless transfers %>
+        <% if @b2b_order.sale? %>
         <div class="form-col-6" id="clientSection">
           <label class="field-label">Cliente</label>
           <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
@@ -40,10 +39,18 @@
           <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
         </div>
 
-        <% else %>
+        <% elsif @b2b_order.stock_transfer? %>
         <div class="form-col-6" id="transferLocationSection">
           <label class="field-label">Local de Destino</label>
           <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+        </div>
+        <% else %>
+        <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
+        <div class="form-col-6" id="b2cDestinationSection">
+          <label class="field-label">Destino</label>
+          <div class="text-main"><%= recipient[:nome] %></div>
+          <span class="text-muted-custom d-block mt-1">CNPJ <%= recipient[:cpf_cnpj] %> · <%= recipient[:endereco] %>, <%= recipient[:numero] %> <%= recipient[:complemento] %> · <%= recipient[:cidade] %>/<%= recipient[:uf] %></span>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com o marcador <%= B2bTinyService::B2C_TRANSFER_TAG %>.</span>
         </div>
         <% end %>
 
@@ -67,7 +74,7 @@
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
 
-        <% unless transfers %>
+        <% if @b2b_order.sale? %>
         <div class="form-col-12 form-check">
           <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
           <label class="form-check-label text-main" for="differentShippingAddressCheck">O endereço de entrega do cliente é diferente do endereço de cobrança</label>
@@ -75,7 +82,7 @@
         <% end %>
       </div>
 
-      <% unless transfers %>
+      <% if @b2b_order.sale? %>
       <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
         <div class="form-col-6">
           <label class="field-label">Rua</label>
@@ -113,7 +120,7 @@
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
     <div class="form-section-body">
-      <% if transfers %>
+      <% if @b2b_order.stock_transfer? %>
       <div class="form-hint-box">
         <i class="fas fa-info-circle"></i>
         <div>O estoque disponível para o abastecimento das lojas sai do Correios B2B.</div>
@@ -206,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var stockCache = {}; // sku -> quantity, preenchido pela busca do modal e reaproveitado na tabela
 
   // A lista de preço é fixa por tela: atacado = padrão, transferência = transferência.
-  var PRICE_LIST = '<%= @b2b_order.stock_transfer? ? 'transfer' : 'standard' %>';
+  var PRICE_LIST = '<%= @b2b_order.sale? ? 'standard' : 'transfer' %>';
   function currentPriceList() {
     return PRICE_LIST;
   }

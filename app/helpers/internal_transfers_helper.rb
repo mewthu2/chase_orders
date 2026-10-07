@@ -25,16 +25,14 @@ module InternalTransfersHelper
   end
 
   def action_needed_badge(transfer)
-    return unless transfer.my_action_needed?(current_user, approver_id: internal_transfer_approver_id)
+    return unless transfer.my_action_needed?(current_user, approver_ids: internal_transfer_approver_ids)
 
     content_tag(:span, 'Aguardando sua ação', class: 'badge bg-warning text-dark action-needed-badge')
   end
 
   # Lido uma vez por requisição (a lista chama para cada linha).
-  def internal_transfer_approver_id
-    return @internal_transfer_approver_id if defined?(@internal_transfer_approver_id)
-
-    @internal_transfer_approver_id = InternalTransferConfig.approver_id
+  def internal_transfer_approver_ids
+    @internal_transfer_approver_ids ||= InternalTransferApprover.user_ids
   end
 
   # Quem gerencia a loja de origem (ou admin) pode reservar/enviar aquela remessa.

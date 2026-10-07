@@ -1,19 +1,20 @@
-<% transfers = order_kind == 'stock_transfer' %>
-<% content_for :title, transfers ? "Abastecimento Lojas" : "Pedidos de Atacado" %>
+<% copy = b2b_screen_copy(order_kind) %>
+<% transfers = order_kind != 'sale' %>
+<% content_for :title, copy[:title] %>
 
 <div class="users-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Abastecimento Lojas' : 'Pedidos de Atacado' %></h1>
-      <p class="page-subtitle"><%= transfers ? 'Transferências de estoque para abastecer as lojas' : 'Pedidos de venda no atacado' %></p>
+      <h1 class="page-title"><i class="fas fa-<%= copy[:icon] %> me-2"></i><%= copy[:title] %></h1>
+      <p class="page-subtitle"><%= copy[:subtitle] %></p>
     </div>
     <div class="header-actions">
       <span class="total-badge"><i class="fas fa-list me-1"></i><%= @b2b_orders.size %> pedido(s)</span>
-      <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-2"></i><%= transfers ? 'Novo Abastecimento' : 'Novo Pedido' %><% end %>
+      <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-2"></i><%= copy[:new_button] %><% end %>
     </div>
   </div>
 
-  <% if transfers %>
+  <% if order_kind == 'stock_transfer' %>
   <div class="form-hint-box mx-3 mt-3">
     <i class="fas fa-info-circle"></i>
     <div>
@@ -23,7 +24,7 @@
   <% end %>
 
   <div class="table-card">
-    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i><%= transfers ? 'Lista de Abastecimentos' : 'Lista de Pedidos' %></h5></div>
+    <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-list me-2"></i><%= copy[:list_title] %></h5></div>
 
     <% unless transfers %>
     <%= form_with url: orders_path_for, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
@@ -82,7 +83,7 @@
               <tr>
                 <td class="text-main">#<%= order.id %></td>
                 <td class="text-muted-custom"><%= order.created_at.strftime('%d/%m/%Y') %></td>
-                <td class="text-muted-custom"><%= transfers ? order.transfer_location&.name : order.client&.display_name %></td>
+                <td class="text-muted-custom"><%= b2b_order_destination(order) %></td>
                 <% unless transfers %><td class="text-muted-custom"><%= order.client&.cnpj_formatted %></td><% end %>
                 <td class="text-end"><%= number_to_currency(order.total, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></td>
                 <td class="text-muted-custom">
@@ -98,17 +99,17 @@
                 <td class="text-end">
                   <div class="table-actions">
                     <%= link_to edit_order_path_for(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <% if current_user.can_access_screen?('fiscal_notes') %>
+                    <% if current_user.can_access_screen?('fiscal_notes') && !order.b2c_transfer? %>
                       <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
                     <% end %>
-                    <% if order.sale? && order.tiny_reference_id.present? %>
-                      <%= button_to cancel_in_tiny_b2b_order_path(order), method: :post, class: "action-btn action-btn--danger", title: 'Cancelar no Tiny e liberar reenvio',
+                    <% if order.tiny_order? && order.tiny_reference_id.present? %>
+                      <%= button_to cancel_in_tiny_order_path_for(order), method: :post, class: "action-btn action-btn--danger", title: 'Cancelar no Tiny e liberar reenvio',
                                     form: { data: { turbo_confirm: "Cancelar o pedido nº #{order.tiny_reference_number.presence || order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
                         <i class="fas fa-ban"></i>
                       <% end %>
                     <% end %>
                     <% if order_deletable?(order) %>
-                      <%= button_to order.stock_transfer? ? stock_transfer_path(order) : b2b_order_path(order), method: :delete, class: "action-btn action-btn--danger", title: 'Excluir pedido',
+                      <%= button_to order_path_for(order), method: :delete, class: "action-btn action-btn--danger", title: 'Excluir pedido',
                                     form: { data: { turbo_confirm: "Excluir o pedido ##{order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey." } } do %>
                         <i class="fas fa-trash"></i>
                       <% end %>
@@ -128,8 +129,8 @@
     <% else %>
       <div class="empty-state">
         <i class="fas fa-handshake fa-3x mb-3 d-block"></i>
-        <h5><%= transfers ? 'Nenhum abastecimento cadastrado' : 'Nenhum pedido cadastrado' %></h5>
-        <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-1"></i><%= transfers ? 'Novo Abastecimento' : 'Novo Pedido' %><% end %>
+        <h5><%= copy[:empty] %></h5>
+        <%= link_to new_order_path_for, class: "btn-export" do %><i class="fas fa-plus me-1"></i><%= copy[:new_button] %><% end %>
       </div>
     <% end %>
   </div>

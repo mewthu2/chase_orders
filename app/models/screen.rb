@@ -23,12 +23,12 @@ class Screen
   # Agrupamento espelhando o menu lateral — usado na tela de Perfis pra
   # organizar as permissões do mesmo jeito que o usuário vê o menu.
   GROUPS = {
-    'Pedidos B2B'  => %i[b2b_orders transfer_locations carriers companies fiscal_notes],
+    'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes],
     'CRM'          => %i[orders customers],
     'Correios B2C' => %i[dashboard_correios],
     'Correios B2B' => %i[dashboard_correios_b2b],
     'Planejador'   => %i[planner_orders],
-    'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers],
+    'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers transfer_locations],
     'Outros'       => %i[discounts logs marketing_campaigns marketing_tasks users_management]
   }.freeze
 

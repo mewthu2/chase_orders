@@ -4,7 +4,7 @@ class SyncB2bOrdersStatusJob < ActiveJob::Base
   def perform
     service = B2bTinyService.new
 
-    B2bOrder.sale.where.not(tiny_reference_id: [nil, '']).find_each do |order|
+    B2bOrder.where(kind: %i[sale b2c_transfer]).where.not(tiny_reference_id: [nil, '']).find_each do |order|
       result = service.order_status(order.tiny_reference_id)
       next unless result
 

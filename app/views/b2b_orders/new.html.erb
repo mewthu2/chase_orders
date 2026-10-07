@@ -1,8 +1,8 @@
-<% transfers = order_kind == 'stock_transfer' %>
-<% content_for :title, transfers ? "Novo Abastecimento Lojas" : "Novo Pedido de Atacado" %>
+<% copy = b2b_screen_copy(order_kind) %>
+<% content_for :title, copy[:new_title] %>
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left"><h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Novo Abastecimento Lojas' : 'Novo Pedido de Atacado' %></h1></div>
+    <div class="header-left"><h1 class="page-title"><i class="fas fa-<%= copy[:icon] %> me-2"></i><%= copy[:new_title] %></h1></div>
     <div class="header-actions">
       <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>

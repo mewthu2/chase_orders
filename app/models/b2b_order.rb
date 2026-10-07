@@ -8,7 +8,8 @@ class B2bOrder < ApplicationRecord
 
   has_many :fiscal_notes, dependent: :nullify
 
-  enum :kind, { sale: 0, stock_transfer: 1 }
+  # b2c_transfer: transferência do estoque B2B para a filial B2C (destinatário fixo, ver B2bTinyService).
+  enum :kind, { sale: 0, stock_transfer: 1, b2c_transfer: 2 }
   enum :status, {
     aberto: 0, aprovado: 1, preparando_envio: 2, faturado: 3,
     pronto_para_envio: 4, enviado: 5, nao_entregue: 6,
@@ -52,6 +53,12 @@ class B2bOrder < ApplicationRecord
 
   def resendable?
     !cancelado? && tiny_reference_id.blank?
+  end
+
+  # Vira pedido de venda no Tiny (pedido.incluir), com situação sincronizada e cancelável por lá.
+  # O abastecimento das lojas vira nota fiscal direto, sem pedido.
+  def tiny_order?
+    sale? || b2c_transfer?
   end
 
   def total

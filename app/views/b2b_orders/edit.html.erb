@@ -1,25 +1,25 @@
-<% transfers = order_kind == 'stock_transfer' %>
-<% content_for :title, transfers ? "Editar Abastecimento Lojas" : "Editar Pedido de Atacado" %>
+<% copy = b2b_screen_copy(order_kind) %>
+<% content_for :title, copy[:edit_title] %>
 <div class="users-container">
   <div class="page-header">
     <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-<%= transfers ? 'dolly' : 'handshake' %> me-2"></i><%= transfers ? 'Editar Abastecimento Lojas' : 'Editar Pedido de Atacado' %></h1>
+      <h1 class="page-title"><i class="fas fa-<%= copy[:icon] %> me-2"></i><%= copy[:edit_title] %></h1>
       <p class="page-subtitle">#<%= @b2b_order.id %></p>
     </div>
     <div class="header-actions">
-      <% if @b2b_order.sale? && @b2b_order.tiny_reference_id.present? %>
-        <%= button_to cancel_in_tiny_b2b_order_path(@b2b_order), method: :post, class: "btn-back",
+      <% if @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present? %>
+        <%= button_to cancel_in_tiny_order_path_for(@b2b_order), method: :post, class: "btn-back",
                       form: { data: { turbo_confirm: "Cancelar o pedido nº #{@b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
           <i class="fas fa-ban me-1"></i>Cancelar no Tiny
         <% end %>
       <% end %>
       <% if order_deletable?(@b2b_order) %>
-        <%= button_to @b2b_order.stock_transfer? ? stock_transfer_path(@b2b_order) : b2b_order_path(@b2b_order), method: :delete, class: "btn-back",
+        <%= button_to order_path_for(@b2b_order), method: :delete, class: "btn-back",
                       form: { data: { turbo_confirm: "Excluir o pedido ##{@b2b_order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey." } } do %>
           <i class="fas fa-trash me-1"></i>Excluir
         <% end %>
       <% end %>
-      <% if current_user.can_access_screen?('fiscal_notes') %>
+      <% if current_user.can_access_screen?('fiscal_notes') && !@b2b_order.b2c_transfer? %>
         <%= link_to new_fiscal_note_path(b2b_order_id: @b2b_order.id), class: "btn-export" do %><i class="fas fa-file-invoice me-2"></i>Gerar nota fiscal<% end %>
       <% end %>
       <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>

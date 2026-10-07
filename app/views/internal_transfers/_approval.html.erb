@@ -3,11 +3,7 @@
     <div class="approval-card-icon"><i class="fas fa-hourglass-half"></i></div>
     <div class="approval-card-body">
       <h5 class="approval-card-title">Aguardando aprovação</h5>
-      <% if approver %>
-        <p class="mb-0">Nada é reservado nas lojas de origem até <strong><%= approver.name %></strong> aprovar esta transferência.</p>
-      <% else %>
-        <p class="mb-0">Nenhum aprovador configurado. <% if current_user.admin? %><%= link_to 'Configurar aprovador', edit_internal_transfer_config_path %><% else %>Peça a um admin para configurar.<% end %></p>
-      <% end %>
+      <p class="mb-0">Nada é reservado nas lojas de origem até <strong><%= (approvers.map(&:name) + ['um admin']).to_sentence(two_words_connector: ' ou ', last_word_connector: ' ou ') %></strong> aprovar esta transferência.</p>
 
       <% if approver? %>
         <div class="approval-card-actions">

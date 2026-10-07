@@ -54,12 +54,27 @@
   .approval-card-title { color: $accent-red-light; }
 }
 
-.approval-banner {
-  padding: 10px 16px; border-radius: $radius-md;
-  &--warning { background: rgba(227, 179, 65, 0.12); border: 1px solid $accent-yellow-alt; color: $accent-yellow; }
-  a { color: inherit; font-weight: 700; margin-left: 6px; }
+// Configurar: cada usuário vira um cartão marcável; os escolhidos acendem em verde.
+.approver-picker {
+  display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
+.approver-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer;
+  border: 1px solid $border-muted; border-radius: $radius-md; transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  input { display: none; }
+  .approver-option-check {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    border: 1px solid $border-muted; color: transparent; transition: all 0.2s;
+  }
+  &:hover { transform: translateY(-1px); border-color: $accent-green-light; }
+  &:has(input:checked) {
+    border-color: $accent-green; background: rgba(63, 185, 80, 0.1);
+    .approver-option-check { background: $accent-green; border-color: $accent-green; color: #fff; animation: approval-pop 0.35s ease-out; }
+  }
+}
+.approver-search { max-width: 320px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .approval-pending-pill, .approval-card-icon, .approval-card-icon i { animation: none !important; }
+  .approval-pending-pill, .approval-card-icon, .approval-card-icon i, .approver-option-check { animation: none !important; }
+  .approver-option { transition: none; }
 }

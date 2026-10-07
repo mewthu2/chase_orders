@@ -263,6 +263,14 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :b2c_transfers, controller: 'b2b_orders', defaults: { order_kind: 'b2c_transfer' },
+                            only: [:index, :new, :create, :edit, :update, :destroy] do
+    member do
+      post :transmit
+      post :cancel_in_tiny
+    end
+  end
+
   resources :ticket_sectors, except: [:show]
   resources :ticket_responsabilities, except: [:show]
   resources :tickets, only: [:new, :create, :show, :destroy] do

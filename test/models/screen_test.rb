@@ -26,4 +26,9 @@ class ScreenTest < ActiveSupport::TestCase
     assert_equal 'Empresas', Screen::DEFINITIONS[:companies]
     assert_equal 'Notas Fiscais', Screen::DEFINITIONS[:fiscal_notes]
   end
+
+  test 'transfer_locations screen belongs to the Produtos group' do
+    assert_includes Screen::GROUPS['Produtos'], :transfer_locations
+    refute_includes Screen::GROUPS['Pedidos B2B'], :transfer_locations
+  end
 end

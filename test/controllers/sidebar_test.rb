@@ -52,6 +52,27 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{stock_corrections_path}']", count: 0
   end
 
+  test 'transfer locations live under Produtos, not Pedidos B2B' do
+    sign_in @admin
+    get b2b_orders_path
+
+    assert_select "#produtosDropdown a[href='#{transfer_locations_path}']", text: /Locais de Transferência/
+    assert_select "#pedidosB2bDropdown a[href='#{transfer_locations_path}']", count: 0
+  end
+
+  test 'a user with only transfer_locations access still sees the Produtos menu' do
+    profile = Profile.create!(name: 'So Locais')
+    profile.update!(screen_keys: ['transfer_locations'])
+    user = User.create!(name: 'So Locais', email: 'so_locais@example.com', password: 'password123')
+    user.profiles << profile
+    sign_in user
+    get transfer_locations_path
+
+    assert_response :success
+    assert_select "#produtosDropdown a[href='#{transfer_locations_path}']"
+    assert_select '#pedidosB2bDropdown', count: 0
+  end
+
   test 'the Chamados group gives every user their tickets and a way to open one' do
     user = User.create!(name: 'Comum Menu', email: 'comum_menu@example.com', password: 'password123')
     sign_in user

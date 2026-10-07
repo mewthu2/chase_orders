@@ -11,24 +11,44 @@
     </div>
   </div>
 
-  <%= form_with model: @config, url: internal_transfer_config_path, method: :patch, local: true do |form| %>
+  <%= form_with url: internal_transfer_config_path, method: :patch, local: true do %>
     <div class="form-section">
-      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-user-check me-2"></i>Aprovador</h5></div>
+      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-user-check me-2"></i>Aprovadores</h5></div>
       <div class="form-section-body">
-        <div class="form-grid">
-          <div class="form-col-6">
-            <label class="field-label">Quem aprova as transferências</label>
-            <%= form.select :approver_id, options_from_collection_for_select(@users, :id, :name, @config.approver_id),
-                            { include_blank: 'Ninguém (transferências ficam paradas)' }, class: 'field-input' %>
-            <small class="text-muted-custom d-block mt-2">As transferências que estão aguardando passam para o novo aprovador.</small>
-          </div>
+        <p class="text-muted-custom mb-3">
+          Qualquer um dos marcados pode aprovar ou reprovar. <strong>Admins sempre podem aprovar</strong>, mesmo sem estar marcados.
+        </p>
+        <input type="text" id="approverSearch" class="field-input approver-search mb-3" placeholder="Filtrar por nome..." autocomplete="off">
+        <%= hidden_field_tag 'approver_ids[]', '' %>
+        <div class="approver-picker" id="approverPicker">
+          <% @users.each do |user| %>
+            <label class="approver-option" data-name="<%= user.name.to_s.downcase %>">
+              <%= check_box_tag 'approver_ids[]', user.id, @approver_ids.include?(user.id), id: "approver_#{user.id}" %>
+              <span class="approver-option-check"><i class="fas fa-check"></i></span>
+              <span class="text-main"><%= user.name %></span>
+            </label>
+          <% end %>
         </div>
       </div>
     </div>
 
     <div class="form-actions">
-      <%= form.submit 'Salvar', class: 'btn-submit' %>
+      <%= submit_tag 'Salvar', class: 'btn-submit' %>
       <%= link_to 'Cancelar', internal_transfers_path, class: 'btn-cancel' %>
     </div>
   <% end %>
 </div>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var search = document.getElementById('approverSearch');
+  search.addEventListener('input', function () {
+    var q = search.value.trim().toLowerCase();
+    document.querySelectorAll('#approverPicker .approver-option').forEach(function (option) {
+      option.style.display = option.dataset.name.indexOf(q) === -1 ? 'none' : '';
+    });
+  });
+});
+</script>
+<% end %>

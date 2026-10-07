@@ -4,7 +4,12 @@ class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
   before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy]
-  helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for, :order_form_url
+  helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
+                :order_path_for, :cancel_in_tiny_order_path_for, :order_form_url
+
+  # Cada tipo de pedido tem a sua tela (rota) e o nome usado nas mensagens.
+  ROUTE_KEYS = { 'sale' => 'b2b_order', 'stock_transfer' => 'stock_transfer', 'b2c_transfer' => 'b2c_transfer' }.freeze
+  KIND_LABELS = { 'sale' => 'Pedido', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' }.freeze
 
   def index
     scope = B2bOrder.includes(:client, :transfer_location, :b2b_order_items).recent.where(kind: order_kind)
@@ -42,7 +47,7 @@ class B2bOrdersController < ApplicationController
 
   def update
     @b2b_order.assign_attributes(b2b_order_params)
-    push_status = @b2b_order.status_changed? && @b2b_order.sale? && @b2b_order.tiny_reference_id.present?
+    push_status = @b2b_order.status_changed? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present?
 
     if @b2b_order.save
       flash_options = { notice: 'Pedido atualizado com sucesso.' }
@@ -300,7 +305,7 @@ class B2bOrdersController < ApplicationController
   def send_to_tiny(order, saved: false)
     TransmitB2bOrderJob.perform_now(order.id)
     order.reload
-    label = order.stock_transfer? ? 'Abastecimento' : 'Pedido'
+    label = KIND_LABELS[order.kind]
 
     if order.tiny_reference_id.present?
       number = order.tiny_reference_number.presence || order.tiny_reference_id
@@ -311,7 +316,7 @@ class B2bOrdersController < ApplicationController
   rescue StandardError => e
     Rails.logger.error "B2bOrdersController#send_to_tiny (#{order.id}): #{e.class} #{e.message}"
     order.reload.update_columns(status: B2bOrder.statuses[:dados_incompletos], error_message: e.message.to_s.first(255)) unless order.tiny_reference_id.present?
-    [:alert, "#{order.stock_transfer? ? 'Abastecimento' : 'Pedido'} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
+    [:alert, "#{KIND_LABELS[order.kind]} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
   end
 
   def undeletable_message(order)
@@ -341,9 +346,9 @@ class B2bOrdersController < ApplicationController
     @order_kind
   end
 
-  # Atacado usa sempre a lista Padrão; a lista Transferência só existe na tela de transferência.
+  # Atacado usa sempre a lista Padrão; a lista Transferência só existe nas telas de transferência.
   def price_list_for(kind)
-    kind.to_s == 'stock_transfer' ? :transfer : :standard
+    kind.to_s == 'sale' ? :standard : :transfer
   end
 
   # Na lista usa o conjunto de pedidos com nota ativa (uma consulta só) em vez de consultar por pedido.
@@ -353,39 +358,49 @@ class B2bOrdersController < ApplicationController
     order.tiny_reference_id.blank? && !@order_ids_with_active_note.include?(order.id)
   end
 
-  def stock_transfer_screen?(kind = order_kind)
-    kind.to_s == 'stock_transfer'
+  def route_key(kind)
+    ROUTE_KEYS.fetch(kind.to_s)
   end
 
   def orders_path_for(kind = order_kind)
-    stock_transfer_screen?(kind) ? stock_transfers_path : b2b_orders_path
+    public_send("#{route_key(kind).pluralize}_path")
   end
 
   def new_order_path_for(kind = order_kind)
-    stock_transfer_screen?(kind) ? new_stock_transfer_path : new_b2b_order_path
+    public_send("new_#{route_key(kind)}_path")
+  end
+
+  def order_path_for(order)
+    public_send("#{route_key(order.kind)}_path", order)
   end
 
   def edit_order_path_for(order)
-    stock_transfer_screen?(order.kind) ? edit_stock_transfer_path(order) : edit_b2b_order_path(order)
+    public_send("edit_#{route_key(order.kind)}_path", order)
   end
 
   def transmit_order_path_for(order)
-    stock_transfer_screen?(order.kind) ? transmit_stock_transfer_path(order) : transmit_b2b_order_path(order)
+    public_send("transmit_#{route_key(order.kind)}_path", order)
+  end
+
+  def cancel_in_tiny_order_path_for(order)
+    public_send("cancel_in_tiny_#{route_key(order.kind)}_path", order)
   end
 
   def order_form_url(order)
-    if stock_transfer_screen?(order.kind)
-      order.persisted? ? stock_transfer_path(order) : stock_transfers_path
-    else
-      order.persisted? ? b2b_order_path(order) : b2b_orders_path
-    end
+    order.persisted? ? order_path_for(order) : orders_path_for(order.kind)
   end
 
   def set_b2b_order
     @b2b_order = B2bOrder.where(kind: order_kind).find(params[:id])
   end
 
+  # A transferência B2C tem destinatário fixo: não aceita cliente nem local de transferência.
   def b2b_order_params
+    permitted = b2b_order_permitted_params
+    order_kind == 'b2c_transfer' ? permitted.except(:client_id, :transfer_location_id) : permitted
+  end
+
+  def b2b_order_permitted_params
     params.require(:b2b_order).permit(
       :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,

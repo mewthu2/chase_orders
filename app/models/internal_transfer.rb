@@ -1,7 +1,7 @@
 # Transferência interna entre lojas (locations do Shopify). Tem uma loja de destino ("Minha
 # loja é: ..."); os itens são agrupados por loja de origem em uma remessa (InternalTransferShipment)
 # por origem, cada uma com o próprio andamento, código de rastreio e ajuste de estoque no Shopify.
-# Nasce aguardando aprovação do aprovador configurado (InternalTransferConfig): só depois de
+# Nasce aguardando aprovação de um dos aprovadores (InternalTransferApprover) ou de um admin: só depois de
 # aprovada as remessas podem ser reservadas. O recebimento não passa por aprovação.
 class InternalTransfer < ApplicationRecord
   class NotPending < StandardError; end
@@ -89,10 +89,10 @@ class InternalTransfer < ApplicationRecord
   end
 
   # A location de `user` participa como origem (com algo a reservar/enviar) ou como destino
-  # (com algo a receber), ou `user` é o aprovador e há aprovação pendente? Usado para destacar
-  # "Aguardando sua ação" na lista.
-  def my_action_needed?(user, approver_id: InternalTransferConfig.approver_id)
-    return user.id == approver_id if approval_pendente?
+  # (com algo a receber), ou `user` pode aprovar (aprovador ou admin) e há aprovação pendente?
+  # Usado para destacar "Aguardando sua ação" na lista.
+  def my_action_needed?(user, approver_ids: InternalTransferApprover.user_ids)
+    return user.admin? || approver_ids.include?(user.id) if approval_pendente?
 
     shipments.any? do |shipment|
       (shipment.reservable? && user_can?(user, shipment.origin_location)) ||

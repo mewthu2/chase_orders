@@ -10,10 +10,14 @@ class TransmitB2bOrderJob < ActiveJob::Base
       next if order.tiny_reference_id.present? || order.cancelado?
 
       service = B2bTinyService.new
-      result = order.sale? ? service.create_sale_order(order) : service.create_stock_transfer(order)
+      result = if order.sale? then service.create_sale_order(order)
+               elsif order.b2c_transfer? then service.create_b2c_transfer(order)
+               else service.create_stock_transfer(order)
+               end
 
       if result[:success]
-        order.update!(status: :aberto, error_message: nil,
+        # A transferência B2C já nasce em preparando_envio no Tiny (fila de criação dos Correios B2B).
+        order.update!(status: order.b2c_transfer? ? :preparando_envio : :aberto, error_message: nil,
                       tiny_reference_id: result[:tiny_reference_id], tiny_reference_number: result[:tiny_reference_number])
       else
         order.update!(status: :dados_incompletos, error_message: result[:error])

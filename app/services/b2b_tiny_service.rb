@@ -23,6 +23,18 @@ class B2bTinyService
 
   NATUREZA_OPERACAO_IDS = { 'standard' => '898357546', 'transfer' => '790850411' }.freeze
 
+  # Transferência B2B -> B2C segue o pedido nº 1859 da conta B2B: destinatário fixo na filial B2C
+  # e o marcador "(Transferencia b2c)" (id lido de pedido.obter.php). Nasce em preparando_envio
+  # para cair na fila de criação dos Correios B2B (CreateCorreiosLogOrdersJob2).
+  B2C_TRANSFER_TAG = '(Transferencia b2c)'.freeze
+  B2C_TRANSFER_MARKER_ID = '182662'.freeze
+  B2C_TRANSFER_RECIPIENT = {
+    nome: 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', tipo_pessoa: 'J',
+    cpf_cnpj: '25.405.327/0003-36', ie: '0029090240268',
+    endereco: 'Av. Raja Gabaglia', numero: '4343', complemento: 'sala 419', bairro: 'Santa Lucia',
+    cidade: 'Belo Horizonte', uf: 'MG', cep: '30.350-577'
+  }.freeze
+
   def initialize
     @token = ENV.fetch('TOKEN_TINY2_PRODUCTION')
   end
@@ -86,6 +98,14 @@ class B2bTinyService
     parse_nota_response(response)
   rescue StandardError => e
     Rails.logger.error "B2bTinyService#create_stock_transfer exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+
+  def create_b2c_transfer(b2b_order)
+    response = do_post('pedido.incluir.php', pedido: { pedido: build_b2c_transfer_pedido(b2b_order) }.to_json)
+    parse_pedido_response(response)
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#create_b2c_transfer exception: #{e.message}"
     { success: false, error: e.message }
   end
 
@@ -200,10 +220,7 @@ class B2bTinyService
       situacao: 'aberto',
       data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
       id_natureza_operacao: NATUREZA_OPERACAO_IDS[b2b_order.price_list],
-      itens: b2b_order.b2b_order_items.map do |i|
-        { item: { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity,
-                   valor_unitario: (i.price.to_f - i.discount.to_f) } }
-      end,
+      itens: pedido_itens(b2b_order),
       cliente: {
         nome: client.display_name,
         tipo_pessoa: client.registration.present? ? 'J' : 'F',
@@ -238,6 +255,33 @@ class B2bTinyService
     end
 
     pedido
+  end
+
+  def pedido_itens(b2b_order)
+    b2b_order.b2b_order_items.map do |i|
+      { item: { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity,
+                 valor_unitario: (i.price.to_f - i.discount.to_f) } }
+    end
+  end
+
+  def build_b2c_transfer_pedido(b2b_order)
+    entrega = B2C_TRANSFER_RECIPIENT.except(:nome).merge(nome_destinatario: B2C_TRANSFER_TAG)
+
+    {
+      situacao: 'preparando_envio',
+      data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
+      id_natureza_operacao: NATUREZA_OPERACAO_IDS['transfer'],
+      id_lista_preco: TRANSFER_PRICE_LIST_ID,
+      itens: pedido_itens(b2b_order),
+      cliente: B2C_TRANSFER_RECIPIENT,
+      endereco_entrega: entrega,
+      marcadores: [{ marcador: { id: B2C_TRANSFER_MARKER_ID, descricao: B2C_TRANSFER_TAG } }],
+      **shipping_fields(b2b_order),
+      frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
+      valor_frete: b2b_order.freight_value.to_f,
+      obs: [B2C_TRANSFER_TAG, "Transferência B2C ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
+      obs_interna: B2C_TRANSFER_TAG
+    }
   end
 
   # Não há vendedor cadastrado no Tiny desta conta (vendedores.pesquisa.php

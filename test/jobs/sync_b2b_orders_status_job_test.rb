@@ -48,4 +48,18 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
 
     assert_not_requested :get, 'https://api.tiny.com.br/api2/pedido.obter.php'
   end
+
+  test 'also syncs B2C transfers (they are a pedido in Tiny)' do
+    order = B2bOrder.new(kind: :b2c_transfer, user: @user, price_list: :transfer, status: :preparando_envio, tiny_reference_id: '333')
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
+    order.save!
+
+    stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php')
+      .with(query: hash_including({ 'id' => '333' }))
+      .to_return(body: { retorno: { status: 'OK', pedido: { situacao: 'Enviado' } } }.to_json)
+
+    SyncB2bOrdersStatusJob.perform_now
+
+    assert order.reload.enviado?
+  end
 end

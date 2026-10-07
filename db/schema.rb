@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_06_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_07_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -330,11 +330,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_120000) do
     t.index ["status"], name: "index_fiscal_notes_on_status"
   end
 
-  create_table "internal_transfer_configs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.bigint "approver_id"
+  create_table "internal_transfer_approvers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["approver_id"], name: "index_internal_transfer_configs_on_approver_id"
+    t.index ["user_id"], name: "index_internal_transfer_approvers_on_user_id", unique: true
   end
 
   create_table "internal_transfer_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -987,7 +987,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_120000) do
   add_foreign_key "campaign_users", "users"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
-  add_foreign_key "internal_transfer_configs", "users", column: "approver_id"
+  add_foreign_key "internal_transfer_approvers", "users"
   add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
   add_foreign_key "internal_transfer_events", "internal_transfers"
   add_foreign_key "internal_transfer_events", "users"

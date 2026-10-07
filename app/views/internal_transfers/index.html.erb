@@ -15,13 +15,6 @@
     </div>
   </div>
 
-  <% if @approver.nil? %>
-    <div class="approval-banner approval-banner--warning mb-3">
-      <i class="fas fa-exclamation-triangle me-2"></i>Nenhum aprovador configurado: as transferências ficam paradas aguardando aprovação.
-      <% if current_user.admin? %><%= link_to 'Configurar agora', edit_internal_transfer_config_path %><% end %>
-    </div>
-  <% end %>
-
   <div class="table-card">
     <% if @transfers.any? %>
       <div class="table-responsive">

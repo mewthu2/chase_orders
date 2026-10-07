@@ -2,7 +2,7 @@
 # ("Minha loja é: ...") e reúne itens de várias lojas de origem; cada origem vira uma remessa
 # (InternalTransferShipment) com o próprio andamento.
 class InternalTransfersController < ApplicationController
-  # O aprovador precisa ver e aprovar/reprovar mesmo sem a tela liberada no perfil.
+  # Os aprovadores precisam ver e aprovar/reprovar mesmo sem a tela liberada no perfil.
   APPROVER_ACTIONS = %w[index show approve reject].freeze
 
   guard_screen :internal_transfers, unless: -> { approver? && APPROVER_ACTIONS.include?(action_name) }
@@ -18,7 +18,6 @@ class InternalTransfersController < ApplicationController
   def index
     scope = InternalTransfer.includes(:destination_location, shipments: [:origin_location, :items]).recent
     scope = scope_for_user(scope) unless current_user.admin?
-    @approver = InternalTransferConfig.current.approver
     @transfers = scope.paginate(page: params[:page], per_page: 20)
     # Só o nome do solicitante: pré-carregar os User faria o Bullet confundir o current_user (quando
     # ele também é solicitante) com um N+1 de profiles.
@@ -51,7 +50,7 @@ class InternalTransfersController < ApplicationController
   end
 
   def show
-    @approver = InternalTransferConfig.current.approver
+    @approvers = User.where(id: InternalTransferApprover.user_ids).order(:name)
   end
 
   def edit
@@ -171,14 +170,14 @@ class InternalTransfersController < ApplicationController
   end
 
   def approver?
-    @approver_flag = current_user.id == InternalTransferConfig.approver_id if @approver_flag.nil?
+    @approver_flag = InternalTransferApprover.can_approve?(current_user) if @approver_flag.nil?
     @approver_flag
   end
 
   def require_approver
     return if approver?
 
-    redirect_to internal_transfer_path(@transfer), alert: 'Só o aprovador configurado pode aprovar ou reprovar transferências.'
+    redirect_to internal_transfer_path(@transfer), alert: 'Só os aprovadores configurados ou um admin podem aprovar ou reprovar transferências.'
   end
 
   def require_editable

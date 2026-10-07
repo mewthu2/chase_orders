@@ -145,13 +145,19 @@ class InternalTransferTest < ActiveSupport::TestCase
     assert_raises(InternalTransfer::NotPending) { transfer.approve!(approver) }
   end
 
-  test 'my_action_needed? while pending flags only the approver' do
+  test 'my_action_needed? while pending flags the approvers and the admins only' do
     transfer = build_transfer(approval_status: :pendente)
     transfer.save!
     approver = User.create!(name: 'Aprovador', email: 'aprovador_a@example.com', password: 'password123')
+    other_approver = User.create!(name: 'Outro Aprovador', email: 'aprovador_b@example.com', password: 'password123')
+    admin = User.create!(name: 'Admin', email: 'admin_a@example.com', password: 'password123')
+    admin.profiles << Profile.find(Profile::ADMIN)
     origin_manager = User.create!(name: 'Gerente BH', email: 'gerente_bh_a@example.com', password: 'password123', allowed_locations: ['bh_shopping'])
+    approver_ids = [approver.id, other_approver.id]
 
-    assert transfer.my_action_needed?(approver, approver_id: approver.id)
-    refute transfer.my_action_needed?(origin_manager, approver_id: approver.id)
+    assert transfer.my_action_needed?(approver, approver_ids: approver_ids)
+    assert transfer.my_action_needed?(other_approver, approver_ids: approver_ids)
+    assert transfer.my_action_needed?(admin, approver_ids: approver_ids)
+    refute transfer.my_action_needed?(origin_manager, approver_ids: approver_ids)
   end
 end

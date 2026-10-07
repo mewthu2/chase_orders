@@ -267,10 +267,10 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     transfer
   end
 
-  def aprovador
-    user = User.create!(name: 'Aprovador', email: 'aprovador_it@example.com', password: 'password123', allowed_locations: ['eldorado_sp'])
-    user.profiles << Profile.create!(name: 'Sem Transferencia IT')
-    InternalTransferConfig.current.update!(approver: user)
+  def aprovador(email: 'aprovador_it@example.com')
+    user = User.create!(name: 'Aprovador', email: email, password: 'password123', allowed_locations: ['eldorado_sp'])
+    user.profiles << Profile.create!(name: "Sem Transferencia #{email}")
+    InternalTransferApprover.create!(user: user)
     user
   end
 
@@ -283,13 +283,34 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test 'an admin sets the approver' do
-    user = User.create!(name: 'Qualquer', email: 'qualquer_it@example.com', password: 'password123')
+  test 'an admin sets several approvers and can remove one later' do
+    ana = User.create!(name: 'Ana', email: 'ana_it@example.com', password: 'password123')
+    bia = User.create!(name: 'Bia', email: 'bia_it@example.com', password: 'password123')
 
-    patch internal_transfer_config_path, params: { internal_transfer_config: { approver_id: user.id } }
-
+    patch internal_transfer_config_path, params: { approver_ids: ['', ana.id, bia.id] }
     assert_redirected_to internal_transfers_path
-    assert_equal user, InternalTransferConfig.current.approver
+    assert_equal [ana.id, bia.id].sort, InternalTransferApprover.user_ids.sort
+
+    patch internal_transfer_config_path, params: { approver_ids: ['', bia.id] }
+    assert_equal [bia.id], InternalTransferApprover.user_ids
+
+    get edit_internal_transfer_config_path
+    assert_select "input[type=checkbox][name='approver_ids[]'][value='#{bia.id}'][checked]"
+    assert_select "input[type=checkbox][name='approver_ids[]'][value='#{ana.id}']:not([checked])"
+  end
+
+  test 'any of several approvers can approve' do
+    transfer = pending_transfer
+    aprovador
+    segundo = aprovador(email: 'segundo_aprovador_it@example.com')
+    sign_in segundo
+
+    get internal_transfer_path(transfer)
+    assert_includes response.body, 'Aprovador, Aprovador ou um admin'
+
+    post approve_internal_transfer_path(transfer)
+    assert transfer.reload.approval_aprovada?
+    assert_equal segundo, transfer.reviewed_by
   end
 
   test 'the approver sees pending transfers and approves them even without the screen in the profile' do
@@ -324,14 +345,38 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert transfer.shipments.all?(&:cancelado?)
   end
 
-  test 'someone other than the approver cannot approve, not even an admin' do
+  test 'an admin approves even without being a configured approver' do
     transfer = pending_transfer
     aprovador
+
+    get internal_transfers_path
+    assert_includes response.body, 'Aguardando sua ação'
+    get internal_transfer_path(transfer)
+    assert_select 'button', text: /Aprovar/
+
+    post approve_internal_transfer_path(transfer)
+
+    assert_redirected_to internal_transfer_path(transfer)
+    assert transfer.reload.approval_aprovada?
+    assert_equal @admin, transfer.reviewed_by
+  end
+
+  test 'a user who is neither approver nor admin cannot approve' do
+    transfer = pending_transfer
+    aprovador
+    sign_in gerente_lagoa
 
     post approve_internal_transfer_path(transfer)
 
     assert_redirected_to internal_transfer_path(transfer)
     assert transfer.reload.approval_pendente?
+  end
+
+  test 'with no approver configured the transfers are not stuck: admins approve' do
+    pending_transfer
+    get internal_transfers_path
+
+    assert_no_match(/Nenhum aprovador configurado/, response.body)
   end
 
   test 'a pending transfer shows no reserve button' do
