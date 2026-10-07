@@ -217,6 +217,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function currentPriceList() {
     return PRICE_LIST;
   }
+  // Preço inicial do item (editável): atacado = sugerido, abastecimento = varejo, transferência B2C = 70% do custo.
+  var ORDER_KIND = '<%= @b2b_order.kind %>';
+  function defaultPrice(product, suggestedPrice) {
+    if (ORDER_KIND === 'b2c_transfer') return product.b2c_transfer_price || 0;
+    return currentPriceList() === 'transfer' ? (product.retail_price || 0) : (suggestedPrice || 0);
+  }
 
   var addrCheck = document.getElementById('differentShippingAddressCheck');
   var addrSection = document.getElementById('shippingAddressSection');
@@ -473,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (data) {
         if (!data.success) { alert(data.message); return; }
         data.items.forEach(function (item) {
-          var price = currentPriceList() === 'transfer' ? (item.retail_price || 0) : (item.suggested_price || 0);
+          var price = defaultPrice(item, item.suggested_price);
           addItemRow(item.sku, item.name, item.quantity, price, item.image_url);
         });
       });
@@ -575,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function () {
           pickerSelected[variant.sku] = {
             sku: variant.sku,
             name: product.name + ' - ' + variant.option,
-            price: currentPriceList() === 'transfer' ? (variant.retail_price || 0) : (variant.price || 0),
+            price: defaultPrice(variant, variant.price),
             image_url: product.image_url
           };
         } else {

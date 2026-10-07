@@ -133,6 +133,7 @@ class B2bOrdersController < ApplicationController
       { sku: sku, name: product&.shopify_product_name, quantity: quantity,
         suggested_price: suggested_price_for(product),
         retail_price: product&.price.to_f,
+        b2c_transfer_price: b2c_transfer_price_for(product),
         image_url: product ? image_url_for(product) : nil }
     end
 
@@ -166,7 +167,7 @@ class B2bOrdersController < ApplicationController
 
     products = token_search(query).limit(10)
 
-    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p), retail_price: p.price.to_f } } }
+    render json: { success: true, products: products.map { |p| { id: p.id, sku: p.sku, name: p.shopify_product_name, image_url: image_url_for(p), suggested_price: suggested_price_for(p), retail_price: p.price.to_f, b2c_transfer_price: b2c_transfer_price_for(p) } } }
   end
 
   # Modal "Selecionar Produtos" (estilo Shopify): agrupa os SKUs encontrados
@@ -187,7 +188,8 @@ class B2bOrdersController < ApplicationController
             sku: v.sku,
             option: v.option1.presence || v.sku,
             price: suggested_price_for(v),
-            retail_price: v.price.to_f
+            retail_price: v.price.to_f,
+            b2c_transfer_price: b2c_transfer_price_for(v)
           }
         end
       }
@@ -276,6 +278,13 @@ class B2bOrdersController < ApplicationController
     return nil unless product&.price.present?
 
     (product.price.to_f * 0.4).round(2)
+  end
+
+  # A transferência B2B -> B2C sai por 70% do custo do produto.
+  def b2c_transfer_price_for(product)
+    return nil unless product&.cost.to_f.positive?
+
+    (product.cost.to_f * 0.7).round(2)
   end
 
   def image_url_for(product)

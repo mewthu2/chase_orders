@@ -281,6 +281,32 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 40.0, product_json['suggested_price']
   end
 
+  test 'search_product and product_picker return the B2C transfer price as 70% of cost' do
+    sign_in @admin
+    Product.create!(sku: 'SKU-B2C', shopify_product_name: 'Produto B2C', price: '100', cost: '50', image_url: 'https://img.example.com/produto.png')
+
+    get search_product_b2b_orders_path, params: { query: 'SKU-B2C' }
+    assert_equal 35.0, JSON.parse(response.body)['products'].first['b2c_transfer_price']
+
+    get product_picker_b2b_orders_path, params: { query: 'SKU-B2C' }
+    assert_equal 35.0, JSON.parse(response.body)['products'].first['variants'].first['b2c_transfer_price']
+  end
+
+  test 'parse_items_spreadsheet returns the B2C transfer price, nil when the product has no cost' do
+    sign_in @admin
+    Product.create!(sku: 'SKU-B2C-CSV', shopify_product_name: 'Produto B2C CSV', price: '80', cost: '20.10', image_url: 'https://img.example.com/produto.png')
+    Product.create!(sku: 'SKU-NO-COST', shopify_product_name: 'Sem custo', price: '80', image_url: 'https://img.example.com/produto.png')
+
+    csv_content = "SKU,Quantidade\nSKU-B2C-CSV,1\nSKU-NO-COST,1\n"
+    file = Rack::Test::UploadedFile.new(StringIO.new(csv_content), 'text/csv', original_filename: 'items.csv')
+
+    post parse_items_spreadsheet_b2b_orders_path, params: { file: file }
+    items = JSON.parse(response.body)['items']
+
+    assert_equal 14.07, items.first['b2c_transfer_price']
+    assert_nil items.last['b2c_transfer_price']
+  end
+
   test 'parse_items_spreadsheet also returns the plain retail price' do
     sign_in @admin
     Product.create!(sku: 'SKU-RET-CSV', shopify_product_name: 'Produto Retail CSV', price: '50', image_url: 'https://img.example.com/produto.png')
