@@ -371,6 +371,12 @@
         <span class="user-name"><%= current_user.name %></span>
         <span class="user-role"><%= current_user.profile_name %></span>
       </div>
+      <div class="font-scale" id="fontScale" data-url="<%= font_scale_path %>" data-scale="<%= current_user.font_scale %>"
+           data-min="<%= User::FONT_SCALE_RANGE.min %>" data-max="<%= User::FONT_SCALE_RANGE.max %>" data-step="10">
+        <button type="button" class="font-scale-btn" data-delta="-10" title="Diminuir fonte">A<sup>−</sup></button>
+        <button type="button" class="font-scale-value" data-reset title="Voltar ao tamanho padrão"><%= current_user.font_scale %>%</button>
+        <button type="button" class="font-scale-btn font-scale-btn--up" data-delta="10" title="Aumentar fonte">A<sup>+</sup></button>
+      </div>
       <%= link_to destroy_user_session_path, method: :delete, class: 'logout-btn', data: { confirm: 'Tem certeza que deseja sair?' }, title: 'Sair' do %>
         <i class="fas fa-sign-out-alt"></i>
       <% end %>
@@ -381,6 +387,43 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  // Zoom do sistema por usuário: aplica na hora e salva no servidor (com debounce).
+  const fontScale = document.getElementById("fontScale")
+  if (fontScale) {
+    const min = Number(fontScale.dataset.min), max = Number(fontScale.dataset.max)
+    const valueEl = fontScale.querySelector(".font-scale-value")
+    let scale = Number(fontScale.dataset.scale) || 100
+    let saveTimer
+
+    const apply = (next) => {
+      scale = Math.min(max, Math.max(min, next))
+      document.documentElement.style.zoom = scale === 100 ? "" : `${scale}%`
+      valueEl.textContent = `${scale}%`
+      valueEl.classList.remove("font-scale-value--pop")
+      void valueEl.offsetWidth
+      valueEl.classList.add("font-scale-value--pop")
+      fontScale.querySelector("[data-delta='-10']").disabled = scale <= min
+      fontScale.querySelector("[data-delta='10']").disabled = scale >= max
+
+      clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => {
+        fetch(fontScale.dataset.url, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "Accept": "application/json",
+                     "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content },
+          body: JSON.stringify({ font_scale: scale })
+        })
+      }, 400)
+    }
+
+    fontScale.querySelectorAll("[data-delta]").forEach((btn) => {
+      btn.addEventListener("click", () => apply(scale + Number(btn.dataset.delta)))
+    })
+    valueEl.addEventListener("click", () => apply(100))
+    fontScale.querySelector("[data-delta='-10']").disabled = scale <= min
+    fontScale.querySelector("[data-delta='10']").disabled = scale >= max
+  }
+
   const carousel = document.getElementById("navCarousel")
   if (!carousel) return
 

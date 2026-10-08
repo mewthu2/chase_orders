@@ -240,6 +240,7 @@ Rails.application.routes.draw do
     member do
       post :transmit
       post :cancel_in_tiny
+      get :romaneio
     end
   end
 
@@ -260,6 +261,7 @@ Rails.application.routes.draw do
                               only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
       post :transmit
+      get :romaneio
     end
   end
 
@@ -268,6 +270,7 @@ Rails.application.routes.draw do
     member do
       post :transmit
       post :cancel_in_tiny
+      get :romaneio
     end
   end
 
@@ -277,6 +280,8 @@ Rails.application.routes.draw do
     resources :ticket_messages, only: [:create], path: 'messages'
     resources :ticket_participants, only: [:create], path: 'participants'
   end
+
+  resource :font_scale, only: [:update]
 
   resources :users do
     member do

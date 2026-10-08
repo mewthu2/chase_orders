@@ -19,6 +19,7 @@
           <i class="fas fa-trash me-1"></i>Excluir
         <% end %>
       <% end %>
+      <%= link_to romaneio_order_path_for(@b2b_order), class: "btn-back", data: { turbo: false } do %><i class="fas fa-file-pdf me-1"></i>Romaneio<% end %>
       <% if current_user.can_access_screen?('fiscal_notes') && !@b2b_order.b2c_transfer? %>
         <%= link_to new_fiscal_note_path(b2b_order_id: @b2b_order.id), class: "btn-export" do %><i class="fas fa-file-invoice me-2"></i>Gerar nota fiscal<% end %>
       <% end %>

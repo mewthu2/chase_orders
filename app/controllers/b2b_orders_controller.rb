@@ -3,9 +3,9 @@ require 'csv'
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy]
+  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio]
   helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
-                :order_path_for, :cancel_in_tiny_order_path_for, :order_form_url
+                :order_path_for, :cancel_in_tiny_order_path_for, :romaneio_order_path_for, :order_form_url
 
   # Cada tipo de pedido tem a sua tela (rota) e o nome usado nas mensagens.
   ROUTE_KEYS = { 'sale' => 'b2b_order', 'stock_transfer' => 'stock_transfer', 'b2c_transfer' => 'b2c_transfer' }.freeze
@@ -107,6 +107,12 @@ class B2bOrdersController < ApplicationController
     else
       redirect_to orders_path_for(order_kind), alert: "O Tiny não cancelou o pedido nº #{number}: #{result[:error]}"
     end
+  end
+
+  # Romaneio em PDF (lista de itens) para mandar ao cliente; o navegador já baixa o arquivo.
+  def romaneio
+    pdf = B2bRomaneioPdf.new(@b2b_order)
+    send_data pdf.render, filename: pdf.filename, type: 'application/pdf', disposition: 'attachment'
   end
 
   def shipping_methods
@@ -393,6 +399,10 @@ class B2bOrdersController < ApplicationController
 
   def cancel_in_tiny_order_path_for(order)
     public_send("cancel_in_tiny_#{route_key(order.kind)}_path", order)
+  end
+
+  def romaneio_order_path_for(order)
+    public_send("romaneio_#{route_key(order.kind)}_path", order)
   end
 
   def order_form_url(order)

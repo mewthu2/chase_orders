@@ -12,6 +12,9 @@ class User < ApplicationRecord
   has_many :marketing_campaigns, through: :campaign_users
   has_many :created_campaigns, class_name: 'MarketingCampaign', foreign_key: :created_by_id, dependent: :nullify
 
+  # Zoom do sistema (%) escolhido pelo usuário; o layout aplica no <html>.
+  FONT_SCALE_RANGE = (80..150).step(10).to_a.freeze
+
   AVAILABLE_LOCATIONS = {
     'lagoa_seca' => {
       name: 'Lagoa Seca',

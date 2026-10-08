@@ -183,6 +183,27 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     order
   end
 
+  test 'romaneio downloads the order items as a PDF' do
+    sign_in @admin
+    order = build_order
+
+    get romaneio_b2b_order_path(order)
+
+    assert_response :success
+    assert_equal 'application/pdf', response.media_type
+    assert_match(/attachment; filename="romaneio-pedido-#{order.id}-cliente-b2b-test\.pdf"/, response.headers['Content-Disposition'])
+    assert response.body.start_with?('%PDF')
+  end
+
+  test 'romaneio is only served on the screen of the order kind' do
+    sign_in @admin
+    order = build_order
+
+    get romaneio_stock_transfer_path(order)
+
+    assert_response :not_found
+  end
+
   test 'update changes the status and pushes it to Tiny when the order was already transmitted' do
     sign_in @admin
     order = build_order(tiny_reference_id: '111')

@@ -194,6 +194,46 @@
 .user-name { color: #fff; font-weight: 600; font-size: 0.85rem; line-height: 1.2; }
 .user-role { color: #a0aec0; font-size: 0.7rem; line-height: 1.2; }
 
+// Controle de zoom/fonte ao lado do nome do usuário
+.font-scale {
+  display: flex; align-items: center; gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(66, 153, 225, 0.18), rgba(159, 122, 234, 0.18));
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  box-shadow: 0 0 0 rgba(66, 153, 225, 0);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.font-scale:hover { border-color: #63b3ed; box-shadow: 0 0 14px rgba(66, 153, 225, 0.45); }
+
+.font-scale-btn, .font-scale-value {
+  border: 0; background: transparent; color: #e2e8f0; cursor: pointer;
+  border-radius: 999px; line-height: 1;
+  transition: transform 0.15s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.font-scale-btn {
+  width: 28px; height: 28px; font-weight: 700; font-size: 0.8rem;
+  display: flex; align-items: center; justify-content: center;
+  sup { font-size: 0.6em; margin-left: 1px; top: -0.5em; }
+}
+.font-scale-btn--up { font-size: 0.95rem; }
+.font-scale-btn:hover:not(:disabled) { background: linear-gradient(135deg, #4299e1, #9f7aea); color: #fff; transform: scale(1.12) rotate(-4deg); }
+.font-scale-btn:active:not(:disabled) { transform: scale(0.92); }
+.font-scale-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.font-scale-value {
+  min-width: 42px; height: 28px; padding: 0 4px;
+  font-size: 0.7rem; font-weight: 700; color: #90cdf4; font-variant-numeric: tabular-nums;
+}
+.font-scale-value:hover { color: #fff; }
+.font-scale-value--pop { animation: font-scale-pop 0.35s ease; }
+
+@keyframes font-scale-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.3); color: #fff; text-shadow: 0 0 8px rgba(144, 205, 244, 0.9); }
+  100% { transform: scale(1); }
+}
+
 .logout-btn {
   color: #a0aec0;
   text-decoration: none;

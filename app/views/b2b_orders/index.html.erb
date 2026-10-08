@@ -99,6 +99,7 @@
                 <td class="text-end">
                   <div class="table-actions">
                     <%= link_to edit_order_path_for(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <%= link_to romaneio_order_path_for(order), class: "action-btn action-btn--edit", title: 'Baixar romaneio (PDF)', data: { turbo: false } do %><i class="fas fa-file-pdf"></i><% end %>
                     <% if current_user.can_access_screen?('fiscal_notes') && !order.b2c_transfer? %>
                       <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
                     <% end %>

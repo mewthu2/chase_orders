@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR"<% if current_user.present? && current_user.font_scale != 100 %> style="zoom: <%= current_user.font_scale %>%;"<% end %>>
   <head>
     <title><%= content_for?(:title) ? "#{yield(:title)} - Honey.Chase - Painel Administrativo" : 'Honey.Chase - Painel Administrativo' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
