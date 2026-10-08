@@ -139,9 +139,11 @@
         </button>
       </div>
 
-      <table class="orders-table" id="itemsTable">
+      <%= render 'stock_reservations/freshness', refresh: StockReservationRefresh.for(:b2b) %>
+
+      <table class="orders-table" id="itemsTable" data-enforce-stock="<%= @b2b_order.tiny_reference_id.blank? && !@b2b_order.cancelado? %>">
         <thead>
-          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Desconto</th><th>Estoque Correios B2B</th><th></th></tr>
+          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Desconto</th><th>Estoque · Reservado · Disponível</th><th></th></tr>
         </thead>
         <tbody id="itemsTableBody">
           <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
@@ -167,7 +169,8 @@
           <% end %>
         </tbody>
       </table>
-      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Estoque exibido é só informativo — não bloqueia o envio.</span>
+      <div id="stockEnforcementNotice" class="stock-enforcement-notice d-none" role="status"></div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque Correios B2B − itens reservados na fila do Tiny. Não dá para adicionar item sem disponível nem pedir acima dele.</span>
     </div>
   </div>
 
@@ -384,11 +387,12 @@ document.addEventListener('DOMContentLoaded', function () {
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
       '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
       '<td><input type="number" step="0.01" min="0" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][discount]" value="0"></td>' +
-      '<td class="item-stock-cell" data-sku="' + (sku || '') + '">-</td>' +
+      '<td class="item-stock-cell" data-sku="' + (sku || '') + '" data-new-row="true">-</td>' +
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);
     itemIndex++;
     if (!imageUrl) queueImageFetch(row.querySelector('.item-photo-cell'));
+    queueStockFetch(row.querySelector('.item-stock-cell'));
   }
 
   document.getElementById('itemsTableBody').addEventListener('click', function (e) {
@@ -416,29 +420,115 @@ document.addEventListener('DOMContentLoaded', function () {
     };
   }
 
+  var enforceStock = document.getElementById('itemsTable').dataset.enforceStock === 'true';
+  var reservationsUrl = <%= raw (current_user.can_access_screen?('stock_reservations_b2b') ? b2b_stock_reservations_path.to_json : 'null') %>;
+
+  function blocksSku(data) {
+    return enforceStock && data && data.status !== 'error';
+  }
+
+  // Aviso animado listando o que o bloqueio mudou (linhas removidas / quantidades reduzidas).
+  var noticeLines = [];
+  var noticeTimer;
+  function notifyStockChange(message) {
+    var box = document.getElementById('stockEnforcementNotice');
+    noticeLines.push(message);
+    box.innerHTML = '<i class="fas fa-lock me-2"></i><div>' + noticeLines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
+    box.classList.remove('d-none');
+    box.classList.remove('stock-enforcement-notice--in');
+    void box.offsetWidth; // reinicia a animação
+    box.classList.add('stock-enforcement-notice--in');
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(function () { noticeLines = []; box.classList.add('d-none'); }, 12000);
+  }
+
+  function reservedText(data) {
+    return data.reserved > 0 ? ' · ' + data.reserved + ' reservados na fila' : '';
+  }
+
+  // Pinta "estoque − reservado = disponível" e destaca a linha se a quantidade passar do disponível.
+  function paintStockCell(cell) {
+    var data = stockCache[cell.dataset.sku];
+    if (!data) return;
+    var row = cell.closest('tr');
+    if (data.status === 'error') {
+      cell.innerHTML = '<span class="text-muted-custom" title="Não foi possível consultar o estoque agora; o item não é bloqueado.">Correios sem resposta</span>';
+      row.classList.remove('item-row--short');
+      return;
+    }
+    var qtyInput = row.querySelector('input[name$="[quantity]"]');
+    var requested = qtyInput ? parseInt(qtyInput.value, 10) || 0 : 0;
+    if (qtyInput && blocksSku(data)) qtyInput.max = Math.max(data.quantity, 0);
+    var short = requested > data.quantity;
+    var reserved = data.reserved > 0 && reservationsUrl
+      ? '<a href="' + reservationsUrl + '?sku=' + encodeURIComponent(cell.dataset.sku) + '" class="stock-breakdown__reserved" target="_blank">' + data.reserved + '</a>'
+      : '<span class="stock-breakdown__reserved">' + data.reserved + '</span>';
+    cell.innerHTML =
+      '<span class="stock-breakdown">' +
+        '<span>' + data.stock + '</span><span class="stock-breakdown__op">−</span>' + reserved +
+        '<span class="stock-breakdown__op">=</span><strong class="stock-breakdown__available stock-breakdown__available--' + data.status + '">' + data.quantity + '</strong>' +
+      '</span>' +
+      (short ? '<span class="stock-breakdown__alert"><i class="fas fa-lock me-1"></i>faltam ' + (requested - data.quantity) + reservedText(data) + '</span>' : '');
+    row.classList.toggle('item-row--short', short);
+  }
+
+  // Linha recém-adicionada (seletor/planilha): some se não há disponível; quantidade cai para o disponível.
+  function enforceNewRow(cell) {
+    var data = stockCache[cell.dataset.sku];
+    if (!blocksSku(data)) return;
+    var row = cell.closest('tr');
+    var qtyInput = row.querySelector('input[name$="[quantity]"]');
+    var requested = qtyInput ? parseInt(qtyInput.value, 10) || 0 : 0;
+    if (data.quantity <= 0) {
+      row.classList.add('item-row--leaving');
+      setTimeout(function () { row.remove(); }, 350);
+      notifyStockChange('<strong>' + cell.dataset.sku + '</strong> não foi adicionado: 0 disponível' + reservedText(data) + '.');
+    } else if (requested > data.quantity) {
+      qtyInput.value = data.quantity;
+      paintStockCell(cell);
+      notifyStockChange('<strong>' + cell.dataset.sku + '</strong>: quantidade reduzida de ' + requested + ' para ' + data.quantity + ' (disponível' + reservedText(data) + ').');
+    }
+  }
+
+  function loadStock(sku) {
+    if (Object.prototype.hasOwnProperty.call(stockCache, sku)) return Promise.resolve(stockCache[sku]);
+    return fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        stockCache[sku] = { quantity: data.quantity, stock: data.stock, reserved: data.reserved, status: data.status };
+        return stockCache[sku];
+      });
+  }
+
   var queueStockFetch = makeQueue(function (cell) {
     var sku = cell.dataset.sku;
     if (!sku) return Promise.resolve();
 
-    if (Object.prototype.hasOwnProperty.call(stockCache, sku)) {
-      var cached = stockCache[sku];
-      cell.textContent = cached.quantity + ' (' + cached.status + ')';
-      return Promise.resolve();
-    }
-
-    return fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        stockCache[sku] = { quantity: data.quantity, status: data.status };
-        cell.textContent = data.quantity + ' (' + data.status + ')';
+    return loadStock(sku)
+      .then(function () {
+        paintStockCell(cell);
+        if (cell.dataset.newRow === 'true') enforceNewRow(cell);
       })
       .catch(function () { cell.textContent = 'erro'; });
   }, 200);
 
+  // Digitar acima do disponível volta para o máximo.
+  document.getElementById('itemsTableBody').addEventListener('input', function (e) {
+    if (!e.target.matches('input[name$="[quantity]"]')) return;
+    var cell = e.target.closest('tr').querySelector('.item-stock-cell');
+    if (!cell) return;
+    var data = stockCache[cell.dataset.sku];
+    var typed = parseInt(e.target.value, 10) || 0;
+    if (blocksSku(data) && typed > data.quantity && data.quantity > 0) {
+      e.target.value = data.quantity;
+      notifyStockChange('<strong>' + cell.dataset.sku + '</strong>: máximo disponível é ' + data.quantity + reservedText(data) + '.');
+    }
+    paintStockCell(cell);
+  });
+
   // Verifica o estoque da tabela de itens apenas uma vez, ao carregar a tela.
-  // Itens adicionados depois (planilha, modal) só têm o estoque consultado
-  // quando o usuário clicar em "Atualizar estoque", pra não travar a fila
-  // com uma consulta por item num upload com muitas linhas.
+  // Itens adicionados depois (planilha, modal) têm o estoque consultado na
+  // hora, pela mesma fila com pausa, para o bloqueio por disponível.
   function checkAllItemsStock(force) {
     var cells = Array.prototype.slice.call(document.querySelectorAll('.item-stock-cell'));
     if (force) cells.forEach(function (cell) { delete stockCache[cell.dataset.sku]; });
@@ -488,11 +578,22 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== Modal "Selecionar Produtos" (estilo Shopify) =====
   var pickerSelected = {}; // sku -> { sku, name, price, image_url }
   function renderPickerStock(cell, cached) {
-    var html = cached.quantity > 0
-      ? '<span>' + cached.quantity + '</span>'
-      : '<span class="text-warning"><i class="fas fa-triangle-exclamation me-1"></i>0</span>';
-    cell.innerHTML = html;
+    var cb = cell.closest('tr').querySelector('.picker-variant-cb');
+    var blocked = blocksSku(cached) && cached.quantity <= 0;
+    if (cb) {
+      cb.disabled = blocked;
+      if (blocked) cb.checked = false;
+    }
+    cell.closest('tr').classList.toggle('picker-variant--blocked', blocked);
+    if (cached.status === 'error') {
+      cell.innerHTML = '<span class="text-muted-custom">-</span>';
+    } else if (cached.quantity > 0) {
+      cell.innerHTML = '<span>' + cached.quantity + '</span>' + (cached.reserved > 0 ? '<small class="d-block text-muted-custom">' + cached.reserved + ' reservados</small>' : '');
+    } else {
+      cell.innerHTML = '<span class="text-warning"><i class="fas fa-lock me-1"></i>0 disponível</span>' + (cached.reserved > 0 ? '<small class="d-block text-muted-custom">' + cached.reserved + ' reservados na fila</small>' : '');
+    }
   }
+
 
   // Dispara a consulta de estoque de todas as variantes em paralelo (sem fila
   // com atraso — é só um punhado de resultados de uma busca no modal). Cada
@@ -514,11 +615,13 @@ document.addEventListener('DOMContentLoaded', function () {
       fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          stockCache[sku] = { quantity: data.quantity, status: data.status };
+          stockCache[sku] = { quantity: data.quantity, stock: data.stock, reserved: data.reserved, status: data.status };
           if (myGeneration !== pickerStockGeneration) return; // busca já foi trocada, ignora
           renderPickerStock(cell, stockCache[sku]);
         })
         .catch(function () {
+          var cb = cell.closest('tr').querySelector('.picker-variant-cb');
+          if (cb) cb.disabled = false;
           if (myGeneration !== pickerStockGeneration) return;
           cell.innerHTML = '<span class="text-danger">-</span>';
         });
@@ -596,10 +699,12 @@ document.addEventListener('DOMContentLoaded', function () {
         cbCell.style.paddingLeft = '2rem';
         var cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.className = 'form-check-input';
+        cb.className = 'form-check-input picker-variant-cb';
+        cb.disabled = enforceStock;
         cb.addEventListener('change', function () {
           setVariantSelected(cb, variant);
-          productCb.checked = variantCheckboxes.every(function (c) { return c.checked; });
+          var enabled = variantCheckboxes.filter(function (c) { return !c.disabled; });
+          productCb.checked = enabled.length > 0 && enabled.every(function (c) { return c.checked; });
           updatePickerFooter();
         });
         variantCheckboxes.push(cb);
@@ -627,6 +732,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       productCb.addEventListener('change', function () {
         variantCheckboxes.forEach(function (cb, idx) {
+          if (cb.disabled) return;
           cb.checked = productCb.checked;
           setVariantSelected(cb, product.variants[idx]);
         });

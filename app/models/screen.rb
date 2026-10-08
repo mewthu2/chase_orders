@@ -7,6 +7,8 @@ class Screen
     logs:                   'Logs',
     dashboard_correios:     'Painel de Correios B2C',
     dashboard_correios_b2b: 'Painel de Correios B2B',
+    stock_reservations_b2c: 'Reservas de Estoque B2C',
+    stock_reservations_b2b: 'Reservas de Estoque B2B',
     marketing_campaigns:    'Campanhas de Marketing',
     marketing_tasks:        'Tarefas de Marketing',
     b2b_orders:             'Pedidos B2B',
@@ -25,8 +27,8 @@ class Screen
   GROUPS = {
     'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes],
     'CRM'          => %i[orders customers],
-    'Correios B2C' => %i[dashboard_correios],
-    'Correios B2B' => %i[dashboard_correios_b2b],
+    'Correios B2C' => %i[dashboard_correios stock_reservations_b2c],
+    'Correios B2B' => %i[dashboard_correios_b2b stock_reservations_b2b],
     'Planejador'   => %i[planner_orders],
     'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers transfer_locations],
     'Outros'       => %i[discounts logs marketing_campaigns marketing_tasks users_management]

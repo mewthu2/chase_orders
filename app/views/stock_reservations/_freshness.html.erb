@@ -1,0 +1,19 @@
+<%# Quando a reserva foi atualizada e quando será a próxima atualização. local: refresh (StockReservationRefresh) %>
+<div class="reservation-freshness reservation-freshness--<%= refresh.status %>">
+  <span class="reservation-freshness__pulse"></span>
+  <% if refresh.last_refreshed_at %>
+    <span>Reservas atualizadas às <strong><%= l(refresh.last_refreshed_at, format: '%H:%M') %></strong>
+      (<%= time_ago_in_words(refresh.last_refreshed_at) %> atrás)</span>
+    <span class="reservation-freshness__sep">·</span>
+    <span>próxima às <strong><%= l(refresh.next_refresh_at, format: '%H:%M') %></strong></span>
+  <% else %>
+    <span>Reservas ainda não foram atualizadas.</span>
+  <% end %>
+  <% if refresh.status == 'running' %>
+    <span class="reservation-freshness__badge"><i class="fas fa-sync fa-spin me-1"></i>atualizando</span>
+  <% elsif refresh.status.in?(%w[error partial]) && refresh.message.present? %>
+    <span class="reservation-freshness__badge reservation-freshness__badge--warn" title="<%= refresh.message %>">
+      <i class="fas fa-triangle-exclamation me-1"></i><%= refresh.status == 'error' ? 'falhou' : 'parcial' %>
+    </span>
+  <% end %>
+</div>

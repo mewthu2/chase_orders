@@ -1,0 +1,96 @@
+<% label = @account == 'b2b' ? 'B2B' : 'B2C' %>
+<% content_for :title, "Reservas de Estoque #{label}" %>
+
+<div class="users-container reservations-page">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-lock me-2"></i>Reservas de Estoque <%= label %></h1>
+      <p class="page-subtitle">
+        Itens de pedidos na fila do Tiny (<%= @account == 'b2b' ? 'Tiny2' : 'Tiny3' %>, preparando envio) que ainda não viraram pedido no Correios Log.
+        <% if @account == 'b2b' %>Esses itens saem do disponível na criação de pedidos B2B.<% else %>Tela informativa: o Shopify já desconta as próprias vendas.<% end %>
+      </p>
+    </div>
+    <div class="header-actions">
+      <%= button_to refresh_stock_reservations_path(account: @account), method: :post, class: 'btn-export', form: { class: 'd-inline' } do %>
+        <i class="fas fa-sync me-2"></i>Atualizar agora
+      <% end %>
+    </div>
+  </div>
+
+  <%= render 'stock_reservations/freshness', refresh: @refresh %>
+
+  <div class="reservation-kpis">
+    <div class="reservation-kpi"><i class="fas fa-receipt"></i><strong data-count="<%= @kpis[:orders] %>"><%= @kpis[:orders] %></strong> pedidos</div>
+    <div class="reservation-kpi"><i class="fas fa-barcode"></i><strong data-count="<%= @kpis[:skus] %>"><%= @kpis[:skus] %></strong> SKUs</div>
+    <div class="reservation-kpi"><i class="fas fa-boxes"></i><strong data-count="<%= @kpis[:units] %>"><%= @kpis[:units] %></strong> unidades</div>
+  </div>
+
+  <div class="table-card">
+    <%= form_with url: (@account == 'b2b' ? b2b_stock_reservations_path : b2c_stock_reservations_path), method: :get, local: true, class: 'd-flex gap-2 flex-wrap px-3 pb-3' do %>
+      <%= text_field_tag :sku, @sku_query, placeholder: 'Buscar SKU', class: 'field-input', style: 'max-width: 260px;' %>
+      <button type="submit" class="btn-back"><i class="fas fa-search me-1"></i>Buscar</button>
+      <% if @sku_query.present? %>
+        <%= link_to 'Limpar', (@account == 'b2b' ? b2b_stock_reservations_path : b2c_stock_reservations_path), class: 'btn-back' %>
+      <% end %>
+    <% end %>
+
+    <% if @groups.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr><th>SKU</th><th>Produto</th><th class="text-end">Reservado</th><th class="text-end">Pedidos</th><th></th></tr>
+          </thead>
+          <% @groups.each_with_index do |(sku, rows), index| %>
+            <tbody class="reservation-sku" style="animation-delay: <%= [index, 20].min * 30 %>ms">
+              <tr class="reservation-sku__row" data-bs-toggle="collapse" data-bs-target="#reservation-<%= index %>">
+                <td class="text-main"><%= sku %></td>
+                <td class="text-muted-custom"><%= @product_names[sku] || '—' %></td>
+                <td class="text-end"><span class="reservation-qty"><%= rows.sum(&:quantity).ceil %></span></td>
+                <td class="text-end"><%= rows.map(&:tiny_order_id).uniq.size %></td>
+                <td class="text-end"><i class="fas fa-chevron-down reservation-sku__chevron"></i></td>
+              </tr>
+              <tr class="collapse <%= 'show' if @sku_query.present? %>" id="reservation-<%= index %>">
+                <td colspan="5" class="reservation-orders">
+                  <% rows.each do |row| %>
+                    <div class="reservation-order">
+                      <span class="reservation-order__number">#<%= row.tiny_order_number.presence || row.tiny_order_id %></span>
+                      <span><%= row.customer_name %></span>
+                      <span class="text-muted-custom"><%= row.order_date&.strftime('%d/%m/%Y') %></span>
+                      <span class="reservation-order__qty"><%= row.quantity.to_i == row.quantity ? row.quantity.to_i : row.quantity %> un.</span>
+                    </div>
+                  <% end %>
+                </td>
+              </tr>
+            </tbody>
+          <% end %>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center text-muted-custom py-5 reservation-empty">
+        <i class="fas fa-check-circle fa-2x mb-2"></i>
+        <div><%= @sku_query.present? ? "Nenhuma reserva para \"#{@sku_query}\"." : 'Nenhum item reservado na fila.' %></div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  (function () {
+    // KPIs sobem de 0 até o valor (efeito de contagem).
+    document.querySelectorAll('.reservation-kpi strong[data-count]').forEach(function (el) {
+      var target = parseInt(el.dataset.count, 10) || 0;
+      var start = performance.now();
+      function tick(now) {
+        var progress = Math.min((now - start) / 700, 1);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - progress, 3)));
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+
+    // Enquanto atualiza, recarrega sozinha.
+    <% if @refresh.status == 'running' %>
+      setTimeout(function () { window.location.reload(); }, 15000);
+    <% end %>
+  })();
+</script>

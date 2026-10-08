@@ -160,7 +160,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('dashboard_correios') %>
+        <% if current_user&.can_access_screen?('dashboard_correios') || current_user&.can_access_screen?('stock_reservations_b2c') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCorreios()">
               <div class="nav-group-title">
@@ -171,6 +171,7 @@
             </div>
             <div class="nav-group-dropdown" id="correiosDropdown">
               <div class="dropdown-content">
+                <% if current_user&.can_access_screen?('dashboard_correios') %>
                 <%= link_to correios_pipeline_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(correios_pipeline_dashboard_index_path)}" do %>
                   <i class="fas fa-stream"></i>
                   <span>Funil de Pedidos</span>
@@ -224,12 +225,20 @@
                   <i class="fas fa-list-check"></i>
                   <span>Tentativas B2C</span>
                 <% end %>
+                <% end %>
+
+                <% if current_user&.can_access_screen?('stock_reservations_b2c') %>
+                  <%= link_to b2c_stock_reservations_path, class: "dropdown-link #{'active' if current_page?(b2c_stock_reservations_path)}" do %>
+                    <i class="fas fa-lock"></i>
+                    <span>Reservas de Estoque</span>
+                  <% end %>
+                <% end %>
               </div>
             </div>
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('dashboard_correios_b2b') %>
+        <% if current_user&.can_access_screen?('dashboard_correios_b2b') || current_user&.can_access_screen?('stock_reservations_b2b') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCorreiosB2b()">
               <div class="nav-group-title">
@@ -240,6 +249,7 @@
             </div>
             <div class="nav-group-dropdown" id="correiosB2bDropdown">
               <div class="dropdown-content">
+                <% if current_user&.can_access_screen?('dashboard_correios_b2b') %>
                 <%= link_to order_correios_create_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_b2b_dashboard_index_path)}" do %>
                   <span class="nav-step-badge">1</span>
                   <i class="fas fa-clipboard-check"></i>
@@ -288,6 +298,14 @@
                 <%= link_to attempts_path(channel: 'b2b'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2b'}" do %>
                   <i class="fas fa-list-check"></i>
                   <span>Tentativas B2B</span>
+                <% end %>
+                <% end %>
+
+                <% if current_user&.can_access_screen?('stock_reservations_b2b') %>
+                  <%= link_to b2b_stock_reservations_path, class: "dropdown-link #{'active' if current_page?(b2b_stock_reservations_path)}" do %>
+                    <i class="fas fa-lock"></i>
+                    <span>Reservas de Estoque</span>
+                  <% end %>
                 <% end %>
               </div>
             </div>

@@ -31,4 +31,11 @@ class ScreenTest < ActiveSupport::TestCase
     assert_includes Screen::GROUPS['Produtos'], :transfer_locations
     refute_includes Screen::GROUPS['Pedidos B2B'], :transfer_locations
   end
+
+  test 'stock reservation screens belong to their Correios groups' do
+    assert_includes Screen::GROUPS['Correios B2B'], :stock_reservations_b2b
+    assert_includes Screen::GROUPS['Correios B2C'], :stock_reservations_b2c
+    assert_equal 'Reservas de Estoque B2B', Screen.label(:stock_reservations_b2b)
+    assert_equal 'Reservas de Estoque B2C', Screen.label(:stock_reservations_b2c)
+  end
 end

@@ -225,6 +225,15 @@ Rails.application.routes.draw do
     end
   end
 
+  # Reservas de estoque: itens da fila do Tiny (B2B = Tiny2, B2C = Tiny3).
+  resources :stock_reservations, only: [] do
+    collection do
+      get :b2b
+      get :b2c
+      post :refresh
+    end
+  end
+
   # Atacado e transferência de estoque são telas separadas sobre o mesmo
   # controller: o tipo do pedido vem do default da rota (order_kind), não do form.
   resources :b2b_orders, defaults: { order_kind: 'sale' } do

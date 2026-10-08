@@ -165,13 +165,15 @@ module Correios::Orders
     end
   end
 
-  def get_stock(item_code, from_tiny2: false)
+  def get_stock(item_code, from_tiny2: false, timeout: nil)
     authentication = {
       'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),
       'Content-Type' => 'application/json',
       'Authorization' => "Basic #{Base64.strict_encode64(from_tiny2 ? ENV.fetch('TOKEN_LOG_PRODUCTION2') : ENV.fetch('TOKEN_LOG_PRODUCTION'))}"
     }
 
-    HTTParty.get("#{ENV.fetch('CORREIOS_ESTOQUE')}#{item_code}/estoque", headers: authentication)
+    options = { headers: authentication }
+    options[:timeout] = timeout if timeout
+    HTTParty.get("#{ENV.fetch('CORREIOS_ESTOQUE')}#{item_code}/estoque", options)
   end
 end

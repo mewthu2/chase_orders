@@ -1,0 +1,179 @@
+@import 'admin/variables';
+
+@keyframes reservation-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba($accent-green-light, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba($accent-green-light, 0); }
+  100% { box-shadow: 0 0 0 0 rgba($accent-green-light, 0); }
+}
+
+@keyframes reservation-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reservation-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-2px); }
+  75%      { transform: translateX(2px); }
+}
+
+.reservation-freshness {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid $border-muted;
+  border-radius: $radius-pill;
+  background: linear-gradient(90deg, rgba($accent-blue, 0.12), rgba($accent-green, 0.08));
+  color: $text-secondary;
+  font-size: 0.85rem;
+  animation: reservation-rise 0.4s ease-out;
+
+  strong { color: $text-primary; }
+
+  &__pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: $accent-green-light;
+    animation: reservation-pulse 2s infinite;
+  }
+
+  &--error &__pulse, &--partial &__pulse { background: $accent-yellow; animation: none; }
+  &--running &__pulse { background: $accent-blue-light; }
+
+  &__sep { color: $text-faint; }
+
+  &__badge {
+    padding: 0.1rem 0.55rem;
+    border-radius: $radius-pill;
+    background: rgba($accent-blue, 0.2);
+    color: $accent-blue-lighter;
+    font-size: 0.75rem;
+
+    &--warn { background: rgba($accent-yellow, 0.15); color: $accent-yellow; }
+  }
+}
+
+.stock-breakdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-variant-numeric: tabular-nums;
+
+  &__op { color: $text-faint; }
+  &__reserved { color: $accent-yellow; text-decoration: none; }
+  a.stock-breakdown__reserved:hover { text-decoration: underline; }
+
+  &__available {
+    padding: 0 0.4rem;
+    border-radius: $radius-sm;
+    &--high { color: $accent-green-light; background: rgba($accent-green, 0.15); }
+    &--low  { color: $accent-yellow; background: rgba($accent-yellow, 0.12); }
+    &--out  { color: $accent-red-light; background: rgba($accent-red, 0.15); }
+  }
+
+  &__alert {
+    display: block;
+    margin-top: 0.2rem;
+    color: $accent-red-light;
+    font-size: 0.75rem;
+    animation: reservation-shake 0.3s ease-in-out 2;
+  }
+}
+
+.item-row--short td {
+  background: rgba($accent-red, 0.08);
+  transition: background 0.3s ease;
+}
+
+.item-row--leaving {
+  opacity: 0;
+  transform: translateX(16px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.picker-variant--blocked td { opacity: 0.55; }
+
+.stock-enforcement-notice {
+  display: flex;
+  align-items: flex-start;
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba($accent-yellow, 0.4);
+  border-left: 4px solid $accent-yellow;
+  border-radius: $radius-md;
+  background: rgba($accent-yellow, 0.08);
+  color: $text-secondary;
+  font-size: 0.85rem;
+
+  i { color: $accent-yellow; margin-top: 0.2rem; }
+  &--in { animation: reservation-rise 0.35s ease-out; }
+}
+
+.reservation-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.reservation-kpi {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid $border-default;
+  border-radius: $radius-lg;
+  background: $bg-surface;
+  color: $text-muted;
+  animation: reservation-rise 0.5s ease-out both;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  &:hover { transform: translateY(-2px); border-color: $accent-blue; }
+  &:nth-child(2) { animation-delay: 80ms; }
+  &:nth-child(3) { animation-delay: 160ms; }
+
+  i { color: $accent-blue-light; }
+  strong { font-size: 1.6rem; color: $text-primary; font-variant-numeric: tabular-nums; }
+}
+
+.reservation-sku {
+  animation: reservation-rise 0.35s ease-out both;
+
+  &__row { cursor: pointer; transition: background 0.2s ease; }
+  &__row:hover td { background: $bg-elevated; }
+  &__chevron { color: $text-faint; transition: transform 0.25s ease; }
+  &__row[aria-expanded='true'] &__chevron { transform: rotate(180deg); }
+}
+
+.reservation-qty {
+  padding: 0.1rem 0.6rem;
+  border-radius: $radius-pill;
+  background: rgba($accent-yellow, 0.15);
+  color: $accent-yellow;
+  font-weight: 600;
+}
+
+.reservation-orders { background: $bg-canvas; }
+
+.reservation-order {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px 80px;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px dashed $border-default;
+  animation: reservation-rise 0.3s ease-out both;
+
+  &:last-child { border-bottom: none; }
+  &__number { color: $accent-blue-light; font-weight: 600; }
+  &__qty { text-align: right; color: $text-primary; }
+}
+
+.reservation-empty i { color: $accent-green-light; animation: reservation-rise 0.6s ease-out; }
+
+@media (max-width: 576px) {
+  .reservation-order { grid-template-columns: 1fr 1fr; }
+}

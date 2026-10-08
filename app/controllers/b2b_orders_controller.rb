@@ -35,7 +35,7 @@ class B2bOrdersController < ApplicationController
     @b2b_order = B2bOrder.new(b2b_order_params.merge(kind: order_kind, price_list: price_list_for(order_kind)))
     @b2b_order.user = current_user
 
-    if @b2b_order.save
+    if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
       kind, message = send_to_tiny(@b2b_order, saved: true)
       redirect_to orders_path_for(order_kind), kind => message
     else
@@ -49,7 +49,7 @@ class B2bOrdersController < ApplicationController
     @b2b_order.assign_attributes(b2b_order_params)
     push_status = @b2b_order.status_changed? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present?
 
-    if @b2b_order.save
+    if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
       flash_options = { notice: 'Pedido atualizado com sucesso.' }
       if push_status
         result = B2bTinyService.new.update_order_status(@b2b_order.tiny_reference_id, @b2b_order.status)
@@ -64,6 +64,11 @@ class B2bOrdersController < ApplicationController
   def transmit
     unless @b2b_order.resendable?
       redirect_to orders_path_for(order_kind), alert: 'Este pedido não pode ser reenviado.'
+      return
+    end
+
+    unless stock_available?(@b2b_order)
+      redirect_to orders_path_for(order_kind), alert: @b2b_order.errors.full_messages.to_sentence
       return
     end
 
@@ -161,7 +166,8 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    render json: { success: true, **correios_stock_for(product) }
+    result = B2bStockAvailability.for_sku(product.sku)
+    render json: { success: true, quantity: result.available, stock: result.stock, reserved: result.reserved, status: result.status }
   end
 
   def search_product
@@ -303,16 +309,17 @@ class B2bOrdersController < ApplicationController
     product.image_url
   end
 
-  def correios_stock_for(product)
-    response = Correios::Orders.get_stock(product.sku, from_tiny2: true)
-    return { quantity: 0, status: 'error' } unless response.respond_to?(:success?) && response.success?
+  # Bloqueia itens acima do disponível no Correios B2B (estoque − reservas da fila do Tiny2). Só vale
+  # enquanto o pedido não chegou ao Tiny: depois disso os itens dele já estão na própria reserva.
+  def stock_available?(order)
+    return true if order.tiny_reference_id.present? || order.cancelado?
 
-    quantity = JSON.parse(response.body)['disponivel'].to_i
-    status = quantity > 10 ? 'high' : (quantity.positive? ? 'low' : 'out')
-    { quantity: quantity, status: status }
-  rescue StandardError => e
-    Rails.logger.error "B2bOrdersController#correios_stock_for exception: #{e.message}"
-    { quantity: 0, status: 'error' }
+    shortages = B2bStockAvailability.shortages(order.b2b_order_items)
+    shortages.each do |s|
+      order.errors.add(:base, "#{s[:sku]}: pedido #{s[:requested]}, disponível #{s[:available]} " \
+                              "(estoque #{s[:stock]}, #{s[:reserved]} reservados na fila)")
+    end
+    shortages.empty?
   end
 
   # O envio ao Tiny é SEMPRE síncrono (perform_now): o resultado aparece na hora, sem depender de
