@@ -56,7 +56,7 @@
 
         <div class="form-col-6">
           <label class="field-label">Forma de Envio</label>
-          <select id="shippingMethodSelect" class="field-input">
+          <select id="shippingMethodSelect" class="field-input" <%= 'required' if @b2b_order.b2c_transfer? %>>
             <option value="">Carregando...</option>
           </select>
           <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
@@ -239,6 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var selectedOption = select.options[select.selectedIndex];
     var isCarrier = !!selectedOption && selectedOption.textContent.trim().toLowerCase() === 'transportadora';
     document.getElementById('carrierSection').style.display = isCarrier ? '' : 'none';
+    // Transportadora sem transportadora escolhida chega ao Tiny sem frete e trava a criação nos Correios.
+    document.getElementById('b2b_order_carrier_id').required = isCarrier;
   }
 
   // O serviço de frete só existe para Correios Log (tipo de logística 5 no Tiny). Fica desabilitado
@@ -250,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var freightSelect = document.getElementById('freightServiceSelect');
     document.getElementById('freightServiceSection').style.display = isCorreiosLog ? '' : 'none';
     freightSelect.disabled = !isCorreiosLog;
+    freightSelect.required = isCorreiosLog;
     if (!isCorreiosLog) freightSelect.value = '';
   }
 
@@ -421,6 +424,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   var enforceStock = document.getElementById('itemsTable').dataset.enforceStock === 'true';
+  // Na edição, o estoque desconta a reserva dos outros pedidos da fila, não a deste.
+  var stockUrl = '<%= raw "#{product_stock_b2b_orders_path}?#{"b2b_order_id=#{@b2b_order.id}&" if @b2b_order.persisted?}sku=" %>';
   var reservationsUrl = <%= raw (current_user.can_access_screen?('stock_reservations_b2b') ? b2b_stock_reservations_path.to_json : 'null') %>;
 
   function blocksSku(data) {
@@ -492,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function loadStock(sku) {
     if (Object.prototype.hasOwnProperty.call(stockCache, sku)) return Promise.resolve(stockCache[sku]);
-    return fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
+    return fetch(stockUrl + encodeURIComponent(sku))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         stockCache[sku] = { quantity: data.quantity, stock: data.stock, reserved: data.reserved, status: data.status };
@@ -612,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      fetch('<%= product_stock_b2b_orders_path %>?sku=' + encodeURIComponent(sku))
+      fetch(stockUrl + encodeURIComponent(sku))
         .then(function (r) { return r.json(); })
         .then(function (data) {
           stockCache[sku] = { quantity: data.quantity, stock: data.stock, reserved: data.reserved, status: data.status };

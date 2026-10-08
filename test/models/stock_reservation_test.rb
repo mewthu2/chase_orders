@@ -24,4 +24,12 @@ class StockReservationTest < ActiveSupport::TestCase
   test 'reserved_for is zero when nothing is reserved' do
     assert_equal 0, StockReservation.reserved_for('NONE', account: :b2b)
   end
+
+  test 'reserved_for can leave out the reservation of one tiny order' do
+    reserve(:b2b, 'LEG-A', 2, order_id: '77')
+    reserve(:b2b, 'LEG-A', 1, order_id: '88')
+
+    assert_equal 1, StockReservation.reserved_for('LEG-A', account: :b2b, exclude_tiny_order_id: '77')
+    assert_equal 3, StockReservation.reserved_for('LEG-A', account: :b2b, exclude_tiny_order_id: nil)
+  end
 end

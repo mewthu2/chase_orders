@@ -13,10 +13,16 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
   end
 
   def build_b2c(**attrs)
-    order = B2bOrder.new({ kind: :b2c_transfer, user: @admin, price_list: :transfer }.merge(attrs))
+    order = B2bOrder.new({ kind: :b2c_transfer, user: @admin, price_list: :transfer,
+                           carrier_shipping_method: '782947860', carrier_name: 'Mix Cargo' }.merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order
+  end
+
+  def stub_formas
+    stub_request(:get, 'https://api.tiny.com.br/api2/formas.envio.pesquisa.php').with(query: hash_including('formato' => 'json'))
+      .to_return(body: { retorno: { status: 'OK', registros: [{ id: '782947860', nome: 'Transportadora', situacao: '1', tipo_logistica: '2' }] } }.to_json)
   end
 
   def stub_pedido_ok
@@ -31,10 +37,12 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
   end
 
   test 'creating forces the b2c_transfer kind and transfer list, and lands in preparando_envio' do
+    stub_formas
     stub = stub_pedido_ok
     assert_difference 'B2bOrder.count', 1 do
       post b2c_transfers_path, params: { b2b_order: {
         kind: 'sale', client_id: @client.id, price_list: 'standard',
+        carrier_shipping_method: '782947860', carrier_name: 'Mix Cargo',
         b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
       } }
     end
@@ -97,5 +105,16 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to b2c_transfers_path
     assert_nil order.reload.tiny_reference_id
+  end
+
+  test 'creating a B2C transfer without a shipping method is refused with a clear message' do
+    assert_no_difference 'B2bOrder.count' do
+      post b2c_transfers_path, params: { b2b_order: {
+        b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match(/Escolha a forma de envio da transferência B2C/, response.body)
   end
 end

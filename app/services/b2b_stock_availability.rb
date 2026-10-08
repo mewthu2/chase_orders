@@ -10,9 +10,9 @@ class B2bStockAvailability
     def error? = status == 'error'
   end
 
-  def self.for_sku(sku)
+  def self.for_sku(sku, exclude_tiny_order_id: nil)
     sku = normalize(sku)
-    build(sku, correios_stock(sku))
+    build(sku, correios_stock(sku), exclude_tiny_order_id:)
   end
 
   # Itens acima do disponível. SKUs sem resposta do Correios não entram (não bloqueiam).
@@ -39,8 +39,8 @@ class B2bStockAvailability
 
   def self.normalize(sku) = sku.to_s.strip.upcase
 
-  def self.build(sku, stock)
-    reserved = StockReservation.reserved_for(sku, account: :b2b)
+  def self.build(sku, stock, exclude_tiny_order_id: nil)
+    reserved = StockReservation.reserved_for(sku, account: :b2b, exclude_tiny_order_id:)
     return Result.new(sku:, stock: 0, reserved:, available: 0, status: 'error') if stock.nil?
 
     available = stock - reserved

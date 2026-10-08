@@ -99,4 +99,25 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
     get edit_b2b_order_path(order)
     assert_select "#itemsTable[data-enforce-stock='false']"
   end
+
+  test 'product_stock does not count the reservation of the order being edited' do
+    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order.b2b_order_items.build(sku: 'LEG-A', quantity: 2, price: 10)
+    order.save!
+
+    get product_stock_b2b_orders_path, params: { sku: 'LEG-A', b2b_order_id: order.id }
+    json = JSON.parse(response.body)
+
+    assert_equal [3, 0, 3], json.values_at('stock', 'reserved', 'quantity')
+  end
+
+  test 'the edit form asks the stock of its own order' do
+    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order.b2b_order_items.build(sku: 'LEG-A', quantity: 2, price: 10)
+    order.save!
+
+    get edit_b2b_order_path(order)
+
+    assert_includes response.body, "product_stock?b2b_order_id=#{order.id}&sku="
+  end
 end

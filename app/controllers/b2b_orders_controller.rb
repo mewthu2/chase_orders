@@ -166,7 +166,8 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    result = B2bStockAvailability.for_sku(product.sku)
+    own_tiny_order_id = B2bOrder.find_by(id: params[:b2b_order_id])&.tiny_reference_id
+    result = B2bStockAvailability.for_sku(product.sku, exclude_tiny_order_id: own_tiny_order_id)
     render json: { success: true, quantity: result.available, stock: result.stock, reserved: result.reserved, status: result.status }
   end
 

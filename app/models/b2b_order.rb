@@ -39,6 +39,8 @@ class B2bOrder < ApplicationRecord
   validates :freight_service, inclusion: { in: FREIGHT_SERVICES }, allow_blank: true
   validates :client, presence: true, if: :sale?
   validates :transfer_location, presence: true, if: :stock_transfer?
+  # A transferência B2C nasce na fila dos Correios B2B, que não cria pedido sem forma de envio.
+  validate :b2c_transfer_must_have_shipping_method, if: :b2c_transfer?
   validates :shipping_street, :shipping_number, :shipping_neighbourhood, :shipping_city,
             :shipping_state, :shipping_zip, presence: true, if: :different_shipping_address?
   validate :must_have_items
@@ -69,5 +71,9 @@ class B2bOrder < ApplicationRecord
 
   def must_have_items
     errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.empty?
+  end
+
+  def b2c_transfer_must_have_shipping_method
+    errors.add(:base, 'Escolha a forma de envio da transferência B2C.') if carrier_shipping_method.blank?
   end
 end

@@ -50,7 +50,8 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
   end
 
   test 'also syncs B2C transfers (they are a pedido in Tiny)' do
-    order = B2bOrder.new(kind: :b2c_transfer, user: @user, price_list: :transfer, status: :preparando_envio, tiny_reference_id: '333')
+    order = B2bOrder.new(kind: :b2c_transfer, user: @user, price_list: :transfer, status: :preparando_envio, tiny_reference_id: '333',
+                         carrier_shipping_method: '782947860', carrier_name: 'Mix Cargo')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
     order.save!
 

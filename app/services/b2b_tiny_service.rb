@@ -208,7 +208,12 @@ class B2bTinyService
       fields[:forma_frete] = order.freight_service
       fields[:nome_transportador] = CORREIOS_CARRIER_NAME
     when 'T'
-      fields[:nome_transportador] = order.carrier&.name || order.carrier_name
+      carrier_name = (order.carrier&.name || order.carrier_name).to_s.strip
+      raise ShippingError, 'Escolha a transportadora da forma de envio "Transportadora".' if carrier_name.blank?
+
+      # Como no pedido 1859: a criação dos Correios B2B exige forma_frete, que leva o nome da transportadora.
+      fields[:nome_transportador] = carrier_name
+      fields[:forma_frete] = carrier_name
     end
     fields.compact_blank
   end

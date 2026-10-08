@@ -63,6 +63,7 @@ class B2bTinyServiceB2cTransferTest < ActiveSupport::TestCase
 
     assert_equal 'T', pedido['forma_envio']
     assert_equal 'Mix Cargo', pedido['nome_transportador']
+    assert_equal 'Mix Cargo', pedido['forma_frete']
     item = pedido['itens'].first['item']
     assert_equal 'LEG-1659-M', item['codigo']
     assert_equal 14, item['quantidade']
@@ -76,5 +77,13 @@ class B2bTinyServiceB2cTransferTest < ActiveSupport::TestCase
     result = B2bTinyService.new.create_b2c_transfer(order)
     refute result[:success]
     assert_equal 'Produto não encontrado', result[:error]
+  end
+
+  test 'a B2C transfer needs a shipping method' do
+    order = B2bOrder.new(kind: :b2c_transfer, user: @user, price_list: :transfer)
+    order.b2b_order_items.build(sku: 'LEG-1659-M', name: 'Legging', quantity: 1, price: 21.96)
+
+    refute order.valid?
+    assert_includes order.errors.full_messages, 'Escolha a forma de envio da transferência B2C.'
   end
 end

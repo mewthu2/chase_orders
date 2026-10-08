@@ -7,7 +7,10 @@ class StockReservation < ApplicationRecord
 
   validates :tiny_order_id, :sku, presence: true
 
-  def self.reserved_for(sku, account:)
-    where(account: account.to_s, sku: sku.to_s.strip.upcase).sum(:quantity).ceil
+  # exclude_tiny_order_id: pedido já na fila que está sendo editado não conta contra ele mesmo.
+  def self.reserved_for(sku, account:, exclude_tiny_order_id: nil)
+    scope = where(account: account.to_s, sku: sku.to_s.strip.upcase)
+    scope = scope.where.not(tiny_order_id: exclude_tiny_order_id.to_s) if exclude_tiny_order_id.present?
+    scope.sum(:quantity).ceil
   end
 end

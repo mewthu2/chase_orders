@@ -376,14 +376,26 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     refute_includes sent.keys, 'id_forma_envio'
   end
 
-  test 'a Transportadora is sent as forma_envio T with the carrier name and no freight service' do
+  # Igual ao pedido 1859 (que passou pela criação dos Correios B2B): a fila exige forma_frete, e na
+  # transportadora ele leva o nome dela.
+  test 'a Transportadora is sent as forma_envio T with the carrier name as transporter and freight service' do
     stub_formas
     result, sent, = send_sale(carrier_shipping_method: '782947860', carrier_name: 'Mix Cargo')
 
     assert result[:success]
     assert_equal 'T', sent['forma_envio']
     assert_equal 'Mix Cargo', sent['nome_transportador']
-    refute_includes sent.keys, 'forma_frete'
+    assert_equal 'Mix Cargo', sent['forma_frete']
+  end
+
+  test 'a Transportadora without a chosen carrier is refused before anything is sent to Tiny' do
+    stub_formas
+    result, sent, stub = send_sale(carrier_shipping_method: '782947860')
+
+    refute result[:success]
+    assert_match(/transportadora/i, result[:error])
+    assert_not_requested stub
+    assert_nil sent
   end
 
   test 'Correios is sent as forma_envio C and pickup as S' do
