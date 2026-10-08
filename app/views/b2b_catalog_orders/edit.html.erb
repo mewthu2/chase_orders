@@ -1,0 +1,36 @@
+<% content_for :title, "Alterar encomenda — #{@catalog_order.customer_name}" %>
+
+<div class="users-container catalogs-page">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-pen me-2"></i>Alterar encomenda de <%= @catalog_order.customer_name %></h1>
+      <p class="page-subtitle">Mude as quantidades (0 tira o item). O cliente vê a nova versão no link.</p>
+    </div>
+    <div class="header-actions"><%= link_to b2b_catalog_catalog_order_path(@catalog, @catalog_order), class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %></div>
+  </div>
+
+  <%= form_with url: b2b_catalog_catalog_order_path(@catalog, @catalog_order), method: :patch, local: true do %>
+    <div class="table-card catalog-order-sheet">
+      <% @catalog.styles.each do |style, colors| %>
+        <div class="catalog-order-style">
+          <h6 class="catalog-order-style__name"><%= style %></h6>
+          <% colors.each do |color| %>
+            <div class="catalog-order-color">
+              <div class="catalog-builder__thumb"><% if color.main_image %><img src="<%= color.main_image %>" loading="lazy"><% else %><i class="fas fa-image"></i><% end %></div>
+              <div class="catalog-order-color__name"><%= color.color_name %></div>
+              <div class="catalog-order-color__sizes">
+                <% color.variants.each do |variant| %>
+                  <label class="catalog-qty catalog-qty--<%= variant.availability %>">
+                    <span><%= variant.size %></span>
+                    <%= number_field_tag "quantities[#{variant.id}]", @quantities[variant.id].to_i, min: 0, class: 'field-input' %>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="p-3"><button type="submit" class="btn-export"><i class="fas fa-save me-1"></i>Salvar alterações</button></div>
+    </div>
+  <% end %>
+</div>

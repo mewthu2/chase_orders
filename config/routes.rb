@@ -225,6 +225,24 @@ Rails.application.routes.draw do
     end
   end
 
+  # Catálogos B2B (montagem e encomendas no Honey) e a página pública do catálogo.
+  resources :b2b_catalogs, except: :destroy do
+    collection do
+      get :product_picker
+      post :split_names
+    end
+    member do
+      post :toggle_status
+      post :regenerate_token
+      post :refresh
+      get :pdf
+    end
+    resources :catalog_orders, controller: 'b2b_catalog_orders', only: %i[show edit update]
+  end
+  get 'catalogo/:token', to: 'public_catalogs#show', as: :public_catalog
+  post 'catalogo/:token/encomenda', to: 'public_catalogs#submit', as: :public_catalog_submit, defaults: { format: :json }
+  post 'catalogo/:token/identificar', to: 'public_catalogs#identify', as: :public_catalog_identify, defaults: { format: :json }
+
   # Reservas de estoque: itens da fila do Tiny (B2B = Tiny2, B2C = Tiny3).
   resources :stock_reservations, only: [] do
     collection do

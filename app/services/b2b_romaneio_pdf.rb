@@ -13,6 +13,8 @@ class B2bRomaneioPdf
   ZEBRA = 'F3F7FD'.freeze
   LINE = 'D8DEE4'.freeze
 
+  LOGO_WHITE = Rails.root.join('app/assets/images/chase-logo-white.png').to_s.freeze
+
   TITLES = { 'sale' => 'Pedido', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2B > B2C' }.freeze
 
   def initialize(order)
@@ -54,8 +56,8 @@ class B2bRomaneioPdf
 
     top = pdf.cursor
     pdf.bounding_box([18, top - 16], width: width / 2) do
-      pdf.fill_color 'FFFFFF'
-      pdf.text 'CHASE BRASIL', size: 22, style: :bold, character_spacing: 2
+      pdf.image LOGO_WHITE, height: 22
+      pdf.move_down 8
       pdf.fill_color SKY
       pdf.text 'ROMANEIO DE MERCADORIAS', size: 9, style: :bold, character_spacing: 1.5
     end

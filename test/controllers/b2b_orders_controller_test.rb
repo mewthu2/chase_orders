@@ -192,6 +192,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 'application/pdf', response.media_type
     assert_match(/attachment; filename="romaneio-pedido-#{order.id}-cliente-b2b-test\.pdf"/, response.headers['Content-Disposition'])
+    assert_includes response.body, '/Subtype /Image', 'o romaneio leva o logo da Chase'
     assert response.body.start_with?('%PDF')
   end
 

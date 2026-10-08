@@ -38,4 +38,9 @@ class ScreenTest < ActiveSupport::TestCase
     assert_equal 'Reservas de Estoque B2B', Screen.label(:stock_reservations_b2b)
     assert_equal 'Reservas de Estoque B2C', Screen.label(:stock_reservations_b2c)
   end
+
+  test 'b2b catalogs screen belongs to the Pedidos B2B group' do
+    assert_includes Screen::GROUPS['Pedidos B2B'], :b2b_catalogs
+    assert_equal 'Catálogos B2B', Screen.label(:b2b_catalogs)
+  end
 end

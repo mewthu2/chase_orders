@@ -1,0 +1,381 @@
+<% content_for :title, "#{@catalog.title} · Chase" %>
+<script type="application/json" id="catalogData"><%= raw json_escape(@payload.to_json) %></script>
+
+<header class="pc-header">
+  <%= image_tag 'chase-logo.png', alt: 'Chase', class: 'pc-logo' %>
+  <button type="button" class="pc-link" id="pcIdentifyOpen" hidden>Já fiz uma encomenda</button>
+</header>
+
+<section class="pc-hero">
+  <p class="pc-hero__eyebrow">Catálogo atacado</p>
+  <h1 class="pc-hero__title"><%= @catalog.title %></h1>
+  <% if @catalog.notes.present? %><p class="pc-hero__notes"><%= @catalog.notes %></p><% end %>
+  <p class="pc-hero__meta" id="pcRefreshed"></p>
+</section>
+
+<% if @catalog.closed? %>
+  <section class="pc-closed"><h2>Este catálogo foi encerrado</h2><p>As encomendas não podem mais ser enviadas ou alteradas. Fale com a equipe da Chase.</p></section>
+<% end %>
+
+<div class="pc-banner" id="pcBanner" hidden></div>
+
+<main class="pc-grid" id="pcGrid"></main>
+
+<div class="pc-bar" id="pcBar">
+  <button type="button" class="pc-bar__summary" id="pcSummaryOpen">
+    <span class="pc-bar__count" id="pcCount">0</span><span id="pcCountLabel">peças selecionadas</span>
+  </button>
+  <button type="button" class="pc-btn pc-btn--light" id="pcSubmit" disabled>Enviar encomenda</button>
+</div>
+
+<div class="pc-overlay" id="pcOverlay" hidden></div>
+
+<aside class="pc-drawer" id="pcProduct" aria-hidden="true">
+  <button type="button" class="pc-drawer__close" data-close>&times;</button>
+  <div class="pc-product">
+    <div class="pc-gallery"><div class="pc-gallery__main" id="pcGalleryMain"></div><div class="pc-gallery__thumbs" id="pcGalleryThumbs"></div></div>
+    <div class="pc-product__info">
+      <h2 class="pc-product__style" id="pcProductStyle"></h2>
+      <p class="pc-product__color" id="pcProductColor"></p>
+      <div class="pc-swatches pc-swatches--large" id="pcProductSwatches"></div>
+      <p class="pc-label">Tamanhos</p>
+      <div class="pc-sizes" id="pcProductSizes"></div>
+      <button type="button" class="pc-btn" data-close>Continuar escolhendo</button>
+    </div>
+  </div>
+</aside>
+
+<aside class="pc-drawer pc-drawer--summary" id="pcSummary" aria-hidden="true">
+  <button type="button" class="pc-drawer__close" data-close>&times;</button>
+  <h2 class="pc-drawer__title">Sua seleção</h2>
+  <div id="pcSummaryList" class="pc-summary"></div>
+  <button type="button" class="pc-btn" id="pcSummarySubmit">Enviar encomenda</button>
+</aside>
+
+<div class="pc-modal" id="pcIdentify" aria-hidden="true">
+  <form class="pc-modal__box" id="pcIdentifyForm" novalidate>
+    <button type="button" class="pc-drawer__close" data-close>&times;</button>
+    <h2 class="pc-drawer__title" id="pcIdentifyTitle">Quem está encomendando?</h2>
+    <p class="pc-muted" id="pcIdentifyText">Usamos o CNPJ para guardar sua encomenda. Você pode voltar e alterar até ela virar pedido.</p>
+    <label class="pc-field" id="pcNameField"><span>Nome da loja</span><input type="text" id="pcName" autocomplete="organization"></label>
+    <label class="pc-field"><span>CNPJ</span><input type="text" id="pcCnpj" inputmode="numeric" placeholder="00.000.000/0000-00"></label>
+    <p class="pc-error" id="pcIdentifyError" hidden></p>
+    <button type="submit" class="pc-btn" id="pcIdentifySubmit">Enviar encomenda</button>
+  </form>
+</div>
+
+<div class="pc-success" id="pcSuccess" hidden>
+  <div class="pc-success__box">
+    <svg class="pc-check" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M14 27l8 8 16-17"/></svg>
+    <h2>Encomenda enviada!</h2>
+    <p id="pcSuccessText">Recebemos sua seleção. Você pode voltar a este link e alterar até ela virar pedido.</p>
+    <button type="button" class="pc-btn" id="pcSuccessClose">Voltar ao catálogo</button>
+  </div>
+</div>
+
+<div class="pc-toast" id="pcToast" hidden></div>
+
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('catalogData').textContent);
+  var catalog = data.catalog;
+  var order = data.order;
+  var quantities = {};
+  var variantsById = {};
+  var colorsById = {};
+  var locked = catalog.closed || (order && order.converted);
+  var submitUrl = '<%= public_catalog_submit_path(@catalog.public_token) %>';
+  var identifyUrl = '<%= public_catalog_identify_path(@catalog.public_token) %>';
+  var csrf = document.querySelector('meta[name="csrf-token"]');
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  var LEVEL = { available: 'Disponível', low: 'Últimas unidades', sold_out: 'Esgotado' };
+
+  data.styles.forEach(function (style) {
+    style.colors.forEach(function (color) {
+      color.style = style.name;
+      colorsById[color.id] = color;
+      color.variants.forEach(function (v) { v.color = color; variantsById[v.id] = v; });
+    });
+  });
+  if (order && order.quantities) Object.keys(order.quantities).forEach(function (id) { if (variantsById[id]) quantities[id] = order.quantities[id]; });
+
+  if (catalog.refreshed_at) $('pcRefreshed').textContent = 'Disponibilidade atualizada em ' + catalog.refreshed_at;
+  if (catalog.needs_identification && !locked) $('pcIdentifyOpen').hidden = false;
+  if (order && order.converted) showBanner('Sua encomenda foi recebida e está em andamento. Para mudar algo, fale com a Chase.');
+  else if (order && order.persisted) showBanner('Olá, ' + order.customer_name + '! Esta é a sua encomenda salva. Altere o que quiser e envie de novo.');
+
+  function showBanner(text) { var b = $('pcBanner'); b.textContent = text; b.hidden = false; }
+
+  function toast(text, error) {
+    var t = $('pcToast');
+    t.textContent = text; t.className = 'pc-toast' + (error ? ' pc-toast--error' : ''); t.hidden = false;
+    clearTimeout(toast.timer); toast.timer = setTimeout(function () { t.hidden = true; }, 4200);
+  }
+
+  function totalPieces() { return Object.keys(quantities).reduce(function (sum, id) { return sum + (quantities[id] || 0); }, 0); }
+  function colorPieces(color) { return color.variants.reduce(function (s, v) { return s + (quantities[v.id] || 0); }, 0); }
+
+  function imageHtml(url, alt, cls) {
+    return url ? '<img src="' + esc(url) + '" alt="' + esc(alt) + '" loading="lazy" class="' + (cls || '') + '">' : '<div class="pc-placeholder ' + (cls || '') + '">CHASE</div>';
+  }
+
+  // ---- Grade de modelos (um card por modelo, bolinhas trocam a cor) ----
+  // Cada card lembra a cor escolhida; mudanças de quantidade só repintam (não recriam a grade).
+  var cards = [];
+  function renderGrid() {
+    var grid = $('pcGrid');
+    grid.innerHTML = '';
+    cards = data.styles.map(function (style, index) {
+      var card = document.createElement('article');
+      card.className = 'pc-card';
+      card.style.animationDelay = Math.min(index, 16) * 60 + 'ms';
+      card.dataset.color = style.colors[0].id;
+      grid.appendChild(card);
+      paintCard(card, style);
+      return { card: card, style: style };
+    });
+  }
+
+  function refreshCards() {
+    cards.forEach(function (entry) { paintCard(entry.card, entry.style); });
+  }
+
+  function showColorOnCard(color) {
+    cards.forEach(function (entry) {
+      if (entry.style.name === color.style && entry.card.dataset.color != color.id) {
+        entry.card.dataset.color = color.id;
+        paintCard(entry.card, entry.style);
+      }
+    });
+  }
+
+  function paintCard(card, style) {
+    var color = colorsById[card.dataset.color];
+    var allSoldOut = color.variants.every(function (v) { return v.availability === 'sold_out'; });
+    var picked = colorPieces(color);
+    card.innerHTML =
+      '<button type="button" class="pc-card__media" data-open="' + color.id + '">' +
+        imageHtml(color.images[0], style.name, 'pc-card__img') +
+        (color.images[1] ? imageHtml(color.images[1], style.name, 'pc-card__img pc-card__img--alt') : '') +
+        (allSoldOut ? '<span class="pc-tag pc-tag--dark">Esgotado</span>' : '') +
+        (picked ? '<span class="pc-tag pc-tag--picked">' + picked + ' peça' + (picked > 1 ? 's' : '') + '</span>' : '') +
+      '</button>' +
+      '<div class="pc-card__body">' +
+        '<h3 class="pc-card__style">' + esc(style.name) + '</h3>' +
+        '<p class="pc-card__color">' + esc(color.name) + ' · ' + style.colors.length + ' cor' + (style.colors.length > 1 ? 'es' : '') + '</p>' +
+        '<div class="pc-swatches">' + style.colors.map(function (c) {
+          return '<button type="button" class="pc-swatch' + (c.id == color.id ? ' pc-swatch--active' : '') + '" data-swatch="' + c.id + '" title="' + esc(c.name) + '">' +
+            (c.images[0] ? '<img src="' + esc(c.images[0]) + '" alt="">' : '<span>' + esc(c.name.slice(0, 2)) + '</span>') + '</button>';
+        }).join('') + '</div>' +
+        '<div class="pc-card__sizes">' + color.variants.map(function (v) {
+          return '<span class="pc-mini pc-mini--' + v.availability + '">' + esc(v.size) + '</span>';
+        }).join('') + '</div>' +
+      '</div>';
+    card.querySelectorAll('[data-swatch]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        card.dataset.color = btn.dataset.swatch;
+        card.classList.remove('pc-card--swap'); void card.offsetWidth; card.classList.add('pc-card--swap');
+        paintCard(card, style);
+      });
+    });
+    card.querySelector('[data-open]').addEventListener('click', function () { openProduct(color.id); });
+  }
+
+  // ---- Produto (galeria + tamanhos) ----
+  var openColorId = null;
+  function openProduct(colorId) {
+    openColorId = colorId;
+    var color = colorsById[colorId];
+    var style = data.styles.find(function (s) { return s.name === color.style; });
+    $('pcProductStyle').textContent = color.style;
+    $('pcProductColor').textContent = color.name;
+    var main = $('pcGalleryMain');
+    main.innerHTML = imageHtml(color.images[0], color.style, 'pc-gallery__img');
+    $('pcGalleryThumbs').innerHTML = color.images.map(function (url, i) {
+      return '<button type="button" class="pc-thumb' + (i === 0 ? ' pc-thumb--active' : '') + '" data-img="' + esc(url) + '"><img src="' + esc(url) + '" alt=""></button>';
+    }).join('');
+    $('pcGalleryThumbs').querySelectorAll('[data-img]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        main.innerHTML = imageHtml(btn.dataset.img, color.style, 'pc-gallery__img pc-fade');
+        $('pcGalleryThumbs').querySelectorAll('.pc-thumb').forEach(function (b) { b.classList.toggle('pc-thumb--active', b === btn); });
+      });
+    });
+    $('pcProductSwatches').innerHTML = style.colors.map(function (c) {
+      return '<button type="button" class="pc-swatch' + (c.id == color.id ? ' pc-swatch--active' : '') + '" data-color="' + c.id + '" title="' + esc(c.name) + '">' +
+        (c.images[0] ? '<img src="' + esc(c.images[0]) + '" alt="">' : '<span>' + esc(c.name.slice(0, 2)) + '</span>') + '</button>';
+    }).join('');
+    $('pcProductSwatches').querySelectorAll('[data-color]').forEach(function (btn) {
+      btn.addEventListener('click', function () { openProduct(btn.dataset.color); });
+    });
+    renderSizes(color);
+    showColorOnCard(color);
+    openDrawer('pcProduct');
+  }
+
+  function renderSizes(color) {
+    $('pcProductSizes').innerHTML = color.variants.map(function (v) {
+      var q = quantities[v.id] || 0;
+      var disabled = locked || v.availability === 'sold_out';
+      return '<div class="pc-size pc-size--' + v.availability + (q ? ' pc-size--picked' : '') + '">' +
+        '<div class="pc-size__head"><strong>' + esc(v.size) + '</strong><small>' + LEVEL[v.availability] + '</small></div>' +
+        '<div class="pc-stepper">' +
+          '<button type="button" data-step="-1" data-id="' + v.id + '"' + (disabled || q <= 0 ? ' disabled' : '') + '>&minus;</button>' +
+          '<input type="number" min="0" value="' + q + '" data-id="' + v.id + '"' + (disabled ? ' disabled' : '') + '>' +
+          '<button type="button" data-step="1" data-id="' + v.id + '"' + (disabled || q >= v.max ? ' disabled' : '') + '>+</button>' +
+        '</div></div>';
+    }).join('');
+    $('pcProductSizes').querySelectorAll('[data-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () { setQuantity(btn.dataset.id, (quantities[btn.dataset.id] || 0) + parseInt(btn.dataset.step, 10)); });
+    });
+    $('pcProductSizes').querySelectorAll('input[data-id]').forEach(function (input) {
+      input.addEventListener('change', function () { setQuantity(input.dataset.id, parseInt(input.value, 10) || 0); });
+    });
+  }
+
+  function setQuantity(id, value) {
+    var v = variantsById[id];
+    if (!v || locked) return;
+    var clamped = Math.max(0, Math.min(value, v.max));
+    if (value > v.max) toast(v.color.style + ' ' + v.color.name + ' ' + v.size + ': esta é a quantidade máxima disponível.');
+    if (clamped) quantities[id] = clamped; else delete quantities[id];
+    renderSizes(v.color);
+    updateBar(true);
+    showColorOnCard(v.color);
+    refreshCards();
+  }
+
+  // ---- Barra fixa e resumo ----
+  function updateBar(bump) {
+    var total = totalPieces();
+    $('pcCount').textContent = total;
+    $('pcCountLabel').textContent = total === 1 ? 'peça selecionada' : 'peças selecionadas';
+    $('pcSubmit').disabled = locked || total === 0;
+    $('pcSummarySubmit').disabled = locked || total === 0;
+    if (bump) { var c = $('pcCount'); c.classList.remove('pc-bump'); void c.offsetWidth; c.classList.add('pc-bump'); }
+  }
+
+  function renderSummary() {
+    var rows = [];
+    data.styles.forEach(function (style) {
+      style.colors.forEach(function (color) {
+        color.variants.forEach(function (v) {
+          if (quantities[v.id]) rows.push({ v: v, color: color, style: style });
+        });
+      });
+    });
+    $('pcSummaryList').innerHTML = rows.length ? rows.map(function (r) {
+      return '<div class="pc-summary__row">' + imageHtml(r.color.images[0], r.style.name, 'pc-summary__img') +
+        '<div><strong>' + esc(r.style.name) + '</strong><span>' + esc(r.color.name) + ' · ' + esc(r.v.size) + '</span></div>' +
+        '<b>&times; ' + quantities[r.v.id] + '</b>' +
+        (locked ? '' : '<button type="button" class="pc-link" data-edit="' + r.color.id + '">Alterar</button>') + '</div>';
+    }).join('') : '<p class="pc-muted">Nenhuma peça escolhida ainda.</p>';
+    $('pcSummaryList').querySelectorAll('[data-edit]').forEach(function (btn) {
+      btn.addEventListener('click', function () { closeAll(); openProduct(btn.dataset.edit); });
+    });
+  }
+
+  // ---- Gavetas e modais ----
+  function openDrawer(id) {
+    closeAll(true);
+    $('pcOverlay').hidden = false;
+    $(id).classList.add('pc-open');
+    $(id).setAttribute('aria-hidden', 'false');
+    document.body.classList.add('pc-lock');
+  }
+  function closeAll(keepOverlay) {
+    ['pcProduct', 'pcSummary', 'pcIdentify'].forEach(function (id) { $(id).classList.remove('pc-open'); $(id).setAttribute('aria-hidden', 'true'); });
+    if (!keepOverlay) { $('pcOverlay').hidden = true; document.body.classList.remove('pc-lock'); }
+  }
+  document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', function () { closeAll(); }); });
+  $('pcOverlay').addEventListener('click', function () { closeAll(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+
+  $('pcSummaryOpen').addEventListener('click', function () { renderSummary(); openDrawer('pcSummary'); });
+
+  // ---- Identificação e envio ----
+  var identifyMode = 'submit';
+  function maskCnpj(value) {
+    var d = value.replace(/\D/g, '').slice(0, 14);
+    return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  $('pcCnpj').addEventListener('input', function (e) { e.target.value = maskCnpj(e.target.value); });
+
+  function askIdentity(mode) {
+    identifyMode = mode;
+    $('pcIdentifyTitle').textContent = mode === 'lookup' ? 'Continuar minha encomenda' : 'Quem está encomendando?';
+    $('pcIdentifyText').textContent = mode === 'lookup' ? 'Informe o CNPJ usado na encomenda.' : 'Usamos o CNPJ para guardar sua encomenda. Você pode voltar e alterar até ela virar pedido.';
+    $('pcNameField').hidden = mode === 'lookup';
+    $('pcIdentifySubmit').textContent = mode === 'lookup' ? 'Continuar' : 'Enviar encomenda';
+    $('pcIdentifyError').hidden = true;
+    if (order) { $('pcName').value = order.customer_name || ''; $('pcCnpj').value = order.customer_registration || ''; }
+    openDrawer('pcIdentify');
+  }
+  $('pcIdentifyOpen').addEventListener('click', function () { askIdentity('lookup'); });
+
+  function startSubmit() {
+    if (locked || totalPieces() === 0) return;
+    if (catalog.needs_identification && !(order && order.persisted)) return askIdentity('submit');
+    if (catalog.needs_identification) return askIdentity('submit');
+    send({});
+  }
+  $('pcSubmit').addEventListener('click', startSubmit);
+  $('pcSummarySubmit').addEventListener('click', startSubmit);
+
+  $('pcIdentifyForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var cnpj = $('pcCnpj').value;
+    if (identifyMode === 'lookup') {
+      post(identifyUrl, { customer_registration: cnpj }).then(function (res) {
+        if (!res.order) { showIdentifyError('Não encontramos encomenda com este CNPJ neste catálogo.'); return; }
+        order = res.order; quantities = {};
+        Object.keys(order.quantities).forEach(function (id) { if (variantsById[id]) quantities[id] = order.quantities[id]; });
+        locked = catalog.closed || order.converted;
+        closeAll(); refreshCards(); updateBar(true);
+        showBanner(order.converted ? 'Sua encomenda foi recebida e está em andamento.' : 'Encomenda de ' + order.customer_name + ' carregada. Altere o que quiser e envie de novo.');
+      });
+      return;
+    }
+    var name = $('pcName').value.trim();
+    if (!name) { showIdentifyError('Informe o nome da loja.'); return; }
+    if (cnpj.replace(/\D/g, '').length !== 14) { showIdentifyError('Informe um CNPJ com 14 dígitos.'); return; }
+    send({ customer_name: name, customer_registration: cnpj });
+  });
+
+  function showIdentifyError(text) { var el = $('pcIdentifyError'); el.textContent = text; el.hidden = false; }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf ? csrf.content : '' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function send(identity) {
+    var body = Object.assign({ quantities: quantities }, identity);
+    $('pcSubmit').classList.add('pc-btn--loading');
+    post(submitUrl, body).then(function (res) {
+      $('pcSubmit').classList.remove('pc-btn--loading');
+      if (!res.ok) {
+        if ($('pcIdentify').classList.contains('pc-open')) showIdentifyError(res.error); else toast(res.error, true);
+        return;
+      }
+      order = res.order;
+      closeAll();
+      $('pcSuccessText').textContent = 'Recebemos ' + totalPieces() + ' peça(s), ' + order.customer_name + '. Você pode voltar a este link e alterar até a encomenda virar pedido.';
+      $('pcSuccess').hidden = false;
+      $('pcSuccess').classList.remove('pc-success--in'); void $('pcSuccess').offsetWidth; $('pcSuccess').classList.add('pc-success--in');
+      showBanner('Encomenda salva. Altere o que quiser e envie de novo.');
+    }).catch(function () {
+      $('pcSubmit').classList.remove('pc-btn--loading');
+      toast('Não conseguimos enviar agora. Verifique a internet e tente de novo.', true);
+    });
+  }
+  $('pcSuccessClose').addEventListener('click', function () { $('pcSuccess').hidden = true; });
+
+  renderGrid();
+  updateBar(false);
+})();
+</script>

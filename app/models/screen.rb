@@ -16,6 +16,7 @@ class Screen
     carriers:               'Transportadoras',
     companies:              'Empresas',
     fiscal_notes:           'Notas Fiscais',
+    b2b_catalogs:           'Catálogos B2B',
     planner_orders:         'Planejador',
     stock_corrections:      'Controle de Estoque',
     stock_withdrawals:      'Retirada de Estoque',
@@ -25,7 +26,7 @@ class Screen
   # Agrupamento espelhando o menu lateral — usado na tela de Perfis pra
   # organizar as permissões do mesmo jeito que o usuário vê o menu.
   GROUPS = {
-    'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes],
+    'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes b2b_catalogs],
     'CRM'          => %i[orders customers],
     'Correios B2C' => %i[dashboard_correios stock_reservations_b2c],
     'Correios B2B' => %i[dashboard_correios_b2b stock_reservations_b2b],

@@ -84,7 +84,7 @@
           </div>
         </div>
 
-        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') %>
+        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') || current_user&.can_access_screen?('b2b_catalogs') %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
               <div class="nav-group-title">
@@ -121,6 +121,14 @@
                   <%= link_to fiscal_notes_path, class: "dropdown-link #{'active' if controller_name == 'fiscal_notes'}" do %>
                     <i class="fas fa-file-invoice"></i>
                     <span>Notas Fiscais</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('b2b_catalogs') %>
+                  <% pending_catalog_orders = B2bCatalogOrder.pending.count %>
+                  <%= link_to b2b_catalogs_path, class: "dropdown-link #{'active' if controller_name.in?(%w[b2b_catalogs b2b_catalog_orders])}" do %>
+                    <i class="fas fa-book-open"></i>
+                    <span>Catálogos</span>
+                    <% if pending_catalog_orders.positive? %><span class="nav-count-badge"><%= pending_catalog_orders %></span><% end %>
                   <% end %>
                 <% end %>
               </div>

@@ -1,0 +1,225 @@
+<% ordered_pieces = @catalog.persisted? ? B2bCatalogOrderItem.joins(:variant).where(b2b_catalog_variants: { b2b_catalog_product_id: @catalog.products.map(&:id) }).group('b2b_catalog_variants.b2b_catalog_product_id').sum(:quantity) : {} %>
+<%= form_with model: @catalog, local: true, id: 'catalogForm' do |form| %>
+  <% if @catalog.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% @catalog.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do catálogo</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Título</label>
+          <%= form.text_field :title, class: 'field-input', placeholder: 'Ex.: Coleção Verão 2027', required: true %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Tipo</label>
+          <div class="catalog-kind-toggle">
+            <% B2bCatalog::KIND_LABELS.each do |value, label| %>
+              <label class="catalog-kind-option">
+                <%= form.radio_button :kind, value, class: 'catalog-kind-radio' %>
+                <span><i class="fas <%= value == 'general' ? 'fa-globe' : 'fa-store' %> me-1"></i><%= label %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+        <div class="form-col-6" id="catalogClientSection">
+          <label class="field-label">Cliente</label>
+          <%= form.collection_select :client_id, Client.order(:responsible_name), :id, :display_name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+        </div>
+        <div class="form-col-12">
+          <label class="field-label">Mensagem para o cliente (aparece no topo do catálogo)</label>
+          <%= form.text_area :notes, class: 'field-input', rows: 2, placeholder: 'Ex.: Encomendas até sexta-feira. Envio em 10 dias.' %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header d-flex justify-content-between align-items-center">
+      <h5 class="form-section-title"><i class="fas fa-palette me-2"></i>Produtos <small class="text-muted-custom">(cada linha é uma cor, com todos os tamanhos)</small></h5>
+      <button type="button" class="btn-export" data-bs-toggle="modal" data-bs-target="#catalogPickerModal"><i class="fas fa-plus me-1"></i>Adicionar cores</button>
+    </div>
+    <div class="form-section-body">
+      <div id="catalogProducts" class="catalog-builder">
+        <% @catalog.products.each_with_index do |product, index| %>
+          <div class="catalog-builder__row" data-ordered-pieces="<%= ordered_pieces[product.id].to_i %>">
+            <%= hidden_field_tag "b2b_catalog[products_attributes][#{index}][id]", product.id %>
+            <%= hidden_field_tag "b2b_catalog[products_attributes][#{index}][position]", product.position, class: 'catalog-position' %>
+            <%= hidden_field_tag "b2b_catalog[products_attributes][#{index}][_destroy]", '0', class: 'catalog-destroy' %>
+            <div class="catalog-builder__thumb"><% if product.main_image %><img src="<%= product.main_image %>" loading="lazy"><% else %><i class="fas fa-image"></i><% end %></div>
+            <div class="catalog-builder__fields">
+              <input type="text" class="field-input" name="b2b_catalog[products_attributes][<%= index %>][style_name]" value="<%= product.style_name %>" placeholder="Modelo">
+              <input type="text" class="field-input" name="b2b_catalog[products_attributes][<%= index %>][color_name]" value="<%= product.color_name %>" placeholder="Cor">
+            </div>
+            <div class="catalog-builder__sizes"><% product.variants.each do |v| %><span class="catalog-size-chip catalog-size-chip--<%= v.availability %>"><%= v.size %></span><% end %></div>
+            <div class="catalog-builder__actions">
+              <button type="button" class="action-btn catalog-move" data-dir="-1" title="Subir"><i class="fas fa-arrow-up"></i></button>
+              <button type="button" class="action-btn catalog-move" data-dir="1" title="Descer"><i class="fas fa-arrow-down"></i></button>
+              <button type="button" class="action-btn action-btn--danger catalog-remove" title="Remover"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      <div id="catalogEmpty" class="text-center text-muted-custom py-4 <%= 'd-none' if @catalog.products.any? %>">
+        <i class="fas fa-palette fa-2x mb-2"></i><div>Adicione as cores que vão aparecer no catálogo.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= form.submit 'Salvar catálogo', class: 'btn-export' %>
+  </div>
+<% end %>
+
+<div class="modal fade" id="catalogPickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-search me-2"></i>Adicionar cores</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="catalogPickerSearch" class="field-input mb-3" placeholder="Buscar por nome ou SKU (ex.: legging apex)">
+        <div id="catalogPickerResults" class="catalog-picker-results"><div class="text-muted-custom text-center py-4">Digite algo para buscar.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var container = document.getElementById('catalogProducts');
+  var nextIndex = <%= @catalog.products.size + 1000 %>;
+  var addedNames = {};
+
+  function toggleClient() {
+    var checked = document.querySelector('.catalog-kind-radio:checked');
+    document.getElementById('catalogClientSection').style.display = checked && checked.value === 'client' ? '' : 'none';
+  }
+  document.querySelectorAll('.catalog-kind-radio').forEach(function (r) { r.addEventListener('change', toggleClient); });
+  toggleClient();
+
+  function visibleRows() {
+    return Array.prototype.filter.call(container.querySelectorAll('.catalog-builder__row'), function (row) { return !row.classList.contains('d-none'); });
+  }
+
+  function renumber() {
+    visibleRows().forEach(function (row, i) { row.querySelector('.catalog-position').value = i; });
+    document.getElementById('catalogEmpty').classList.toggle('d-none', visibleRows().length > 0);
+  }
+
+  container.addEventListener('click', function (e) {
+    var move = e.target.closest('.catalog-move');
+    var remove = e.target.closest('.catalog-remove');
+    if (move) {
+      var row = move.closest('.catalog-builder__row');
+      var rows = visibleRows();
+      var idx = rows.indexOf(row) + parseInt(move.dataset.dir, 10);
+      if (idx < 0 || idx >= rows.length) return;
+      if (move.dataset.dir === '-1') container.insertBefore(row, rows[idx]); else container.insertBefore(rows[idx], row);
+      row.classList.add('catalog-builder__row--moved');
+      setTimeout(function () { row.classList.remove('catalog-builder__row--moved'); }, 400);
+      renumber();
+    }
+    if (remove) {
+      var target = remove.closest('.catalog-builder__row');
+      var pieces = parseInt(target.dataset.orderedPieces || '0', 10);
+      if (pieces > 0 && !confirm('Esta cor tem ' + pieces + ' peça(s) em encomendas. Removendo, esses itens saem das encomendas. Continuar?')) return;
+      var destroy = target.querySelector('.catalog-destroy');
+      if (destroy) { destroy.value = '1'; target.classList.add('d-none'); } else { target.remove(); }
+      renumber();
+    }
+  });
+
+  function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  // Sugere modelo/cor para as linhas novas, considerando todos os nomes já no catálogo.
+  function suggestNames() {
+    var rows = Array.prototype.filter.call(container.querySelectorAll('.catalog-builder__row[data-name]'), function (r) { return !r.dataset.suggested; });
+    if (!rows.length) return;
+    var names = Object.keys(addedNames).concat(Array.prototype.map.call(container.querySelectorAll('.catalog-builder__row'), function (r) {
+      var s = r.querySelector('[name$="[style_name]"]').value, c = r.querySelector('[name$="[color_name]"]').value;
+      return r.dataset.name || (s + ' ' + c).trim();
+    }));
+    fetch('<%= split_names_b2b_catalogs_path %>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+      body: JSON.stringify({ names: names })
+    }).then(function (r) { return r.json(); }).then(function (map) {
+      rows.forEach(function (row) {
+        var pair = map[row.dataset.name];
+        if (!pair) return;
+        row.querySelector('[name$="[style_name]"]').value = pair[0];
+        row.querySelector('[name$="[color_name]"]').value = pair[1];
+        row.dataset.suggested = '1';
+      });
+    });
+  }
+
+  function addColor(entry) {
+    if (addedNames[entry.name]) return;
+    addedNames[entry.name] = true;
+    var i = nextIndex++;
+    var base = 'b2b_catalog[products_attributes][' + i + ']';
+    var row = document.createElement('div');
+    row.className = 'catalog-builder__row catalog-builder__row--new';
+    row.dataset.name = entry.name;
+    row.dataset.orderedPieces = '0';
+    row.innerHTML =
+      '<input type="hidden" name="' + base + '[position]" class="catalog-position">' +
+      entry.skus.map(function (sku) { return '<input type="hidden" name="' + base + '[skus][]" value="' + escapeHtml(sku) + '">'; }).join('') +
+      '<div class="catalog-builder__thumb">' + (entry.image_url ? '<img src="' + escapeHtml(entry.image_url) + '" loading="lazy">' : '<i class="fas fa-image"></i>') + '</div>' +
+      '<div class="catalog-builder__fields">' +
+        '<input type="text" class="field-input" name="' + base + '[style_name]" value="' + escapeHtml(entry.name) + '" placeholder="Modelo">' +
+        '<input type="text" class="field-input" name="' + base + '[color_name]" value="" placeholder="Cor">' +
+      '</div>' +
+      '<div class="catalog-builder__sizes">' + entry.sizes.map(function (s) { return '<span class="catalog-size-chip">' + escapeHtml(s) + '</span>'; }).join('') + '</div>' +
+      '<div class="catalog-builder__actions">' +
+        '<button type="button" class="action-btn catalog-move" data-dir="-1" title="Subir"><i class="fas fa-arrow-up"></i></button>' +
+        '<button type="button" class="action-btn catalog-move" data-dir="1" title="Descer"><i class="fas fa-arrow-down"></i></button>' +
+        '<button type="button" class="action-btn action-btn--danger catalog-remove" title="Remover"><i class="fas fa-trash"></i></button>' +
+      '</div>';
+    container.appendChild(row);
+    renumber();
+  }
+
+  var searchTimer;
+  document.getElementById('catalogPickerSearch').addEventListener('input', function (e) {
+    clearTimeout(searchTimer);
+    var q = e.target.value.trim();
+    var box = document.getElementById('catalogPickerResults');
+    if (!q) { box.innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo para buscar.</div>'; return; }
+    box.innerHTML = '<div class="text-muted-custom text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
+    searchTimer = setTimeout(function () {
+      fetch('<%= product_picker_b2b_catalogs_path %>?query=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var products = data.products || [];
+          if (!products.length) { box.innerHTML = '<div class="text-muted-custom text-center py-4">Nenhum produto encontrado.</div>'; return; }
+          box.innerHTML = '';
+          products.forEach(function (p) {
+            var item = document.createElement('div');
+            item.className = 'catalog-picker-item' + (addedNames[p.name] ? ' catalog-picker-item--added' : '');
+            item.innerHTML =
+              '<div class="catalog-builder__thumb">' + (p.image_url ? '<img src="' + escapeHtml(p.image_url) + '" loading="lazy">' : '<i class="fas fa-image"></i>') + '</div>' +
+              '<div class="flex-grow-1"><div class="text-main fw-bold">' + escapeHtml(p.name) + '</div><div class="text-muted-custom small">' + p.sizes.map(escapeHtml).join(' · ') + '</div></div>' +
+              '<button type="button" class="btn-export catalog-picker-add">' + (addedNames[p.name] ? '<i class="fas fa-check me-1"></i>Adicionada' : '<i class="fas fa-plus me-1"></i>Adicionar') + '</button>';
+            item.querySelector('.catalog-picker-add').addEventListener('click', function (ev) {
+              addColor(p);
+              item.classList.add('catalog-picker-item--added');
+              ev.currentTarget.innerHTML = '<i class="fas fa-check me-1"></i>Adicionada';
+              suggestNames();
+            });
+            box.appendChild(item);
+          });
+        });
+    }, 300);
+  });
+
+  document.getElementById('catalogForm').addEventListener('submit', renumber);
+});
+</script>

@@ -29,6 +29,7 @@ class B2bOrdersController < ApplicationController
 
   def new
     @b2b_order = B2bOrder.new(kind: order_kind, price_list: price_list_for(order_kind))
+    prefill_from_catalog_order(@b2b_order) if order_kind == 'sale' && params[:catalog_order_id].present?
   end
 
   def create
@@ -36,6 +37,7 @@ class B2bOrdersController < ApplicationController
     @b2b_order.user = current_user
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
+      link_catalog_order(@b2b_order)
       kind, message = send_to_tiny(@b2b_order, saved: true)
       redirect_to orders_path_for(order_kind), kind => message
     else
@@ -308,6 +310,30 @@ class B2bOrdersController < ApplicationController
 
     Shopify::Products.update_product_with_image_url(product)
     product.image_url
+  end
+
+  # Pedido de venda a partir de uma encomenda de catálogo: itens, quantidades, cliente (pelo CNPJ) e
+  # preço sugerido de sempre. O usuário completa o resto e salva.
+  def prefill_from_catalog_order(order)
+    catalog_order = B2bCatalogOrder.includes(:catalog, items: { variant: :catalog_product }).find_by(id: params[:catalog_order_id])
+    return unless catalog_order && !catalog_order.converted?
+
+    order.client = catalog_order.matching_client
+    order.notes = "Encomenda do catálogo \"#{catalog_order.catalog.title}\" — #{catalog_order.customer_name}"
+    products = Product.where(sku: catalog_order.items.map { |item| item.variant.sku }).index_by { |p| p.sku.to_s.upcase }
+
+    catalog_order.items.sort_by { |item| [item.variant.catalog_product.position, item.variant.position] }.each do |item|
+      variant = item.variant
+      product = products[variant.sku]
+      name = product&.shopify_product_name.present? ? "#{product.shopify_product_name} - #{variant.size}" : "#{variant.catalog_product.style_name} #{variant.catalog_product.color_name} #{variant.size}".squish
+      order.b2b_order_items.build(sku: variant.sku, name:, quantity: item.quantity, price: suggested_price_for(product) || 0)
+    end
+  end
+
+  def link_catalog_order(order)
+    return if params[:catalog_order_id].blank?
+
+    B2bCatalogOrder.find_by(id: params[:catalog_order_id])&.convert!(order)
   end
 
   # Bloqueia itens acima do disponível no Correios B2B (estoque − reservas da fila do Tiny2). Só vale

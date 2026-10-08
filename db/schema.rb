@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_08_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_08_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -90,6 +90,77 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_130000) do
     t.index ["kinds", "status", "order_correios_id"], name: "index_attempts_on_kinds_status_order_correios_id"
     t.index ["kinds"], name: "index_attempts_on_kinds"
     t.index ["tiny_order_id"], name: "index_attempts_on_tiny_order_id"
+  end
+
+  create_table "b2b_catalog_order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "b2b_catalog_order_id", null: false
+    t.bigint "b2b_catalog_variant_id", null: false
+    t.integer "quantity", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_catalog_order_id"], name: "index_b2b_catalog_order_items_on_b2b_catalog_order_id"
+    t.index ["b2b_catalog_variant_id"], name: "index_b2b_catalog_order_items_on_b2b_catalog_variant_id"
+  end
+
+  create_table "b2b_catalog_orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "b2b_catalog_id", null: false
+    t.string "customer_name", null: false
+    t.string "customer_registration"
+    t.bigint "client_id"
+    t.integer "status", default: 0, null: false
+    t.bigint "b2b_order_id"
+    t.datetime "submitted_at"
+    t.string "last_edited_by"
+    t.string "edit_token", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_catalog_id", "customer_registration"], name: "index_b2b_catalog_orders_on_catalog_and_registration", unique: true
+    t.index ["b2b_catalog_id"], name: "index_b2b_catalog_orders_on_b2b_catalog_id"
+    t.index ["b2b_order_id"], name: "index_b2b_catalog_orders_on_b2b_order_id"
+    t.index ["client_id"], name: "index_b2b_catalog_orders_on_client_id"
+    t.index ["edit_token"], name: "index_b2b_catalog_orders_on_edit_token", unique: true
+  end
+
+  create_table "b2b_catalog_products", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "b2b_catalog_id", null: false
+    t.string "shopify_product_id"
+    t.string "style_name", null: false
+    t.string "color_name", default: "", null: false
+    t.integer "position", default: 0, null: false
+    t.json "image_urls"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_catalog_id"], name: "index_b2b_catalog_products_on_b2b_catalog_id"
+    t.index ["shopify_product_id"], name: "index_b2b_catalog_products_on_shopify_product_id"
+  end
+
+  create_table "b2b_catalog_variants", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "b2b_catalog_product_id", null: false
+    t.string "sku", null: false
+    t.string "size", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "available", default: 0, null: false
+    t.integer "availability", default: 2, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_catalog_product_id"], name: "index_b2b_catalog_variants_on_b2b_catalog_product_id"
+    t.index ["sku"], name: "index_b2b_catalog_variants_on_sku"
+  end
+
+  create_table "b2b_catalogs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "title", null: false
+    t.integer "kind", default: 0, null: false
+    t.bigint "client_id"
+    t.integer "status", default: 0, null: false
+    t.string "public_token", null: false
+    t.text "notes"
+    t.bigint "user_id", null: false
+    t.datetime "stock_refreshed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_b2b_catalogs_on_client_id"
+    t.index ["public_token"], name: "index_b2b_catalogs_on_public_token", unique: true
+    t.index ["user_id"], name: "index_b2b_catalogs_on_user_id"
   end
 
   create_table "b2b_order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1003,6 +1074,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_130000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "b2b_catalog_order_items", "b2b_catalog_orders"
+  add_foreign_key "b2b_catalog_order_items", "b2b_catalog_variants"
+  add_foreign_key "b2b_catalog_orders", "b2b_catalogs"
+  add_foreign_key "b2b_catalog_orders", "b2b_orders"
+  add_foreign_key "b2b_catalog_orders", "clients"
+  add_foreign_key "b2b_catalog_products", "b2b_catalogs"
+  add_foreign_key "b2b_catalog_variants", "b2b_catalog_products"
+  add_foreign_key "b2b_catalogs", "clients"
+  add_foreign_key "b2b_catalogs", "users"
   add_foreign_key "b2b_order_items", "b2b_orders"
   add_foreign_key "b2b_orders", "carriers"
   add_foreign_key "b2b_orders", "clients"

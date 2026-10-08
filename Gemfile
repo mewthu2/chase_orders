@@ -16,6 +16,7 @@ gem 'jwt'
 
 gem 'prawn'
 gem 'prawn-table'
+gem 'rqrcode', '~> 2.2'
 
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
 gem "shopify_api"

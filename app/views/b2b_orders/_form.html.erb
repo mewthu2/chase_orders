@@ -1,4 +1,5 @@
 <%= form_with model: @b2b_order, url: order_form_url(@b2b_order), local: true, id: 'b2bOrderForm' do |form| %>
+  <%= hidden_field_tag :catalog_order_id, params[:catalog_order_id] if params[:catalog_order_id].present? %>
   <% if @b2b_order.errors.any? %>
     <div class="form-error-box">
       <i class="fas fa-exclamation-triangle me-2"></i>

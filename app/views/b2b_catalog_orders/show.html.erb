@@ -1,0 +1,50 @@
+<% content_for :title, "Encomenda — #{@catalog_order.customer_name}" %>
+
+<div class="users-container catalogs-page">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-receipt me-2"></i><%= @catalog_order.customer_name %>
+        <span class="catalog-order-status catalog-order-status--<%= @catalog_order.status %> ms-2"><%= B2bCatalogOrder::STATUS_LABELS[@catalog_order.status] %></span>
+      </h1>
+      <p class="page-subtitle">
+        <%= @catalog.title %> · CNPJ <%= B2bCatalogs::Cnpj.format(@catalog_order.customer_registration).presence || '—' %>
+        · <%= @catalog_order.total_pieces %> peça(s)
+        · alterada por <%= @catalog_order.last_edited_by == 'customer' ? 'Cliente' : @catalog_order.last_edited_by %>
+        em <%= l(@catalog_order.updated_at, format: '%d/%m %H:%M') %>
+      </p>
+    </div>
+    <div class="header-actions">
+      <%= link_to b2b_catalog_path(@catalog), class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <% if @catalog_order.converted? %>
+        <%= link_to edit_b2b_order_path(@catalog_order.b2b_order), class: 'btn-export' do %><i class="fas fa-file-invoice-dollar me-1"></i>Ver pedido #<%= @catalog_order.b2b_order_id %><% end if @catalog_order.b2b_order %>
+      <% else %>
+        <%= link_to edit_b2b_catalog_catalog_order_path(@catalog, @catalog_order), class: 'btn-back' do %><i class="fas fa-pen me-1"></i>Alterar<% end %>
+        <%= link_to new_b2b_order_path(catalog_order_id: @catalog_order.id), class: 'btn-export' do %><i class="fas fa-magic me-1"></i>Criar pedido<% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card catalog-order-sheet">
+    <% @catalog.styles.each do |style, colors| %>
+      <% chosen = colors.flat_map { |c| c.variants.select { |v| @quantities[v.id].to_i.positive? }.map { |v| [c, v] } } %>
+      <% next if chosen.empty? %>
+      <div class="catalog-order-style">
+        <h6 class="catalog-order-style__name"><%= style %></h6>
+        <% chosen.group_by(&:first).each do |color, pairs| %>
+          <div class="catalog-order-color">
+            <div class="catalog-builder__thumb"><% if color.main_image %><img src="<%= color.main_image %>" loading="lazy"><% else %><i class="fas fa-image"></i><% end %></div>
+            <div class="catalog-order-color__name"><%= color.color_name %></div>
+            <div class="catalog-order-color__sizes">
+              <% pairs.each do |_, variant| %>
+                <span class="catalog-order-item"><%= style %> <%= color.color_name %> <b><%= variant.size %></b> × <%= @quantities[variant.id] %></span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+    <% if @catalog_order.items.empty? %>
+      <div class="text-center text-muted-custom py-5">Encomenda sem itens.</div>
+    <% end %>
+  </div>
+</div>

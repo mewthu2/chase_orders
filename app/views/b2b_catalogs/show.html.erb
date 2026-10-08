@@ -1,0 +1,74 @@
+<% content_for :title, @catalog.title %>
+<% link = public_catalog_url(@catalog.public_token) %>
+
+<div class="users-container catalogs-page">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fas fa-book-open me-2"></i><%= @catalog.title %>
+        <span class="catalog-status catalog-status--<%= @catalog.status %> ms-2"><%= @catalog.active? ? 'Ativo' : 'Encerrado' %></span>
+      </h1>
+      <p class="page-subtitle">
+        <%= B2bCatalog::KIND_LABELS[@catalog.kind] %><%= " · #{@catalog.client&.display_name}" if @catalog.kind_client? %>
+        · <%= @catalog.products.size %> cor(es)
+        · estoque <%= @catalog.stock_refreshed_at ? "atualizado às #{l(@catalog.stock_refreshed_at, format: '%d/%m %H:%M')}" : 'ainda não atualizado' %>
+      </p>
+    </div>
+    <div class="header-actions">
+      <%= link_to b2b_catalogs_path, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <%= link_to edit_b2b_catalog_path(@catalog), class: 'btn-back' do %><i class="fas fa-pen me-1"></i>Editar<% end %>
+      <%= link_to pdf_b2b_catalog_path(@catalog), class: 'btn-back' do %><i class="fas fa-file-pdf me-1"></i>PDF<% end %>
+    </div>
+  </div>
+
+  <div class="catalog-share">
+    <div class="catalog-share__link">
+      <i class="fas fa-link"></i>
+      <input type="text" readonly value="<%= link %>" id="catalogLink" class="field-input">
+      <button type="button" class="btn-export" id="copyCatalogLink"><i class="fas fa-copy me-1"></i>Copiar link</button>
+      <%= link_to link, target: '_blank', class: 'btn-back' do %><i class="fas fa-external-link-alt me-1"></i>Abrir<% end %>
+    </div>
+    <div class="catalog-share__actions">
+      <%= button_to refresh_b2b_catalog_path(@catalog), class: 'btn-back', form: { class: 'd-inline' } do %><i class="fas fa-sync me-1"></i>Atualizar estoque<% end %>
+      <%= button_to regenerate_token_b2b_catalog_path(@catalog), class: 'btn-back', form: { class: 'd-inline', onsubmit: "return confirm('O link atual deixa de funcionar. Gerar um novo?')" } do %><i class="fas fa-key me-1"></i>Novo link<% end %>
+      <%= button_to toggle_status_b2b_catalog_path(@catalog), class: (@catalog.active? ? 'btn-back' : 'btn-export'), form: { class: 'd-inline' } do %>
+        <i class="fas <%= @catalog.active? ? 'fa-lock' : 'fa-lock-open' %> me-1"></i><%= @catalog.active? ? 'Encerrar' : 'Reabrir' %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <h5 class="px-3 pt-3 text-main"><i class="fas fa-receipt me-2"></i>Encomendas</h5>
+    <% if @catalog_orders.any? %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead><tr><th>Cliente</th><th>CNPJ</th><th>Atualizada</th><th class="text-end">Peças</th><th>Status</th><th>Alterada por</th><th class="text-end">Ações</th></tr></thead>
+          <tbody>
+            <% @catalog_orders.each do |order| %>
+              <tr class="catalog-order-row catalog-order-row--<%= order.status %>">
+                <td class="text-main"><% if order.pending? %><span class="catalog-dot"></span><% end %><%= order.customer_name %></td>
+                <td class="text-muted-custom"><%= B2bCatalogs::Cnpj.format(order.customer_registration) %></td>
+                <td class="text-muted-custom"><%= l(order.updated_at, format: '%d/%m %H:%M') %></td>
+                <td class="text-end"><%= order.total_pieces %></td>
+                <td><span class="catalog-order-status catalog-order-status--<%= order.status %>"><%= B2bCatalogOrder::STATUS_LABELS[order.status] %></span></td>
+                <td class="text-muted-custom"><%= order.last_edited_by == 'customer' ? 'Cliente' : order.last_edited_by %></td>
+                <td class="text-end"><%= link_to 'Abrir', b2b_catalog_catalog_order_path(@catalog, order), class: 'btn-back' %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="text-center text-muted-custom py-5"><i class="fas fa-inbox fa-2x mb-2"></i><div>Nenhuma encomenda ainda. Mande o link para os lojistas.</div></div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  document.getElementById('copyCatalogLink').addEventListener('click', function (e) {
+    var input = document.getElementById('catalogLink');
+    input.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.resolve(document.execCommand('copy'))).then(function () {
+      e.currentTarget.innerHTML = '<i class="fas fa-check me-1"></i>Copiado!';
+    });
+  });
+</script>
