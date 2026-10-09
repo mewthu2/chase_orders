@@ -45,7 +45,7 @@ class Correios::OrdersTest < ActiveSupport::TestCase
     }
   end
 
-  def numero_endereco_sent_for(numero)
+  def destinatario_sent_for(numero, **options)
     ENV['CORREIOS_COD_ARMAZEM'] = '1'
     ENV['CORREIOS_CNPJ_TRANSPORTADORA'] = '123'
     ENV['CORREIOS_CRIAR_PEDIDO'] = 'https://correios-log.example.com/pedidos'
@@ -57,8 +57,20 @@ class Correios::OrdersTest < ActiveSupport::TestCase
     end
 
     attempt = Attempt.create!(kinds: :create_correios_order, tiny_order_id: 919_929_089)
-    Correios::Orders.create_orders(build_params(numero), attempt)
-    sent['destinatario']['numeroEndereco']
+    Correios::Orders.create_orders(build_params(numero), attempt, **options)
+    sent['destinatario']
+  end
+
+  def numero_endereco_sent_for(numero)
+    destinatario_sent_for(numero)['numeroEndereco']
+  end
+
+  test 'create_orders sends the client name as recipient by default' do
+    assert_equal 'Adriana Braul Romano', destinatario_sent_for('1')['nome']
+  end
+
+  test 'create_orders replaces the recipient name when recipient_name is given' do
+    assert_equal '(TRANSFERENCIA B2B PARA B2C)', destinatario_sent_for('1', recipient_name: '(TRANSFERENCIA B2B PARA B2C)')['nome']
   end
 
   test 'create_orders keeps only digits of numero when text is mixed in' do

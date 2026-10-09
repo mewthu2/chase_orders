@@ -20,7 +20,8 @@ module Correios::Orders
     attempt.update(error: "Valor grande demais para #{data.keys.join(', ')}", status: :error)
   end
 
-  def create_orders(params, attempt)
+  # recipient_name substitui só o nome do destinatário enviado aos Correios (params[:nome] fica intacto).
+  def create_orders(params, attempt, recipient_name: nil)
     is_transportadora = params[:cnpj_transportadora].present?
     from_tiny2 = attempt.kinds == 'create_correios_order_tiny2'
 
@@ -59,7 +60,7 @@ module Correios::Orders
       cnpjTransportadora: correios_cnpj_transportadora,
       servicosAdicionais: servicos_adicionais,
       destinatario: {
-        nome: params[:nome],
+        nome: recipient_name.presence || params[:nome],
         logradouro: params[:endereco],
         numeroEndereco: params[:numero].to_s.gsub(/\D/, '').first(6).presence || 'S/N',
         complemento: params[:complemento].to_s.first(60),

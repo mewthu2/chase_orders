@@ -257,7 +257,9 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     end
 
     # Create Order in Correios Log +
-    Correios::Orders.create_orders(params, attempt) unless attempt.error.present?
+    # Transferência B2B -> B2C: só o destinatário enviado aos Correios vai identificado como transferência.
+    recipient_name = B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME if b2c_transfer?(selected_order[:pedido])
+    Correios::Orders.create_orders(params, attempt, recipient_name:) unless attempt.error.present?
 
     attempt
   end
@@ -268,6 +270,12 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     tags = [B2bTinyService::HAND_DELIVERY_TAG, B2bTinyService::B2C_TRANSFER_TAG].map(&:downcase)
     notes = [pedido[:obs], pedido[:obs_interna]].compact.join(' ').downcase
     tags.any? { |tag| notes.include?(tag) }
+  end
+
+  # Transferência B2B -> B2C: marcada nas observações com B2C_TRANSFER_TAG.
+  def b2c_transfer?(pedido)
+    notes = [pedido[:obs], pedido[:obs_interna]].compact.join(' ').downcase
+    notes.include?(B2bTinyService::B2C_TRANSFER_TAG.downcase)
   end
 
   def verify_params(attempt, params)

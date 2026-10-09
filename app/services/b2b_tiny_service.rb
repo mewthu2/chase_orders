@@ -30,6 +30,8 @@ class B2bTinyService
   # A transferência B2C é entregue em mão própria: o identificador vai nas observações do pedido e a
   # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usa forma_envio 002 quando o encontra.
   HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
+  # Nome que vai no destinatário da entrega (endereco_entrega.nome_destinatario) da transferência.
+  B2C_TRANSFER_RECIPIENT_NAME = '(TRANSFERENCIA B2B PARA B2C)'.freeze
   B2C_TRANSFER_MARKER_ID = '182662'.freeze
   B2C_TRANSFER_RECIPIENT = {
     nome: 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', tipo_pessoa: 'J',
@@ -270,7 +272,7 @@ class B2bTinyService
   end
 
   def build_b2c_transfer_pedido(b2b_order)
-    entrega = B2C_TRANSFER_RECIPIENT.except(:nome).merge(nome_destinatario: B2C_TRANSFER_TAG)
+    entrega = B2C_TRANSFER_RECIPIENT.except(:nome).merge(nome_destinatario: B2C_TRANSFER_RECIPIENT_NAME)
 
     {
       situacao: 'preparando_envio',

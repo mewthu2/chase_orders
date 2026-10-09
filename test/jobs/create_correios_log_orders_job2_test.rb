@@ -20,10 +20,11 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
 
   def run_job(pedido)
     sent = nil
+    @recipient_name = nil
     job = CreateCorreiosLogOrdersJob2.new
     job.stub(:sleep, nil) do
       Tiny::Orders.stub(:obtain_order, pedido) do
-        Correios::Orders.stub(:create_orders, ->(params, _attempt) { sent = params }) do
+        Correios::Orders.stub(:create_orders, ->(params, _attempt, recipient_name: nil) { sent = params; @recipient_name = recipient_name }) do
           job.create_one_log_order({ pedido: { id: '902371809' } }.with_indifferent_access)
         end
       end
@@ -37,6 +38,8 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     assert_equal '002', params[:forma_envio]
     assert_equal '', params[:cnpj_transportadora]
     assert_equal [{ codigo: 'LEG-1659-M', quantidade: '14' }], params[:itens]
+    assert_equal '(TRANSFERENCIA B2B PARA B2C)', @recipient_name
+    assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', params[:nome]
     refute Attempt.last.is_transportadora
   end
 
@@ -52,6 +55,8 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     params = run_job(tiny_pedido(obs: 'Pedido B2B #10', forma_frete: 'PAC CORREIOS LOG+', nome_transportador: 'EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS'))
 
     assert_equal '39870', params[:forma_envio]
+    assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', params[:nome]
+    assert_nil @recipient_name
   end
 
   test 'an order without forma de frete that is not hand delivery is still refused' do
