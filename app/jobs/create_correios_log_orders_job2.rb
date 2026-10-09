@@ -178,16 +178,21 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       uf = correction.uf.presence || uf
     end
 
+    # Transferência B2C (mão própria, identificada nas observações): forma_envio 002, sem forma de frete.
+    hand_delivery = hand_delivery?(selected_order[:pedido])
+
     # assert sending way
-    unless selected_order.dig(:pedido, :forma_frete).present?
+    unless hand_delivery || selected_order.dig(:pedido, :forma_frete).present?
       attempt.update(error: 'Forma de Envio não localizada', status: :error)
       return attempt
     end
 
     transportadora_nome = selected_order[:pedido][:nome_transportador]
-    via_transportadora = transportadora_nome.present? && !transportadora_nome.strip.downcase.include?('correios')
+    via_transportadora = !hand_delivery && transportadora_nome.present? && !transportadora_nome.strip.downcase.include?('correios')
 
-    if via_transportadora
+    if hand_delivery
+      forma_envio_code = HAND_DELIVERY_FORMA_ENVIO
+    elsif via_transportadora
       forma_envio_code = '74926'
 
       begin
@@ -255,6 +260,14 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     Correios::Orders.create_orders(params, attempt) unless attempt.error.present?
 
     attempt
+  end
+
+  HAND_DELIVERY_FORMA_ENVIO = '002'.freeze
+
+  def hand_delivery?(pedido)
+    tags = [B2bTinyService::HAND_DELIVERY_TAG, B2bTinyService::B2C_TRANSFER_TAG].map(&:downcase)
+    notes = [pedido[:obs], pedido[:obs_interna]].compact.join(' ').downcase
+    tags.any? { |tag| notes.include?(tag) }
   end
 
   def verify_params(attempt, params)

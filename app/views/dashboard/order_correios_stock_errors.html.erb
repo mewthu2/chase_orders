@@ -154,7 +154,7 @@
             <% @missing_stock_items.each do |item| %>
               <tr>
                 <td class="text-center">
-                  <div class="d-flex flex-column align-items-center gap-1">
+                  <div class="row-actions">
                     <% if item[:tiny_order_id].present? %>
                       <%= link_to verify_attempts_attempts_path(
                             tiny_order_id: item[:tiny_order_id]

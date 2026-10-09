@@ -35,14 +35,6 @@ class CarrierTest < ActiveSupport::TestCase
     refute_includes Carrier.active, inactive
   end
 
-  test 'transmitted? is false until the Tiny contact id and timestamp are set' do
-    carrier = Carrier.create!(valid_attrs)
-    refute carrier.transmitted?
-
-    carrier.update!(tiny_contact_id: '123', transmitted_at: Time.current)
-    assert carrier.transmitted?
-  end
-
   test 'cannot be destroyed while it has b2b_orders' do
     carrier = Carrier.create!(valid_attrs)
     user = User.create!(name: 'Teste Carrier', email: 'teste_carrier@example.com', password: 'password123')

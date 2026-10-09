@@ -8,7 +8,7 @@ class TransmitB2bOrderJobTest < ActiveSupport::TestCase
     @client = Client.create!(responsible_name: 'Cliente Transmit')
   end
 
-  test 'sets status to aberto and stores the tiny reference on success' do
+  test 'sets status to preparando_envio and stores the tiny reference on success' do
     order = B2bOrder.new(kind: :sale, user: @user, client: @client)
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
     order.save!
@@ -19,7 +19,7 @@ class TransmitB2bOrderJobTest < ActiveSupport::TestCase
     TransmitB2bOrderJob.perform_now(order.id)
 
     order.reload
-    assert order.aberto?
+    assert order.preparando_envio?
     assert_equal '111', order.tiny_reference_id
     assert_equal '222', order.tiny_reference_number
   end

@@ -51,3 +51,47 @@
 .status-pill--cancelado { background: rgba(139, 148, 158, 0.12); color: $text-muted; border: 1px solid $border-muted; }
 
 .form-col-12 { flex: 0 0 100%; }
+
+// "Enviar ao Tiny" com o checkbox de gerar a nota fiscal lá.
+.send-to-tiny-form { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; }
+.send-to-tiny-invoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px dashed $border-muted;
+  border-radius: $radius-md;
+  color: $text-muted;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+
+  input { accent-color: $accent-green; cursor: pointer; }
+  &:hover { color: $text-primary; border-color: $accent-green; }
+  &:has(input:checked) { color: $text-primary; border-style: solid; border-color: $accent-green; background: rgba($accent-green, 0.12); }
+}
+.form-actions:has(.send-to-tiny-invoice) { align-items: center; }
+
+// Selo "Mão Própria" da transferência B2C.
+@keyframes hand-delivery-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba($accent-green, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba($accent-green, 0); }
+}
+.hand-delivery-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: $radius-md;
+  border: 1px solid $accent-green;
+  background: rgba($accent-green, 0.15);
+  color: $text-primary;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  animation: hand-delivery-glow 2.4s ease-in-out infinite;
+
+  i { color: $accent-green; }
+}
+@media (prefers-reduced-motion: reduce) { .hand-delivery-badge { animation: none; } }

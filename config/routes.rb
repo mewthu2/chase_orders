@@ -219,11 +219,7 @@ Rails.application.routes.draw do
   resources :profiles
   resources :transfer_locations
 
-  resources :carriers do
-    member do
-      post :transmit
-    end
-  end
+  resources :carriers
 
   # Catálogos B2B (montagem e encomendas no Honey) e a página pública do catálogo.
   resources :b2b_catalogs, except: :destroy do

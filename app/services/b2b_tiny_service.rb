@@ -27,6 +27,9 @@ class B2bTinyService
   # e o marcador "(Transferencia b2c)" (id lido de pedido.obter.php). Nasce em preparando_envio
   # para cair na fila de criação dos Correios B2B (CreateCorreiosLogOrdersJob2).
   B2C_TRANSFER_TAG = '(Transferencia b2c)'.freeze
+  # A transferência B2C é entregue em mão própria: o identificador vai nas observações do pedido e a
+  # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usa forma_envio 002 quando o encontra.
+  HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
   B2C_TRANSFER_MARKER_ID = '182662'.freeze
   B2C_TRANSFER_RECIPIENT = {
     nome: 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', tipo_pessoa: 'J',
@@ -109,11 +112,23 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
-  def create_carrier_contact(carrier)
-    response = do_post('contato.incluir.php', contato: build_contato(carrier).to_json)
-    parse_contato_response(response)
+  # Gera (sem emitir) a nota fiscal do pedido no Tiny, como o "Gerar nota fiscal" de lá. A fila dos
+  # Correios B2B lê essa nota (id_nota_fiscal do pedido) para achar o CNPJ da transportadora.
+  def generate_invoice(tiny_reference_id)
+    response = do_post('gerar.nota.fiscal.pedido.php', id: tiny_reference_id, modelo: 'NFe')
+    retorno = parse_retorno(response)
+    return { success: false, error: "Resposta inválida do Tiny (HTTP #{response.code})." } unless retorno
+
+    registros = retorno[:registros]
+    registro = (registros.is_a?(Array) ? registros.first : registros)&.dig(:registro) || {}
+    invoice_id = registro[:idNotaFiscal].presence || registro[:id].presence
+    if retorno[:status] == 'OK' && invoice_id
+      { success: true, invoice_id: invoice_id.to_s, number: registro[:numero].presence&.to_s }
+    else
+      { success: false, error: tiny_error_message(retorno) }
+    end
   rescue StandardError => e
-    Rails.logger.error "B2bTinyService#create_carrier_contact exception: #{e.message}"
+    Rails.logger.error "B2bTinyService#generate_invoice exception: #{e.message}"
     { success: false, error: e.message }
   end
 
@@ -130,6 +145,23 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
+  # true só quando o Tiny responde que o pedido não existe (excluído por lá). Falha de rede ou
+  # qualquer outra resposta devolve false: na dúvida o vínculo com o Tiny é mantido.
+  NOT_FOUND_ERROR_CODES = %w[20 32].freeze
+  NOT_FOUND_PATTERN = /n[ãa]o\s+(foi\s+)?(encontrad|localizad)|n[ãa]o\s+existe|inexistente|n[ãa]o\s+retornou\s+registros/i
+
+  def order_missing?(tiny_reference_id)
+    response = HTTParty.get("#{BASE_URL}/pedido.obter.php",
+                             query: { token: @token, formato: 'json', id: tiny_reference_id })
+    retorno = parse_retorno(response)
+    return false if retorno.nil? || retorno[:status] == 'OK'
+
+    NOT_FOUND_ERROR_CODES.include?(retorno[:codigo_erro].to_s) || tiny_error_message(retorno).match?(NOT_FOUND_PATTERN)
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#order_missing? exception: #{e.message}"
+    false
+  end
+
   def order_status(tiny_reference_id)
     response = HTTParty.get("#{BASE_URL}/pedido.obter.php",
                              query: { token: @token, formato: 'json', id: tiny_reference_id })
@@ -144,39 +176,6 @@ class B2bTinyService
   end
 
   private
-
-  def build_contato(carrier)
-    {
-      sequencia: '1',
-      nome: carrier.name,
-      tipo_pessoa: 'J',
-      cpf_cnpj: carrier.registration.to_s.gsub(/\D/, ''),
-      ie: carrier.state_registration.presence || '',
-      endereco: carrier.street,
-      numero: carrier.number,
-      complemento: carrier.complement.presence || '',
-      bairro: carrier.neighbourhood,
-      cep: carrier.zip.to_s.gsub(/\D/, ''),
-      cidade: carrier.city,
-      uf: carrier.state,
-      fone: carrier.phone.presence || '',
-      email: carrier.email.presence || '',
-      situacao: 'A',
-      tipos_contato: [{ tipo: 'Transportadora' }]
-    }
-  end
-
-  def parse_contato_response(response)
-    retorno = JSON.parse(response.body).with_indifferent_access[:retorno]
-    if retorno[:status] == 'OK'
-      registro = retorno.dig(:registros, :registro)
-      { success: true, tiny_contact_id: registro&.dig(:id)&.to_s }
-    else
-      registro = retorno.dig(:registros, :registro)
-      erro = registro&.dig(:erros)&.dig(:erro) || retorno.dig(:erros, :erro)
-      { success: false, error: Array(erro).join(', ').presence || erro.to_s.presence || 'Erro desconhecido na API Tiny' }
-    end
-  end
 
   def do_post(endpoint, body_params)
     HTTParty.post("#{BASE_URL}/#{endpoint}",
@@ -221,8 +220,9 @@ class B2bTinyService
   def build_pedido(b2b_order)
     client = b2b_order.client
 
+    # Entra no Tiny já em preparando_envio (o pedido só é enviado quando está pronto, pelo botão "Enviar ao Tiny").
     pedido = {
-      situacao: 'aberto',
+      situacao: 'preparando_envio',
       data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
       id_natureza_operacao: NATUREZA_OPERACAO_IDS[b2b_order.price_list],
       itens: pedido_itens(b2b_order),
@@ -281,11 +281,9 @@ class B2bTinyService
       cliente: B2C_TRANSFER_RECIPIENT,
       endereco_entrega: entrega,
       marcadores: [{ marcador: { id: B2C_TRANSFER_MARKER_ID, descricao: B2C_TRANSFER_TAG } }],
-      **shipping_fields(b2b_order),
-      frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
-      valor_frete: b2b_order.freight_value.to_f,
-      obs: [B2C_TRANSFER_TAG, "Transferência B2C ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
-      obs_interna: B2C_TRANSFER_TAG
+      frete_por_conta: 'R',
+      obs: [B2C_TRANSFER_TAG, HAND_DELIVERY_TAG, "Transferência B2C ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
+      obs_interna: "#{B2C_TRANSFER_TAG} #{HAND_DELIVERY_TAG}"
     }
   end
 

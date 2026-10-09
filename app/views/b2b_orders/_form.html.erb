@@ -51,13 +51,19 @@
           <label class="field-label">Destino</label>
           <div class="text-main"><%= recipient[:nome] %></div>
           <span class="text-muted-custom d-block mt-1">CNPJ <%= recipient[:cpf_cnpj] %> · <%= recipient[:endereco] %>, <%= recipient[:numero] %> <%= recipient[:complemento] %> · <%= recipient[:cidade] %>/<%= recipient[:uf] %></span>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com o marcador <%= B2bTinyService::B2C_TRANSFER_TAG %>.</span>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com a nota fiscal gerada e o marcador <%= B2bTinyService::B2C_TRANSFER_TAG %>.</span>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Entrega</label>
+          <span class="hand-delivery-badge"><i class="fas fa-hand-holding"></i>Mão Própria</span>
+          <span class="text-muted-custom d-block mt-1">Sem forma de envio: nos Correios B2B o pedido é criado com forma de envio 002.</span>
         </div>
         <% end %>
 
+        <% unless @b2b_order.b2c_transfer? %>
         <div class="form-col-6">
           <label class="field-label">Forma de Envio</label>
-          <select id="shippingMethodSelect" class="field-input" <%= 'required' if @b2b_order.b2c_transfer? %>>
+          <select id="shippingMethodSelect" class="field-input">
             <option value="">Carregando...</option>
           </select>
           <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
@@ -74,6 +80,7 @@
           <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
+        <% end %>
 
         <% if @b2b_order.sale? %>
         <div class="form-col-12 form-check">
@@ -257,7 +264,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!isCorreiosLog) freightSelect.value = '';
   }
 
-  // Forma de Envio via AJAX (lista vem do Tiny)
+  // Forma de Envio via AJAX (lista vem do Tiny). A transferência B2C é mão própria e não tem esse campo.
+  if (document.getElementById('shippingMethodSelect')) {
   fetch('<%= shipping_methods_b2b_orders_path %>')
     .then(function (r) { return r.json(); })
     .then(function (data) {
@@ -279,6 +287,7 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleCarrierSection();
     toggleFreightService();
   });
+  }
 
   // Cliente via AJAX (busca no Honey e no Tiny ao mesmo tempo)
   var clientTimeout;

@@ -23,6 +23,17 @@ module B2bOrdersHelper
     B2B_SCREEN_COPY.fetch(kind.to_s)
   end
 
+  # Pedido já no Tiny é cancelado lá antes de sair do Honey (a API do Tiny não exclui pedido).
+  def b2b_delete_confirm(order)
+    if order.tiny_reference_id.present?
+      number = order.tiny_reference_number.presence || order.tiny_reference_id
+      "Excluir o pedido ##{order.id}? Ele será CANCELADO no Tiny (nº #{number}) e removido do Honey com os itens. " \
+        'O cancelado continua no Tiny e pode ser excluído por lá.'
+    else
+      "Excluir o pedido ##{order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey."
+    end
+  end
+
   def b2b_order_destination(order)
     if order.sale? then order.client&.display_name
     elsif order.stock_transfer? then order.transfer_location&.name

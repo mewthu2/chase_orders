@@ -179,21 +179,6 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
-  test 'create_carrier_contact returns the Tiny contact id on success' do
-    carrier = Carrier.create!(
-      name: 'Jamef Transportes', registration: '25.405.327/0001-74', street: 'Rua Service',
-      number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
-    )
-
-    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
-      .with { |req| body = URI.decode_www_form(req.body).to_h['contato']; body.include?('"nome":"Jamef Transportes"') && body.include?('"tipo":"Transportadora"') }
-      .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '555' } } } }.to_json)
-
-    result = @service.create_carrier_contact(carrier)
-    assert result[:success]
-    assert_equal '555', result[:tiny_contact_id]
-  end
-
   test 'order_status returns the situacao and tracking code from Tiny' do
     stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php')
       .with(query: hash_including({ 'id' => '111' }))
@@ -231,20 +216,6 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
 
     refute result[:success]
     assert_equal 'Situação inválida', result[:error]
-  end
-
-  test 'create_carrier_contact returns the Tiny error message on failure' do
-    carrier = Carrier.create!(
-      name: 'Jamef Transportes', registration: '25.405.327/0001-74', street: 'Rua Service',
-      number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
-    )
-
-    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
-      .to_return(body: { retorno: { status: 'Erro', erros: { erro: 'CNPJ já cadastrado' } } }.to_json)
-
-    result = @service.create_carrier_contact(carrier)
-    refute result[:success]
-    assert_equal 'CNPJ já cadastrado', result[:error]
   end
 
   def sale_order_for_errors
@@ -319,7 +290,7 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     pedido = sent['pedido']
     assert_equal @client.display_name, pedido.dig('cliente', 'nome')
     assert_equal %w[SKU1 SKU2], pedido['itens'].map { |i| i.dig('item', 'codigo') }
-    assert_equal 'aberto', pedido['situacao']
+    assert_equal 'preparando_envio', pedido['situacao']
   end
 
   test 'create_stock_transfer keeps sending the nota wrapped in the "nota_fiscal" root' do

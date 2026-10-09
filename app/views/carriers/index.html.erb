@@ -28,7 +28,6 @@
               <th>CNPJ</th>
               <th>Cidade/UF</th>
               <th class="text-center">Status</th>
-              <th class="text-center">Tiny</th>
               <th class="text-end">Ações</th>
             </tr>
           </thead>
@@ -43,18 +42,8 @@
                     <%= carrier.active? ? 'Ativo' : 'Inativo' %>
                   </span>
                 </td>
-                <td class="text-center">
-                  <% if carrier.transmitted? %>
-                    <span class="status-pill status-pill--active" title="ID Tiny: <%= carrier.tiny_contact_id %>">Transmitida</span>
-                  <% else %>
-                    <span class="status-pill status-pill--inactive"><%= carrier.tiny_error.presence || 'Não transmitida' %></span>
-                  <% end %>
-                </td>
                 <td class="text-end">
                   <div class="table-actions">
-                    <%= button_to transmit_carrier_path(carrier), method: :post, class: "action-btn action-btn--edit", form: { style: 'display:inline' } do %>
-                      <i class="fas fa-paper-plane"></i>
-                    <% end %>
                     <%= link_to edit_carrier_path(carrier), class: "action-btn action-btn--edit" do %>
                       <i class="fas fa-pencil-alt"></i>
                     <% end %>

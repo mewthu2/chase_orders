@@ -59,40 +59,70 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status_processamento: '2', status: 'Erro', registros: { registro: { status: 'Erro', erros: [{ erro: message }] } } } }.to_json)
   end
 
-  test 'admin creates a sale order and it is sent to Tiny right away, synchronously' do
-    sign_in @admin
-    stub = stub_tiny_pedido_ok
+  def create_sale_order
+    post b2b_orders_path, params: { b2b_order: {
+      kind: 'sale', client_id: @client.id,
+      b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
+    } }
+    B2bOrder.last
+  end
 
-    assert_no_enqueued_jobs do
-      assert_difference 'B2bOrder.count', 1 do
-        post b2b_orders_path, params: { b2b_order: {
-          kind: 'sale', client_id: @client.id,
-          b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
-        } }
-      end
+  test 'creating a sale order saves it only in Honey, without sending it to Tiny' do
+    sign_in @admin
+
+    assert_difference 'B2bOrder.count', 1 do
+      create_sale_order
     end
 
-    assert_requested stub
+    assert_not_requested :post, PEDIDO_URL
     order = B2bOrder.last
     assert order.aberto?
-    assert_equal '111', order.tiny_reference_id
+    assert_nil order.tiny_reference_id
     assert_equal 1, order.b2b_order_items.count
     assert_redirected_to b2b_orders_path
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /salvo.*Enviar ao Tiny/
+  end
+
+  test 'the send button sends the sale order to Tiny synchronously, already as preparando envio' do
+    sign_in @admin
+    order = create_sale_order
+    sent = nil
+    stub = stub_request(:post, PEDIDO_URL)
+           .with { |req| sent = JSON.parse(URI.decode_www_form(req.body).to_h['pedido']); true }
+           .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '111', numero: '222' } } } }.to_json)
+
+    assert_no_enqueued_jobs { post transmit_b2b_order_path(order) }
+
+    assert_requested stub
+    assert_equal 'preparando_envio', sent.dig('pedido', 'situacao')
+    order.reload
+    assert order.preparando_envio?
+    assert_equal '111', order.tiny_reference_id
     follow_redirect!
     assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny.*222/
   end
 
-  test 'when Tiny rejects a new order it is still saved and the real Tiny error is shown' do
+  test 'the edit page has the send button only while the order is not in Tiny' do
     sign_in @admin
+    order = create_sale_order
+
+    get edit_b2b_order_path(order)
+    assert_select "form[action='#{transmit_b2b_order_path(order)}']", count: 1
+
+    order.update_columns(tiny_reference_id: '1')
+    get edit_b2b_order_path(order)
+    assert_select "form[action='#{transmit_b2b_order_path(order)}']", count: 0
+  end
+
+  test 'when Tiny rejects the order the real Tiny error is shown' do
+    sign_in @admin
+    order = create_sale_order
     stub_tiny_pedido_error('Cliente: CPF/CNPJ inválido')
 
-    assert_difference 'B2bOrder.count', 1 do
-      post b2b_orders_path, params: { b2b_order: {
-        client_id: @client.id, b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
-      } }
-    end
+    post transmit_b2b_order_path(order)
 
-    order = B2bOrder.last
+    order.reload
     assert order.dados_incompletos?
     assert_equal 'Cliente: CPF/CNPJ inválido', order.error_message
     follow_redirect!
@@ -101,14 +131,13 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   test 'an unexpected failure while sending is reported instead of a 500' do
     sign_in @admin
+    order = create_sale_order
     stub_request(:post, PEDIDO_URL).to_timeout
 
-    post b2b_orders_path, params: { b2b_order: {
-      client_id: @client.id, b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
-    } }
+    post transmit_b2b_order_path(order)
 
     assert_redirected_to b2b_orders_path
-    assert B2bOrder.last.dados_incompletos?
+    assert order.reload.dados_incompletos?
     follow_redirect!
     assert_select '.flash-messages-container .alert-danger'
   end
@@ -359,5 +388,45 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     refute item.key?('stock_quantity')
     refute item.key?('stock_status')
     assert_not_requested :get, 'https://correios-log.example.com/estoque/SKU-CSV/estoque'
+  end
+  INVOICE_URL = 'https://api.tiny.com.br/api2/gerar.nota.fiscal.pedido.php'.freeze
+
+  test 'sending with the checkbox also generates the nota fiscal of the order in Tiny' do
+    sign_in @admin
+    order = create_sale_order
+    stub_tiny_pedido_ok
+    invoice = stub_request(:post, INVOICE_URL).with(body: hash_including('id' => '111'))
+                                              .to_return(body: { retorno: { status: 'OK', registros: { registro: { idNotaFiscal: '44', numero: '000321' } } } }.to_json)
+
+    post transmit_b2b_order_path(order), params: { generate_invoice: '1' }
+
+    assert_requested invoice
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny.*Nota fiscal gerada no Tiny \(nº 000321\)/
+  end
+
+  test 'when Tiny does not generate the nota the order stays sent and the error is shown' do
+    sign_in @admin
+    order = create_sale_order
+    stub_tiny_pedido_ok
+    stub_request(:post, INVOICE_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Natureza sem regra fiscal' }] } }.to_json)
+
+    post transmit_b2b_order_path(order), params: { generate_invoice: '1' }
+
+    assert_equal '111', order.reload.tiny_reference_id
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /enviado ao Tiny.*não gerou a nota fiscal: Natureza sem regra fiscal/
+  end
+
+  test 'sending without the checkbox does not touch the nota, and the edit page offers the checkbox' do
+    sign_in @admin
+    order = create_sale_order
+    get edit_b2b_order_path(order)
+    assert_select "form[action='#{transmit_b2b_order_path(order)}'] input[type=checkbox][name=generate_invoice]", count: 1
+
+    stub_tiny_pedido_ok
+    post transmit_b2b_order_path(order)
+
+    assert_not_requested :post, INVOICE_URL
   end
 end

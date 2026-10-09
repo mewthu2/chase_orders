@@ -7,6 +7,17 @@
       <p class="page-subtitle">#<%= @b2b_order.id %></p>
     </div>
     <div class="header-actions">
+      <% if @b2b_order.resendable? %>
+        <%= form_with url: transmit_order_path_for(@b2b_order), method: :post, class: 'send-to-tiny-form',
+                      data: { turbo_confirm: 'Enviar este pedido para o Tiny? Ele entra como Preparando Envio. Salve antes as alterações feitas nesta tela.' } do %>
+          <% if @b2b_order.sale? %>
+            <label class="send-to-tiny-invoice">
+              <%= check_box_tag :generate_invoice, '1', false %> Gerar nota fiscal no Tiny
+            </label>
+          <% end %>
+          <button type="submit" class="btn-export"><i class="fas fa-paper-plane me-1"></i>Enviar ao Tiny</button>
+        <% end %>
+      <% end %>
       <% if @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present? %>
         <%= button_to cancel_in_tiny_order_path_for(@b2b_order), method: :post, class: "btn-back",
                       form: { data: { turbo_confirm: "Cancelar o pedido nº #{@b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
@@ -15,7 +26,7 @@
       <% end %>
       <% if order_deletable?(@b2b_order) %>
         <%= button_to order_path_for(@b2b_order), method: :delete, class: "btn-back",
-                      form: { data: { turbo_confirm: "Excluir o pedido ##{@b2b_order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey." } } do %>
+                      form: { data: { turbo_confirm: b2b_delete_confirm(@b2b_order) } } do %>
           <i class="fas fa-trash me-1"></i>Excluir
         <% end %>
       <% end %>

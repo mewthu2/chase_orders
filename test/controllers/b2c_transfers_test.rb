@@ -20,9 +20,11 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     order
   end
 
-  def stub_formas
-    stub_request(:get, 'https://api.tiny.com.br/api2/formas.envio.pesquisa.php').with(query: hash_including('formato' => 'json'))
-      .to_return(body: { retorno: { status: 'OK', registros: [{ id: '782947860', nome: 'Transportadora', situacao: '1', tipo_logistica: '2' }] } }.to_json)
+  INVOICE_URL = 'https://api.tiny.com.br/api2/gerar.nota.fiscal.pedido.php'.freeze
+
+  def stub_invoice_ok
+    stub_request(:post, INVOICE_URL).with(body: hash_including('id' => '902371809'))
+      .to_return(body: { retorno: { status: 'OK', registros: { registro: { idNotaFiscal: '44', serie: '1', numero: '000321' } } } }.to_json)
   end
 
   def stub_pedido_ok
@@ -37,8 +39,8 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
   end
 
   test 'creating forces the b2c_transfer kind and transfer list, and lands in preparando_envio' do
-    stub_formas
     stub = stub_pedido_ok
+    stub_invoice_ok
     assert_difference 'B2bOrder.count', 1 do
       post b2c_transfers_path, params: { b2b_order: {
         kind: 'sale', client_id: @client.id, price_list: 'standard',
@@ -79,7 +81,10 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert_select '#clientSection', count: 0
     assert_select '#transferLocationSection', count: 0
     assert_select '#b2cDestinationSection', text: /25.405.327\/0003-36/
-    assert_select '#shippingMethodSelect'
+    assert_select '#shippingMethodSelect', count: 0
+    assert_select '#carrierSection', count: 0
+    assert_select '.hand-delivery-badge', text: /Mão Própria/
+    assert_select 'input[name=generate_invoice]', count: 0
     assert_match(/var PRICE_LIST = 'transfer'/, response.body)
     assert_select "form[action='#{b2c_transfers_path}']"
   end
@@ -107,14 +112,51 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert_nil order.reload.tiny_reference_id
   end
 
-  test 'creating a B2C transfer without a shipping method is refused with a clear message' do
-    assert_no_difference 'B2bOrder.count' do
-      post b2c_transfers_path, params: { b2b_order: {
-        b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
-      } }
-    end
+  test 'creating ignores shipping data: a B2C transfer is hand delivery' do
+    stub_pedido_ok
+    stub_invoice_ok
 
-    assert_response :unprocessable_entity
-    assert_match(/Escolha a forma de envio da transferência B2C/, response.body)
+    post b2c_transfers_path, params: { b2b_order: {
+      carrier_shipping_method: '782947860', carrier_name: 'Mix Cargo',
+      b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
+    } }
+
+    order = B2bOrder.last
+    assert order.b2c_transfer?
+    assert_nil order.carrier_shipping_method
+    assert_nil order.carrier_name
+    assert order.preparando_envio?
+  end
+
+  test 'creating always generates the nota fiscal of the transfer in Tiny' do
+    stub_pedido_ok
+    invoice = stub_invoice_ok
+
+    post b2c_transfers_path, params: { b2b_order: { b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }] } }
+
+    assert_requested invoice
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny.*Nota fiscal gerada no Tiny \(nº 000321\)/
+  end
+
+  test 'when Tiny does not generate the nota the transfer stays sent and the error is shown' do
+    stub_pedido_ok
+    stub_request(:post, INVOICE_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Sem regra fiscal' }] } }.to_json)
+
+    post b2c_transfers_path, params: { b2b_order: { b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }] } }
+
+    assert_equal '902371809', B2bOrder.last.tiny_reference_id
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-danger', text: /não gerou a nota fiscal: Sem regra fiscal/
+  end
+
+  test 'the edit page has no nota checkbox: resending a B2C transfer always generates it' do
+    order = build_b2c
+
+    get edit_b2c_transfer_path(order)
+
+    assert_select "form[action='#{transmit_b2c_transfer_path(order)}']", count: 1
+    assert_select 'input[name=generate_invoice]', count: 0
+    assert_select 'select[name="b2b_order[status]"]'
   end
 end

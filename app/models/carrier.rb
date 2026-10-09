@@ -12,8 +12,4 @@ class Carrier < ApplicationRecord
   def cnpj_formatted
     registration.gsub(/\D/, '').sub(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '\1.\2.\3/\4-\5')
   end
-
-  def transmitted?
-    transmitted_at.present? && tiny_contact_id.present?
-  end
 end

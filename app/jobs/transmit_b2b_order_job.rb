@@ -16,8 +16,8 @@ class TransmitB2bOrderJob < ActiveJob::Base
                end
 
       if result[:success]
-        # A transferência B2C já nasce em preparando_envio no Tiny (fila de criação dos Correios B2B).
-        order.update!(status: order.b2c_transfer? ? :preparando_envio : :aberto, error_message: nil,
+        # Pedido de venda e transferência B2C já nascem em preparando_envio no Tiny (fila de criação dos Correios B2B).
+        order.update!(status: order.tiny_order? ? :preparando_envio : :aberto, error_message: nil,
                       tiny_reference_id: result[:tiny_reference_id], tiny_reference_number: result[:tiny_reference_number])
       else
         order.update!(status: :dados_incompletos, error_message: result[:error])

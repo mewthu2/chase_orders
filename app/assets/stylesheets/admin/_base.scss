@@ -535,3 +535,35 @@ table.dataTable.display tbody tr:hover > * {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+// O tooltip nunca captura o mouse: se ele abrir por cima do botão, o cursor "pisca" entre o
+// texto do tooltip e o botão (o tooltip some ao sair do botão e volta ao entrar de novo).
+.tooltip { pointer-events: none; }
+
+// Botões de ação da coluna da engrenagem: lado a lado e com área de clique confortável.
+.row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+
+  .btn,
+  > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    min-height: 32px;
+    padding: 0.35rem 0.55rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover,
+  > a:hover { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); }
+  .btn:active,
+  > a:active { transform: scale(0.94); }
+  // O ícone é só desenho: o clique e o cursor são sempre do botão.
+  .btn i,
+  > a i { pointer-events: none; }
+}

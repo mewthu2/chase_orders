@@ -15,6 +15,9 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
       neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
     sign_in @admin
+    # Por padrão o pedido existe no Tiny (consultado quando o cancelamento é recusado).
+    stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php').with(query: hash_including('formato' => 'json'))
+      .to_return(body: { retorno: { status: 'OK', pedido: { id: '555', situacao: 'Faturado' } } }.to_json)
   end
 
   def build_order(kind: :sale, **attrs)
@@ -162,6 +165,38 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_not_requested stub
+    assert_equal '555', order.reload.tiny_reference_id
+  end
+  OBTER_URL = 'https://api.tiny.com.br/api2/pedido.obter.php'.freeze
+
+  def stub_status_refused
+    stub_request(:post, STATUS_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Pedido não localizado' }] } }.to_json)
+  end
+
+  test 'when the order no longer exists in Tiny, cancelling just removes the link' do
+    order = sent_order
+    stub_status_refused
+    stub_request(:get, OBTER_URL).with(query: hash_including('id' => '555'))
+      .to_return(body: { retorno: { status: 'Erro', codigo_erro: '20', erros: [{ erro: 'A consulta não retornou registros' }] } }.to_json)
+
+    post cancel_in_tiny_b2b_order_path(order)
+
+    order.reload
+    assert_nil order.tiny_reference_id
+    assert order.aberto?
+    assert Log.last.details_parsed['missing_in_tiny']
+    follow_redirect!
+    assert_select '.flash-messages-container .alert-success', text: /não existe mais no Tiny.*vínculo foi removido/
+  end
+
+  test 'when the order still exists in Tiny and the cancellation is refused, the link is kept' do
+    order = sent_order
+    stub_status_refused
+    stub_request(:get, OBTER_URL).with(query: hash_including('id' => '555'))
+      .to_return(body: { retorno: { status: 'OK', pedido: { id: '555', situacao: 'Faturado' } } }.to_json)
+
+    post cancel_in_tiny_b2b_order_path(order)
+
     assert_equal '555', order.reload.tiny_reference_id
   end
 end

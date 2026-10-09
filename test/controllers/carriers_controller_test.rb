@@ -55,42 +55,4 @@ class CarriersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to carriers_path
   end
-
-  test 'transmit updates the carrier on success' do
-    ENV['TOKEN_TINY2_PRODUCTION'] = 'fake-token'
-    sign_in @admin
-    carrier = Carrier.create!(
-      name: 'Transmitir', registration: '25.405.327/0001-74', street: 'Rua A',
-      number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
-    )
-
-    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
-      .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '999' } } } }.to_json)
-
-    post transmit_carrier_path(carrier)
-
-    assert_redirected_to carriers_path
-    carrier.reload
-    assert_equal '999', carrier.tiny_contact_id
-    assert carrier.transmitted?
-  end
-
-  test 'transmit records the error on failure' do
-    ENV['TOKEN_TINY2_PRODUCTION'] = 'fake-token'
-    sign_in @admin
-    carrier = Carrier.create!(
-      name: 'Falha', registration: '25.405.327/0001-74', street: 'Rua A',
-      number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
-    )
-
-    stub_request(:post, 'https://api.tiny.com.br/api2/contato.incluir.php')
-      .to_return(body: { retorno: { status: 'Erro', erros: { erro: 'CNPJ inválido' } } }.to_json)
-
-    post transmit_carrier_path(carrier)
-
-    assert_redirected_to carriers_path
-    carrier.reload
-    assert_equal 'CNPJ inválido', carrier.tiny_error
-    refute carrier.transmitted?
-  end
 end
