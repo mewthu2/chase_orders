@@ -159,6 +159,10 @@
                       <%= Attempt.human_attribute_name :tiny_order_id %>
                     </th>
                     <th class="text-center">
+                      <i class="fas fa-user me-1"></i>
+                      Cliente
+                    </th>
+                    <th class="text-center">
                       <i class="fas fa-truck-moving me-1"></i>
                       Transportadora
                     </th>
@@ -230,6 +234,7 @@
                           </button>
                         </div>
                       </td>
+                      <%= render 'dashboard/customer_name_cell', att: att %>
                       <td class="text-center">
                         <% if att.is_transportadora %>
                           <span class="badge bg-warning text-dark"><i class="fas fa-truck-moving me-1"></i>Outra Transportadora</span>

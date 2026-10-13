@@ -1,0 +1,7 @@
+<td class="text-center customer-name-cell">
+  <% if (name = att.customer_name).present? %>
+    <span class="text-white" title="<%= name %>"><i class="fas fa-user me-1 text-muted"></i><%= truncate(name, length: 40) %></span>
+  <% else %>
+    <span class="badge bg-secondary">-</span>
+  <% end %>
+</td>

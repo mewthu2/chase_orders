@@ -51,6 +51,18 @@ class Attempt < ApplicationRecord
   end
   # Metodos estaticos
   # Metodos publicos
+
+  # Nome do cliente guardado na criação do pedido no Correios (params é o Hash#inspect dos dados
+  # enviados; o destinatário da requisição pode ter sido trocado, como na transferência B2C).
+  CUSTOMER_NAME_PATTERN = /(?::nome=>|\bnome: )("(?:[^"\\]|\\.)*")/
+
+  def customer_name
+    quoted = params.to_s[CUSTOMER_NAME_PATTERN, 1]
+    return if quoted.blank?
+
+    quoted[1..-2].gsub(/\\([\\"#])/, '\\1').strip.presence
+  end
+
   # Metodos GET
   # Metodos SET
 

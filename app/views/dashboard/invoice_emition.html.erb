@@ -146,6 +146,10 @@
                       <%= Attempt.human_attribute_name :tiny_order_id %>
                     </th>
                     <th class="text-center">
+                      <i class="fas fa-user me-1"></i>
+                      Cliente
+                    </th>
+                    <th class="text-center">
                       <i class="fas fa-mail-bulk me-1"></i>
                       <%= Attempt.human_attribute_name :order_correios_id %>
                     </th>
@@ -213,6 +217,7 @@
                           </button>
                         </div>
                       </td>
+                      <%= render 'dashboard/customer_name_cell', att: att %>
                       <td class="text-center">
                         <span class="badge bg-secondary fs-6"><i class="fas fa-truck me-1" title="Correios"></i><%= att.order_correios_id %></span>
                       </td>
