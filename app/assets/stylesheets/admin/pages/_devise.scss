@@ -22,7 +22,8 @@ body.sessions.new {
     min-height: 100dvh;
     padding: 1rem;
     box-sizing: border-box;
-    background: radial-gradient(ellipse at top, rgba(31, 111, 235, 0.12), transparent 65%), $bg-canvas;
+    // Translucent so the body's triangle pattern (subtle-prism.png) shows through.
+    background: radial-gradient(ellipse at top, rgba(31, 111, 235, 0.12), transparent 65%), rgba($bg-canvas, 0.55);
   }
 
   .login-card {
@@ -31,7 +32,9 @@ body.sessions.new {
     margin: 0;
     padding: 2.5rem;
     box-sizing: border-box;
-    background: $bg-surface;
+    background: rgba($bg-surface, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border: 1px solid $border-muted;
     border-radius: 16px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
