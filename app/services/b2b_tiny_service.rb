@@ -31,7 +31,7 @@ class B2bTinyService
   # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usa forma_envio 002 quando o encontra.
   HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
   # Nome que vai no destinatário da entrega (endereco_entrega.nome_destinatario) da transferência.
-  B2C_TRANSFER_RECIPIENT_NAME = '(TRANSFERENCIA B2B PARA B2C)'.freeze
+  B2C_TRANSFER_RECIPIENT_NAME = 'TRANSFERENCIA B2B PARA B2C'.freeze
   B2C_TRANSFER_MARKER_ID = '182662'.freeze
   B2C_TRANSFER_RECIPIENT = {
     nome: 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', tipo_pessoa: 'J',

@@ -38,7 +38,7 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     assert_equal '002', params[:forma_envio]
     assert_equal '', params[:cnpj_transportadora]
     assert_equal [{ codigo: 'LEG-1659-M', quantidade: '14' }], params[:itens]
-    assert_equal '(TRANSFERENCIA B2B PARA B2C)', @recipient_name
+    assert_equal 'TRANSFERENCIA B2B PARA B2C', @recipient_name
     assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', params[:nome]
     refute Attempt.last.is_transportadora
   end

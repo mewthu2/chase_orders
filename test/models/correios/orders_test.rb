@@ -70,7 +70,7 @@ class Correios::OrdersTest < ActiveSupport::TestCase
   end
 
   test 'create_orders replaces the recipient name when recipient_name is given' do
-    assert_equal '(TRANSFERENCIA B2B PARA B2C)', destinatario_sent_for('1', recipient_name: '(TRANSFERENCIA B2B PARA B2C)')['nome']
+    assert_equal 'TRANSFERENCIA B2B PARA B2C', destinatario_sent_for('1', recipient_name: 'TRANSFERENCIA B2B PARA B2C')['nome']
   end
 
   test 'create_orders keeps only digits of numero when text is mixed in' do

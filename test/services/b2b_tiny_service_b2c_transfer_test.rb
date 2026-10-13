@@ -54,7 +54,7 @@ class B2bTinyServiceB2cTransferTest < ActiveSupport::TestCase
     assert_equal '0029090240268', pedido['cliente']['ie']
     assert_equal 'MG', pedido['cliente']['uf']
 
-    assert_equal '(TRANSFERENCIA B2B PARA B2C)', pedido['endereco_entrega']['nome_destinatario']
+    assert_equal 'TRANSFERENCIA B2B PARA B2C', pedido['endereco_entrega']['nome_destinatario']
     assert_equal '25.405.327/0003-36', pedido['endereco_entrega']['cpf_cnpj']
     assert_equal [{ 'marcador' => { 'id' => '182662', 'descricao' => '(Transferencia b2c)' } }], pedido['marcadores']
     assert_equal '(Transferencia b2c) MAO PROPRIA', pedido['obs_interna']
