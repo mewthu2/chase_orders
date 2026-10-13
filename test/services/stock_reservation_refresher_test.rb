@@ -95,6 +95,18 @@ class StockReservationRefresherTest < ActiveSupport::TestCase
     assert_not_requested :get, ORDER_URL, query: hash_including(id: '10')
   end
 
+  test 'orders with a Correios order number are not reserved even if the attempt is not marked success' do
+    stub_queue('tiny2', [summary(30), summary(31)])
+    stub_order(31, [['LEG-A', '1']])
+    Attempt.insert_all([{ kinds: Attempt.kinds[:create_correios_order_tiny2], status: Attempt.statuses[:fail], tiny_order_id: 30,
+                          order_correios_id: 25_135_290, created_at: Time.current, updated_at: Time.current }])
+
+    StockReservationRefresher.call(:b2b)
+
+    assert_equal %w[31], StockReservation.distinct.pluck(:tiny_order_id)
+    assert_not_requested :get, ORDER_URL, query: hash_including(id: '30')
+  end
+
   test 'removes orders that left the queue and keeps known ones without refetching' do
     StockReservation.create!(account: :b2b, tiny_order_id: '10', sku: 'A', quantity: 1)
     StockReservation.create!(account: :b2b, tiny_order_id: '99', sku: 'A', quantity: 5)

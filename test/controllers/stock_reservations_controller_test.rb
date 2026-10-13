@@ -35,15 +35,28 @@ class StockReservationsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/1001/, response.body)
   end
 
-  test 'each order shows the shop order, the invoice and the Correios order when there is one' do
+  test 'each order shows the shop order and the invoice' do
     StockReservation.create!(account: :b2c, tiny_order_id: '77', tiny_order_number: '7077', customer_name: 'Cliente NF', sku: 'LEG-A', quantity: 1, ecommerce_number: '#5501', invoice_id: '880011')
-    Attempt.create!(kinds: :create_correios_order, status: :fail, tiny_order_id: 9, order_correios_id: 123_456, id_nota_fiscal: 990_022)
+    Attempt.create!(kinds: :create_correios_order, status: :fail, tiny_order_id: 9, id_nota_fiscal: 990_022)
     sign_in @admin
 
     get b2c_stock_reservations_path
 
-    assert_select '.reservation-order', text: /7077.*#5501.*880011.*sem Correios/m
-    assert_select '.reservation-order', text: /9009.*990022.*123456/m
+    assert_select '.reservation-order', text: /7077.*#5501.*880011/m
+    assert_select '.reservation-order', text: /9009.*990022/m
+  end
+
+  test 'an order that already has a Correios order number is not shown, even before the next refresh' do
+    StockReservation.create!(account: :b2c, tiny_order_id: '78', tiny_order_number: '7078', customer_name: 'Ja no WMS', sku: 'LEG-A', quantity: 3)
+    Attempt.insert_all([{ kinds: Attempt.kinds[:create_correios_order], status: Attempt.statuses[:fail], tiny_order_id: 78,
+                          order_correios_id: 25_135_290, created_at: Time.current, updated_at: Time.current }])
+    sign_in @admin
+
+    get b2c_stock_reservations_path
+
+    assert_no_match(/7078/, response.body)
+    assert_select '.reservation-kpi', text: /1\s*pedidos/
+    assert_select '.reservation-kpi', text: /7\s*unidades/
   end
 
   test 'sku filter narrows the list' do

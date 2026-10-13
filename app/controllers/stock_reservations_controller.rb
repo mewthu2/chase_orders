@@ -33,6 +33,8 @@ class StockReservationsController < ApplicationController
     scope = StockReservation.where(account:)
     scope = scope.where('sku LIKE ?', "%#{StockReservation.sanitize_sql_like(@sku_query)}%") if @sku_query.present?
     reservations = scope.order(:sku, :order_date, :tiny_order_number).to_a
+    created = created_in_correios(reservations.map(&:tiny_order_id).uniq)
+    reservations.reject! { |row| created.include?(row.tiny_order_id) }
 
     @groups = reservations.group_by(&:sku)
     @product_names = Product.where(sku: @groups.keys).pluck(:sku, :shopify_product_name)
@@ -43,18 +45,25 @@ class StockReservationsController < ApplicationController
     render :index
   end
 
-  # Pedido no Correios Log e nota fiscal vindos das tentativas de criação do pedido no Correios
-  # (a nota guardada na reserva tem prioridade; a tentativa cobre notas emitidas depois da foto).
+  def creation_attempts(tiny_order_ids)
+    Attempt.where(kinds: StockReservationRefresher::ACCOUNTS.fetch(@account)[:attempt_kind], tiny_order_id: tiny_order_ids)
+  end
+
+  # Pedido que já tem número no Correios Log já está reservado no WMS: não aparece aqui, mesmo
+  # antes da próxima atualização da fila.
+  def created_in_correios(tiny_order_ids)
+    attempts = creation_attempts(tiny_order_ids)
+    attempts.where(status: :success).or(attempts.where('order_correios_id > 0')).pluck(:tiny_order_id).map(&:to_s).to_set
+  end
+
+  # Nota fiscal: a guardada na reserva tem prioridade; a tentativa de criação no Correios cobre
+  # notas emitidas depois da foto.
   def order_refs(reservations)
-    kind = StockReservationRefresher::ACCOUNTS.fetch(@account)[:attempt_kind]
-    ids = reservations.map(&:tiny_order_id).uniq
     refs = Hash.new { |hash, key| hash[key] = {} }
 
-    Attempt.where(kinds: kind, tiny_order_id: ids).order(:updated_at)
-           .pluck(:tiny_order_id, :order_correios_id, :id_nota_fiscal).each do |tiny_order_id, correios_id, invoice_id|
-      ref = refs[tiny_order_id.to_s]
-      ref[:correios] = correios_id.to_s if correios_id.to_i.positive?
-      ref[:invoice] = invoice_id.to_s if invoice_id.to_i.positive?
+    attempts = creation_attempts(reservations.map(&:tiny_order_id).uniq).order(:updated_at)
+    attempts.pluck(:tiny_order_id, :id_nota_fiscal).each do |tiny_order_id, invoice_id|
+      refs[tiny_order_id.to_s][:invoice] = invoice_id.to_s if invoice_id.to_i.positive?
     end
 
     reservations.each do |row|

@@ -59,7 +59,6 @@
                       <span class="reservation-refs">
                         <span class="reservation-ref" title="Pedido na loja (e-commerce)"><i class="fas fa-shopping-bag"></i><%= row.ecommerce_number.presence || '—' %></span>
                         <span class="reservation-ref <%= 'reservation-ref--empty' if refs[:invoice].blank? %>" title="Nota fiscal (ID no Tiny)"><i class="fas fa-file-invoice"></i><%= refs[:invoice].presence || 'sem NF' %></span>
-                        <span class="reservation-ref <%= 'reservation-ref--empty' if refs[:correios].blank? %>" title="Pedido no Correios Log"><i class="fas fa-truck"></i><%= refs[:correios].presence || 'sem Correios' %></span>
                       </span>
                       <span class="text-muted-custom"><%= row.order_date&.strftime('%d/%m/%Y') %></span>
                       <span class="reservation-order__qty"><%= row.quantity.to_i == row.quantity ? row.quantity.to_i : row.quantity %> un.</span>

@@ -45,6 +45,38 @@ class Correios::OrdersTest < ActiveSupport::TestCase
     }
   end
 
+  def body_sent_for(params)
+    ENV['CORREIOS_COD_ARMAZEM'] = '1'
+    ENV['CORREIOS_CNPJ_TRANSPORTADORA'] = '123'
+    ENV['CORREIOS_CRIAR_PEDIDO'] = 'https://correios-log.example.com/pedidos'
+
+    sent = nil
+    stub_request(:post, 'https://correios-log.example.com/pedidos').to_return do |request|
+      sent = JSON.parse(request.body)
+      { status: 400, body: 'x' }
+    end
+
+    Correios::Orders.create_orders(params, Attempt.create!(kinds: :create_correios_order_tiny2, tiny_order_id: 919_929_089))
+    sent
+  end
+
+  test 'hand delivery goes as an additional service on top of the SEDEX service' do
+    ENV['CORREIOS_CARTAO_POSTAGEM_2'] = 'card2'
+    ENV['TOKEN_LOG_PRODUCTION2'] = 'token2'
+    body = body_sent_for(build_params('1').merge(mao_propria: true))
+
+    assert_equal '39888', body['codigoservico']
+    assert_equal %w[019 002], body['servicosAdicionais']
+  end
+
+  test 'orders without hand delivery keep only the declared value additional service' do
+    ENV['CORREIOS_CARTAO_POSTAGEM_2'] = 'card2'
+    ENV['TOKEN_LOG_PRODUCTION2'] = 'token2'
+    body = body_sent_for(build_params('1'))
+
+    assert_equal %w[019], body['servicosAdicionais']
+  end
+
   def destinatario_sent_for(numero, **options)
     ENV['CORREIOS_COD_ARMAZEM'] = '1'
     ENV['CORREIOS_CNPJ_TRANSPORTADORA'] = '123'

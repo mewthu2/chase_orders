@@ -4,7 +4,11 @@ class Attempt < ApplicationRecord
 
   B2C_KINDS = %w[create_correios_order send_xml emission_invoice get_tracking].freeze
   B2B_KINDS = %w[create_correios_order_tiny2 send_xml_tiny2 emission_invoice_tiny2 get_tracking_tiny2].freeze
+  # Conta da reserva de estoque de cada tipo de criação de pedido no Correios Log.
+  RESERVATION_ACCOUNTS = { 'create_correios_order' => :b2c, 'create_correios_order_tiny2' => :b2b }.freeze
+
   # Callbacks
+  after_commit :release_stock_reservation, on: [:create, :update]
   # Associacoes
 
   # Validacoes
@@ -52,4 +56,16 @@ class Attempt < ApplicationRecord
 
   # Nota: os metodos somente utilizados em callbacks ou utilizados somente por essa
   #       propria classe deverao ser privados (remover essa anotacao)
+
+  private
+
+  # Pedido criado no Correios Log já está reservado no WMS: sai da reserva de estoque na hora,
+  # sem esperar a próxima atualização da fila.
+  def release_stock_reservation
+    account = RESERVATION_ACCOUNTS[kinds]
+    return unless account && tiny_order_id.present?
+    return unless success? || order_correios_id.to_i.positive?
+
+    StockReservation.where(account:, tiny_order_id: tiny_order_id.to_s).delete_all
+  end
 end

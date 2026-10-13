@@ -2,6 +2,8 @@ module Correios::Orders
   module_function
 
   MAX_LOG_SIZE = 100
+  # Serviço adicional de mão própria: vai junto do serviço de postagem (params[:mao_propria]).
+  MAO_PROPRIA = '002'.freeze
 
   def truncate_value(attempt, key, value)
     v = value.to_s
@@ -47,6 +49,7 @@ module Correios::Orders
                           else
                             ['064']
                           end
+    servicos_adicionais += [MAO_PROPRIA] if params[:mao_propria]
 
     body = {
       codigoArmazem: correios_cod_armazem,

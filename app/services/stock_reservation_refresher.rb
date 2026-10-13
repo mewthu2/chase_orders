@@ -64,8 +64,9 @@ class StockReservationRefresher
 
   def pending_orders(orders)
     by_id = orders.index_by { |order| order[:id].to_s }
-    created = Attempt.where(kinds: @config[:attempt_kind], status: :success, tiny_order_id: by_id.keys)
-                     .pluck(:tiny_order_id).map(&:to_s)
+    attempts = Attempt.where(kinds: @config[:attempt_kind], tiny_order_id: by_id.keys)
+    created = attempts.where(status: :success).or(attempts.where('order_correios_id > 0'))
+                      .pluck(:tiny_order_id).map(&:to_s)
     by_id.except(*created)
   end
 
