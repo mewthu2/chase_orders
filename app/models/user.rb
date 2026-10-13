@@ -6,6 +6,10 @@ class User < ApplicationRecord
 
   has_many :user_profiles, dependent: :destroy
   has_many :profiles, through: :user_profiles
+  has_one_attached :avatar
+
+  AVATAR_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
+  AVATAR_MAX_SIZE = 5.megabytes
 
   has_many :marketing_tasks, foreign_key: :user_id, dependent: :nullify
   has_many :campaign_users, dependent: :destroy
@@ -54,6 +58,7 @@ class User < ApplicationRecord
   validates :name, presence: true
   validate :must_have_at_least_one_profile
   validate :validate_allowed_locations_exist
+  validate :avatar_is_acceptable
 
   scope :active, -> { where(active: true) }
   scope :admins, -> { joins(:profiles).where(profiles: { id: Profile::ADMIN }) }
@@ -245,6 +250,17 @@ class User < ApplicationRecord
   end
 
   private
+
+  def avatar_is_acceptable
+    return unless avatar.attached?
+
+    unless AVATAR_CONTENT_TYPES.include?(avatar.blob.content_type)
+      errors.add(:avatar, 'deve ser uma imagem JPG, PNG ou WEBP')
+    end
+    if avatar.blob.byte_size > AVATAR_MAX_SIZE
+      errors.add(:avatar, 'deve ter no máximo 5 MB')
+    end
+  end
 
   def set_default_profile
     profiles << Profile.find(Profile::USER) if profiles.empty?

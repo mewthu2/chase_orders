@@ -1,0 +1,33 @@
+<div class="profile-photo" data-profile-photo data-max-size="<%= User::AVATAR_MAX_SIZE %>">
+  <div class="profile-photo-picker">
+    <div class="user-avatar user-avatar--large">
+      <%= tag.img src: (url_for(@user.avatar) if saved_avatar?(@user)),
+                  alt: 'Prévia da foto de perfil', hidden: !saved_avatar?(@user),
+                  data: { photo_preview: true } %>
+      <i class="fas fa-user" aria-hidden="true" data-photo-placeholder <%= 'hidden' if saved_avatar?(@user) %>></i>
+    </div>
+    <%= form.label :avatar, class: 'profile-photo-camera', title: 'Escolher foto de perfil' do %>
+      <i class="fas fa-camera" aria-hidden="true"></i>
+      <span class="visually-hidden">Escolher foto de perfil</span>
+    <% end %>
+  </div>
+  <div class="profile-photo-controls">
+    <%= form.label :avatar, 'Foto de perfil', class: 'field-label' %>
+    <%= form.file_field :avatar, accept: User::AVATAR_CONTENT_TYPES.join(','),
+                        class: 'form-control', aria: { describedby: 'profile-photo-help profile-photo-error' },
+                        data: { photo_input: true } %>
+    <p id="profile-photo-help" class="profile-photo-help">JPG, PNG ou WEBP de até 5 MB. A foto aparece em formato circular. Salve as alterações para confirmar.</p>
+    <p id="profile-photo-error" class="profile-photo-error" role="alert" data-photo-error></p>
+    <% if saved_avatar?(@user) %>
+      <div class="form-check">
+        <%= check_box_tag 'user[remove_avatar]', '1', false, id: 'user_remove_avatar',
+                          class: 'form-check-input', data: { photo_remove: true } %>
+        <%= label_tag 'user_remove_avatar', 'Remover foto atual', class: 'form-check-label' %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<% content_for :scripts do %>
+  <%= javascript_include_tag 'profile_photo', defer: true %>
+<% end %>

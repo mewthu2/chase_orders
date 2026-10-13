@@ -9,7 +9,7 @@ class UsersController < ApplicationController
     @page = 1 if @page < 1
     @per_page = 10
     @offset = (@page - 1) * @per_page
-    @users = User.includes(:profiles).limit(@per_page).offset(@offset).order(:name)
+    @users = User.includes(:profiles).with_attached_avatar.limit(@per_page).offset(@offset).order(:name)
     @total_users = User.count
     @total_pages = (@total_users.to_f / @per_page).ceil
   end
@@ -21,7 +21,7 @@ class UsersController < ApplicationController
   end
 
   def create
-    @user = User.new(admin_user_params)
+    @user = User.new(admin_user_params.except(:remove_avatar))
 
     validation = current_user.admin? && params[:user][:allowed_location_keys].present?
     @user.set_allowed_locations(params[:user][:allowed_location_keys]) if validation
@@ -29,7 +29,7 @@ class UsersController < ApplicationController
     if @user.save
       redirect_to users_path, notice: 'Usuário criado com sucesso.'
     else
-      render :new
+      render :new, status: :unprocessable_entity
     end
   end
 
@@ -42,6 +42,8 @@ class UsersController < ApplicationController
     end
 
     permitted_params = current_user.admin? ? admin_user_params : user_self_params
+    remove_avatar = ActiveModel::Type::Boolean.new.cast(permitted_params.delete(:remove_avatar))
+    permitted_params.delete(:avatar) if permitted_params[:avatar].blank?
 
     validation = current_user.admin? && @user != current_user && params[:user][:allowed_location_keys].present?
     @user.set_allowed_locations(params[:user][:allowed_location_keys]) if validation
@@ -57,10 +59,11 @@ class UsersController < ApplicationController
     end
 
     if @user.update(permitted_params)
+      @user.avatar.purge_later if remove_avatar && permitted_params[:avatar].blank?
       redirect_path = current_user.admin? ? users_path : root_path
       redirect_to redirect_path, notice: 'Usuário atualizado com sucesso.'
     else
-      render :edit
+      render :edit, status: :unprocessable_entity
     end
   end
 
@@ -82,11 +85,11 @@ class UsersController < ApplicationController
   end
 
   def admin_user_params
-    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation, :active, :ticket_notifications_enabled, profile_ids: [])
+    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation, :active, :ticket_notifications_enabled, :avatar, :remove_avatar, profile_ids: [])
   end
 
   def user_self_params
-    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation)
+    params.require(:user).permit(:name, :email, :phone, :password, :password_confirmation, :avatar, :remove_avatar)
   end
 
   def user_params
