@@ -371,6 +371,22 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_equal 50.0, json['items'].first['retail_price']
   end
 
+  test 'parse_items_spreadsheet accepts semicolon-separated CSV saved by Excel' do
+    sign_in @admin
+    Product.create!(sku: 'SKU-SEMI', shopify_product_name: 'Produto Ponto e Virgula', price: '50', image_url: 'https://img.example.com/produto.png')
+
+    csv_content = "\uFEFFSKU;Quantidade\r\nSKU-SEMI;10\r\n"
+    file = Rack::Test::UploadedFile.new(StringIO.new(csv_content), 'text/csv', original_filename: 'items.csv')
+
+    post parse_items_spreadsheet_b2b_orders_path, params: { file: file }
+    json = JSON.parse(response.body)
+
+    assert json['success']
+    assert_equal 'SKU-SEMI', json['items'].first['sku']
+    assert_equal 'Produto Ponto e Virgula', json['items'].first['name']
+    assert_equal 10, json['items'].first['quantity']
+  end
+
   test 'parse_items_spreadsheet does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
     Product.create!(sku: 'SKU-CSV', shopify_product_name: 'Produto CSV', image_url: 'https://img.example.com/produto.png')

@@ -157,9 +157,12 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    csv = CSV.parse(file.read.force_encoding('UTF-8'), headers: true)
+    content = file.read.force_encoding('UTF-8').delete_prefix("\uFEFF")
+    # Excel em português salva CSV com ";" no lugar de ",".
+    col_sep = content.lines.first.to_s.count(';') > content.lines.first.to_s.count(',') ? ';' : ','
+    csv = CSV.parse(content, headers: true, col_sep: col_sep)
     items = csv.filter_map do |row|
-      sku = row['SKU']
+      sku = row['SKU']&.strip
       quantity = row['Quantidade'].to_i
       next if sku.blank? || quantity <= 0
 
