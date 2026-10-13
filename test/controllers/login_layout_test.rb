@@ -15,6 +15,26 @@ class LoginLayoutTest < ActionDispatch::IntegrationTest
     assert_select '.login-container .login-card'
   end
 
+  test 'login fields have associated labels and support password managers' do
+    get new_user_session_path
+
+    assert_select 'label[for="user_email"]', text: 'E-mail'
+    assert_select 'input#user_email[type="email"][required][autocomplete="username"]'
+    assert_select 'label[for="user_password"]', text: 'Senha'
+    assert_select 'input#user_password[type="password"][required][autocomplete="current-password"]'
+    assert_select 'button[type="button"][aria-controls="user_password"][aria-pressed="false"]'
+    assert_select 'a[href=?]', new_user_password_path, text: 'Esqueci minha senha'
+  end
+
+  test 'the authentication message appears once next to the login form' do
+    get root_path
+    assert_redirected_to new_user_session_path
+    follow_redirect!
+
+    assert_select '.login-card .login-message-alert[role="alert"]', count: 1
+    assert_select '.flash-messages-container .alert', count: 0
+  end
+
   test 'the login page cancels the logged-in layout offsets that pushed the card off center' do
     css = login_css
 
