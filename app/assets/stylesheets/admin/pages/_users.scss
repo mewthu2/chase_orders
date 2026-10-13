@@ -27,7 +27,54 @@
   justify-content: center;
   color: #fff;
   font-size: 1rem;
+  flex-shrink: 0;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+  [hidden] { display: none; }
 }
+.user-avatar--large {
+  width: 144px;
+  height: 144px;
+  background: $border-muted;
+  > .fa-user { font-size: 3.5rem; color: $text-muted; }
+}
+.profile-avatar-link { border-radius: 50%; text-decoration: none; }
+.profile-avatar-link:focus-visible { outline: 3px solid $accent-green-light; outline-offset: 4px; }
+
+.profile-photo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: $bg-surface;
+  border: 1px solid $border-muted;
+  border-radius: $radius-lg;
+  color: $text-primary;
+}
+.profile-photo-picker { position: relative; flex-shrink: 0; }
+.profile-photo-camera {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 3px solid $bg-surface;
+  border-radius: 50%;
+  background: $accent-green;
+  color: #fff;
+  cursor: pointer;
+  &:hover { background: $accent-green-hover; }
+}
+.profile-photo-controls { flex: 1 1 220px; min-width: 0; }
+.profile-photo-help { margin: 0.5rem 0; color: $text-muted; font-size: 0.85rem; }
+.profile-photo-error { color: $accent-red-light; font-size: 0.85rem; }
+.profile-photo-error:empty { display: none; }
 .user-name-cell { display: flex; align-items: center; gap: 0.75rem; }
 
 // ---- Pills (index + show): profiles, status, admin/location access ----

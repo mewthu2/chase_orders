@@ -26,6 +26,7 @@
   <div class="info-grid">
     <div class="info-section">
       <h6 class="info-section-title"><i class="fas fa-id-card me-2"></i>Dados Pessoais</h6>
+      <%= user_avatar(@user, large: true) %>
       <div class="info-row">
         <span class="info-key">Nome</span>
         <span class="info-val"><%= @user.name %></span>

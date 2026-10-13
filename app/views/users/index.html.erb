@@ -51,9 +51,7 @@
               <tr>
                 <td>
                   <div class="user-name-cell">
-                    <div class="user-avatar">
-                      <i class="fas fa-user"></i>
-                    </div>
+                    <%= user_avatar(user) %>
                     <div>
                       <span class="text-main d-block"><%= user.name %></span>
                       <span class="text-muted-custom">ID: <%= user.id %></span>

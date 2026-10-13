@@ -326,6 +326,7 @@ pt-BR:
         cost: Custo
       user:
         name: Nome
+        avatar: Foto de perfil
         email: E-mail
         password: Senha
         password_confirmation: Confirmação da senha
