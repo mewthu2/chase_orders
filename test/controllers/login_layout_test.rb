@@ -66,4 +66,12 @@ class LoginLayoutTest < ActionDispatch::IntegrationTest
 
     assert_match(/body\.sessions\.new \.login-container/, css)
   end
+
+  test 'the login background is translucent so the triangle pattern of the body shows through' do
+    get new_user_session_path
+    assert_includes response.body, 'subtle-prism'
+
+    container = login_css[/\.login-container \{[^}]*\}/]
+    assert_match(/background:.*rgba\(\$bg-canvas, 0\.\d+\)/, container)
+  end
 end

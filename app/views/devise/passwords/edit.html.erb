@@ -1,25 +1,42 @@
-<h2>Alterar sua senha</h2>
+<% content_for :title, 'Nova senha' %>
 
-<%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put }) do |f| %>
-  <%= render "devise/shared/error_messages", resource: resource %>
-  <%= f.hidden_field :reset_password_token %>
+<%= render layout: 'devise/shared/auth_card', locals: { icon: 'fa-shield-alt', title: 'Crie uma nova senha', subtitle: 'Escolha uma senha que você não usa em outros sites.' } do %>
+  <div class="login-form">
+    <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put }) do |f| %>
+      <%= render 'devise/shared/error_messages', resource: resource %>
+      <%= f.hidden_field :reset_password_token %>
 
-  <div class="field">
-    <%= f.label :password, "Nova senha" %><br />
-    <% if @minimum_password_length %>
-      <em>(mínimo de <%= @minimum_password_length %> caracteres)</em><br />
+      <div class="form-group">
+        <%= f.label :password, 'Nova senha', class: 'form-label' %>
+        <div class="input-group">
+          <div class="input-group-text" aria-hidden="true"><i class="fas fa-lock"></i></div>
+          <%= f.password_field :password, autofocus: true, autocomplete: 'new-password', required: true, minlength: @minimum_password_length, class: 'form-control', placeholder: 'Digite a nova senha', data: { new_password: true }, aria: { describedby: 'password-rules' } %>
+          <button type="button" class="password-toggle" data-password-toggle aria-controls="<%= f.field_id(:password) %>" aria-label="Mostrar senha" aria-pressed="false" hidden>Mostrar</button>
+        </div>
+        <p class="login-hint" data-caps-lock role="status" hidden>Caps Lock está ativado.</p>
+      </div>
+
+      <div class="form-group">
+        <%= f.label :password_confirmation, 'Confirme a nova senha', class: 'form-label' %>
+        <div class="input-group">
+          <div class="input-group-text" aria-hidden="true"><i class="fas fa-check-double"></i></div>
+          <%= f.password_field :password_confirmation, autocomplete: 'new-password', required: true, class: 'form-control', placeholder: 'Repita a nova senha', data: { password_confirmation: true } %>
+          <button type="button" class="password-toggle" data-password-toggle aria-controls="<%= f.field_id(:password_confirmation) %>" aria-label="Mostrar senha" aria-pressed="false" hidden>Mostrar</button>
+        </div>
+      </div>
+
+      <ul class="password-rules" id="password-rules">
+        <% if @minimum_password_length %>
+          <li data-rule-length><i class="fas fa-circle-check" aria-hidden="true"></i> Pelo menos <%= @minimum_password_length %> caracteres</li>
+        <% end %>
+        <li data-rule-match><i class="fas fa-circle-check" aria-hidden="true"></i> As duas senhas são iguais</li>
+      </ul>
+
+      <div class="form-actions">
+        <%= f.submit 'Salvar nova senha', class: 'btn btn-login', data: { disable_with: 'Salvando…', turbo_submits_with: 'Salvando…' } %>
+      </div>
     <% end %>
-    <%= f.password_field :password, autofocus: true, autocomplete: "new-password" %>
   </div>
 
-  <div class="field">
-    <%= f.label :password_confirmation, "Confirme a nova senha" %><br />
-    <%= f.password_field :password_confirmation, autocomplete: "new-password" %>
-  </div>
-
-  <div class="actions">
-    <%= f.submit "Alterar minha senha" %>
-  </div>
+  <p class="login-back"><%= link_to new_session_path(resource_name), class: 'login-recovery' do %><i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Voltar para o login<% end %></p>
 <% end %>
-
-<%= render "devise/shared/links" %>

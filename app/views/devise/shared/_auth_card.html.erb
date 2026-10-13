@@ -1,0 +1,75 @@
+<%# Cartão das telas de autenticação (login e recuperação de senha): logo, título, mensagens e rodapé. %>
+<div class="login-container">
+  <section class="login-card" aria-labelledby="login-title">
+    <div class="logo-container">
+      <%= image_tag 'admin/chase-logo', class: 'logo-image', alt: 'Chase Brasil' %>
+    </div>
+
+    <% if local_assigns[:icon] %>
+      <div class="login-badge" aria-hidden="true"><i class="fas <%= icon %>"></i></div>
+    <% end %>
+    <h1 id="login-title" class="login-title"><%= title %></h1>
+    <p class="login-subtitle"><%= subtitle %></p>
+
+    <%# flash.delete devolve o próprio flash, não a mensagem: lê antes e só então remove. %>
+    <% [:alert, :notice].each do |type| %>
+      <% message = flash[type] %>
+      <% flash.delete(type) %>
+      <% if message.present? %>
+        <div class="login-message login-message-<%= type %>" role="<%= type == :alert ? 'alert' : 'status' %>">
+          <%= message %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= yield %>
+
+    <footer class="login-footer">
+      <p>© <%= Date.current.year %> Chase Brasil</p>
+    </footer>
+  </section>
+</div>
+
+<% content_for :scripts do %>
+  <script>
+    (() => {
+      document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {
+        const password = document.getElementById(toggle.getAttribute('aria-controls'));
+        if (!password) return;
+        const capsLock = password.closest('.form-group')?.querySelector('[data-caps-lock]');
+
+        toggle.hidden = false;
+        toggle.addEventListener('click', () => {
+          const visible = password.type === 'password';
+          password.type = visible ? 'text' : 'password';
+          toggle.textContent = visible ? 'Ocultar' : 'Mostrar';
+          toggle.setAttribute('aria-label', visible ? 'Ocultar senha' : 'Mostrar senha');
+          toggle.setAttribute('aria-pressed', String(visible));
+        });
+
+        if (!capsLock) return;
+        const updateCapsLock = (event) => {
+          if (event.getModifierState) capsLock.hidden = !event.getModifierState('CapsLock');
+        };
+        password.addEventListener('keydown', updateCapsLock);
+        password.addEventListener('keyup', updateCapsLock);
+        password.addEventListener('blur', () => { capsLock.hidden = true; });
+      });
+
+      // Nova senha: avisa em tempo real se a confirmação não bate e se falta tamanho.
+      const newPassword = document.querySelector('[data-new-password]');
+      const confirmation = document.querySelector('[data-password-confirmation]');
+      const lengthRule = document.querySelector('[data-rule-length]');
+      const matchRule = document.querySelector('[data-rule-match]');
+      if (!newPassword || !confirmation) return;
+      const minLength = Number(newPassword.getAttribute('minlength')) || 0;
+      const check = () => {
+        if (lengthRule) lengthRule.classList.toggle('is-ok', newPassword.value.length >= minLength);
+        if (matchRule) matchRule.classList.toggle('is-ok', confirmation.value.length > 0 && confirmation.value === newPassword.value);
+        confirmation.setCustomValidity(confirmation.value && confirmation.value !== newPassword.value ? 'As senhas não conferem.' : '');
+      };
+      newPassword.addEventListener('input', check);
+      confirmation.addEventListener('input', check);
+    })();
+  </script>
+<% end %>

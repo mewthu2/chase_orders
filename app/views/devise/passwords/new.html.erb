@@ -1,16 +1,25 @@
-<h2>Esqueceu sua senha?</h2>
+<% content_for :title, 'Recuperar senha' %>
 
-<%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post }) do |f| %>
-  <%= render "devise/shared/error_messages", resource: resource %>
+<%= render layout: 'devise/shared/auth_card', locals: { icon: 'fa-key', title: 'Esqueceu sua senha?', subtitle: 'Informe o e-mail da sua conta e enviaremos um link para você criar uma nova senha.' } do %>
+  <div class="login-form">
+    <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post }) do |f| %>
+      <%= render 'devise/shared/error_messages', resource: resource %>
 
-  <div class="field">
-    <%= f.label :email %><br />
-    <%= f.email_field :email, autofocus: true, autocomplete: "email" %>
+      <div class="form-group">
+        <%= f.label :email, 'E-mail', class: 'form-label' %>
+        <div class="input-group">
+          <div class="input-group-text" aria-hidden="true"><i class="fas fa-envelope"></i></div>
+          <%= f.email_field :email, autofocus: true, autocomplete: 'username', inputmode: 'email', autocapitalize: 'none', spellcheck: false, required: true, class: 'form-control', placeholder: 'voce@exemplo.com' %>
+        </div>
+      </div>
+
+      <p class="login-tip"><i class="fas fa-clock" aria-hidden="true"></i> O link vale por <%= distance_of_time_in_words(Devise.reset_password_within) %>. Confira também a caixa de spam.</p>
+
+      <div class="form-actions">
+        <%= f.submit 'Enviar link de redefinição', class: 'btn btn-login', data: { disable_with: 'Enviando…', turbo_submits_with: 'Enviando…' } %>
+      </div>
+    <% end %>
   </div>
 
-  <div class="actions">
-    <%= f.submit "Enviar instruções para redefinir a senha" %>
-  </div>
+  <p class="login-back"><%= link_to new_session_path(resource_name), class: 'login-recovery' do %><i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Voltar para o login<% end %></p>
 <% end %>
-
-<%= render "devise/shared/links" %>
