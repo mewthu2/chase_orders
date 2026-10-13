@@ -161,7 +161,8 @@
 
 .reservation-order {
   display: grid;
-  grid-template-columns: 110px 1fr 110px 80px;
+  grid-template-columns: 110px minmax(120px, 1fr) auto 110px 80px;
+  align-items: center;
   gap: 0.75rem;
   padding: 0.35rem 0.5rem;
   border-bottom: 1px dashed $border-default;
@@ -172,8 +173,28 @@
   &__qty { text-align: right; color: $text-primary; }
 }
 
+.reservation-refs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.reservation-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: rgba($accent-blue-light, 0.12);
+  border: 1px solid rgba($accent-blue-light, 0.3);
+  color: $text-primary;
+  font-size: 0.8rem;
+  white-space: nowrap;
+
+  i { color: $accent-blue-light; font-size: 0.75rem; }
+
+  &--empty { background: transparent; border-style: dashed; border-color: $border-default; color: $text-muted; }
+  &--empty i { color: $text-muted; }
+}
+
 .reservation-empty i { color: $accent-green-light; animation: reservation-rise 0.6s ease-out; }
 
 @media (max-width: 576px) {
   .reservation-order { grid-template-columns: 1fr 1fr; }
+  .reservation-refs { grid-column: 1 / -1; }
 }

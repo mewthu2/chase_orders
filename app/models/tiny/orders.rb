@@ -151,6 +151,18 @@ module Tiny::Orders
     JSON.parse(response).with_indifferent_access[:retorno]
   end
 
+  # Listagem com todas as páginas: o retorno da 1ª página (status, erros) com os pedidos de todas.
+  def get_all_orders_response(situacao, token, data)
+    first = get_orders_response('', situacao, token, 1, data)
+    return first unless first.is_a?(Hash) && first[:status] == 'OK'
+
+    pedidos = Array(first[:pedidos])
+    (2..first[:numero_paginas].to_i).each do |page|
+      pedidos.concat(Array(get_orders_response('', situacao, token, page, data)&.dig(:pedidos)))
+    end
+    first.merge(pedidos:)
+  end
+
   def obtain_order(token, order_id)
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_PEDIDO'),
                                        query: { token:,

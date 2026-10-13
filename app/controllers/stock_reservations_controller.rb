@@ -37,8 +37,29 @@ class StockReservationsController < ApplicationController
     @groups = reservations.group_by(&:sku)
     @product_names = Product.where(sku: @groups.keys).pluck(:sku, :shopify_product_name)
                             .to_h { |sku, name| [sku.to_s.upcase, name] }
+    @order_refs = order_refs(reservations)
     @kpis = { orders: reservations.map(&:tiny_order_id).uniq.size, skus: @groups.size,
               units: reservations.sum(&:quantity).ceil }
     render :index
+  end
+
+  # Pedido no Correios Log e nota fiscal vindos das tentativas de criação do pedido no Correios
+  # (a nota guardada na reserva tem prioridade; a tentativa cobre notas emitidas depois da foto).
+  def order_refs(reservations)
+    kind = StockReservationRefresher::ACCOUNTS.fetch(@account)[:attempt_kind]
+    ids = reservations.map(&:tiny_order_id).uniq
+    refs = Hash.new { |hash, key| hash[key] = {} }
+
+    Attempt.where(kinds: kind, tiny_order_id: ids).order(:updated_at)
+           .pluck(:tiny_order_id, :order_correios_id, :id_nota_fiscal).each do |tiny_order_id, correios_id, invoice_id|
+      ref = refs[tiny_order_id.to_s]
+      ref[:correios] = correios_id.to_s if correios_id.to_i.positive?
+      ref[:invoice] = invoice_id.to_s if invoice_id.to_i.positive?
+    end
+
+    reservations.each do |row|
+      refs[row.tiny_order_id][:invoice] = row.invoice_id if row.invoice_id.present?
+    end
+    refs
   end
 end

@@ -35,6 +35,17 @@ class StockReservationsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/1001/, response.body)
   end
 
+  test 'each order shows the shop order, the invoice and the Correios order when there is one' do
+    StockReservation.create!(account: :b2c, tiny_order_id: '77', tiny_order_number: '7077', customer_name: 'Cliente NF', sku: 'LEG-A', quantity: 1, ecommerce_number: '#5501', invoice_id: '880011')
+    Attempt.create!(kinds: :create_correios_order, status: :fail, tiny_order_id: 9, order_correios_id: 123_456, id_nota_fiscal: 990_022)
+    sign_in @admin
+
+    get b2c_stock_reservations_path
+
+    assert_select '.reservation-order', text: /7077.*#5501.*880011.*sem Correios/m
+    assert_select '.reservation-order', text: /9009.*990022.*123456/m
+  end
+
   test 'sku filter narrows the list' do
     sign_in @admin
     get b2b_stock_reservations_path(sku: 'top')

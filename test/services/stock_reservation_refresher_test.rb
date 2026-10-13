@@ -12,8 +12,8 @@ class StockReservationRefresherTest < ActiveSupport::TestCase
     ENV['TOKEN_TINY3_PRODUCTION'] = 'tiny3'
   end
 
-  def summary(id, numero: "N#{id}")
-    { pedido: { id: id.to_s, numero: numero, nome: "Cliente #{id}", data_pedido: '07/10/2026' } }
+  def summary(id, numero: "N#{id}", numero_ecommerce: nil)
+    { pedido: { id: id.to_s, numero: numero, numero_ecommerce: numero_ecommerce, nome: "Cliente #{id}", data_pedido: '07/10/2026' }.compact }
   end
 
   def stub_queue(token, pedidos, pages: 1, page: 1)
@@ -27,9 +27,38 @@ class StockReservationRefresherTest < ActiveSupport::TestCase
       .to_return(body: { retorno: { status: 'Erro', codigo_erro: '20', erros: [{ erro: 'A consulta não retornou registros' }] } }.to_json)
   end
 
-  def stub_order(id, items)
+  def stub_order(id, items, **extra)
     stub_request(:get, ORDER_URL).with(query: hash_including(id: id.to_s))
-      .to_return(body: { retorno: { status: 'OK', pedido: { id: id.to_s, itens: items.map { |sku, qty| { item: { codigo: sku, quantidade: qty } } } } } }.to_json)
+      .to_return(body: { retorno: { status: 'OK', pedido: { id: id.to_s, itens: items.map { |sku, qty| { item: { codigo: sku, quantidade: qty } } } }.merge(extra) } }.to_json)
+  end
+
+  test 'stores the shop order number and the invoice of the Tiny order' do
+    stub_queue('tiny3', [summary(20, numero_ecommerce: '#5501')])
+    stub_order(20, [['LEG-A', '1']], id_nota_fiscal: '880011')
+
+    StockReservationRefresher.call(:b2c)
+
+    row = StockReservation.find_by(tiny_order_id: '20')
+    assert_equal ['#5501', '880011'], [row.ecommerce_number, row.invoice_id]
+  end
+
+  test 'an order without invoice keeps it blank (Tiny sends 0)' do
+    stub_queue('tiny3', [summary(22)])
+    stub_order(22, [['LEG-A', '1']], id_nota_fiscal: '0')
+
+    StockReservationRefresher.call(:b2c)
+
+    assert_nil StockReservation.find_by(tiny_order_id: '22').invoice_id
+  end
+
+  test 'known orders get the shop order number without fetching the order again' do
+    StockReservation.create!(account: :b2c, tiny_order_id: '23', tiny_order_number: 'N23', sku: 'LEG-A', quantity: 1)
+    stub_queue('tiny3', [summary(23, numero_ecommerce: '#7007')])
+
+    StockReservationRefresher.call(:b2c)
+
+    assert_equal '#7007', StockReservation.find_by(tiny_order_id: '23').ecommerce_number
+    assert_not_requested :get, ORDER_URL, query: hash_including(id: '23')
   end
 
   test 'stores the items of new queue orders' do

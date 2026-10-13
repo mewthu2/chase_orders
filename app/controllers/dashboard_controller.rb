@@ -299,8 +299,9 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', 4.weeks.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), 4.weeks.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
+    @tiny_error = tiny_listing_error(@orders_response)
 
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order,
@@ -390,7 +391,7 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create_b2b
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
     orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
@@ -431,7 +432,7 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create_queue_b2b
-    @orders_response = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), '', B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
 
     successfully_processed_ids = Attempt.where(
@@ -1567,4 +1568,12 @@ class DashboardController < ApplicationController
 
   def api_correios_b2b; end
 
+  # Erro da listagem do Tiny para mostrar na tela (token inválido, limite de requisições...).
+  # "A consulta não retornou registros" (código 20) é só fila vazia, não erro.
+  def tiny_listing_error(retorno)
+    return 'O Tiny não respondeu.' if retorno.blank?
+    return if retorno['status'] == 'OK' || retorno['codigo_erro'].to_s == '20'
+
+    Array(retorno['erros']).map { |e| e.is_a?(Hash) ? e['erro'] : e }.compact.join(', ').presence || "status #{retorno['status']}"
+  end
 end

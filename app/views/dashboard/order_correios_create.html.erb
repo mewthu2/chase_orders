@@ -64,6 +64,18 @@
     </div>
   </div>
 
+  <% if @tiny_error %>
+    <div class="alert alert-danger border-0 mb-4" role="alert">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-plug fa-2x me-3"></i>
+        <div>
+          <h5 class="mb-1">Não foi possível buscar os pedidos no Tiny (B2C)</h5>
+          <p class="mb-0">O Tiny respondeu: <strong><%= @tiny_error %></strong>. A lista abaixo fica vazia até isso ser resolvido.</p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
   <div class="alert alert-primary border-0 mb-4">
     <div class="d-flex align-items-center">
       <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>

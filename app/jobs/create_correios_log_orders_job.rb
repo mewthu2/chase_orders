@@ -24,15 +24,10 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
   end
 
   def create_correios_log_orders
-    page = 1
-    orders = Tiny::Orders.get_orders_response('', 'preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '', '14/06/2025')
-
-    while orders[:numero_paginas].present? && page <= orders[:numero_paginas]
-      orders[:pedidos].each do |order|
-        process_order(order)
-      end
-
-      page += 1
+    # Todas as páginas da fila (o Tiny devolve 100 pedidos por página).
+    orders = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), '14/06/2025')
+    Array(orders&.dig(:pedidos)).each do |order|
+      process_order(order)
     end
   end
 

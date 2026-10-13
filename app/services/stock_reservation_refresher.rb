@@ -27,6 +27,7 @@ class StockReservationRefresher
     @refresh.update!(status: 'running', message: nil)
     queue = pending_orders(fetch_queue)
     StockReservation.where(account: @account).where.not(tiny_order_id: queue.keys).delete_all
+    update_ecommerce_numbers(queue)
     rate_limited = store_new_orders(queue)
     @refresh.update!(status: rate_limited ? 'partial' : 'success', last_refreshed_at: Time.current,
                      message: rate_limited ? RATE_LIMIT_MESSAGE : nil)
@@ -85,6 +86,18 @@ class StockReservationRefresher
     false
   end
 
+  # O número da loja vem no resumo da fila: atualiza também os pedidos já conhecidos, sem chamada extra.
+  def update_ecommerce_numbers(queue)
+    queue.each do |tiny_order_id, summary|
+      number = summary[:numero_ecommerce].to_s.presence
+      next unless number
+
+      StockReservation.where(account: @account, tiny_order_id:)
+                      .where('ecommerce_number IS NULL OR ecommerce_number <> ?', number)
+                      .update_all(ecommerce_number: number)
+    end
+  end
+
   def store_order(summary, pedido)
     quantities = Array(pedido[:itens]).each_with_object(Hash.new(0.to_d)) do |entry, acc|
       sku = entry.dig(:item, :codigo).to_s.strip.upcase
@@ -96,6 +109,8 @@ class StockReservationRefresher
     StockReservation.insert_all(quantities.map do |sku, quantity|
       { account: StockReservation.accounts[@account], tiny_order_id: summary[:id].to_s,
         tiny_order_number: summary[:numero].to_s, customer_name: summary[:nome].to_s.first(255),
+        ecommerce_number: (summary[:numero_ecommerce].presence || pedido[:numero_ecommerce]).to_s.presence,
+        invoice_id: pedido[:id_nota_fiscal].to_s.presence&.then { |id| id == '0' ? nil : id },
         order_date: parse_date(summary[:data_pedido]), sku:, quantity:, created_at: now, updated_at: now }
     end)
   end

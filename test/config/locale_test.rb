@@ -65,13 +65,13 @@ class LocaleTest < ActionDispatch::IntegrationTest
     get b2b_orders_path
     follow_redirect!
 
-    assert_select '.flash-messages-container .alert', text: /Para continuar, faça login/
+    assert_select '.login-card .login-message-alert', text: /Para continuar, faça login/
   end
 
   test 'the password reset pages are in Portuguese' do
     get new_user_password_path
 
-    assert_select 'h2', text: /Esqueceu sua senha\?/
+    assert_select 'h1', text: /Esqueceu sua senha\?/
     assert_no_match(/Forgot your password/, response.body)
   end
 
