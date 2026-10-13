@@ -1,89 +1,41 @@
 <% content_for :title, 'Entrar' %>
 
-<div class="login-container">
-  <section class="login-card" aria-labelledby="login-title">
-    <div class="logo-container">
-      <%= image_tag 'admin/chase-logo', class: 'logo-image', alt: 'Chase Brasil' %>
-    </div>
-
-    <h1 id="login-title" class="login-title">Entre no painel</h1>
-    <p class="login-subtitle">Use seu e-mail e senha para continuar.</p>
-
-    <% [:alert, :notice].each do |type| %>
-      <% if (message = flash.delete(type)).present? %>
-        <div class="login-message login-message-<%= type %>" role="<%= type == :alert ? 'alert' : 'status' %>">
-          <%= message %>
+<%= render layout: 'devise/shared/auth_card', locals: { title: 'Entre no painel', subtitle: 'Use seu e-mail e senha para continuar.' } do %>
+  <div class="login-form">
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
+      <div class="form-group">
+        <%= f.label :email, 'E-mail', class: 'form-label' %>
+        <div class="input-group">
+          <div class="input-group-text" aria-hidden="true"><i class="fas fa-envelope"></i></div>
+          <%= f.email_field :email, autofocus: true, autocomplete: 'username', inputmode: 'email', autocapitalize: 'none', spellcheck: false, required: true, class: 'form-control', placeholder: 'voce@exemplo.com' %>
         </div>
-      <% end %>
+      </div>
+
+      <div class="form-group">
+        <%= f.label :password, 'Senha', class: 'form-label' %>
+        <div class="input-group">
+          <div class="input-group-text" aria-hidden="true"><i class="fas fa-lock"></i></div>
+          <%= f.password_field :password, autocomplete: 'current-password', required: true, class: 'form-control', placeholder: 'Digite sua senha' %>
+          <button type="button" class="password-toggle" data-password-toggle aria-controls="<%= f.field_id(:password) %>" aria-label="Mostrar senha" aria-pressed="false" hidden>Mostrar</button>
+        </div>
+        <p class="login-hint" data-caps-lock role="status" hidden>Caps Lock está ativado.</p>
+      </div>
+
+      <div class="login-options">
+        <% if devise_mapping.rememberable? %>
+          <div class="form-check">
+            <%= f.check_box :remember_me, class: 'form-check-input' %>
+            <%= f.label :remember_me, 'Lembrar de mim', class: 'form-check-label' %>
+          </div>
+        <% end %>
+        <% if devise_mapping.recoverable? %>
+          <%= link_to 'Esqueci minha senha', new_password_path(resource_name), class: 'login-recovery' %>
+        <% end %>
+      </div>
+
+      <div class="form-actions">
+        <%= f.submit 'Entrar', class: 'btn btn-login', data: { disable_with: 'Entrando…', turbo_submits_with: 'Entrando…' } %>
+      </div>
     <% end %>
-
-    <div class="login-form">
-      <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
-        <div class="form-group">
-          <%= f.label :email, 'E-mail', class: 'form-label' %>
-          <div class="input-group">
-            <div class="input-group-text" aria-hidden="true"><i class="fas fa-envelope"></i></div>
-            <%= f.email_field :email, autofocus: true, autocomplete: 'username', inputmode: 'email', autocapitalize: 'none', spellcheck: false, required: true, class: 'form-control', placeholder: 'voce@exemplo.com' %>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <%= f.label :password, 'Senha', class: 'form-label' %>
-          <div class="input-group">
-            <div class="input-group-text" aria-hidden="true"><i class="fas fa-lock"></i></div>
-            <%= f.password_field :password, autocomplete: 'current-password', required: true, class: 'form-control', placeholder: 'Digite sua senha' %>
-            <button type="button" class="password-toggle" data-password-toggle aria-controls="<%= f.field_id(:password) %>" aria-pressed="false" hidden>Mostrar senha</button>
-          </div>
-          <p class="login-hint" data-caps-lock role="status" hidden>Caps Lock está ativado.</p>
-        </div>
-
-        <div class="login-options">
-          <% if devise_mapping.rememberable? %>
-            <div class="form-check">
-              <%= f.check_box :remember_me, class: 'form-check-input' %>
-              <%= f.label :remember_me, 'Lembrar de mim', class: 'form-check-label' %>
-            </div>
-          <% end %>
-          <% if devise_mapping.recoverable? %>
-            <%= link_to 'Esqueci minha senha', new_password_path(resource_name), class: 'login-recovery' %>
-          <% end %>
-        </div>
-
-        <div class="form-actions">
-          <%= f.submit 'Entrar', class: 'btn btn-login', data: { disable_with: 'Entrando…', turbo_submits_with: 'Entrando…' } %>
-        </div>
-      <% end %>
-    </div>
-
-    <footer class="login-footer">
-      <p>© <%= Date.current.year %> Chase Brasil</p>
-    </footer>
-  </section>
-</div>
-
-<% content_for :scripts do %>
-  <script>
-    (() => {
-      const toggle = document.querySelector('[data-password-toggle]');
-      if (!toggle) return;
-      const password = document.getElementById(toggle.getAttribute('aria-controls'));
-      const capsLock = document.querySelector('[data-caps-lock]');
-      if (!password) return;
-
-      toggle.hidden = false;
-      toggle.addEventListener('click', () => {
-        const visible = password.type === 'password';
-        password.type = visible ? 'text' : 'password';
-        toggle.textContent = visible ? 'Ocultar senha' : 'Mostrar senha';
-        toggle.setAttribute('aria-pressed', String(visible));
-      });
-
-      const updateCapsLock = (event) => {
-        capsLock.hidden = !event.getModifierState('CapsLock');
-      };
-      password.addEventListener('keydown', updateCapsLock);
-      password.addEventListener('keyup', updateCapsLock);
-      password.addEventListener('blur', () => { capsLock.hidden = true; });
-    })();
-  </script>
+  </div>
 <% end %>
