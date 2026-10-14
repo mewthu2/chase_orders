@@ -237,6 +237,8 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       params[:pedido_id]        = selected_order[:pedido][:id]
       params[:forma_envio]      = forma_envio_code
       params[:cnpj_transportadora] = cnpj_transportadora if via_transportadora
+      # O 74926 não aceita o CNPJ dos Correios como transportadora: na mão própria vai o da filial B2C da Chase.
+      params[:cnpj_transportadora] = HAND_DELIVERY_CNPJ if hand_delivery
       params[:mao_propria]      = true if hand_delivery
 
       # Form items array
@@ -264,6 +266,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
   # Mão própria é serviço adicional (Correios::Orders::MAO_PROPRIA): o serviço de postagem é o 74926,
   # o mesmo usado para transportadora.
   HAND_DELIVERY_SERVICE = '74926'.freeze
+  HAND_DELIVERY_CNPJ = B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj].gsub(/\D/, '').freeze
 
   def hand_delivery?(pedido)
     tags = [B2bTinyService::HAND_DELIVERY_TAG, B2bTinyService::B2C_TRANSFER_TAG].map(&:downcase)

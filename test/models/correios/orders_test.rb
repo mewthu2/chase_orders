@@ -63,10 +63,11 @@ class Correios::OrdersTest < ActiveSupport::TestCase
   test 'hand delivery goes as an additional service on top of the 74926 service' do
     ENV['CORREIOS_CARTAO_POSTAGEM_2'] = 'card2'
     ENV['TOKEN_LOG_PRODUCTION2'] = 'token2'
-    body = body_sent_for(build_params('1').merge(mao_propria: true, forma_envio: '74926'))
+    body = body_sent_for(build_params('1').merge(mao_propria: true, forma_envio: '74926', cnpj_transportadora: '25405327000336'))
 
     assert_equal '74926', body['codigoservico']
     assert_equal %w[002], body['servicosAdicionais']
+    assert_equal '25405327000336', body['cnpjTransportadora']
     assert_equal '', body['valordeclarado']
     assert_match(/ 08:00:00\z/, body['dataSolicitacao'])
   end

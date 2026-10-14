@@ -37,7 +37,7 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
 
     assert_equal '74926', params[:forma_envio]
     assert params[:mao_propria]
-    assert_equal '', params[:cnpj_transportadora]
+    assert_equal '25405327000336', params[:cnpj_transportadora]
     assert_equal [{ codigo: 'LEG-1659-M', quantidade: '14' }], params[:itens]
     assert_equal 'TRANSFERENCIA B2B PARA B2C', @recipient_name
     assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', params[:nome]
@@ -50,7 +50,7 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
 
     assert_equal '74926', params[:forma_envio]
     assert params[:mao_propria]
-    assert_equal '', params[:cnpj_transportadora]
+    assert_equal '25405327000336', params[:cnpj_transportadora]
   end
 
   test 'other orders keep using the forma de frete' do
