@@ -360,12 +360,12 @@ class DashboardController < ApplicationController
 
     @last_errors = {}
     relevant_attempts
-      .select { |a| %w[fail error].include?(a.status) && (a.message.present? || a.error.present?) }
+      .select { |a| (a.status.nil? || %w[fail error].include?(a.status)) && (a.message.present? || a.error.present?) }
       .group_by(&:tiny_order_id).each do |order_id, attempts|
         last = attempts.max_by(&:updated_at)
         @last_errors[order_id.to_s] = {
           message: last.message.presence || last.error,
-          status: last.status,
+          status: last.status || 'error',
           updated_at: last.updated_at
         }
       end
@@ -495,12 +495,12 @@ class DashboardController < ApplicationController
 
     @last_errors = {}
     relevant_attempts
-      .select { |a| %w[fail error].include?(a.status) && (a.message.present? || a.error.present?) }
+      .select { |a| (a.status.nil? || %w[fail error].include?(a.status)) && (a.message.present? || a.error.present?) }
       .group_by(&:tiny_order_id).each do |order_id, attempts|
         last = attempts.max_by(&:updated_at)
         @last_errors[order_id.to_s] = {
           message: last.message.presence || last.error,
-          status: last.status,
+          status: last.status || 'error',
           updated_at: last.updated_at
         }
       end

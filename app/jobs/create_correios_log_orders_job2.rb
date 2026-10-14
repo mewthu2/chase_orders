@@ -283,6 +283,6 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
 
     return unless missing_params.any?
     error_message = "#{missing_params.join(', ')} não presente"
-    attempt.update(error: error_message)
+    attempt.update(error: error_message, status: :error)
   end
 end
