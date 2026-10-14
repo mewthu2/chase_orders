@@ -32,10 +32,10 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     sent
   end
 
-  test 'a hand delivery (B2C transfer) order goes by SEDEX with the hand delivery additional service and no forma de frete' do
+  test 'a hand delivery (B2C transfer) order goes by the 74926 service with the hand delivery additional service and no forma de frete' do
     params = run_job(tiny_pedido(obs: '(Transferencia b2c) | MAO PROPRIA | Transferência B2C #9', obs_interna: '(Transferencia b2c) MAO PROPRIA'))
 
-    assert_equal '39888', params[:forma_envio]
+    assert_equal '74926', params[:forma_envio]
     assert params[:mao_propria]
     assert_equal '', params[:cnpj_transportadora]
     assert_equal [{ codigo: 'LEG-1659-M', quantidade: '14' }], params[:itens]
@@ -48,7 +48,7 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     params = run_job(tiny_pedido(obs: '(Transferencia b2c) | Transferência B2C #9', obs_interna: '(Transferencia b2c)',
                                  forma_frete: 'Mix Cargo', nome_transportador: 'Mix Cargo'))
 
-    assert_equal '39888', params[:forma_envio]
+    assert_equal '74926', params[:forma_envio]
     assert params[:mao_propria]
     assert_equal '', params[:cnpj_transportadora]
   end

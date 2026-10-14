@@ -173,8 +173,8 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       uf = correction.uf.presence || uf
     end
 
-    # Transferência B2C (mão própria, identificada nas observações): vai por SEDEX com o adicional de
-    # mão própria, sem forma de frete.
+    # Transferência B2C (mão própria, identificada nas observações): vai pelo serviço 74926 (o mesmo da
+    # transportadora) com o adicional de mão própria, sem forma de frete.
     hand_delivery = hand_delivery?(selected_order[:pedido])
 
     # assert sending way
@@ -261,8 +261,9 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     attempt
   end
 
-  # Mão própria é serviço adicional (Correios::Orders::MAO_PROPRIA): o serviço de postagem é o SEDEX.
-  HAND_DELIVERY_SERVICE = '39888'.freeze
+  # Mão própria é serviço adicional (Correios::Orders::MAO_PROPRIA): o serviço de postagem é o 74926,
+  # o mesmo usado para transportadora.
+  HAND_DELIVERY_SERVICE = '74926'.freeze
 
   def hand_delivery?(pedido)
     tags = [B2bTinyService::HAND_DELIVERY_TAG, B2bTinyService::B2C_TRANSFER_TAG].map(&:downcase)
