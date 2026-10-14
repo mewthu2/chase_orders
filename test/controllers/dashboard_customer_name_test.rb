@@ -31,6 +31,7 @@ class DashboardCustomerNameTest < ActionDispatch::IntegrationTest
       assert_select 'th', text: /Cliente/
       assert_select '.customer-name-cell', text: /Maria Conceição/
       assert_match(/4105/, response.body, 'o ID do Correios continua aparecendo')
+      assert_select '.b2b-order-type-badge', text: /B2B Comum/, count: screen.to_s.end_with?('_b2b') ? 1 : 0
     end
   end
 end

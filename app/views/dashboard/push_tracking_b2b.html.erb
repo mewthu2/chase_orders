@@ -198,6 +198,7 @@
                 <td class="text-center">
                   <div class="d-flex flex-column align-items-center">
                     <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
+                    <%= b2b_order_type_badge(@order_types[att.tiny_order_id.to_s]) %>
                     <button class="btn btn-sm btn-primary mt-1"
                             onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= att.tiny_order_id %>', '_blank');"
                             title="Ver no Tiny">

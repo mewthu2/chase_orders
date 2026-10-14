@@ -120,6 +120,7 @@
                     <div class="d-flex flex-column align-items-center">
                       <span class="fw-bold text-white">#<%= order['numero'] %></span>
                       <small class="text-muted">ID: <%= order['id'] %></small>
+                      <%= b2b_order_type_badge(@order_types[order['id'].to_s]) %>
                     </div>
                   </td>
                   <td class="text-center">

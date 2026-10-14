@@ -70,6 +70,7 @@ class DashboardController < ApplicationController
                         .group(:order_correios_id)
 
     @push_tracking = Attempt.where(id: latest_ids.map(&:id))
+    @order_types = B2bOrderType.for_orders(@push_tracking.map(&:tiny_order_id))
     @job_running = b2b_job_running?(:get_tracking_tiny2)
   end
 
@@ -171,6 +172,7 @@ class DashboardController < ApplicationController
                             [last.tiny_order_id.to_s, { message: last.message, status: last.status, updated_at: last.updated_at }]
                           end
 
+    @order_types = B2bOrderType.for_orders(pending_order_ids)
     @job_running = b2b_job_running?(:send_xml_tiny2)
   end
 
@@ -239,6 +241,7 @@ class DashboardController < ApplicationController
 
     @job_running = b2b_job_running?(:emission_invoice_tiny2)
     preload_address_corrections(@invoice_emition)
+    @order_types = B2bOrderType.for_orders(@invoice_emition.map(&:tiny_order_id))
   end
 
   def run_invoice_emition_b2b
@@ -427,6 +430,7 @@ class DashboardController < ApplicationController
     }
 
     @orders = @orders.paginate(page: params[:page], per_page: 20)
+    load_b2b_order_types_from_tiny(@orders)
 
     @job_running = b2b_job_running?(:create_correios_order_tiny2)
   end
@@ -450,6 +454,7 @@ class DashboardController < ApplicationController
     end
 
     pending_order_ids = @pending_orders.map { |order_data| order_data['pedido']['id'].to_s }
+    load_b2b_order_types_from_tiny(@pending_orders)
 
     relevant_attempts = Attempt.where(
       kinds: :create_correios_order_tiny2,
@@ -758,7 +763,7 @@ class DashboardController < ApplicationController
     }
 
     respond_to do |format|
-      format.html
+      format.html { @order_types = B2bOrderType.for_orders(@missing_stock_items.map { |item| item[:tiny_order_id] }) }
 
       format.csv do
         send_data(
@@ -790,6 +795,7 @@ class DashboardController < ApplicationController
     }
 
     prepare_tracking_data_optimized_b2b(@filter_params)
+    @order_types = B2bOrderType.for_orders(@tracking_summary.keys)
   end
 
   def correios_pipeline
@@ -1343,6 +1349,13 @@ class DashboardController < ApplicationController
   end
 
   # Uma consulta só para as correções de endereço dos pedidos listados (evita uma por linha).
+  # Tipo de cada pedido B2B da listagem do Tiny (o nome do cliente decide se vale buscar o pedido completo).
+  def load_b2b_order_types_from_tiny(orders)
+    pedidos = orders.map { |order_data| order_data['pedido'] }
+    @order_types = B2bOrderType.for_orders(pedidos.map { |pedido| pedido['id'] },
+                                           names: pedidos.to_h { |pedido| [pedido['id'].to_s, pedido['nome']] })
+  end
+
   def preload_address_corrections(attempts)
     ids = attempts.map { |attempt| attempt.tiny_order_id.to_s }.reject(&:blank?).uniq
     @address_corrections = AddressCorrection.where(tiny_order_id: ids).index_by(&:tiny_order_id)

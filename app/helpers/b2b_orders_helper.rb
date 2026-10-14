@@ -34,6 +34,19 @@ module B2bOrdersHelper
     end
   end
 
+  B2B_ORDER_TYPE_ICONS = { store_supply: 'dolly', b2c_transfer: 'random', sale: 'handshake' }.freeze
+
+  # Selo do tipo do pedido (B2bOrderType) nas telas do Correios B2B.
+  def b2b_order_type_badge(type)
+    label = B2bOrderType.label(type)
+    return if label.nil?
+
+    content_tag(:span, class: "b2b-order-type-badge type-#{type}", title: "Tipo do pedido: #{label}") do
+      concat content_tag(:i, '', class: "fas fa-#{B2B_ORDER_TYPE_ICONS[type.to_sym]}")
+      concat label
+    end
+  end
+
   def b2b_order_destination(order)
     if order.sale? then order.client&.display_name
     elsif order.stock_transfer? then order.transfer_location&.name

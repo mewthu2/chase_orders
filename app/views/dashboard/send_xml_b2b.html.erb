@@ -218,6 +218,7 @@
                 <td class="text-center">
                   <div class="d-flex flex-column align-items-center">
                     <span class="fw-bold text-white"><%= att.tiny_order_id %></span>
+                    <%= b2b_order_type_badge(@order_types[att.tiny_order_id.to_s]) %>
                   </div>
                 </td>
                 <%= render 'dashboard/customer_name_cell', att: att %>

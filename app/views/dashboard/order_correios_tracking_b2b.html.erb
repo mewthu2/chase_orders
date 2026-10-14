@@ -233,7 +233,12 @@
                     <i class="fas fa-paperclip"></i>
                   <% end %>
                 </td>
-                <td class="text-center fw-bold text-white"><%= order_id %></td>
+                <td class="text-center fw-bold text-white">
+                  <div class="d-flex flex-column align-items-center">
+                    <%= order_id %>
+                    <%= b2b_order_type_badge(@order_types[order_id.to_s]) %>
+                  </div>
+                </td>
                 <td class="text-center"><%= status[:client_name].presence || '-' %></td>
                 <td class="text-center">
                   <% if status[:is_transportadora] %>

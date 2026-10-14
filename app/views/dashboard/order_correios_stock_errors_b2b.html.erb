@@ -201,6 +201,7 @@
                     <small class="text-muted">
                       ID: <%= item[:tiny_order_id].presence || '-' %>
                     </small>
+                    <%= b2b_order_type_badge(@order_types[item[:tiny_order_id].to_s]) %>
                   </div>
                 </td>
 

@@ -583,3 +583,45 @@
 .qty-unit { color: $text-muted; font-size: 0.7rem; }
 
 .order-item-total { color: $text-primary; font-weight: 700; font-size: 0.88rem; flex-shrink: 0; min-width: 90px; text-align: right; }
+
+// Selo do tipo de pedido B2B (abastecimento loja / transferência B2C / B2B comum) nas telas do Correios B2B.
+.b2b-order-type-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  margin-top: 0.3rem; padding: 0.18rem 0.6rem;
+  border-radius: 999px; border: 1px solid transparent;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap;
+  background-size: 200% 100%;
+  animation: b2b-order-type-shine 4s ease-in-out infinite;
+  transition: transform 0.15s ease;
+
+  &:hover { transform: translateY(-1px) scale(1.04); }
+  i { font-size: 0.72rem; }
+
+  &.type-store_supply {
+    color: #ffd8a8; border-color: rgba(255, 159, 67, 0.45);
+    background-image: linear-gradient(110deg, rgba(255, 159, 67, 0.16) 40%, rgba(255, 200, 120, 0.38) 50%, rgba(255, 159, 67, 0.16) 60%);
+  }
+  &.type-b2c_transfer {
+    color: #d8c4ff; border-color: rgba(163, 113, 247, 0.5);
+    background-image: linear-gradient(110deg, rgba(163, 113, 247, 0.16) 40%, rgba(200, 170, 255, 0.4) 50%, rgba(163, 113, 247, 0.16) 60%);
+    i { animation: b2b-order-type-swap 2.4s ease-in-out infinite; }
+  }
+  &.type-sale {
+    color: #a5f3c4; border-color: rgba(63, 185, 80, 0.45);
+    background-image: linear-gradient(110deg, rgba(63, 185, 80, 0.14) 40%, rgba(120, 230, 150, 0.32) 50%, rgba(63, 185, 80, 0.14) 60%);
+  }
+}
+
+@keyframes b2b-order-type-shine {
+  0%, 60% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes b2b-order-type-swap {
+  0%, 70%, 100% { transform: rotate(0); }
+  85% { transform: rotate(180deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .b2b-order-type-badge, .b2b-order-type-badge i { animation: none; }
+}
