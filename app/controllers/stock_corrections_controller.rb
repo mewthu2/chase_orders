@@ -143,7 +143,8 @@ class StockCorrectionsController < ApplicationController
 
     if item.new_record?
       product = Product.find(params[:product_id])
-      current_stock = stock_for_location(product, @stock_correction.location)
+      current_stock = fetch_shopify_stock(product, @stock_correction.location) ||
+                      stock_for_location(product, @stock_correction.location)
       item.current_stock = current_stock
       item.stock_before = current_stock
     end
@@ -323,17 +324,22 @@ class StockCorrectionsController < ApplicationController
     product.respond_to?(field) ? product.public_send(field).to_i : 0
   end
 
+  def shopify_linked?(product)
+    product.shopify_inventory_item_id.present? || product.shopify_variant_id.present?
+  end
+
+  # Consulta a Shopify direto pelo inventory_item_id (ou variant_id); nil quando a consulta falha,
+  # para não confundir erro de integração com estoque zero.
   def fetch_shopify_stock(product, location)
-    return nil unless product.shopify_variant_id.present?
+    return nil unless shopify_linked?(product)
 
-    stock_result = StockService.check_stock(product.shopify_variant_id, location)
+    result = StockService.check_shopify_stock(product, location)
+    return result[:available_quantity].to_i if result[:success]
+    return 0 if result[:message] == 'Sem estoque nessa location'
 
-    if stock_result.is_a?(Hash)
-      stock_result[:available_quantity] || stock_result['available_quantity'] || 0
-    else
-      stock_result.to_i
-    end
-  rescue StandardError
+    nil
+  rescue StandardError => e
+    Rails.logger.error "fetch_shopify_stock #{product.sku}: #{e.message}"
     nil
   end
 
@@ -343,30 +349,18 @@ class StockCorrectionsController < ApplicationController
     items.each do |item|
       next unless item&.product
 
-      if item.product.shopify_variant_id.present?
-        real_stock = fetch_shopify_stock(item.product, location)
+      fallback_stock = stock_for_location(item.product, location)
+      real_stock = fetch_shopify_stock(item.product, location)
+      source = if real_stock
+                 'shopify_real_time'
+               elsif shopify_linked?(item.product)
+                 'database_fallback'
+               else
+                 'no_shopify_id'
+               end
 
-        fallback_stock = stock_for_location(item.product, location)
-
-        item.define_singleton_method(:real_stock) do
-          real_stock || fallback_stock
-        end
-
-        item.define_singleton_method(:stock_source) do
-          if real_stock
-            'shopify_real_time'
-          elsif item.product.shopify_variant_id.present?
-            'database_fallback'
-          else
-            'no_shopify_id'
-          end
-        end
-      else
-        current_stock = stock_for_location(item.product, location)
-
-        item.define_singleton_method(:real_stock) { current_stock }
-        item.define_singleton_method(:stock_source) { 'no_shopify_id' }
-      end
+      item.define_singleton_method(:real_stock) { real_stock || fallback_stock }
+      item.define_singleton_method(:stock_source) { source }
     end
   end
 
