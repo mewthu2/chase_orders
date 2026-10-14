@@ -32,25 +32,47 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     sent
   end
 
-  test 'a hand delivery (B2C transfer) order goes by the 74926 service with the hand delivery additional service and no forma de frete' do
-    params = run_job(tiny_pedido(obs: '(Transferencia b2c) | MAO PROPRIA | Transferência B2C #9', obs_interna: '(Transferencia b2c) MAO PROPRIA'))
+  test 'a B2C transfer goes as transportadora (74926) with Chase as the carrier and no forma de frete' do
+    params = run_job(tiny_pedido(obs: '(Transferencia b2c) | Transferência B2C #9', obs_interna: '(Transferencia b2c)'))
 
     assert_equal '74926', params[:forma_envio]
-    assert params[:mao_propria]
     assert_equal '25405327000336', params[:cnpj_transportadora]
+    assert_nil params[:mao_propria]
     assert_equal [{ codigo: 'LEG-1659-M', quantidade: '14' }], params[:itens]
     assert_equal 'TRANSFERENCIA B2B PARA B2C', @recipient_name
     assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA', params[:nome]
-    refute Attempt.last.is_transportadora
+    assert Attempt.last.is_transportadora
   end
 
-  test 'B2C transfers sent before the hand delivery tag are recognised by the transfer tag' do
-    params = run_job(tiny_pedido(obs: '(Transferencia b2c) | Transferência B2C #9', obs_interna: '(Transferencia b2c)',
+  test 'B2C transfers created with the old hand delivery tag or another carrier still go with Chase as the carrier' do
+    params = run_job(tiny_pedido(obs: '(Transferencia b2c) | MAO PROPRIA | Transferência B2C #9', obs_interna: '(Transferencia b2c) MAO PROPRIA',
                                  forma_frete: 'Mix Cargo', nome_transportador: 'Mix Cargo'))
 
     assert_equal '74926', params[:forma_envio]
-    assert params[:mao_propria]
     assert_equal '25405327000336', params[:cnpj_transportadora]
+    assert_nil params[:mao_propria]
+  end
+
+  test 'a store order by Mix Cargo goes as transportadora with the carrier CNPJ from the invoice' do
+    invoice = { transportador: { cpf_cnpj: '11.222.333/0001-44' } }.with_indifferent_access
+    params = Tiny::Invoices.stub(:obtain_invoice, invoice) do
+      run_job(tiny_pedido(obs: 'Abastecimento loja', forma_frete: 'Mix Cargo', nome_transportador: 'Mix Cargo'))
+    end
+
+    assert_equal '74926', params[:forma_envio]
+    assert_equal '11222333000144', params[:cnpj_transportadora]
+    assert_nil params[:mao_propria]
+    assert Attempt.last.is_transportadora
+  end
+
+  test 'a store to store order with the hand delivery tag goes by SEDEX with the hand delivery additional service' do
+    params = run_job(tiny_pedido(obs: 'Abastecimento loja | MAO PROPRIA'))
+
+    assert_equal '39888', params[:forma_envio]
+    assert params[:mao_propria]
+    assert_empty params[:cnpj_transportadora]
+    assert_nil @recipient_name
+    refute Attempt.last.is_transportadora
   end
 
   test 'other orders keep using the forma de frete' do

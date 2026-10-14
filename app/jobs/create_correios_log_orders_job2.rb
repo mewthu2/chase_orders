@@ -173,20 +173,24 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       uf = correction.uf.presence || uf
     end
 
-    # Transferência B2C (mão própria, identificada nas observações): vai pelo serviço 74926 (o mesmo da
-    # transportadora) com o adicional de mão própria, sem forma de frete.
-    hand_delivery = hand_delivery?(selected_order[:pedido])
+    # Transferência B2B -> B2C acontece dentro do galpão do Log: vai na modalidade transportadora (74926)
+    # com o CNPJ da Chase como transportadora. Mão própria (loja para loja, identificado nas observações)
+    # vai por SEDEX com o adicional de mão própria. Nenhum dos dois depende da forma de frete.
+    b2c_transfer = b2c_transfer?(selected_order[:pedido])
+    hand_delivery = !b2c_transfer && hand_delivery?(selected_order[:pedido])
 
     # assert sending way
-    unless hand_delivery || selected_order.dig(:pedido, :forma_frete).present?
+    unless b2c_transfer || hand_delivery || selected_order.dig(:pedido, :forma_frete).present?
       attempt.update(error: 'Forma de Envio não localizada', status: :error)
       return attempt
     end
 
     transportadora_nome = selected_order[:pedido][:nome_transportador]
-    via_transportadora = !hand_delivery && transportadora_nome.present? && !transportadora_nome.strip.downcase.include?('correios')
+    via_transportadora = !b2c_transfer && !hand_delivery && transportadora_nome.present? && !transportadora_nome.strip.downcase.include?('correios')
 
-    if hand_delivery
+    if b2c_transfer
+      forma_envio_code = B2C_TRANSFER_SERVICE
+    elsif hand_delivery
       forma_envio_code = HAND_DELIVERY_SERVICE
     elsif via_transportadora
       forma_envio_code = '74926'
@@ -237,8 +241,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
       params[:pedido_id]        = selected_order[:pedido][:id]
       params[:forma_envio]      = forma_envio_code
       params[:cnpj_transportadora] = cnpj_transportadora if via_transportadora
-      # O 74926 não aceita o CNPJ dos Correios como transportadora: na mão própria vai o da filial B2C da Chase.
-      params[:cnpj_transportadora] = HAND_DELIVERY_CNPJ if hand_delivery
+      params[:cnpj_transportadora] = B2C_TRANSFER_CARRIER_CNPJ if b2c_transfer
       params[:mao_propria]      = true if hand_delivery
 
       # Form items array
@@ -248,7 +251,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
         params[:itens] << { codigo: oi[:item][:codigo].upcase, quantidade: oi[:item][:quantidade].sub(/\.?0*\z/, '') }
       end
 
-      attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i, is_transportadora: via_transportadora, params:)
+      attempt.update(id_nota_fiscal: selected_order[:pedido][:id_nota_fiscal].to_i, is_transportadora: via_transportadora || b2c_transfer, params:)
 
       verify_params(attempt, params)
     rescue StandardError => e
@@ -257,21 +260,24 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
 
     # Create Order in Correios Log +
     # Transferência B2B -> B2C: só o destinatário enviado aos Correios vai identificado como transferência.
-    recipient_name = B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME if b2c_transfer?(selected_order[:pedido])
+    recipient_name = B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME if b2c_transfer
     Correios::Orders.create_orders(params, attempt, recipient_name:) unless attempt.error.present?
 
     attempt
   end
 
-  # Mão própria é serviço adicional (Correios::Orders::MAO_PROPRIA): o serviço de postagem é o 74926,
-  # o mesmo usado para transportadora.
-  HAND_DELIVERY_SERVICE = '74926'.freeze
-  HAND_DELIVERY_CNPJ = B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj].gsub(/\D/, '').freeze
+  # Mão própria é serviço adicional (Correios::Orders::MAO_PROPRIA) em cima do SEDEX normal
+  # (o mesmo de 'SEDEX CORREIOS LOG+').
+  HAND_DELIVERY_SERVICE = '39888'.freeze
+  # Transferência B2B -> B2C: modalidade transportadora (74926, sem serviço adicional) com a própria Chase
+  # (filial B2C) como transportadora. Se os Correios recusarem esse CNPJ, trocar pelo da Mix Cargo.
+  B2C_TRANSFER_SERVICE = '74926'.freeze
+  B2C_TRANSFER_CARRIER_CNPJ = B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj].gsub(/\D/, '').freeze
 
+  # Mão própria: marcada nas observações com HAND_DELIVERY_TAG (loja para loja).
   def hand_delivery?(pedido)
-    tags = [B2bTinyService::HAND_DELIVERY_TAG, B2bTinyService::B2C_TRANSFER_TAG].map(&:downcase)
     notes = [pedido[:obs], pedido[:obs_interna]].compact.join(' ').downcase
-    tags.any? { |tag| notes.include?(tag) }
+    notes.include?(B2bTinyService::HAND_DELIVERY_TAG.downcase)
   end
 
   # Transferência B2B -> B2C: marcada nas observações com B2C_TRANSFER_TAG.

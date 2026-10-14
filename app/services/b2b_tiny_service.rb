@@ -27,8 +27,9 @@ class B2bTinyService
   # e o marcador "(Transferencia b2c)" (id lido de pedido.obter.php). Nasce em preparando_envio
   # para cair na fila de criação dos Correios B2B (CreateCorreiosLogOrdersJob2).
   B2C_TRANSFER_TAG = '(Transferencia b2c)'.freeze
-  # A transferência B2C é entregue em mão própria: o identificador vai nas observações do pedido e a
-  # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usa forma_envio 002 quando o encontra.
+  # Mão própria fica só para o abastecimento de lojas: o identificador nas observações do pedido faz a
+  # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usar o adicional de mão própria. A transferência
+  # B2C não leva esse identificador (vai como transportadora, dentro do galpão do Log).
   HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
   # Nome que vai no destinatário da entrega (endereco_entrega.nome_destinatario) da transferência.
   B2C_TRANSFER_RECIPIENT_NAME = 'TRANSFERENCIA B2B PARA B2C'.freeze
@@ -284,8 +285,8 @@ class B2bTinyService
       endereco_entrega: entrega,
       marcadores: [{ marcador: { id: B2C_TRANSFER_MARKER_ID, descricao: B2C_TRANSFER_TAG } }],
       frete_por_conta: 'R',
-      obs: [B2C_TRANSFER_TAG, HAND_DELIVERY_TAG, "Transferência B2C ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
-      obs_interna: "#{B2C_TRANSFER_TAG} #{HAND_DELIVERY_TAG}"
+      obs: [B2C_TRANSFER_TAG, "Transferência B2C ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
+      obs_interna: B2C_TRANSFER_TAG
     }
   end
 

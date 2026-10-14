@@ -38,7 +38,7 @@ module Correios::Orders
     correios_cnpj_transportadora = is_transportadora ? params[:cnpj_transportadora] : ENV.fetch('CORREIOS_CNPJ_TRANSPORTADORA')
     fone = params[:fone].present? ? params[:fone] : ''
 
-    # O serviço 74926 (transportadora e mão própria) exige data+hora e não aceita
+    # O serviço 74926 (transportadora) exige data+hora e não aceita
     # o adicional de Valor Declarado (064), diferente dos serviços diretos dos Correios
     servico_74926 = is_transportadora || params[:forma_envio] == '74926'
     data_solicitacao = servico_74926 ? "#{params[:data_pedido]} 08:00:00" : params[:data_pedido]

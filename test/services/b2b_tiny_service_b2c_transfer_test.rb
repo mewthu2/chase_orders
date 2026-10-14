@@ -57,12 +57,12 @@ class B2bTinyServiceB2cTransferTest < ActiveSupport::TestCase
     assert_equal 'TRANSFERENCIA B2B PARA B2C', pedido['endereco_entrega']['nome_destinatario']
     assert_equal '25.405.327/0003-36', pedido['endereco_entrega']['cpf_cnpj']
     assert_equal [{ 'marcador' => { 'id' => '182662', 'descricao' => '(Transferencia b2c)' } }], pedido['marcadores']
-    assert_equal '(Transferencia b2c) MAO PROPRIA', pedido['obs_interna']
+    assert_equal '(Transferencia b2c)', pedido['obs_interna']
     assert_includes pedido['obs'], '(Transferencia b2c)'
-    assert_includes pedido['obs'], 'MAO PROPRIA'
+    refute_includes pedido['obs'], 'MAO PROPRIA'
     assert_includes pedido['obs'], 'Reposição site'
 
-    # Mão própria: nada de forma de envio/transportadora, mesmo que o pedido antigo tenha guardado uma.
+    # Transferência: nada de forma de envio/transportadora, mesmo que o pedido antigo tenha guardado uma.
     assert_nil pedido['forma_envio']
     assert_nil pedido['nome_transportador']
     assert_nil pedido['forma_frete']
