@@ -14,6 +14,15 @@
           <% end %>
         </div>
 
+        <% if current_user&.can_access_screen?('cashback_unifications') %>
+          <div class="nav-item">
+            <%= link_to cashback_unifications_path, class: "nav-link #{'active' if controller_name == 'cashback_unifications'}" do %>
+              <i class="fas fa-ticket-alt"></i>
+              <span class="nav-text">Cupons de cashback</span>
+            <% end %>
+          </div>
+        <% end %>
+
         <div class="nav-item nav-group-collapsible">
           <div class="nav-group-header-collapsible" onclick="toggleChamados()">
             <div class="nav-group-title">

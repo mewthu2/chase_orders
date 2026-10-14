@@ -1,0 +1,73 @@
+<% title 'Conferência de cashback' %>
+<div class="orders-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><%= @unification.completed? ? 'Cashback unificado' : 'Conferência de cashback' %></h1>
+      <p class="page-subtitle">Operação #<%= @unification.id %> · <%= @unification.status_label %></p>
+    </div>
+    <%= link_to 'Histórico', cashback_unifications_path, class: 'btn btn-outline-secondary' %>
+  </div>
+  <% if @unification.needs_review? || @unification.processing? %>
+    <div class="alert alert-warning" role="alert">
+      <strong>Aguarde a conferência desta operação.</strong>
+      Não utilize os cupons nem inicie outra unificação com eles. Se o processamento não terminar, informe o número desta operação ao administrador.
+    </div>
+  <% elsif @unification.rejected? %>
+    <div class="alert alert-danger" role="alert"><%= @unification.error_message %> Nenhum cupom foi alterado por esta operação.</div>
+  <% elsif @unification.completed? %>
+    <div class="alert alert-success" role="status">Os dois cupons MTZ foram desativados. Use o novo código abaixo.</div>
+  <% end %>
+  <div class="table-card mb-4">
+    <div class="table-card-header"><h2 class="table-card-title">Cliente e cupons originais</h2></div>
+    <div class="p-3">
+      <p><strong><%= @unification.customer.full_name %></strong> · <%= @unification.customer.email %></p>
+      <% if @unification.ownership_confirmed? %><p class="text-muted-custom">Titularidade conferida por <%= @unification.user.name %>.</p><% end %>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead><tr><th>Cupom</th><th>Cashback</th><th>Compra mínima</th><th>Validade original (Brasília)</th></tr></thead>
+          <tbody>
+            <% @unification.source_snapshots.each do |source| %>
+              <tr>
+                <td><%= source['code'] %></td>
+                <td><%= number_to_currency(source.dig('data', 'customerGets', 'value', 'amount', 'amount'), unit: 'R$ ', separator: ',', delimiter: '.') %></td>
+                <td><%= number_to_currency(source.dig('data', 'minimumRequirement', 'greaterThanOrEqualToSubtotal', 'amount'), unit: 'R$ ', separator: ',', delimiter: '.') %></td>
+                <td><%= Time.iso8601(source.dig('data', 'endsAt')).in_time_zone('America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S') %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="table-card mb-4">
+    <div class="table-card-header"><h2 class="table-card-title">Novo cupom</h2></div>
+    <div class="p-3">
+      <% if @unification.completed? %>
+        <label for="unified-code" class="form-label">Código para a cliente</label>
+        <input id="unified-code" class="form-control font-monospace mb-3" readonly value="<%= @unification.code %>">
+      <% else %>
+        <p>O código começará com <strong>UNF</strong> e será exibido quando a unificação for concluída.</p>
+      <% end %>
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Cashback total</dt><dd class="col-sm-8"><%= number_to_currency(@unification.amount, unit: 'R$ ', separator: ',', delimiter: '.') %></dd>
+        <dt class="col-sm-4">Compra mínima total</dt><dd class="col-sm-8"><%= number_to_currency(@unification.minimum_purchase, unit: 'R$ ', separator: ',', delimiter: '.') %></dd>
+        <dt class="col-sm-4">Validade (Brasília)</dt><dd class="col-sm-8"><%= @unification.expires_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m/%Y %H:%M:%S') %></dd>
+        <dt class="col-sm-4">Utilização</dt><dd class="col-sm-8">Uma única compra, exclusiva da cliente selecionada.</dd>
+      </dl>
+    </div>
+  </div>
+  <% if @unification.draft? && @unification.user_id == current_user.id %>
+    <p>Ao confirmar, os dois MTZ serão desativados e substituídos pelo UNF. Confira os valores e a cliente. Esta conferência vale por 10 minutos.</p>
+    <%= button_to 'Confirmar unificação', confirm_cashback_unification_path(@unification), method: :post,
+          class: 'btn btn-primary', form: { data: { turbo: false } }, data: { disable_with: 'Unificando...' } %>
+  <% end %>
+  <% if @unification.draft? || @unification.rejected? || @unification.completed? %>
+    <%= link_to 'Nova consulta', new_cashback_unification_path, class: 'btn btn-outline-secondary mt-3' %>
+  <% end %>
+  <% if current_user.admin? && (@unification.needs_review? || @unification.processing?) %>
+    <div class="alert alert-secondary mt-4">
+      Conferência administrativa: etapa <code><%= @unification.step %></code>, código reservado <code><%= @unification.code %></code>.
+      Verifique na Shopify os dois MTZ e este UNF antes de qualquer correção. O código reservado não indica que o cupom foi criado.
+    </div>
+  <% end %>
+</div>

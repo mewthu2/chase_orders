@@ -1,6 +1,14 @@
 require 'test_helper'
 
 class ScreenTest < ActiveSupport::TestCase
+  # Screen is an in-memory registry; unrelated database fixtures are not needed.
+  self.fixture_table_names = []
+
+  test 'cashback unification has a configurable permission' do
+    assert_includes Screen::GROUPS['Outros'], :cashback_unifications
+    assert_equal 'Cupons de Cashback', Screen.label(:cashback_unifications)
+  end
+
   test 'keys returns all screen keys as strings' do
     assert_includes Screen.keys, 'users_management'
     assert_includes Screen.keys, 'marketing_tasks'

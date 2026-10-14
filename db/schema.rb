@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_13_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_14_220000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -242,6 +242,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_120000) do
     t.text "tiny_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "cashback_unification_sources", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "cashback_unification_id", null: false
+    t.string "shopify_node_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cashback_unification_id"], name: "idx_cashback_sources_unification"
+    t.index ["shopify_node_id"], name: "idx_cashback_sources_shopify_unique", unique: true
+  end
+
+  create_table "cashback_unifications", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "customer_id", null: false
+    t.string "customer_gid", null: false
+    t.string "code", null: false
+    t.string "shopify_node_id"
+    t.string "status", default: "draft", null: false
+    t.json "source_snapshots", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.decimal "minimum_purchase", precision: 12, scale: 2, null: false
+    t.datetime "expires_at", null: false
+    t.boolean "ownership_confirmed", default: false, null: false
+    t.string "step"
+    t.text "error_message"
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_cashback_unifications_on_code", unique: true
+    t.index ["customer_id"], name: "index_cashback_unifications_on_customer_id"
+    t.index ["user_id"], name: "index_cashback_unifications_on_user_id"
   end
 
   create_table "clients", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1092,6 +1123,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_13_120000) do
   add_foreign_key "b2b_orders", "users"
   add_foreign_key "campaign_users", "marketing_campaigns"
   add_foreign_key "campaign_users", "users"
+  add_foreign_key "cashback_unification_sources", "cashback_unifications"
+  add_foreign_key "cashback_unifications", "customers"
+  add_foreign_key "cashback_unifications", "users"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
   add_foreign_key "internal_transfer_approvers", "users"

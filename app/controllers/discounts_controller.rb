@@ -68,6 +68,10 @@ class DiscountsController < ApplicationController
     begin
       discount = Discount.find(discount_id)
 
+      if CashbackUnificationSource.exists?(shopify_node_id: discount.shopify_node_id)
+        raise StandardError, 'Este cupom participa de uma unificação e não pode ter o status alterado aqui.'
+      end
+
       old_status = discount.is_active ? 'active' : 'inactive'
       old_ends_at = discount.ends_at
 

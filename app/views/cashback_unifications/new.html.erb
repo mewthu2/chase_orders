@@ -1,0 +1,63 @@
+<% title 'Unificar cupons de cashback' %>
+<div class="orders-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Unificar cupons de cashback</h1>
+      <p class="page-subtitle">Some os cashbacks e os mínimos de compra, mantendo a validade que vencer primeiro.</p>
+    </div>
+    <%= link_to 'Histórico', cashback_unifications_path, class: 'btn btn-outline-secondary' %>
+  </div>
+
+  <div class="table-card mb-4">
+    <div class="table-card-header"><h2 class="table-card-title">1. Localize a cliente</h2></div>
+    <div class="p-3">
+      <%= form_with url: new_cashback_unification_path, method: :get, local: true do |form| %>
+        <%= form.label :search, 'Nome, e-mail ou telefone', class: 'form-label' %>
+        <div class="d-flex gap-2">
+          <%= form.search_field :search, value: @search, minlength: 3, maxlength: 100, required: true, class: 'form-control' %>
+          <%= form.submit 'Buscar cliente', class: 'btn btn-outline-primary' %>
+        </div>
+        <p class="text-muted-custom mt-2 mb-0">Use pelo menos 3 caracteres. Serão exibidos até 20 cadastros do Honey vinculados à Shopify.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @customers.any? %>
+    <%= form_with url: cashback_unifications_path, method: :post, local: true, data: { turbo: false } do |form| %>
+      <%= hidden_field_tag :search, @search %>
+      <div class="table-card mb-4">
+        <div class="table-card-header"><h2 class="table-card-title">2. Confira a cliente e informe os cupons</h2></div>
+        <div class="p-3">
+          <fieldset class="mb-4">
+            <legend class="fs-6">Cliente que receberá o novo cupom</legend>
+            <% @customers.each do |customer| %>
+              <div class="form-check mb-2">
+                <%= radio_button_tag :customer_id, customer.id, params[:customer_id].to_s == customer.id.to_s, required: true, class: 'form-check-input', id: "cashback_customer_#{customer.id}" %>
+                <%= label_tag "cashback_customer_#{customer.id}", [customer.full_name.presence || 'Sem nome', customer.email, customer.phone].compact_blank.join(' · '), class: 'form-check-label' %>
+              </div>
+            <% end %>
+          </fieldset>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <%= form.label :first_code, 'Primeiro cupom MTZ', class: 'form-label' %>
+              <%= form.text_field :first_code, value: params[:first_code], required: true, maxlength: 255, autocomplete: 'off', class: 'form-control', placeholder: 'MTZ...' %>
+            </div>
+            <div class="col-md-6">
+              <%= form.label :second_code, 'Segundo cupom MTZ', class: 'form-label' %>
+              <%= form.text_field :second_code, value: params[:second_code], required: true, maxlength: 255, autocomplete: 'off', class: 'form-control', placeholder: 'MTZ...' %>
+            </div>
+          </div>
+          <div class="form-check mb-3">
+            <%= check_box_tag :ownership_confirmed, '1', params[:ownership_confirmed] == '1', class: 'form-check-input' %>
+            <%= label_tag :ownership_confirmed, 'Conferi que os dois cupons pertencem à cliente selecionada.', class: 'form-check-label' %>
+            <p class="text-muted-custom mt-1">Obrigatório quando a Shopify não informa a dona do cupom. O novo UNF será exclusivo desta cliente.</p>
+          </div>
+          <%= form.submit 'Consultar e conferir valores', class: 'btn btn-primary', data: { disable_with: 'Consultando...' } %>
+          <p class="text-muted-custom mt-2 mb-0">Esta etapa apenas consulta. Os cupons serão alterados após a sua confirmação na próxima tela.</p>
+        </div>
+      </div>
+    <% end %>
+  <% elsif @search.length >= 3 %>
+    <div class="alert alert-info">Nenhuma cliente encontrada. Confira o nome, e-mail ou telefone usado no cadastro.</div>
+  <% end %>
+</div>
