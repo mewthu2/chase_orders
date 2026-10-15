@@ -4,6 +4,10 @@ Rails.application.routes.draw do
   devise_for :user, skip: [:registrations]
   root to: 'home#index'
 
+  resources :cashback_unifications, only: [:index, :new, :create, :show] do
+    post :confirm, on: :member
+  end
+
   authenticate :user do
     mount Sidekiq::Web => '/sidekiq'
   end

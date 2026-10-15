@@ -4,6 +4,7 @@ class Screen
     orders:                 'Pedidos',
     customers:              'Clientes',
     discounts:              'Descontos',
+    cashback_unifications:  'Cupons de Cashback',
     logs:                   'Logs',
     dashboard_correios:     'Painel de Correios B2C',
     dashboard_correios_b2b: 'Painel de Correios B2B',
@@ -32,7 +33,7 @@ class Screen
     'Correios B2B' => %i[dashboard_correios_b2b stock_reservations_b2b],
     'Planejador'   => %i[planner_orders],
     'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers transfer_locations],
-    'Outros'       => %i[discounts logs marketing_campaigns marketing_tasks users_management]
+    'Outros'       => %i[discounts cashback_unifications logs marketing_campaigns marketing_tasks users_management]
   }.freeze
 
   def self.keys = DEFINITIONS.keys.map(&:to_s)

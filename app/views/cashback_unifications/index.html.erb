@@ -1,0 +1,31 @@
+<% title 'Cupons de cashback' %>
+<div class="orders-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title"><i class="fas fa-ticket-alt me-2"></i>Cupons de cashback</h1>
+      <p class="page-subtitle">Unifique dois cupons MTZ da mesma cliente em um novo cupom UNF.</p>
+    </div>
+    <%= link_to 'Unificar cupons', new_cashback_unification_path, class: 'btn btn-primary' %>
+  </div>
+  <div class="table-card">
+    <div class="table-card-header"><h2 class="table-card-title">Últimas unificações</h2></div>
+    <div class="table-responsive">
+      <table class="orders-table">
+        <thead><tr><th>Data</th><th>Cliente</th><th>Cupons originais</th><th>Cashback</th><th>Situação</th><th></th></tr></thead>
+        <tbody>
+          <% @unifications.each do |unification| %>
+            <tr>
+              <td><%= unification.created_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m/%Y %H:%M') %></td>
+              <td><%= unification.customer.full_name %></td>
+              <td><%= unification.source_codes.join(' + ') %></td>
+              <td><%= number_to_currency(unification.amount, unit: 'R$ ', separator: ',', delimiter: '.') %></td>
+              <td><%= unification.status_label %></td>
+              <td><%= link_to 'Ver detalhes', cashback_unification_path(unification) %></td>
+            </tr>
+          <% end %>
+          <% if @unifications.empty? %><tr><td colspan="6" class="text-center py-4">Nenhuma unificação registrada.</td></tr><% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
