@@ -28,12 +28,12 @@ class Screen
   # organizar as permissões do mesmo jeito que o usuário vê o menu.
   GROUPS = {
     'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes b2b_catalogs],
-    'CRM'          => %i[orders customers],
+    'CRM'          => %i[orders customers cashback_unifications],
     'Correios B2C' => %i[dashboard_correios stock_reservations_b2c],
     'Correios B2B' => %i[dashboard_correios_b2b stock_reservations_b2b],
     'Planejador'   => %i[planner_orders],
     'Produtos'     => %i[stock_corrections stock_withdrawals internal_transfers transfer_locations],
-    'Outros'       => %i[discounts cashback_unifications logs marketing_campaigns marketing_tasks users_management]
+    'Outros'       => %i[discounts logs marketing_campaigns marketing_tasks users_management]
   }.freeze
 
   def self.keys = DEFINITIONS.keys.map(&:to_s)

@@ -1,0 +1,7 @@
+<div class="impersonation-banner" role="status">
+  <i class="fas fa-user-secret impersonation-banner-icon"></i>
+  <span>Você (<strong><%= true_user.name %></strong>) está logado como <strong><%= current_user.name %></strong> · <%= current_user.email %></span>
+  <%= button_to impersonation_path, method: :delete, class: 'impersonation-back', form: { data: { turbo: false } } do %>
+    <i class="fas fa-undo"></i> Voltar para o meu usuário
+  <% end %>
+</div>

@@ -74,6 +74,13 @@ class User < ApplicationRecord
   before_validation :clean_allowed_locations
   after_update :log_location_changes, if: :saved_change_to_allowed_locations?
 
+  SUPER_ADMIN_EMAILS = %w[danielkbr89@gmail.com].freeze
+
+  # Super admin pode logar como qualquer usuário (ImpersonationsController).
+  def super_admin?
+    SUPER_ADMIN_EMAILS.include?(email.to_s.downcase)
+  end
+
   def admin?
     profile_ids.include?(Profile::ADMIN)
   end

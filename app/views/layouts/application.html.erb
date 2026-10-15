@@ -46,6 +46,7 @@
       <% end %>
     </div>
 
+    <%= render 'layouts/partials/impersonation_banner' if user_signed_in? && impersonating? %>
     <%= render 'layouts/partials/messages' %>
 
     <%= yield :scripts %>

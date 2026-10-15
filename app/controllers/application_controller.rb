@@ -6,8 +6,21 @@ class ApplicationController < ActionController::Base
 
   layout 'layouts/application'
 
+  helper_method :true_user, :impersonating?
+
   def self.guard_screen(key, **options)
     before_action(**options) { authorize_screen!(key) }
+  end
+
+  # Quem está de fato no teclado: o super admin quando está logado como outro usuário.
+  def true_user
+    return current_user unless impersonating?
+
+    @true_user ||= User.find(session[:impersonator_id])
+  end
+
+  def impersonating?
+    session[:impersonator_id].present? && User.find_by(id: session[:impersonator_id])&.super_admin?
   end
 
   private

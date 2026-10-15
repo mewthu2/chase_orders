@@ -5,7 +5,8 @@ class ScreenTest < ActiveSupport::TestCase
   self.fixture_table_names = []
 
   test 'cashback unification has a configurable permission' do
-    assert_includes Screen::GROUPS['Outros'], :cashback_unifications
+    assert_includes Screen::GROUPS['CRM'], :cashback_unifications
+    refute_includes Screen::GROUPS['Outros'], :cashback_unifications
     assert_equal 'Cupons de Cashback', Screen.label(:cashback_unifications)
   end
 

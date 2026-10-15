@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   devise_for :user, skip: [:registrations]
   root to: 'home#index'
 
+  resource :impersonation, only: [:create, :destroy]
+
   resources :cashback_unifications, only: [:index, :new, :create, :show] do
     post :confirm, on: :member
   end
@@ -118,7 +120,7 @@ Rails.application.routes.draw do
       post :save_item_correction
       get :finalize_correction
       get :debug_locations
-      get :reopen
+      patch :reopen
       get :check_shopify_inventory
       patch :sync_with_shopify
       post :retry_shopify_sync

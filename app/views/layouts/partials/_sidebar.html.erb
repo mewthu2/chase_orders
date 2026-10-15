@@ -14,15 +14,6 @@
           <% end %>
         </div>
 
-        <% if current_user&.can_access_screen?('cashback_unifications') %>
-          <div class="nav-item">
-            <%= link_to cashback_unifications_path, class: "nav-link #{'active' if controller_name == 'cashback_unifications'}" do %>
-              <i class="fas fa-ticket-alt"></i>
-              <span class="nav-text">Cupons de cashback</span>
-            <% end %>
-          </div>
-        <% end %>
-
         <div class="nav-item nav-group-collapsible">
           <div class="nav-group-header-collapsible" onclick="toggleChamados()">
             <div class="nav-group-title">
@@ -145,7 +136,7 @@
           </div>
         <% end %>
 
-        <% if current_user&.can_access_screen?('orders') || current_user&.can_access_screen?('customers') %>
+        <% if %w[orders customers cashback_unifications].any? { |key| current_user&.can_access_screen?(key) } %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCRM()">
               <div class="nav-group-title">
@@ -170,6 +161,12 @@
                   <%= link_to customers_path, class: "dropdown-link #{'active' if controller_name == 'customers'}" do %>
                     <i class="fas fa-users"></i>
                     <span>Clientes</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('cashback_unifications') %>
+                  <%= link_to cashback_unifications_path, class: "dropdown-link #{'active' if controller_name == 'cashback_unifications'}" do %>
+                    <i class="fas fa-coins"></i>
+                    <span>Cupons de cashback</span>
                   <% end %>
                 <% end %>
               </div>
@@ -415,6 +412,7 @@
         <button type="button" class="font-scale-value" data-reset title="Voltar ao tamanho padrão"><%= current_user.font_scale %>%</button>
         <button type="button" class="font-scale-btn font-scale-btn--up" data-delta="10" title="Aumentar fonte">A<sup>+</sup></button>
       </div>
+      <%= render 'layouts/partials/impersonation_switcher' if true_user.super_admin? %>
       <%= link_to destroy_user_session_path, method: :delete, class: 'logout-btn', data: { confirm: 'Tem certeza que deseja sair?' }, title: 'Sair' do %>
         <i class="fas fa-sign-out-alt"></i>
       <% end %>

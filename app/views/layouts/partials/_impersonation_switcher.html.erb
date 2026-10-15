@@ -1,0 +1,18 @@
+<details class="impersonation-switcher">
+  <summary title="Logar como outro usuário"><i class="fas fa-user-secret"></i></summary>
+  <div class="impersonation-popover">
+    <%= form_with url: impersonation_path, method: :post, local: true, data: { turbo: false } do |form| %>
+      <label for="impersonation-email" class="impersonation-label">Logar como</label>
+      <div class="impersonation-row">
+        <%= form.email_field :email, id: 'impersonation-email', required: true, autocomplete: 'off',
+                             list: 'impersonation-emails', placeholder: 'e-mail do usuário', class: 'impersonation-input' %>
+        <%= form.button type: 'submit', class: 'impersonation-go', title: 'Entrar' do %><i class="fas fa-arrow-right"></i><% end %>
+      </div>
+      <datalist id="impersonation-emails">
+        <% User.where.not(id: true_user.id).order(:name).pluck(:email, :name).each do |email, name| %>
+          <option value="<%= email %>"><%= name %></option>
+        <% end %>
+      </datalist>
+    <% end %>
+  </div>
+</details>
