@@ -136,6 +136,29 @@
           </div>
         <% end %>
 
+        <% if %w[whatsapp_attend whatsapp_manage].any? { |key| current_user&.can_access_screen?(key) } %>
+          <div class="nav-item nav-group-collapsible">
+            <div class="nav-group-header-collapsible" onclick="toggleWhatsapp()">
+              <div class="nav-group-title"><i class="fab fa-whatsapp"></i><span class="nav-text">Atendimento WhatsApp</span></div>
+              <i class="fas fa-chevron-right collapse-icon" id="whatsappIcon"></i>
+            </div>
+            <div class="nav-group-dropdown" id="whatsappDropdown">
+              <div class="dropdown-content">
+                <% if current_user&.can_access_screen?('whatsapp_attend') %>
+                  <%= link_to whatsapp_conversations_path, class: "dropdown-link #{'active' if controller_path == 'whatsapp/conversations'}" do %>
+                    <i class="fas fa-comments"></i><span>Conversas</span>
+                  <% end %>
+                <% end %>
+                <% if current_user&.can_access_screen?('whatsapp_manage') %>
+                  <%= link_to whatsapp_connections_path, class: "dropdown-link #{'active' if controller_path == 'whatsapp/connections'}" do %>
+                    <i class="fas fa-mobile-alt"></i><span>Números conectados</span>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+
         <% if %w[orders customers cashback_unifications].any? { |key| current_user&.can_access_screen?(key) } %>
           <div class="nav-item nav-group-collapsible">
             <div class="nav-group-header-collapsible" onclick="toggleCRM()">
@@ -510,6 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener("click", (e) => {
     const dropdowns = [
+      { id: "whatsappDropdown", header: '[onclick="toggleWhatsapp()"]' },
       { id: "crmDropdown",           header: '[onclick="toggleCRM()"]'           },
       { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
       { id: "correiosB2bDropdown",   header: '[onclick="toggleCorreiosB2b()"]'    },
@@ -579,6 +603,10 @@ function repositionOpenDropdown() {
 
 window.addEventListener("resize", repositionOpenDropdown)
 document.getElementById("navCarousel")?.addEventListener("scroll", repositionOpenDropdown)
+
+function toggleWhatsapp() {
+  toggleDropdown("whatsappDropdown", "whatsappIcon", '[onclick="toggleWhatsapp()"]')
+}
 
 function toggleCRM() {
   toggleDropdown("crmDropdown", "crmIcon", '[onclick="toggleCRM()"]')

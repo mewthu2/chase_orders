@@ -69,3 +69,7 @@ yarn-debug.log*
 # Ignore all logs
 /log/*
 !/log/.keep
+
+# Per-deployment WhatsApp credentials
+.env.whatsapp.local
+/deploy/whatsapp/.env

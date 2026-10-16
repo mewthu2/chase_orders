@@ -4,6 +4,31 @@ Rails.application.routes.draw do
   devise_for :user, skip: [:registrations]
   root to: 'home#index'
 
+  namespace :whatsapp do
+    get :health, to: "health#show"
+    post 'webhooks/:instance_key', to: 'webhooks#create'
+    resources :connections, only: [:index, :create, :update] do
+      member do
+        post :connect
+        post :disconnect
+        post :sync
+      end
+    end
+    resources :conversations, only: [:index, :show, :create, :update] do
+      member do
+        post :read
+        patch :link_customer
+        get :customers
+      end
+      resources :messages, only: [:index, :create] do
+        member do
+          get :attachment
+          post :retry_send
+        end
+      end
+    end
+  end
+
   resource :impersonation, only: [:create, :destroy]
 
   resources :cashback_unifications, only: [:index, :new, :create, :show] do

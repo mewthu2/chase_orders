@@ -1,0 +1,15 @@
+<% content_for :title, 'Números conectados' %>
+<% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
+<% content_for :scripts do %><%= javascript_include_tag 'whatsapp_support', defer: true %><% end %>
+<section class="wa-app" id="wa-connections">
+  <header class="wa-title"><div><h1>Números conectados</h1><p>Conecte cada WhatsApp Business pelo celular.</p></div><% if current_user.can_access_screen?('whatsapp_attend') %><%= link_to 'Conversas', whatsapp_conversations_path, class: 'btn btn-outline-secondary' %><% end %></header>
+  <div id="wa-error" class="wa-notice" role="status" hidden></div>
+  <% unless Whatsapp::Providers::Evolution.configured? %><div class="alert alert-warning">A integração precisa ser configurada no servidor antes de adicionar um número. Consulte as instruções de instalação do módulo.</div><% end %>
+  <form id="wa-add-number" class="wa-add-number"><h2>Adicionar número</h2><label for="wa-number-name">Nome para a equipe</label><input id="wa-number-name" name="name" class="form-control" placeholder="Vendas, Atacado, Loja Centro…" maxlength="80" required>
+    <fieldset><legend>Quem pode atender neste número?</legend><div class="wa-member-list"><% @users.each do |user| %><label><input type="checkbox" name="user_ids[]" value="<%= user.id %>"> <%= user.name %></label><% end %></div></fieldset>
+    <button class="btn btn-success" <%= 'disabled' unless Whatsapp::Providers::Evolution.configured? %>>Adicionar número</button><small>Administradores do Honey têm acesso a todos os números.</small>
+  </form>
+  <div id="wa-number-cards" class="wa-number-cards" aria-live="polite"></div>
+  <template id="wa-user-options"><% @users.each do |user| %><label><input type="checkbox" value="<%= user.id %>"> <%= user.name %></label><% end %></template>
+  <details class="wa-provider-info"><summary>Informações para a administração</summary><p>Este módulo utiliza <a href="https://github.com/evolution-foundation/evolution-api/tree/2.3.7" target="_blank" rel="noopener">Evolution API 2.3.7</a> com Baileys. O pareamento por aparelhos conectados não é a API oficial da Meta. Mudanças no WhatsApp podem interromper sessões ou exigir novo QR. O uso também está sujeito às regras do WhatsApp.</p><p>O histórico disponível depende da sincronização do celular e do que o provedor armazenou. A recuperação inicial busca até os últimos 7 dias disponíveis; não há promessa de importar todo o histórico antigo.</p><p>Ao desconectar, o histórico no Honey permanece. Para conectar de novo, pode ser necessário escanear outro QR. Sessões, banco e armazenamento do provedor devem usar volumes persistentes.</p></details>
+</section>

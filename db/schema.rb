@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_14_220000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_16_180000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1105,6 +1105,168 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_14_220000) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
+  create_table "whatsapp_activities", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.string "action", null: false
+    t.bigint "assignee_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_id"], name: "index_whatsapp_activities_on_assignee_id"
+    t.index ["conversation_id"], name: "index_whatsapp_activities_on_conversation_id"
+    t.index ["user_id"], name: "index_whatsapp_activities_on_user_id"
+  end
+
+  create_table "whatsapp_connections", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "provider", default: "evolution", null: false
+    t.string "instance_key", null: false
+    t.text "webhook_token", null: false
+    t.string "phone"
+    t.string "state", default: "disconnected", null: false
+    t.boolean "enabled", default: true, null: false
+    t.text "qr_data"
+    t.datetime "qr_expires_at"
+    t.datetime "provider_updated_at"
+    t.datetime "last_event_at"
+    t.datetime "last_synced_at"
+    t.datetime "sync_requested_at"
+    t.string "control_action"
+    t.integer "control_version", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["instance_key"], name: "index_whatsapp_connections_on_instance_key", unique: true
+  end
+
+  create_table "whatsapp_contact_aliases", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "contact_id", null: false
+    t.string "jid", limit: 191, null: false
+    t.index ["connection_id", "jid"], name: "idx_wa_alias_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_contact_aliases_on_connection_id"
+    t.index ["contact_id"], name: "index_whatsapp_contact_aliases_on_contact_id"
+  end
+
+  create_table "whatsapp_contacts", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "customer_id"
+    t.string "provider_jid", limit: 191, null: false
+    t.string "phone"
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "provider_jid"], name: "idx_wa_contact_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_contacts_on_connection_id"
+    t.index ["customer_id"], name: "index_whatsapp_contacts_on_customer_id"
+    t.index ["phone"], name: "index_whatsapp_contacts_on_phone"
+  end
+
+  create_table "whatsapp_conversations", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "assignee_id"
+    t.string "state", default: "open", null: false
+    t.datetime "last_message_at"
+    t.string "last_message_preview"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_id"], name: "index_whatsapp_conversations_on_assignee_id"
+    t.index ["connection_id", "contact_id"], name: "idx_wa_conversation_unique", unique: true
+    t.index ["connection_id", "last_message_at"], name: "idx_wa_inbox"
+    t.index ["connection_id"], name: "index_whatsapp_conversations_on_connection_id"
+    t.index ["contact_id"], name: "index_whatsapp_conversations_on_contact_id"
+  end
+
+  create_table "whatsapp_events", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.string "digest", limit: 64, null: false
+    t.string "kind", null: false
+    t.text "payload", size: :long, null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "processed_at"
+    t.integer "attempts", default: 0, null: false
+    t.string "error_code"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "digest"], name: "idx_wa_event_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_events_on_connection_id"
+    t.index ["processed_at", "attempts"], name: "idx_wa_pending_events"
+  end
+
+  create_table "whatsapp_media", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.string "storage_key", null: false
+    t.string "service_name", null: false
+    t.string "filename", null: false
+    t.string "content_type", null: false
+    t.bigint "byte_size", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_whatsapp_media_on_message_id", unique: true
+    t.index ["storage_key"], name: "index_whatsapp_media_on_storage_key", unique: true
+  end
+
+  create_table "whatsapp_memberships", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "user_id"], name: "idx_wa_membership_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_memberships_on_connection_id"
+    t.index ["user_id"], name: "index_whatsapp_memberships_on_user_id"
+  end
+
+  create_table "whatsapp_messages", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id"
+    t.string "provider_id", limit: 191
+    t.string "client_nonce", limit: 64
+    t.string "direction", null: false
+    t.string "kind", default: "text", null: false
+    t.text "body"
+    t.string "state", null: false
+    t.integer "receipt_rank", default: 0, null: false
+    t.boolean "historical", default: false, null: false
+    t.datetime "sent_at", null: false
+    t.datetime "attempted_at"
+    t.string "error_code"
+    t.string "media_state"
+    t.json "provider_key"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "media_attempts", default: 0, null: false
+    t.datetime "media_retry_at"
+    t.index ["connection_id", "client_nonce"], name: "idx_wa_client_message", unique: true
+    t.index ["connection_id", "provider_id"], name: "idx_wa_provider_message", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_messages_on_connection_id"
+    t.index ["conversation_id", "sent_at", "id"], name: "idx_wa_history"
+    t.index ["conversation_id"], name: "index_whatsapp_messages_on_conversation_id"
+    t.index ["media_state", "media_retry_at"], name: "idx_wa_pending_media"
+    t.index ["state", "attempted_at"], name: "idx_wa_pending_sends"
+    t.index ["user_id"], name: "index_whatsapp_messages_on_user_id"
+  end
+
+  create_table "whatsapp_reads", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "last_message_id", default: 0, null: false
+    t.index ["conversation_id", "user_id"], name: "idx_wa_read_unique", unique: true
+    t.index ["conversation_id"], name: "index_whatsapp_reads_on_conversation_id"
+    t.index ["user_id"], name: "index_whatsapp_reads_on_user_id"
+  end
+
+  create_table "whatsapp_receipts", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.string "provider_id", limit: 191, null: false
+    t.integer "rank", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "provider_id"], name: "idx_wa_receipt_unique", unique: true
+    t.index ["connection_id"], name: "index_whatsapp_receipts_on_connection_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "b2b_catalog_order_items", "b2b_catalog_orders"
@@ -1182,4 +1344,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_14_220000) do
   add_foreign_key "tickets", "users", column: "requester_id"
   add_foreign_key "user_profiles", "profiles"
   add_foreign_key "user_profiles", "users"
+  add_foreign_key "whatsapp_activities", "users"
+  add_foreign_key "whatsapp_activities", "users", column: "assignee_id"
+  add_foreign_key "whatsapp_activities", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_contact_aliases", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_contact_aliases", "whatsapp_contacts", column: "contact_id"
+  add_foreign_key "whatsapp_contacts", "customers"
+  add_foreign_key "whatsapp_contacts", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_conversations", "users", column: "assignee_id"
+  add_foreign_key "whatsapp_conversations", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_conversations", "whatsapp_contacts", column: "contact_id"
+  add_foreign_key "whatsapp_events", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_media", "whatsapp_messages", column: "message_id"
+  add_foreign_key "whatsapp_memberships", "users"
+  add_foreign_key "whatsapp_memberships", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_messages", "users"
+  add_foreign_key "whatsapp_messages", "whatsapp_connections", column: "connection_id"
+  add_foreign_key "whatsapp_messages", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_reads", "users"
+  add_foreign_key "whatsapp_reads", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_receipts", "whatsapp_connections", column: "connection_id"
 end

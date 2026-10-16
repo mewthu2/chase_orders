@@ -210,6 +210,7 @@ class OrdersController < ApplicationController
 
   def build_query
     query = Order.includes(:customer, :location).order(created_at: :desc)
+    query = query.where(customer_id: params[:customer_id]) if params[:customer_id].present?
 
     if params[:search].present?
       term  = "%#{params[:search]}%"
