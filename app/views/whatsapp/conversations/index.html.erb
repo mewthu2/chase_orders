@@ -1,0 +1,34 @@
+<% content_for :title, 'Atendimento WhatsApp' %>
+<% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
+<% content_for :scripts do %><%= javascript_include_tag 'whatsapp_support', defer: true %><% end %>
+<section class="wa-app" id="wa-inbox" aria-label="Atendimento WhatsApp">
+  <header class="wa-title"><div><h1>Atendimento WhatsApp</h1><p>Conversas da sua equipe, em um só lugar.</p></div>
+    <% if current_user.can_access_screen?('whatsapp_manage') %><%= link_to 'Números conectados', whatsapp_connections_path, class: 'btn btn-outline-secondary' %><% end %>
+  </header>
+  <div class="wa-notice" id="wa-error" role="status" hidden></div>
+  <div class="wa-workspace">
+    <aside class="wa-inbox-list" aria-label="Lista de conversas">
+      <button class="btn btn-success w-100" id="wa-new">Nova conversa</button>
+      <label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Buscar nome ou telefone" type="search">
+      <label class="visually-hidden" for="wa-number">Número da empresa</label><select id="wa-number" class="form-select"><option value="">Todos os meus números</option></select>
+      <div class="wa-filters"><select id="wa-state" class="form-select" aria-label="Situação"><option value="open">Abertas</option><option value="closed">Encerradas</option><option value="">Todas</option></select>
+        <label><input id="wa-unread" type="checkbox"> Não lidas</label><label><input id="wa-mine" type="checkbox"> Minhas</label></div>
+      <div id="wa-threads" class="wa-threads" aria-live="polite"></div><button id="wa-more-conversations" class="btn btn-light" hidden>Mais conversas</button>
+    </aside>
+    <main class="wa-chat" aria-label="Conversa selecionada">
+      <div id="wa-empty" class="wa-empty">Selecione uma conversa para começar.</div>
+      <div id="wa-selected" hidden>
+        <header class="wa-chat-header"><button id="wa-back" class="btn btn-light wa-mobile">← Voltar</button><div><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-owner"></small></div><button id="wa-contact-toggle" class="btn btn-light" aria-expanded="false">Contato</button></header>
+        <div class="wa-actions"><button id="wa-take" class="btn btn-sm btn-outline-secondary">Assumir</button><select id="wa-assignee" class="form-select form-select-sm" aria-label="Transferir para"><option value="">Transferir para…</option></select><button id="wa-transfer" class="btn btn-sm btn-outline-secondary">Transferir</button><button id="wa-close" class="btn btn-sm btn-outline-secondary">Encerrar</button></div>
+        <div class="wa-history" id="wa-history" role="log" aria-label="Histórico de mensagens"><button id="wa-older" class="btn btn-light" hidden>Carregar anteriores</button><div id="wa-messages"></div></div>
+        <button id="wa-new-indicator" class="btn btn-sm btn-success" hidden>Novas mensagens ↓</button>
+        <form id="wa-compose" class="wa-compose"><label for="wa-text" class="visually-hidden">Mensagem</label><textarea id="wa-text" class="form-control" rows="2" maxlength="10000" placeholder="Escreva uma mensagem"></textarea>
+          <div class="wa-compose-tools"><label class="btn btn-sm btn-light">Anexar<input id="wa-file" type="file" class="visually-hidden" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,audio/*"></label><span id="wa-file-name"></span><button id="wa-clear-file" class="btn btn-sm btn-light" type="button" hidden>Remover arquivo</button><button id="wa-record" type="button" class="btn btn-sm btn-light">Gravar áudio</button><button type="submit" id="wa-send" class="btn btn-success">Enviar</button></div>
+          <small>Arquivos de até 10 MB. Entrega e leitura aparecem somente quando confirmadas pelo WhatsApp.</small>
+        </form>
+      </div>
+    </main>
+    <aside class="wa-contact" id="wa-contact-panel" aria-label="Dados do contato" hidden><button id="wa-contact-hide" class="btn btn-light">Fechar</button><h2>Contato</h2><p id="wa-contact-phone"></p><div id="wa-linked"></div><div id="wa-customer-picker" hidden><label for="wa-customer-search">Vincular ao cadastro do Honey</label><input id="wa-customer-search" class="form-control" placeholder="Nome ou telefone"><button id="wa-customer-find" class="btn btn-light">Buscar</button><div id="wa-customer-results"></div><small>Escolha o cadastro correto. Nenhum cliente será mesclado automaticamente.</small></div></aside>
+  </div>
+  <dialog id="wa-new-dialog"><form id="wa-start"><h2>Nova conversa</h2><label for="wa-start-number">Enviar pelo número</label><select id="wa-start-number" class="form-select" required><option value="">Escolha um número</option></select><label for="wa-start-phone">Telefone do cliente</label><input id="wa-start-phone" class="form-control" type="tel" placeholder="+55 11 99999-9999" required><div class="wa-dialog-actions"><button type="button" id="wa-cancel-new" class="btn btn-light">Cancelar</button><button class="btn btn-success">Abrir conversa</button></div></form></dialog>
+</section>

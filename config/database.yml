@@ -22,3 +22,8 @@ production:
   password: <%= ENV['PRODUCTION_DATABASE_PASSWORD'] %>
   database: <%= ENV['PRODUCTION_DATABASE_NAME'] %>
   port: <%= ENV['PRODUCTION_DATABASE_PORT'] %>
+
+# Optional new sandbox. Never falls back to PRODUCTION_DATABASE_*.
+whatsapp_preview:
+  <<: *default
+  url: <%= ENV['HONEY_WHATSAPP_PREVIEW_DATABASE_URL'] %>

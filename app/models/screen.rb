@@ -1,5 +1,7 @@
 class Screen
   DEFINITIONS = {
+    whatsapp_attend: 'Atendimento WhatsApp — Conversas',
+    whatsapp_manage: 'Atendimento WhatsApp — Administrar conexões',
     users_management:      'Gerenciar Usuários',
     orders:                 'Pedidos',
     customers:              'Clientes',
@@ -27,6 +29,7 @@ class Screen
   # Agrupamento espelhando o menu lateral — usado na tela de Perfis pra
   # organizar as permissões do mesmo jeito que o usuário vê o menu.
   GROUPS = {
+    'Atendimento WhatsApp' => %i[whatsapp_attend whatsapp_manage],
     'Pedidos B2B'  => %i[b2b_orders carriers companies fiscal_notes b2b_catalogs],
     'CRM'          => %i[orders customers cashback_unifications],
     'Correios B2C' => %i[dashboard_correios stock_reservations_b2c],

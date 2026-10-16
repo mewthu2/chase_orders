@@ -1,0 +1,443 @@
+.wa-app {
+  max-width: 1600px;
+  margin: auto;
+  padding: 20px;
+  color: #22332e;
+}
+.wa-app h1 {
+  font-size: 1.65rem;
+  margin: 0;
+}
+.wa-app h2 {
+  font-size: 1.15rem;
+}
+.wa-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.wa-title p {
+  color: #60736b;
+  margin: 6px 0 0;
+}
+.wa-notice {
+  background: #fff2d5;
+  border: 1px solid #e8c477;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.wa-workspace {
+  display: flex;
+  background: #fff;
+  border: 1px solid #dce5e0;
+  border-radius: 14px;
+  overflow: hidden;
+  height: calc(100dvh - 190px);
+  min-height: 560px;
+  position: relative;
+}
+.wa-inbox-list {
+  width: 315px;
+  flex-shrink: 0;
+  border-right: 1px solid #dce5e0;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wa-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.wa-filters select {
+  width: 100%;
+}
+.wa-threads {
+  overflow: auto;
+  flex: 1;
+}
+.wa-thread {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: white;
+  border: 0;
+  border-bottom: 1px solid #ecf0ed;
+  padding: 14px 9px;
+  border-radius: 5px;
+}
+.wa-thread:hover,
+.wa-thread.selected {
+  background: #edf7f1;
+}
+.wa-thread strong,
+.wa-thread small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wa-thread small {
+  color: #62766b;
+}
+.wa-thread .wa-badge {
+  float: right;
+  background: #148359;
+  color: white;
+  border-radius: 12px;
+  padding: 1px 6px;
+}
+.wa-chat {
+  flex: 1;
+  min-width: 0;
+  background: #f4f7f4;
+}
+.wa-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #718078;
+  padding: 30px;
+}
+#wa-selected {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+#wa-selected[hidden] {
+  display: none;
+}
+.wa-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: white;
+  border-bottom: 1px solid #e5ebe7;
+}
+.wa-chat-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.wa-chat-header small {
+  display: block;
+  color: #65766d;
+}
+.wa-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  border-bottom: 1px solid #dce5e0;
+  background: white;
+}
+.wa-actions select {
+  width: auto;
+  max-width: 180px;
+}
+.wa-history {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+}
+.wa-message {
+  max-width: 82%;
+  width: fit-content;
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: white;
+  margin: 8px 0;
+  box-shadow: 0 1px 2px #0001;
+  overflow-wrap: anywhere;
+}
+.wa-message.outgoing {
+  margin-left: auto;
+  background: #d9f5e4;
+}
+.wa-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.wa-message small {
+  display: block;
+  color: #536b5d;
+  text-align: right;
+  font-size: 0.72rem;
+  margin-top: 6px;
+}
+.wa-message img {
+  display: block;
+  max-width: 260px;
+  max-height: 250px;
+  border-radius: 8px;
+}
+.wa-message audio {
+  max-width: 260px;
+  width: 100%;
+}
+.wa-message .wa-send-warning {
+  font-size: 0.8rem;
+  color: #7a4a11;
+  margin-top: 6px;
+}
+.wa-compose {
+  padding: 12px;
+  background: #fff;
+  border-top: 1px solid #e0e8e3;
+}
+.wa-compose textarea {
+  resize: none;
+}
+.wa-compose-tools {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.wa-compose-tools > button:last-child {
+  margin-left: auto;
+}
+.wa-compose small {
+  font-size: 0.72rem;
+  color: #6e7d75;
+}
+#wa-file-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+.wa-contact {
+  width: 280px;
+  padding: 16px;
+  overflow: auto;
+  background: #fff;
+  border-left: 1px solid #e0e8e3;
+}
+.wa-contact h2 {
+  margin-top: 16px;
+}
+.wa-contact a {
+  display: block;
+}
+.wa-mobile {
+  display: none;
+}
+.wa-app dialog {
+  border: 1px solid #dce5e0;
+  border-radius: 14px;
+  max-width: 440px;
+  width: 95%;
+  padding: 24px;
+}
+.wa-app dialog::backdrop {
+  background: #18372b77;
+}
+.wa-app dialog input,
+.wa-app dialog select {
+  margin: 8px 0 16px;
+}
+.wa-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.wa-add-number {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #dce5e0;
+  border-radius: 12px;
+  max-width: 700px;
+  margin-bottom: 24px;
+}
+.wa-add-number input[type="text"],
+.wa-add-number .form-control {
+  margin: 8px 0 16px;
+}
+.wa-add-number legend {
+  font-size: 0.95rem;
+}
+.wa-member-list {
+  display: flex;
+  gap: 10px 22px;
+  flex-wrap: wrap;
+  max-height: 180px;
+  overflow: auto;
+  margin-bottom: 16px;
+}
+.wa-add-number small {
+  display: block;
+  margin-top: 8px;
+  color: #697c70;
+}
+.wa-number-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 18px;
+}
+.wa-number-card {
+  padding: 20px;
+  background: white;
+  border: 1px solid #dce5e0;
+  border-radius: 12px;
+}
+.wa-number-card img {
+  width: 240px;
+  height: 240px;
+  max-width: 100%;
+  display: block;
+  margin: 15px auto;
+}
+.wa-number-card .wa-state {
+  display: inline-block;
+  background: #eff3f0;
+  border-radius: 15px;
+  padding: 3px 10px;
+  margin: 6px 0;
+}
+.wa-number-card button {
+  margin: 4px 6px 4px 0;
+}
+.wa-number-card fieldset label {
+  display: block;
+}
+.wa-provider-info {
+  margin-top: 24px;
+  font-size: 0.88rem;
+  color: #60736b;
+}
+.wa-provider-info p {
+  margin-top: 12px;
+}
+.wa-customer-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 8px 0;
+}
+.wa-app [hidden] {
+  display: none !important;
+}
+@media (max-width: 1000px) {
+  .wa-contact {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: -8px 0 18px #0002;
+  }
+  .wa-inbox-list {
+    width: 270px;
+  }
+}
+@media (max-width: 700px) {
+  .wa-app {
+    padding: 8px;
+  }
+  .wa-title {
+    align-items: flex-start;
+  }
+  .wa-title h1 {
+    font-size: 1.25rem;
+  }
+  .wa-title p {
+    font-size: 0.85rem;
+  }
+  .wa-title .btn {
+    font-size: 0.8rem;
+  }
+  .wa-workspace {
+    height: calc(100dvh - 145px);
+    min-height: 460px;
+  }
+  .wa-inbox-list {
+    width: 100%;
+  }
+  .wa-chat {
+    display: none;
+  }
+  .wa-workspace.chat-open .wa-inbox-list {
+    display: none;
+  }
+  .wa-workspace.chat-open .wa-chat {
+    display: block;
+    width: 100%;
+  }
+  .wa-mobile {
+    display: inline-block;
+  }
+  .wa-contact {
+    width: 100%;
+  }
+  .wa-chat-header {
+    padding: 9px;
+  }
+  .wa-actions {
+    gap: 5px;
+    padding: 8px;
+  }
+  .wa-actions select {
+    max-width: 135px;
+  }
+  .wa-message {
+    max-width: 92%;
+  }
+  .wa-message img {
+    max-width: 100%;
+  }
+  .wa-compose small {
+    display: none;
+  }
+  .wa-history {
+    padding: 10px;
+  }
+}
+
+.wa-title {
+  color: #f4f8f6;
+}
+.wa-title p {
+  color: #c3d4cb;
+}
+.wa-title .btn {
+  color: #f4f8f6;
+  border-color: #9eafa6;
+}
+.wa-title .btn:hover {
+  background: #e6eee9;
+  color: #22332e;
+}
+.wa-app .form-control,
+.wa-app .form-select {
+  background-color: #fff;
+  color: #22332e;
+  border-color: #cad8cf;
+}
+.wa-app .form-control::placeholder {
+  color: #708177;
+}
+.wa-provider-info {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.wa-number-card > small {
+  display: block;
+  margin: 8px 0;
+}
+.wa-app .btn-sm {
+  min-height: 32px;
+  font-size: 0.8rem;
+}

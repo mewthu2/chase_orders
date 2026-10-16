@@ -1,0 +1,96 @@
+name: honey-whatsapp-provider
+services:
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7@sha256:1bd8afc4a6cf48822e6cf02469aeae7bd35a12a6b616eacd1291926307f4d339
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${EVOLUTION_BIND_PORT:-8088}:8080"
+    environment:
+      SERVER_URL: ${EVOLUTION_PUBLIC_URL:-http://localhost:8088}
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?Gere uma chave exclusiva do provedor}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${EVOLUTION_POSTGRES_PASSWORD:?Defina a senha do banco isolado}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: honey-whatsapp
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
+      DATABASE_DELETE_MESSAGE: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/0
+      CACHE_REDIS_PREFIX_KEY: honey-whatsapp
+      CACHE_REDIS_SAVE_INSTANCES: "true"
+      CACHE_LOCAL_ENABLED: "false"
+      DEL_INSTANCE: "false"
+      LOG_LEVEL: ERROR,WARN
+      LOG_BAILEYS: error
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      WEBHOOK_RETRY_MAX_ATTEMPTS: 5
+      WEBHOOK_RETRY_INITIAL_DELAY_SECONDS: 5
+      WEBHOOK_RETRY_USE_EXPONENTIAL_BACKOFF: "true"
+      WEBHOOK_RETRY_MAX_DELAY_SECONDS: 60
+      WEBHOOK_RETRY_NON_RETRYABLE_STATUS_CODES: 400,401,403,404,422
+      WEBHOOK_REQUEST_TIMEOUT_MS: 15000
+      CHATWOOT_ENABLED: "false"
+      TYPEBOT_ENABLED: "false"
+      OPENAI_ENABLED: "false"
+      DIFY_ENABLED: "false"
+      N8N_ENABLED: "false"
+      FLOWISE_ENABLED: "false"
+      S3_ENABLED: "false"
+      TELEMETRY_ENABLED: "false"
+      QRCODE_LIMIT: 30
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - sessions:/evolution/instances
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:8080/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 90s
+    networks: [provider]
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVOLUTION_POSTGRES_PASSWORD:?Defina a senha do banco isolado}
+    volumes: ["database:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [provider]
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["cache:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [provider]
+volumes:
+  sessions:
+  database:
+  cache:
+networks:
+  provider:
