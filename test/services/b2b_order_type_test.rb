@@ -22,6 +22,18 @@ class B2bOrderTypeTest < ActiveSupport::TestCase
     assert_equal({ '777' => :b2c_transfer }, B2bOrderType.for_orders([777]))
   end
 
+  test 'stock transfers created in Honey are store supply, old ones (nota fiscal) are ignored' do
+    user = User.create!(name: 'Tipo Abast', email: 'tipo_abast@example.com', password: 'password123')
+    [%w[90000777 1900], %w[555 555]].each do |id, number|
+      order = B2bOrder.new(kind: :stock_transfer, user:, transfer_location: @store, price_list: :transfer,
+                           tiny_reference_id: id, tiny_reference_number: number)
+      order.b2b_order_items.build(sku: 'LEG-1', name: 'Legging', quantity: 1, price: 10)
+      order.save!
+    end
+
+    assert_equal({ '90000777' => :store_supply, '555' => :sale }, B2bOrderType.for_orders(%w[90000777 555]))
+  end
+
   test 'orders sent to the Correios are typed by the recipient CNPJ and hand delivery' do
     created(1, cpf_cnpj: '25405327000336')
     created(2, cpf_cnpj: '25405327000506')

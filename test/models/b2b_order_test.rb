@@ -104,4 +104,14 @@ class B2bOrderTest < ActiveSupport::TestCase
     refute invalid.valid?
     assert_equal %w[SEDEX\ CORREIOS\ LOG+ PAC\ CORREIOS\ LOG+ SEDEX\ HOJE\ LOG+], B2bOrder::FREIGHT_SERVICES
   end
+
+  test 'stock transfers are Tiny orders, except the old ones that became a nota fiscal' do
+    order = B2bOrder.new(kind: :stock_transfer, tiny_reference_id: '90000777', tiny_reference_number: '1900')
+    assert order.tiny_order?
+    refute order.legacy_invoice?
+
+    legacy = B2bOrder.new(kind: :stock_transfer, tiny_reference_id: '777', tiny_reference_number: '777')
+    refute legacy.tiny_order?
+    assert legacy.legacy_invoice?
+  end
 end

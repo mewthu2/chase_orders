@@ -24,6 +24,46 @@ class InternalTransfer < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
 
+  # Status geral (overall_status) em SQL, para filtrar a lista sem carregar as remessas.
+  def self.with_overall_status(status)
+    shipments = InternalTransferShipment
+    ids_with = ->(statuses) { shipments.where(status: statuses).select(:internal_transfer_id) }
+    ids_without = ->(statuses) { shipments.where.not(status: statuses).select(:internal_transfer_id) }
+    active = %w[aberto reservado enviado]
+
+    case status.to_s
+    when 'aguardando_aprovacao' then approval_pendente
+    when 'reprovada' then approval_reprovada
+    when 'aberto' then approval_aprovada.where.not(id: ids_without.call('aberto'))
+    when 'cancelada' then approval_aprovada.where(id: ids_with.call('cancelado')).where.not(id: ids_without.call('cancelado'))
+    when 'concluida' then approval_aprovada.where(id: ids_with.call('recebido')).where.not(id: ids_with.call(active))
+    when 'em_andamento' then approval_aprovada.where(id: ids_with.call(active)).where(id: ids_without.call('aberto'))
+    else all
+    end
+  end
+
+  # Busca pelo número, observação, solicitante, código de rastreio ou produto (SKU/nome).
+  def self.search(query)
+    text = query.to_s.strip
+    return all if text.empty?
+
+    like = "%#{sanitize_sql_like(text)}%"
+    by_product = InternalTransferShipment.joins(items: :product)
+                                         .where('products.sku LIKE :q OR products.shopify_product_name LIKE :q', q: like)
+                                         .select(:internal_transfer_id)
+    by_tracking = InternalTransferShipment.where('tracking_code LIKE ?', like).select(:internal_transfer_id)
+
+    found = where('internal_transfers.notes LIKE ?', like)
+            .or(where(requested_by_id: User.where('name LIKE ?', like).select(:id)))
+            .or(where(id: by_product)).or(where(id: by_tracking))
+    number = text.delete_prefix('#')
+    number.match?(/\A\d+\z/) ? found.or(where(id: number.to_i)) : found
+  end
+
+  def self.with_origin(location_id)
+    where(id: InternalTransferShipment.where(origin_location_id: location_id).select(:internal_transfer_id))
+  end
+
   # Pedidos em que a location (por slug) participa, como origem ou como destino.
   def self.involving_location_slug(slug)
     location = Location.find_by(slug: slug)

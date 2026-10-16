@@ -229,7 +229,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     order = build_order
 
-    get romaneio_stock_transfer_path(order)
+    get romaneio_b2c_transfer_path(order)
 
     assert_response :not_found
   end

@@ -15,7 +15,61 @@
     </div>
   </div>
 
+  <% filter_keys = %i[q destination_id origin_id from to mine per_page] %>
+  <% base_params = params.permit(*filter_keys).to_h.compact_blank %>
+  <% filtering = base_params.except('per_page').any? %>
+
+  <div class="filters-panel transfer-filters">
+    <%= form_with url: internal_transfers_path, method: :get, local: true, id: 'transferFiltersForm' do %>
+      <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+      <div class="search-row mb-3">
+        <%= text_field_tag :q, params[:q], class: 'search-input', placeholder: 'Nº, SKU, produto, solicitante, rastreio ou observação...' %>
+        <button type="submit" class="btn-primary-sm"><i class="fas fa-search me-1"></i>Buscar</button>
+        <% if filtering || params[:status].present? %>
+          <%= link_to internal_transfers_path, class: 'btn-clear' do %><i class="fas fa-times me-1"></i>Limpar filtros<% end %>
+        <% end %>
+      </div>
+      <div class="transfer-filters-grid">
+        <div>
+          <label class="filter-label" for="destination_id"><i class="fas fa-map-marker-alt me-1"></i>Destino</label>
+          <%= select_tag :destination_id, options_from_collection_for_select(@filter_locations, :id, :name, params[:destination_id]), include_blank: 'Todas as lojas', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+        </div>
+        <div>
+          <label class="filter-label" for="origin_id"><i class="fas fa-truck-loading me-1"></i>Origem</label>
+          <%= select_tag :origin_id, options_from_collection_for_select(@filter_locations, :id, :name, params[:origin_id]), include_blank: 'Todas as lojas', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+        </div>
+        <div>
+          <label class="filter-label" for="from"><i class="fas fa-calendar-alt me-1"></i>Criada de</label>
+          <%= date_field_tag :from, params[:from], class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+        </div>
+        <div>
+          <label class="filter-label" for="to"><i class="fas fa-calendar-check me-1"></i>Até</label>
+          <%= date_field_tag :to, params[:to], class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+        </div>
+        <div class="transfer-filters-toggle">
+          <label class="mine-toggle">
+            <%= check_box_tag :mine, '1', params[:mine] == '1', onchange: 'this.form.requestSubmit()' %>
+            <span class="mine-toggle-track"><span class="mine-toggle-thumb"></span></span>
+            <span><i class="fas fa-bell me-1"></i>Aguardando minha ação</span>
+          </label>
+        </div>
+      </div>
+      <%= hidden_field_tag :per_page, params[:per_page] if params[:per_page].present? %>
+    <% end %>
+  </div>
+
   <div class="table-card">
+    <div class="status-tabs transfer-status-tabs px-3 pt-3 pb-2">
+      <%= link_to internal_transfers_path(base_params), class: "status-tab #{'status-tab--active' if params[:status].blank?}" do %>
+        Todas <span class="status-tab-count"><%= @total_count %></span>
+      <% end %>
+      <% InternalTransfer::STATUS_LABELS.each do |key, label| %>
+        <%= link_to internal_transfers_path(base_params.merge(status: key)), class: "status-tab status-tab--#{key} #{'status-tab--active' if params[:status] == key}" do %>
+          <span class="status-dot status-dot--<%= key %>"></span><%= label %> <span class="status-tab-count"><%= @status_counts[key] %></span>
+        <% end %>
+      <% end %>
+    </div>
+
     <% if @transfers.any? %>
       <div class="table-responsive">
         <table class="orders-table">
@@ -58,7 +112,25 @@
           </tbody>
         </table>
       </div>
-      <div class="px-3 py-3"><%= will_paginate @transfers, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+      <div class="transfer-pagination px-3 py-3">
+        <span class="text-muted-custom">
+          Mostrando <%= @transfers.offset + 1 %>–<%= @transfers.offset + @transfers.size %> de <%= @transfers.total_entries %>
+        </span>
+        <%= will_paginate @transfers, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
+        <%= form_with url: internal_transfers_path, method: :get, local: true, class: 'per-page-form' do %>
+          <% params.permit(*filter_keys, :status).to_h.except('per_page').compact_blank.each do |key, value| %>
+            <%= hidden_field_tag key, value %>
+          <% end %>
+          <label for="per_page_select" class="text-muted-custom">Por página</label>
+          <%= select_tag :per_page, options_for_select(InternalTransfersController::PER_PAGE_OPTIONS, @per_page), id: 'per_page_select', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+        <% end %>
+      </div>
+    <% elsif filtering || params[:status].present? %>
+      <div class="empty-state">
+        <i class="fas fa-search fa-3x mb-3 d-block"></i>
+        <h5>Nenhuma transferência encontrada com esses filtros</h5>
+        <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-times me-1"></i>Limpar filtros<% end %>
+      </div>
     <% else %>
       <div class="empty-state">
         <i class="fas fa-exchange-alt fa-3x mb-3 d-block"></i>

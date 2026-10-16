@@ -28,9 +28,11 @@ class B2bTinyService
   # para cair na fila de criação dos Correios B2B (CreateCorreiosLogOrdersJob2).
   B2C_TRANSFER_TAG = '(Transferencia b2c)'.freeze
   # Mão própria fica só para o abastecimento de lojas: o identificador nas observações do pedido faz a
-  # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usar o adicional de mão própria. A transferência
-  # B2C não leva esse identificador (vai como transportadora, dentro do galpão do Log).
+  # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usar SEDEX com o adicional de mão própria (002).
+  # A transferência B2C não leva esse identificador (vai como transportadora, dentro do galpão do Log).
   HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
+  # Abastecimento das lojas sempre vai por SEDEX (Correios Log).
+  STOCK_TRANSFER_FREIGHT_SERVICE = 'SEDEX CORREIOS LOG+'.freeze
   # Nome que vai no destinatário da entrega (endereco_entrega.nome_destinatario) da transferência.
   B2C_TRANSFER_RECIPIENT_NAME = 'TRANSFERENCIA B2B PARA B2C'.freeze
   B2C_TRANSFER_MARKER_ID = '182662'.freeze
@@ -99,9 +101,11 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
+  # Abastecimento das lojas vira pedido no Tiny (não mais nota fiscal direto), já em preparando_envio,
+  # para cair na fila dos Correios B2B como SEDEX com mão própria (adicional 002).
   def create_stock_transfer(b2b_order)
-    response = do_post('nota.fiscal.incluir.php', nota: build_nota_fiscal(b2b_order).to_json)
-    parse_nota_response(response)
+    response = do_post('pedido.incluir.php', pedido: { pedido: build_stock_transfer_pedido(b2b_order) }.to_json)
+    parse_pedido_response(response)
   rescue StandardError => e
     Rails.logger.error "B2bTinyService#create_stock_transfer exception: #{e.message}"
     { success: false, error: e.message }
@@ -300,48 +304,27 @@ class B2bTinyService
     "Vendedor: #{b2b_order.salesperson_name} | #{base}"
   end
 
-  def build_nota_fiscal(b2b_order)
-    transfer_location = b2b_order.transfer_location
-
-    items = b2b_order.b2b_order_items.map do |i|
-      { codigo: i.sku, descricao: i.name, unidade: 'UN', quantidade: i.quantity.to_s,
-        valor_unitario: format('%.2f', i.price.to_f - i.discount.to_f), tipo: 'P', cfop: '5152' }
-    end
-
-    valor_produtos = items.sum { |it| it[:valor_unitario].to_f * it[:quantidade].to_f }
-    valor_icms = (valor_produtos * 0.18).round(2)
-    valor_nota = (valor_produtos + valor_icms).round(2)
+  def build_stock_transfer_pedido(b2b_order)
+    location = b2b_order.transfer_location
 
     {
-      nota_fiscal: {
-        tipo: 'S',
-        natureza_operacao: 'CFOP 5152 - Transferência de mercadoria adquirida ou recebida de terceiros',
-        data_emissao: Time.current.strftime('%d/%m/%Y'),
-        cliente: {
-          nome: transfer_location.name,
-          tipo_pessoa: 'J',
-          cpf_cnpj: transfer_location.registration,
-          ie: transfer_location.state_registration.presence || '',
-          endereco: transfer_location.street,
-          numero: transfer_location.number,
-          complemento: transfer_location.complement.presence || '',
-          bairro: transfer_location.neighbourhood,
-          cidade: transfer_location.city,
-          uf: transfer_location.state,
-          cep: transfer_location.zip
-        },
-        itens: items.map { |item| { item: item } },
-        transportador: { nome: b2b_order.carrier&.name || b2b_order.carrier_name },
-        forma_frete: b2b_order.carrier_shipping_method,
-        frete_por_conta: b2b_order.shipper? ? 'R' : 'D',
-        valor_frete: b2b_order.freight_value.to_f,
-        valor_produtos: format('%.2f', valor_produtos),
-        valor_icms: format('%.2f', valor_icms),
-        base_icms: format('%.2f', valor_produtos),
-        valor_nota: format('%.2f', valor_nota),
-        valor_faturado: format('%.2f', valor_nota),
-        obs: "Transferência B2B ##{b2b_order.id} | #{b2b_order.notes}"
-      }
+      situacao: 'preparando_envio',
+      data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
+      id_natureza_operacao: NATUREZA_OPERACAO_IDS['transfer'],
+      id_lista_preco: TRANSFER_PRICE_LIST_ID,
+      itens: pedido_itens(b2b_order),
+      cliente: {
+        nome: location.name, tipo_pessoa: 'J', cpf_cnpj: location.registration.to_s,
+        ie: location.state_registration.presence || '',
+        endereco: location.street.to_s, numero: location.number.to_s, complemento: location.complement.presence || '',
+        bairro: location.neighbourhood.to_s, cidade: location.city.to_s, uf: location.state.to_s, cep: location.zip.to_s
+      },
+      forma_envio: 'E',
+      forma_frete: STOCK_TRANSFER_FREIGHT_SERVICE,
+      nome_transportador: CORREIOS_CARRIER_NAME,
+      frete_por_conta: 'R',
+      obs: [HAND_DELIVERY_TAG, "Abastecimento Loja ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
+      obs_interna: HAND_DELIVERY_TAG
     }
   end
 
@@ -378,18 +361,6 @@ class B2bTinyService
     when Hash then node.flat_map { |key, value| key.to_s == 'erro' ? Array(value).map(&:to_s) : collect_tiny_errors(value) }
     when Array then node.flat_map { |item| collect_tiny_errors(item) }
     else []
-    end
-  end
-
-  def parse_nota_response(response)
-    retorno = JSON.parse(response.body).with_indifferent_access[:retorno]
-    registro = retorno.dig(:registros, :registro)
-    erro = registro&.dig(:erro)
-
-    if retorno[:status_processamento] == '3' && retorno[:status] == 'OK'
-      { success: true, tiny_reference_id: registro&.dig(:numero)&.to_s, tiny_reference_number: registro&.dig(:numero)&.to_s }
-    else
-      { success: false, error: erro.presence || 'Erro desconhecido na API Tiny' }
     end
   end
 end

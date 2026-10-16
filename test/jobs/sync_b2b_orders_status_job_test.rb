@@ -35,12 +35,13 @@ class SyncB2bOrdersStatusJobTest < ActiveSupport::TestCase
     assert order.reload.aberto?
   end
 
-  test 'ignores stock_transfer orders (they create a nota fiscal in Tiny, not a pedido)' do
+  test 'ignores old stock_transfer orders (they became a nota fiscal in Tiny, not a pedido)' do
     location = TransferLocation.create!(
       name: 'CD Sync', registration: '25.405.327/0001-74', street: 'Rua Sync',
       number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: location, status: :aberto, tiny_reference_id: '222')
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: location, status: :aberto, tiny_reference_id: '222',
+                         tiny_reference_number: '222')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 10)
     order.save!
 

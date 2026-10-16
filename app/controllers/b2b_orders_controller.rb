@@ -400,10 +400,10 @@ class B2bOrdersController < ApplicationController
     [:alert, "#{KIND_LABELS[order.kind]} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
   end
 
-  # Checkbox "Gerar nota fiscal no Tiny" do envio do atacado. A transferência B2C sempre vai com a nota
-  # gerada (é mão própria: os Correios B2B precisam dela na fila de preparando envio).
+  # Checkbox "Gerar nota fiscal no Tiny" do envio do atacado. Abastecimento e transferência B2C sempre vão
+  # com a nota gerada (os Correios B2B precisam dela na fila de preparando envio).
   def generate_invoice?
-    order_kind == 'b2c_transfer' || params[:generate_invoice] == '1'
+    order_kind != 'sale' || params[:generate_invoice] == '1'
   end
 
   def undeletable_message(order)
@@ -496,12 +496,17 @@ class B2bOrdersController < ApplicationController
     @b2b_order = B2bOrder.where(kind: order_kind).find(params[:id])
   end
 
-  # A transferência B2C tem destinatário fixo e é mão própria: não aceita cliente, local nem dados de envio.
-  B2C_IGNORED_PARAMS = %i[client_id transfer_location_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
+  # As transferências não aceitam dados de envio: a B2C tem destinatário fixo e vai como transportadora; o
+  # abastecimento vai sempre por SEDEX com mão própria. Só o abastecimento escolhe o local de destino.
+  SHIPPING_PARAMS = %i[client_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
 
   def b2b_order_params
     permitted = b2b_order_permitted_params
-    order_kind == 'b2c_transfer' ? permitted.except(*B2C_IGNORED_PARAMS) : permitted
+    case order_kind
+    when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, :transfer_location_id)
+    when 'stock_transfer' then permitted.except(*SHIPPING_PARAMS)
+    else permitted
+    end
   end
 
   def b2b_order_permitted_params

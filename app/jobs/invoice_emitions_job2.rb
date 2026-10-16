@@ -53,7 +53,9 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
             status: error_message == 'Nota Fiscal localizada, porém apenas notas pendentes ou rejeitadas podem ser enviadas' ? :success : :error
           )
 
-          if attempt.error?
+          if attempt.error? && deleted_in_tiny?(att, error_message)
+            drop_from_queue(attempt, att)
+          elsif attempt.error?
             hold_on_address_error(attempt, att, error_message)
           else
             release_hold_if_any(att)
@@ -86,5 +88,22 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
     end
 
     attempt
+  end
+
+  private
+
+  NOTA_NOT_FOUND = 'Nota Fiscal não localizada'.freeze
+  DELETED_MESSAGE = 'Pedido excluído no Tiny: saiu da fila de emissão'.freeze
+
+  # Nota não localizada e o pedido também não existe mais no Tiny (excluído e, em geral, refeito com
+  # outro número): não há o que emitir. Sem isso a tentativa ficava na fila para sempre.
+  def deleted_in_tiny?(att, error_message)
+    error_message.to_s.start_with?(NOTA_NOT_FOUND) && B2bTinyService.new.order_missing?(att.tiny_order_id)
+  end
+
+  # A criação no Correios deixa de contar como sucesso, e por isso sai da fila (e da reserva de estoque).
+  def drop_from_queue(attempt, att)
+    att.update(status: :fail, error: DELETED_MESSAGE)
+    attempt.update(message: DELETED_MESSAGE)
   end
 end

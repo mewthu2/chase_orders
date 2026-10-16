@@ -120,7 +120,7 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
     assert_select '.flash-messages-container .alert-danger', text: /não foi enviado ao Tiny/
   end
 
-  test 'stock transfers cannot be cancelled this way (they are notas fiscais, not pedidos)' do
+  test 'stock transfers cannot be cancelled from the wholesale screen' do
     transfer = build_order(kind: :stock_transfer, tiny_reference_id: '555', tiny_reference_number: '9')
     stub = stub_request(:post, STATUS_URL)
 

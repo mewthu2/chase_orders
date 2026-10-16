@@ -45,9 +45,9 @@ class B2bOrder < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
 
-  # Pedido sem nota fiscal ativa pode ser excluído. Se já está no Tiny como pedido (venda/transferência B2C),
-  # a exclusão cancela o pedido lá antes (a API do Tiny não exclui pedido); o abastecimento enviado vira
-  # nota fiscal no Tiny e não pode ser excluído por aqui.
+  # Pedido sem nota fiscal ativa pode ser excluído. Se já está no Tiny como pedido, a exclusão cancela o
+  # pedido lá antes (a API do Tiny não exclui pedido); o abastecimento antigo, que virou nota fiscal no
+  # Tiny, não pode ser excluído por aqui.
   def deletable?
     (tiny_reference_id.blank? || tiny_order?) && !FiscalNote.active_for?(self)
   end
@@ -57,9 +57,16 @@ class B2bOrder < ApplicationRecord
   end
 
   # Vira pedido de venda no Tiny (pedido.incluir), com situação sincronizada e cancelável por lá.
-  # O abastecimento das lojas vira nota fiscal direto, sem pedido.
+  # Todos os tipos viram pedido, menos o abastecimento antigo, que virou nota fiscal direto.
   def tiny_order?
-    sale? || b2c_transfer?
+    !legacy_invoice?
+  end
+
+  # Abastecimentos enviados antes de virarem pedido foram criados como nota fiscal no Tiny: o
+  # tiny_reference_id deles é o número da nota (igual ao tiny_reference_number). Num pedido o id
+  # do Tiny nunca é igual ao número.
+  def legacy_invoice?
+    stock_transfer? && tiny_reference_id.present? && tiny_reference_id.to_s == tiny_reference_number.to_s
   end
 
   def total

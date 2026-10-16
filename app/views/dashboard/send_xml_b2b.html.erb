@@ -33,6 +33,7 @@
   <div class="collapse mb-4" id="filtersCollapse">
     <div class="filters-panel">
       <form action="<%= send_xml_b2b_dashboard_index_path %>" method="get">
+        <%= hidden_field_tag :order_type, @filter_order_type if @filter_order_type.present? %>
         <div class="filter-section">
           <label class="filter-label" for="status"><i class="fas fa-info-circle me-1"></i>Status</label>
           <div class="search-row">
@@ -140,6 +141,7 @@
         <% end %>
       </div>
     </div>
+    <div class="px-3 pb-3"><%= render 'dashboard/order_type_filter' %></div>
     <% if @send_xml.present? %>
       <div class="table-responsive">
         <table class="orders-table" id="xmlTable">

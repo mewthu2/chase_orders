@@ -400,4 +400,90 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_nil transfer.reviewed_by
     refute transfer.shipments.first.reservable?
   end
+
+  # ---- Lista: busca, filtros, abas de status e paginação ----
+  test 'the list searches by number, SKU, product name, requester and tracking code' do
+    camiseta = build_transfer(items: [[@bh, @a, 1]])
+    calca = build_transfer(items: [[@bh, @b, 1]])
+    calca.shipments.first.update!(tracking_code: 'QB123456789BR')
+
+    { 'SKU-A' => camiseta, 'Calça' => calca, 'QB1234' => calca, "##{camiseta.id}" => camiseta }.each do |q, expected|
+      get internal_transfers_path(q:)
+      assert_select 'tbody tr', count: 1, message: "busca #{q}"
+      assert_select 'tbody td.text-main', text: "##{expected.id}"
+    end
+
+    get internal_transfers_path(q: 'Admin')
+    assert_select 'tbody tr', count: 2
+  end
+
+  test 'the list filters by destination, origin and period' do
+    to_lagoa = build_transfer(items: [[@bh, @a, 1]], destination: @lagoa)
+    to_bh = build_transfer(items: [[@lagoa, @a, 1]], destination: @bh)
+    to_bh.update_columns(created_at: 10.days.ago)
+
+    get internal_transfers_path(destination_id: @bh.id)
+    assert_select 'tbody td.text-main', text: "##{to_bh.id}"
+    assert_select 'tbody tr', count: 1
+
+    get internal_transfers_path(origin_id: @bh.id)
+    assert_select 'tbody td.text-main', text: "##{to_lagoa.id}"
+    assert_select 'tbody tr', count: 1
+
+    get internal_transfers_path(from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601)
+    assert_select 'tbody td.text-main', text: "##{to_lagoa.id}"
+    assert_select 'tbody tr', count: 1
+
+    get internal_transfers_path(from: 'lixo')
+    assert_select 'tbody tr', count: 2
+  end
+
+  test 'status tabs count and filter by the overall status' do
+    pending = build_transfer
+    pending.update_columns(approval_status: InternalTransfer.approval_statuses[:pendente])
+    open = build_transfer
+    sent = build_transfer
+    sent.shipments.first.update_columns(status: InternalTransferShipment.statuses[:enviado])
+    done = build_transfer
+    done.shipments.first.update_columns(status: InternalTransferShipment.statuses[:recebido])
+    cancelled = build_transfer
+    cancelled.shipments.first.update_columns(status: InternalTransferShipment.statuses[:cancelado])
+
+    expected = { 'aguardando_aprovacao' => pending, 'aberto' => open, 'em_andamento' => sent, 'concluida' => done, 'cancelada' => cancelled }
+    expected.each do |status, transfer|
+      assert_equal status, transfer.reload.overall_status
+      assert_equal [transfer.id], InternalTransfer.with_overall_status(status).ids, status
+    end
+
+    get internal_transfers_path(status: 'em_andamento')
+    assert_select 'tbody tr', count: 1
+    assert_select 'tbody td.text-main', text: "##{sent.id}"
+    assert_select '.status-tab--active', text: /Em andamento\s*1/
+    assert_select '.status-tab', text: /Todas\s*5/
+  end
+
+  test 'filters are kept in the status tabs and pagination respects the page size' do
+    21.times { build_transfer }
+
+    get internal_transfers_path(destination_id: @lagoa.id)
+    assert_select 'tbody tr', count: 20
+    assert_select "a.status-tab[href*='destination_id=#{@lagoa.id}'][href*='status=aberto']"
+    assert_select '.pagination'
+
+    get internal_transfers_path(per_page: 50)
+    assert_select 'tbody tr', count: 21
+  end
+
+  test 'the "waiting on me" toggle lists only transfers that need the user' do
+    receivable = build_transfer(items: [[@bh, @a, 1]], destination: @lagoa)
+    receivable.shipments.first.update_columns(status: InternalTransferShipment.statuses[:enviado])
+    build_transfer(items: [[@lagoa, @a, 1]], destination: @bh).shipments.first
+                  .update_columns(status: InternalTransferShipment.statuses[:enviado])
+    sign_in gerente_lagoa
+
+    get internal_transfers_path(mine: '1')
+
+    assert_select 'tbody tr', count: 1
+    assert_select 'tbody td.text-main', text: "##{receivable.id}"
+  end
 end

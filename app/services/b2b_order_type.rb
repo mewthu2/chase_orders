@@ -26,8 +26,9 @@ module B2bOrderType
     ids = Array(tiny_order_ids).map(&:to_s).reject(&:blank?).uniq
     return {} if ids.empty?
 
-    types = B2bOrder.where(tiny_reference_id: ids).where.not(kind: :stock_transfer)
-                    .pluck(:tiny_reference_id, :kind).to_h { |id, kind| [id.to_s, KIND_TYPES[kind]] }
+    # Abastecimento antigo guarda o número da nota (não o id do pedido) e não entra aqui.
+    types = B2bOrder.where(tiny_reference_id: ids).select(&:tiny_order?)
+                    .to_h { |order| [order.tiny_reference_id.to_s, KIND_TYPES[order.kind]] }
 
     stores = store_cnpjs
     store_names = TransferLocation.pluck(:name).map { |name| name.to_s.downcase.strip }

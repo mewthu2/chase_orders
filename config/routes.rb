@@ -290,7 +290,7 @@ Rails.application.routes.draw do
                               only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
       post :transmit
-      get :romaneio
+      post :cancel_in_tiny
     end
   end
 

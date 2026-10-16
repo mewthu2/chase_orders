@@ -41,12 +41,12 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     order
   end
 
-  test 'the generate icon shows on both order lists and on the edit page for users with fiscal_notes access' do
+  test 'the generate icon shows on the wholesale list and edit page; stock transfers get the nota from Tiny' do
     get b2b_orders_path
     assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @sale.id)}']"
 
     get stock_transfers_path
-    assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @transfer.id)}']"
+    assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @transfer.id)}']", count: 0
 
     get edit_b2b_order_path(@sale)
     assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @sale.id)}']", text: /Gerar nota fiscal/

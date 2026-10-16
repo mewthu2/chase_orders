@@ -14,11 +14,13 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     sign_in @admin
   end
 
-  NOTA_URL = 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php'.freeze
   PEDIDO_URL = 'https://api.tiny.com.br/api2/pedido.incluir.php'.freeze
+  INVOICE_URL = 'https://api.tiny.com.br/api2/gerar.nota.fiscal.pedido.php'.freeze
 
+  # Abastecimento vira pedido no Tiny e já sai com a nota fiscal gerada.
   def stub_tiny_nota_ok(numero: '777')
-    stub_request(:post, NOTA_URL).to_return(body: { retorno: { status_processamento: '3', status: 'OK', registros: { registro: { numero: numero } } } }.to_json)
+    stub_request(:post, INVOICE_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '5', numero: '42' } } } }.to_json)
+    stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '90000777', numero: numero } } } }.to_json)
   end
 
   def build_sale(**attrs)
@@ -226,5 +228,42 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     order = B2bOrder.last
     assert_equal 'SEDEX CORREIOS LOG+', order.freight_service
     assert order.aberto?, order.error_message
+  end
+
+  test 'a stock transfer enters Tiny as a pedido in preparando envio, with the nota generated' do
+    stub_tiny_nota_ok(numero: '1900')
+    post stock_transfers_path, params: { b2b_order: {
+      transfer_location_id: @location.id, carrier_shipping_method: '123', freight_service: 'PAC CORREIOS LOG+',
+      b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
+    } }
+
+    order = B2bOrder.last
+    assert order.preparando_envio?
+    assert_equal '90000777', order.tiny_reference_id
+    assert_nil order.freight_service, 'abastecimento é sempre SEDEX, não aceita outro serviço'
+    assert_requested :post, INVOICE_URL
+    follow_redirect!
+    assert_select '.flash-messages-container', text: /Nota fiscal gerada no Tiny/
+  end
+
+  test 'the stock transfers list has no romaneio and links the Tiny number to the pedido' do
+    transfer = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '1900', status: :preparando_envio)
+
+    get stock_transfers_path
+
+    assert_select "a[href*='romaneio']", count: 0
+    assert_select "a[href='https://erp.tiny.com.br/vendas#edit/90000777']"
+    get edit_stock_transfer_path(transfer)
+    assert_select "a[href*='romaneio']", count: 0
+    assert_select '#shippingMethodSelect', count: 0
+    assert_match(/SEDEX · Mão Própria/, response.body)
+  end
+
+  test 'an old stock transfer that became a nota fiscal still links to the nota' do
+    build_transfer(tiny_reference_id: '777', tiny_reference_number: '777')
+
+    get stock_transfers_path
+
+    assert_select "a[href='https://erp.tiny.com.br/notas_fiscais#edit/777']"
   end
 end

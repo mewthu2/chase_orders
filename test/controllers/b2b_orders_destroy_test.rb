@@ -201,13 +201,14 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
     assert_operator count, :<=, 1
   end
 
-  test 'deletable? is a model rule: no active fiscal note, and a sent stock transfer (a nota in Tiny) is never deletable' do
+  test 'deletable? is a model rule: no active fiscal note, and an old stock transfer (a nota in Tiny) is never deletable' do
     order = build_order
 
     assert order.deletable?
     order.tiny_reference_id = '1'
     assert order.deletable?
-    refute build_order(kind: :stock_transfer, tiny_reference_id: '9').deletable?
+    refute build_order(kind: :stock_transfer, tiny_reference_id: '9', tiny_reference_number: '9').deletable?
+    assert build_order(kind: :stock_transfer, tiny_reference_id: '90000009', tiny_reference_number: '9').deletable?
     order.tiny_reference_id = nil
     note_for(order, :assinada)
     refute order.reload.deletable?

@@ -60,30 +60,46 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     assert_equal 'CPF/CNPJ inválido', result[:error]
   end
 
-  test 'create_stock_transfer returns success when status_processamento is 3' do
-    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location)
+  test 'create_stock_transfer creates a pedido in preparando_envio, always SEDEX with hand delivery' do
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location, notes: 'Reposição')
     order.b2b_order_items.build(sku: 'SKU1', name: 'Produto 1', quantity: 1, price: 5)
     order.save!
 
-    stub_request(:post, 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php')
-      .to_return(body: { retorno: { status: 'OK', status_processamento: '3', registros: { registro: { numero: '999' } } } }.to_json)
+    pedido = nil
+    stub_request(:post, 'https://api.tiny.com.br/api2/pedido.incluir.php').with do |req|
+      pedido = JSON.parse(URI.decode_www_form(req.body).to_h['pedido'])['pedido']
+      true
+    end.to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '902371999', numero: '1900' } } } }.to_json)
 
     result = @service.create_stock_transfer(order)
     assert result[:success]
-    assert_equal '999', result[:tiny_reference_id]
+    assert_equal '902371999', result[:tiny_reference_id]
+    assert_equal '1900', result[:tiny_reference_number]
+
+    assert_equal 'preparando_envio', pedido['situacao']
+    assert_equal '790850411', pedido['id_natureza_operacao']
+    assert_equal '8198', pedido['id_lista_preco']
+    assert_equal @location.name, pedido['cliente']['nome']
+    assert_equal @location.registration, pedido['cliente']['cpf_cnpj']
+    assert_equal 'E', pedido['forma_envio']
+    assert_equal 'SEDEX CORREIOS LOG+', pedido['forma_frete']
+    assert_includes pedido['obs'], 'MAO PROPRIA'
+    assert_includes pedido['obs'], 'Reposição'
+    assert_equal 'MAO PROPRIA', pedido['obs_interna']
+    assert_not_requested :post, 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php'
   end
 
-  test 'create_stock_transfer returns failure when Tiny rejects the note' do
+  test 'create_stock_transfer returns failure when Tiny rejects the order' do
     order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location)
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 5)
     order.save!
 
-    stub_request(:post, 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php')
-      .to_return(body: { retorno: { status: 'Erro', status_processamento: '1', registros: { registro: { erro: 'Item sem CFOP' } } } }.to_json)
+    stub_request(:post, 'https://api.tiny.com.br/api2/pedido.incluir.php')
+      .to_return(body: { retorno: { status: 'Erro', erros: { erro: 'Produto não encontrado' } } }.to_json)
 
     result = @service.create_stock_transfer(order)
     refute result[:success]
-    assert_equal 'Item sem CFOP', result[:error]
+    assert_equal 'Produto não encontrado', result[:error]
   end
 
   test 'create_sale_order sends the unit price net of the item discount' do
@@ -291,22 +307,6 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     assert_equal @client.display_name, pedido.dig('cliente', 'nome')
     assert_equal %w[SKU1 SKU2], pedido['itens'].map { |i| i.dig('item', 'codigo') }
     assert_equal 'preparando_envio', pedido['situacao']
-  end
-
-  test 'create_stock_transfer keeps sending the nota wrapped in the "nota_fiscal" root' do
-    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location)
-    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto 1', quantity: 1, price: 5)
-    order.save!
-    sent = nil
-    stub_request(:post, 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php')
-      .with { |req| sent = JSON.parse(URI.decode_www_form(req.body).to_h['nota']); true }
-      .to_return(body: { retorno: { status_processamento: '3', status: 'OK', registros: { registro: { numero: '9' } } } }.to_json)
-
-    @service.create_stock_transfer(order)
-
-    assert_equal ['nota_fiscal'], sent.keys
-    assert_equal @location.name, sent.dig('nota_fiscal', 'cliente', 'nome')
-    assert_equal 1, sent.dig('nota_fiscal', 'itens').size
   end
 
   # ---- Forma de envio / frete: o Tiny guarda um código por tipo de logística e o serviço em forma_frete ----

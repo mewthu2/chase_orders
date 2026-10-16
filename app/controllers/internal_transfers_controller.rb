@@ -15,10 +15,21 @@ class InternalTransfersController < ApplicationController
   before_action :require_approver, only: [:approve, :reject]
   helper_method :approver?
 
+  PER_PAGE_OPTIONS = [20, 50, 100].freeze
+
   def index
-    scope = InternalTransfer.includes(:destination_location, shipments: [:origin_location, :items]).recent
+    scope = InternalTransfer.recent
     scope = scope_for_user(scope) unless current_user.admin?
-    @transfers = scope.paginate(page: params[:page], per_page: 20)
+    scope = apply_filters(scope)
+
+    @status_counts = InternalTransfer::STATUS_LABELS.keys.index_with { |status| scope.with_overall_status(status).count }
+    @total_count = scope.count
+    scope = scope.with_overall_status(params[:status]) if InternalTransfer::STATUS_LABELS.key?(params[:status])
+    scope = only_my_action(scope) if params[:mine] == '1'
+
+    @per_page = PER_PAGE_OPTIONS.include?(params[:per_page].to_i) ? params[:per_page].to_i : PER_PAGE_OPTIONS.first
+    @transfers = scope.includes(:destination_location, shipments: [:origin_location, :items]).paginate(page: params[:page], per_page: @per_page)
+    @filter_locations = Location.where.not(slug: EXCLUDED_LOCATION_SLUGS).order(:name)
     # Só o nome do solicitante: pré-carregar os User faria o Bullet confundir o current_user (quando
     # ele também é solicitante) com um N+1 de profiles.
     @requester_names = User.where(id: @transfers.map(&:requested_by_id).uniq).pluck(:id, :name).to_h
@@ -208,6 +219,34 @@ class InternalTransfersController < ApplicationController
 
   # Só pedidos em que a location (por slug) participa, como origem ou destino; o aprovador vê
   # também todos os que aguardam aprovação.
+  # Filtros da lista (menos o status, que vira aba com contagem).
+  def apply_filters(scope)
+    scope = scope.search(params[:q]) if params[:q].present?
+    scope = scope.where(destination_location_id: params[:destination_id]) if params[:destination_id].present?
+    scope = scope.with_origin(params[:origin_id]) if params[:origin_id].present?
+    scope = scope.where(created_at: parse_date(params[:from]).beginning_of_day..) if parse_date(params[:from])
+    scope = scope.where(created_at: ..parse_date(params[:to]).end_of_day) if parse_date(params[:to])
+    scope
+  end
+
+  def parse_date(value)
+    Date.iso8601(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  # "Aguardando minha ação" depende das permissões do usuário em cada loja: é calculado em Ruby, só
+  # sobre as transferências que ainda não terminaram.
+  def only_my_action(scope)
+    approver_ids = InternalTransferApprover.user_ids
+    open_scope = scope.where.not(id: InternalTransfer.with_overall_status('concluida').select(:id))
+                      .where.not(id: InternalTransfer.with_overall_status('cancelada').select(:id))
+                      .where.not(approval_status: :reprovada)
+    ids = open_scope.includes(:destination_location, shipments: [:origin_location, :items])
+                    .select { |transfer| transfer.my_action_needed?(current_user, approver_ids:) }.map(&:id)
+    scope.where(id: ids)
+  end
+
   def scope_for_user(scope)
     slugs = current_user.allowed_location_keys
     ids = slugs.flat_map { |slug| InternalTransfer.involving_location_slug(slug).ids }

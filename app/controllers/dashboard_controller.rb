@@ -173,6 +173,7 @@ class DashboardController < ApplicationController
                           end
 
     @order_types = B2bOrderType.for_orders(pending_order_ids)
+    @send_xml = filter_by_order_type(@send_xml, @order_types)
     @job_running = b2b_job_running?(:send_xml_tiny2)
   end
 
@@ -865,6 +866,16 @@ class DashboardController < ApplicationController
   end
 
   private
+
+  # Filtro "Tipo do pedido" (abastecimento loja, transferência B2B -> B2C, B2B comum) das filas do Correios B2B.
+  # O tipo é deduzido por pedido (B2bOrderType), então o filtro usa o resultado já calculado.
+  def filter_by_order_type(scope, order_types)
+    @order_type_counts = order_types.values.map(&:to_s).tally
+    @filter_order_type = params[:order_type].presence_in(B2bOrderType::LABELS.keys.map(&:to_s))
+    return scope unless @filter_order_type
+
+    scope.where(tiny_order_id: order_types.select { |_, type| type.to_s == @filter_order_type }.keys)
+  end
 
   def authorize_correios_dashboard!
     return if current_user&.can_access_screen?('dashboard_correios') ||

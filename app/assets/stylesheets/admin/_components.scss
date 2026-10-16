@@ -625,3 +625,31 @@
 @media (prefers-reduced-motion: reduce) {
   .b2b-order-type-badge, .b2b-order-type-badge i { animation: none; }
 }
+
+// Filtro por tipo do pedido B2B: os próprios selos viram chips clicáveis.
+.order-type-filter {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+}
+.order-type-filter-label {
+  color: $text-muted; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  margin-right: 0.25rem;
+}
+.order-type-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0;
+  padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+  text-decoration: none; opacity: 0.55; transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+
+  &:hover { opacity: 0.9; text-decoration: none; transform: translateY(-1px) scale(1.04); }
+  &.is-active { opacity: 1; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18), 0 4px 14px rgba(0, 0, 0, 0.35); }
+  &:focus-visible { outline: 2px solid $accent-blue-light; outline-offset: 2px; }
+}
+.order-type-chip--all {
+  color: $text-primary; border: 1px solid $border-muted; background: $bg-elevated;
+}
+.order-type-chip-count {
+  min-width: 1.4rem; padding: 0 0.4rem; border-radius: 999px; text-align: center;
+  background: rgba(0, 0, 0, 0.35); font-size: 0.7rem; font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+  .order-type-chip { transition: none; }
+}

@@ -1,0 +1,19 @@
+<%# Filtro por tipo do pedido B2B, no mesmo visual do selo (b2b_order_type_badge). Mantém os outros filtros da tela. %>
+<% kept = request.query_parameters.except('order_type', 'page') %>
+<div class="order-type-filter" role="group" aria-label="Filtrar por tipo do pedido">
+  <span class="order-type-filter-label"><i class="fas fa-tags me-1"></i>Tipo do pedido</span>
+  <%= link_to url_for(kept), class: "order-type-chip order-type-chip--all #{'is-active' if @filter_order_type.blank?}",
+              aria: { current: @filter_order_type.blank? ? 'true' : nil } do %>
+    <i class="fas fa-layer-group"></i>Todos
+    <span class="order-type-chip-count"><%= @order_type_counts.values.sum %></span>
+  <% end %>
+  <% B2bOrderType::LABELS.each do |type, label| %>
+    <% active = @filter_order_type == type.to_s %>
+    <%= link_to url_for(kept.merge('order_type' => type)),
+                class: "b2b-order-type-badge type-#{type} order-type-chip #{'is-active' if active}",
+                aria: { current: active ? 'true' : nil }, title: "Mostrar só #{label}" do %>
+      <i class="fas fa-<%= B2bOrdersHelper::B2B_ORDER_TYPE_ICONS[type] %>"></i><%= label %>
+      <span class="order-type-chip-count"><%= @order_type_counts[type.to_s].to_i %></span>
+    <% end %>
+  <% end %>
+</div>

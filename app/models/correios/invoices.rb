@@ -18,7 +18,8 @@ module Correios::Invoices
                                headers:,
                                body:)
     rescue StandardError => e
-      attempt.update(error: e, status: :error)
+      attempt.update(error: e.message.to_s.first(255), status: :error, message: "Falha ao enviar o XML aos Correios: #{e.class}")
+      return
     end
 
     begin
@@ -53,9 +54,14 @@ module Correios::Invoices
         else
           attempt.update(status: :error, status_code: response.code, message: response.body)
         end
+      else
+        attempt.update(status: :error, status_code: response.code,
+                       message: "Os Correios responderam HTTP #{response.code}: #{response.body.to_s.first(200)}")
       end
     else
-      attempt.update(status: :error, message: 'Requisição vazia')
+      # Resposta sem corpo: guarda o código HTTP para saber o que os Correios responderam.
+      attempt.update(status: :error, status_code: response.code,
+                     message: "Requisição vazia (os Correios responderam HTTP #{response.code} sem conteúdo)")
     end
   end
 end
