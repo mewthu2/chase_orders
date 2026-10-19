@@ -1,5 +1,6 @@
 <% copy = b2b_screen_copy(order_kind) %>
 <% transfers = order_kind != 'sale' %>
+<% show_status = order_kind != 'b2c_transfer' %>
 <% content_for :title, copy[:title] %>
 
 <div class="users-container">
@@ -61,7 +62,7 @@
               <th>Destino</th>
               <th class="text-end">Total</th>
               <th>Nº Tiny</th>
-              <th class="text-center">Status</th>
+              <% if show_status %><th class="text-center">Status</th><% end %>
               <th class="text-end">Ações</th>
             </tr>
             <% else %>
@@ -93,9 +94,11 @@
                   <% end %>
                 </td>
                 <% unless transfers %><td class="text-muted-custom"><%= order.tracking_code.presence || '-' %></td><% end %>
+                <% if show_status %>
                 <td class="text-center">
                   <span class="status-pill status-pill--<%= order.status %>"><%= B2bOrder::STATUS_LABELS[order.status] %></span>
                 </td>
+                <% end %>
                 <td class="text-end">
                   <div class="table-actions">
                     <%= link_to edit_order_path_for(order), class: "action-btn action-btn--edit" do %><i class="fas fa-pencil-alt"></i><% end %>
