@@ -240,6 +240,38 @@ document.addEventListener('DOMContentLoaded', function() {
   const profileCheckboxes = document.querySelectorAll('.profile-checkbox');
   const adminProfileCheckbox = document.getElementById('profile_1');
 
+  // Location checkboxes
+  const locationCheckboxes = document.querySelectorAll('.location-checkbox');
+  const selectAllBtn = document.getElementById('selectAllLocations');
+  const deselectAllBtn = document.getElementById('deselectAllLocations');
+  const selectedCounter = document.getElementById('selectedCount');
+  const locationsSection = document.getElementById('locationsSection');
+  const locationControls = document.getElementById('locationControls');
+  const locationHelpText = document.getElementById('locationHelpText');
+
+  function updateSelectedCount() {
+    if (!selectedCounter) return;
+
+    const checkedCount = document.querySelectorAll('.location-checkbox:checked').length;
+    selectedCounter.textContent = `${checkedCount} de ${locationCheckboxes.length} selecionadas`;
+  }
+
+  locationCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+  });
+
+  function setAllLocations(checked) {
+    locationCheckboxes.forEach(checkbox => {
+      checkbox.checked = checked;
+    });
+    updateSelectedCount();
+  }
+
+  if (selectAllBtn) selectAllBtn.addEventListener('click', () => setAllLocations(true));
+  if (deselectAllBtn) deselectAllBtn.addEventListener('click', () => setAllLocations(false));
+
+  updateSelectedCount();
+
   function toggleLocationsSection() {
     if (!locationsSection) return;
 
@@ -257,7 +289,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (selectedCounter) {
         selectedCounter.textContent = 'Todas (Admin)';
-        selectedCounter.className = 'badge bg-warning text-dark';
       }
     } else {
       locationControls.style.display = 'flex';
