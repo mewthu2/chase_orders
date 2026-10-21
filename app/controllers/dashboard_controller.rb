@@ -813,7 +813,7 @@ class DashboardController < ApplicationController
     id_nota_fiscal = params[:id_nota_fiscal]
 
     if tiny_order_id.blank? || id_nota_fiscal.blank?
-      redirect_to order_correios_tracking_dashboard_index_path, alert: 'Parâmetros obrigatórios não informados.'
+      redirect_back fallback_location: invoice_emition_dashboard_index_path, alert: 'Parâmetros obrigatórios não informados.'
       return
     end
 
@@ -821,18 +821,18 @@ class DashboardController < ApplicationController
       attempts = Attempt.where(tiny_order_id:, status: :success)
 
       if attempts.empty?
-        redirect_to order_correios_tracking_dashboard_index_path, alert: "Nenhum attempt com status 'success' encontrado para o pedido #{tiny_order_id}."
+        redirect_back fallback_location: invoice_emition_dashboard_index_path, alert: "Nenhum attempt com status 'success' encontrado para o pedido #{tiny_order_id}."
         return
       end
 
       updated_count = attempts.update_all(id_nota_fiscal:)
 
-      redirect_to order_correios_tracking_dashboard_index_path,
-                  notice: "ID da nota fiscal atualizado com sucesso! #{updated_count} attempt(s) foram atualizados para o pedido #{tiny_order_id}."
+      redirect_back fallback_location: invoice_emition_dashboard_index_path,
+                    notice: "ID da nota fiscal atualizado com sucesso! #{updated_count} attempt(s) foram atualizados para o pedido #{tiny_order_id}."
     rescue StandardError => e
       Rails.logger.error "Erro ao atualizar ID da nota fiscal: #{e.message}"
-      redirect_to order_correios_tracking_dashboard_index_path, 
-                  alert: "Erro ao atualizar ID da nota fiscal: #{e.message}"
+      redirect_back fallback_location: invoice_emition_dashboard_index_path,
+                    alert: "Erro ao atualizar ID da nota fiscal: #{e.message}"
     end
   end
 

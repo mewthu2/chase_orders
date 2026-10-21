@@ -22,7 +22,48 @@
           <button type="button" class="btn btn-warning" id="bulkRunBtn" disabled>
             <i class="fas fa-file-invoice me-1"></i> Emitir Selecionados (<span id="bulkRunCount">0</span>)
           </button>
+          <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#updateInvoiceModal">
+            <i class="fas fa-edit me-1"></i> Atualizar Nota Fiscal
+          </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="updateInvoiceModal" tabindex="-1" aria-labelledby="updateInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-white" id="updateInvoiceModalLabel">
+            <i class="fas fa-edit me-2"></i>Atualizar ID da Nota Fiscal
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="<%= update_invoice_id_dashboard_index_path %>" method="post">
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="tiny_order_id" class="form-label text-white">ID do Pedido (Tiny Order ID)</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="tiny_order_id" name="tiny_order_id" required placeholder="Ex: 911317520">
+              <div class="form-text text-muted">Digite o ID do pedido no sistema Tiny</div>
+            </div>
+            <div class="mb-3">
+              <label for="id_nota_fiscal" class="form-label text-white">ID da Nota Fiscal</label>
+              <input type="number" class="form-control bg-dark text-white border-secondary" id="id_nota_fiscal" name="id_nota_fiscal" required placeholder="Ex: 123456">
+              <div class="form-text text-muted">Digite o novo ID da nota fiscal</div>
+            </div>
+            <div class="alert alert-info border-0">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Atenção:</strong> Esta ação irá atualizar o ID da nota fiscal em todos os attempts com status "success" para o pedido informado.
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-save me-1"></i> Atualizar Nota Fiscal
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
