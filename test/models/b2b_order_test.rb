@@ -30,6 +30,17 @@ class B2bOrderTest < ActiveSupport::TestCase
     assert_includes order.errors[:transfer_location], 'não pode ficar em branco'
   end
 
+  test 'stock_transfer order not yet sent requires the receiver name' do
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location)
+    order.b2b_order_items.build(sku: 'ABC', quantity: 1, price: 10)
+    refute order.valid?
+    assert_includes order.errors[:receiver_name], 'não pode ficar em branco'
+
+    order.tiny_reference_id = '90000777'
+    order.valid?
+    assert_empty order.errors[:receiver_name]
+  end
+
   test 'order requires at least one item' do
     order = B2bOrder.new(kind: :sale, user: @user, client: @client)
     refute order.valid?

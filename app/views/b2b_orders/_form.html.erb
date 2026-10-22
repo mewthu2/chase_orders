@@ -51,6 +51,11 @@
           <span class="hand-delivery-badge"><i class="fas fa-hand-holding"></i>SEDEX · Mão Própria</span>
           <span class="text-muted-custom d-block mt-1">Sempre SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
         </div>
+        <div class="form-col-6">
+          <label class="field-label">Responsável pelo Recebimento</label>
+          <%= form.text_field :receiver_name, class: 'field-input', placeholder: 'Nome de quem vai receber na loja', maxlength: 60, required: @b2b_order.tiny_reference_id.blank? %>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai nas observações do pedido no Tiny e como destinatário nos Correios: com mão própria, só essa pessoa pode receber.</span>
+        </div>
         <% else %>
         <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
         <div class="form-col-6" id="b2cDestinationSection">
@@ -61,8 +66,8 @@
         </div>
         <div class="form-col-6">
           <label class="field-label">Entrega</label>
-          <span class="hand-delivery-badge"><i class="fas fa-hand-holding"></i>Mão Própria</span>
-          <span class="text-muted-custom d-block mt-1">Sem forma de envio: nos Correios B2B o pedido é criado com forma de envio 002.</span>
+          <span class="hand-delivery-badge"><i class="fas fa-truck-moving"></i>Transportadora</span>
+          <span class="text-muted-custom d-block mt-1">Sem mão própria: nos Correios B2B o pedido entra como outra transportadora (dentro do galpão do Log).</span>
         </div>
         <% end %>
 
@@ -270,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!isCorreiosLog) freightSelect.value = '';
   }
 
-  // Forma de Envio via AJAX (lista vem do Tiny). A transferência B2C é mão própria e não tem esse campo.
+  // Forma de Envio via AJAX (lista vem do Tiny). A transferência B2C vai como transportadora e não tem esse campo.
   if (document.getElementById('shippingMethodSelect')) {
   fetch('<%= shipping_methods_b2b_orders_path %>')
     .then(function (r) { return r.json(); })

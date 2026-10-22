@@ -75,6 +75,21 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     refute Attempt.last.is_transportadora
   end
 
+  test 'a store supply order goes to Correios with the receiver as the recipient' do
+    location = TransferLocation.create!(name: 'Loja Savassi', registration: '25.405.327/0001-74', street: 'Rua A',
+                                        number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000')
+    user = User.create!(name: 'Teste Receb', email: 'teste_receb@example.com', password: 'password123')
+    order = B2bOrder.new(kind: :stock_transfer, user:, transfer_location: location, receiver_name: 'Maria Souza',
+                         tiny_reference_id: '902371809', tiny_reference_number: '1900')
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
+    order.save!
+
+    params = run_job(tiny_pedido(obs: 'MAO PROPRIA | Abastecimento Loja #1 | Responsável pelo recebimento: Maria Souza'))
+
+    assert params[:mao_propria]
+    assert_equal 'Maria Souza', @recipient_name
+  end
+
   test 'other orders keep using the forma de frete' do
     params = run_job(tiny_pedido(obs: 'Pedido B2B #10', forma_frete: 'PAC CORREIOS LOG+', nome_transportador: 'EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS'))
 

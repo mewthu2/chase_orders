@@ -38,7 +38,7 @@ class TransferLocationTest < ActiveSupport::TestCase
   test 'cannot be destroyed while it has b2b_orders' do
     location = TransferLocation.create!(valid_attrs)
     user = User.create!(name: 'Teste TL', email: 'teste_tl@example.com', password: 'password123')
-    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: user)
+    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: user, receiver_name: 'Maria')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
 

@@ -34,7 +34,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
   end
 
   def build_order(kind, sku: 'SKU-1')
-    attrs = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer }
+    attrs = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer, receiver_name: 'Maria' }
     order = B2bOrder.new({ kind: kind, user: @admin }.merge(attrs))
     order.b2b_order_items.build(sku: sku, name: sku, quantity: 2, price: 10)
     order.save!

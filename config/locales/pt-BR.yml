@@ -256,6 +256,7 @@ pt-BR:
         kind: Tipo
         status: Status
         salesperson_name: Vendedor
+        receiver_name: Responsável pelo recebimento
         price_list: Lista de preço
         freight_value: Valor do frete
         notes: Observações

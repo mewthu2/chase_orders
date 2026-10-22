@@ -20,7 +20,7 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
   end
 
   def build_order(kind: :sale, **attrs)
-    target = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer }
+    target = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer, receiver_name: 'Maria' }
     order = B2bOrder.new({ kind: kind, user: @admin, status: :dados_incompletos }.merge(target).merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 2, price: 10)
     order.b2b_order_items.build(sku: 'SKU2', name: 'Produto 2', quantity: 1, price: 5)

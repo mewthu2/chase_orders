@@ -44,7 +44,7 @@ class TransferLocationsControllerTest < ActionDispatch::IntegrationTest
       name: 'CD Com Pedido', registration: '25.405.327/0001-74', street: 'Rua A',
       number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
-    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: @admin)
+    order = B2bOrder.new(kind: :stock_transfer, transfer_location: location, user: @admin, receiver_name: 'Maria')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
 

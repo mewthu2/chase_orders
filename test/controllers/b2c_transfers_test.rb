@@ -83,7 +83,7 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert_select '#b2cDestinationSection', text: /25.405.327\/0003-36/
     assert_select '#shippingMethodSelect', count: 0
     assert_select '#carrierSection', count: 0
-    assert_select '.hand-delivery-badge', text: /Mão Própria/
+    assert_select '.hand-delivery-badge', text: /Transportadora/
     assert_select 'input[name=generate_invoice]', count: 0
     assert_match(/var PRICE_LIST = 'transfer'/, response.body)
     assert_select "form[action='#{b2c_transfers_path}']"

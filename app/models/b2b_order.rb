@@ -39,6 +39,10 @@ class B2bOrder < ApplicationRecord
   validates :freight_service, inclusion: { in: FREIGHT_SERVICES }, allow_blank: true
   validates :client, presence: true, if: :sale?
   validates :transfer_location, presence: true, if: :stock_transfer?
+  # Mão própria: os Correios só entregam para o destinatário nomeado, que é quem recebe na loja.
+  # Abastecimentos já enviados antes deste campo existir continuam editáveis sem ele.
+  validates :receiver_name, presence: true, if: -> { stock_transfer? && tiny_reference_id.blank? }
+  validates :receiver_name, length: { maximum: 60 }
   validates :shipping_street, :shipping_number, :shipping_neighbourhood, :shipping_city,
             :shipping_state, :shipping_zip, presence: true, if: :different_shipping_address?
   validate :must_have_items

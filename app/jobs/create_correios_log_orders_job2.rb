@@ -260,7 +260,12 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
 
     # Create Order in Correios Log +
     # Transferência B2B -> B2C: só o destinatário enviado aos Correios vai identificado como transferência.
-    recipient_name = B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME if b2c_transfer
+    # Abastecimento com mão própria: o destinatário é o responsável pelo recebimento na loja.
+    recipient_name = if b2c_transfer
+                       B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME
+                     elsif hand_delivery
+                       store_receiver_name(selected_order[:pedido][:id])
+                     end
     Correios::Orders.create_orders(params, attempt, recipient_name:) unless attempt.error.present?
 
     attempt
@@ -278,6 +283,10 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
   def hand_delivery?(pedido)
     notes = [pedido[:obs], pedido[:obs_interna]].compact.join(' ').downcase
     notes.include?(B2bTinyService::HAND_DELIVERY_TAG.downcase)
+  end
+
+  def store_receiver_name(tiny_order_id)
+    B2bOrder.stock_transfer.find_by(tiny_reference_id: tiny_order_id.to_s)&.receiver_name.presence&.first(60)
   end
 
   # Transferência B2B -> B2C: marcada nas observações com B2C_TRANSFER_TAG.

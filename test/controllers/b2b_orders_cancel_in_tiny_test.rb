@@ -21,7 +21,7 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
   end
 
   def build_order(kind: :sale, **attrs)
-    target = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer }
+    target = kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer, receiver_name: 'Maria' }
     order = B2bOrder.new({ kind: kind, user: @admin, status: :aprovado }.merge(target).merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 1, price: 10)
     order.save!

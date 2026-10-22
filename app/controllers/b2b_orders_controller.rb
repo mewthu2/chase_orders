@@ -497,15 +497,16 @@ class B2bOrdersController < ApplicationController
   end
 
   # As transferências não aceitam dados de envio: a B2C tem destinatário fixo e vai como transportadora; o
-  # abastecimento vai sempre por SEDEX com mão própria. Só o abastecimento escolhe o local de destino.
+  # abastecimento vai sempre por SEDEX com mão própria. Só o abastecimento escolhe o local de destino e o
+  # responsável pelo recebimento.
   SHIPPING_PARAMS = %i[client_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
 
   def b2b_order_params
     permitted = b2b_order_permitted_params
     case order_kind
-    when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, :transfer_location_id)
+    when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, :transfer_location_id, :receiver_name)
     when 'stock_transfer' then permitted.except(*SHIPPING_PARAMS)
-    else permitted
+    else permitted.except(:receiver_name)
     end
   end
 
@@ -513,7 +514,7 @@ class B2bOrdersController < ApplicationController
     params.require(:b2b_order).permit(
       :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,
-      :salesperson_name, :status, :different_shipping_address,
+      :salesperson_name, :receiver_name, :status, :different_shipping_address,
       :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
       :shipping_city, :shipping_state, :shipping_zip,
       b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]

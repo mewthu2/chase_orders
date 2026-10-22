@@ -33,7 +33,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
   end
 
   def build_order(kind: :sale, items: [['SKU-1', 2, 10, 0], ['SKU-2', 1, 5.5, 0]], **attrs)
-    order = B2bOrder.new({ kind: kind, user: @user }.merge(kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer }).merge(attrs))
+    order = B2bOrder.new({ kind: kind, user: @user }.merge(kind == :sale ? { client: @client } : { transfer_location: @location, price_list: :transfer, receiver_name: 'Maria' }).merge(attrs))
     items.each { |sku, quantity, price, discount| order.b2b_order_items.build(sku: sku, name: sku, quantity: quantity, price: price, discount: discount) }
     order.save!
     order

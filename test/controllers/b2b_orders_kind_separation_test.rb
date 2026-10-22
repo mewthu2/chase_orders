@@ -31,7 +31,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   end
 
   def build_transfer(**attrs)
-    order = B2bOrder.new({ kind: :stock_transfer, user: @admin, transfer_location: @location, price_list: :transfer }.merge(attrs))
+    order = B2bOrder.new({ kind: :stock_transfer, user: @admin, transfer_location: @location, price_list: :transfer, receiver_name: 'Maria' }.merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order
@@ -71,7 +71,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     assert_no_enqueued_jobs do
       assert_difference 'B2bOrder.count', 1 do
         post stock_transfers_path, params: { b2b_order: {
-          kind: 'sale', transfer_location_id: @location.id, price_list: 'transfer',
+          kind: 'sale', transfer_location_id: @location.id, price_list: 'transfer', receiver_name: 'Maria',
           b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
         } }
       end
@@ -180,7 +180,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'a stock transfer is created with the transfer price list even if standard is submitted' do
     stub_tiny_nota_ok
     post stock_transfers_path, params: { b2b_order: {
-      transfer_location_id: @location.id, price_list: 'standard',
+      transfer_location_id: @location.id, price_list: 'standard', receiver_name: 'Maria',
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
     } }
 
@@ -233,7 +233,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'a stock transfer enters Tiny as a pedido in preparando envio, with the nota generated' do
     stub_tiny_nota_ok(numero: '1900')
     post stock_transfers_path, params: { b2b_order: {
-      transfer_location_id: @location.id, carrier_shipping_method: '123', freight_service: 'PAC CORREIOS LOG+',
+      transfer_location_id: @location.id, carrier_shipping_method: '123', freight_service: 'PAC CORREIOS LOG+', receiver_name: 'Maria',
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
     } }
 

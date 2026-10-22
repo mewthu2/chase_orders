@@ -304,6 +304,10 @@ class B2bTinyService
     "Vendedor: #{b2b_order.salesperson_name} | #{base}"
   end
 
+  def receiver_obs(b2b_order)
+    "Responsável pelo recebimento: #{b2b_order.receiver_name}" if b2b_order.receiver_name.present?
+  end
+
   def build_stock_transfer_pedido(b2b_order)
     location = b2b_order.transfer_location
 
@@ -323,7 +327,7 @@ class B2bTinyService
       forma_frete: STOCK_TRANSFER_FREIGHT_SERVICE,
       nome_transportador: CORREIOS_CARRIER_NAME,
       frete_por_conta: 'R',
-      obs: [HAND_DELIVERY_TAG, "Abastecimento Loja ##{b2b_order.id}", b2b_order.notes.presence].compact.join(' | '),
+      obs: [HAND_DELIVERY_TAG, "Abastecimento Loja ##{b2b_order.id}", receiver_obs(b2b_order), b2b_order.notes.presence].compact.join(' | '),
       obs_interna: HAND_DELIVERY_TAG
     }
   end

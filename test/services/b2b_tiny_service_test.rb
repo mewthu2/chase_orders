@@ -61,7 +61,8 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
   end
 
   test 'create_stock_transfer creates a pedido in preparando_envio, always SEDEX with hand delivery' do
-    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location, notes: 'Reposição')
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location, notes: 'Reposição',
+                         receiver_name: 'Maria Souza')
     order.b2b_order_items.build(sku: 'SKU1', name: 'Produto 1', quantity: 1, price: 5)
     order.save!
 
@@ -85,12 +86,13 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
     assert_equal 'SEDEX CORREIOS LOG+', pedido['forma_frete']
     assert_includes pedido['obs'], 'MAO PROPRIA'
     assert_includes pedido['obs'], 'Reposição'
+    assert_includes pedido['obs'], 'Responsável pelo recebimento: Maria Souza'
     assert_equal 'MAO PROPRIA', pedido['obs_interna']
     assert_not_requested :post, 'https://api.tiny.com.br/api2/nota.fiscal.incluir.php'
   end
 
   test 'create_stock_transfer returns failure when Tiny rejects the order' do
-    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location)
+    order = B2bOrder.new(kind: :stock_transfer, user: @user, transfer_location: @location, receiver_name: 'Maria')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 5)
     order.save!
 
