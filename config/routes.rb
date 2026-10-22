@@ -89,6 +89,7 @@ Rails.application.routes.draw do
       get :send_xml_b2b
       post :run_send_xml_b2b
       post :run_send_xml_b2b_now
+      post :complete_send_xml_b2b
       get :push_tracking
       post :run_push_tracking
       post :run_push_tracking_now

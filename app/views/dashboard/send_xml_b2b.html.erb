@@ -203,6 +203,17 @@
                             title="Enviar este XML agora">
                       <i class="fas fa-paper-plane"></i>
                     </button>
+                    <% if att.is_transportadora %>
+                      <%= button_to complete_send_xml_b2b_dashboard_index_path,
+                                    method: :post,
+                                    params: { attempt_id: att.id, transportadora: @filter_transportadora, order_type: @filter_order_type }.compact_blank,
+                                    class: 'btn btn-sm btn-success',
+                                    form_class: 'd-inline-block',
+                                    title: 'Envio realizado: conclui o pedido e tira da fila',
+                                    data: { turbo_confirm: "Confirmar que o envio do pedido #{att.tiny_order_id} pela transportadora foi realizado? Ele sairá da fila e será marcado como Entregue no Tiny." } do %>
+                        <i class="fas fa-check-double me-1"></i>Envio realizado
+                      <% end %>
+                    <% end %>
                     <%= link_to verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id),
                         class: 'btn btn-sm btn-outline-info',
                         method: :post,

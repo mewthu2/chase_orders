@@ -4,7 +4,7 @@ class DashboardController < ApplicationController
   # Actions exclusivas do painel "Correios B2B" (permissão dashboard_correios_b2b).
   B2B_ONLY_ACTIONS = %i[
     push_tracking_b2b run_push_tracking_b2b run_push_tracking_b2b_now
-    send_xml_b2b run_send_xml_b2b run_send_xml_b2b_now
+    send_xml_b2b run_send_xml_b2b run_send_xml_b2b_now complete_send_xml_b2b
     invoice_emition_b2b run_invoice_emition_b2b run_invoice_emition_b2b_now
     order_correios_create_b2b order_correios_create_queue_b2b
     run_create_correios_b2b run_order_correios_create_b2b_now
@@ -195,6 +195,44 @@ class DashboardController < ApplicationController
     render json: attempt_result_json(result)
   rescue StandardError => e
     render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
+  # Pedidos de outra transportadora não passam pelo envio de XML aos Correios:
+  # o usuário confirma o envio, o pedido vai para "Entregue" no Tiny 2 e um
+  # send_xml_tiny2 de sucesso tira o pedido da fila. Transportadora não entra no
+  # rastreamento, então o pedido fica concluído.
+  def complete_send_xml_b2b
+    queue_attempt = Attempt.find(params[:attempt_id])
+    redirect_path = send_xml_b2b_dashboard_index_path(params.permit(:transportadora, :order_type).to_h)
+
+    unless queue_attempt.is_transportadora
+      redirect_to redirect_path, alert: 'Apenas pedidos de transportadora podem ser concluídos manualmente.'
+      return
+    end
+
+    tiny_response = Tiny::Orders.change_situation(queue_attempt.tiny_order_id, 'entregue', ENV.fetch('TOKEN_TINY2_PRODUCTION'))
+
+    unless tiny_response&.dig(:status) == 'OK'
+      tiny_error = Array(tiny_response&.dig(:erros)).map { |e| e.is_a?(Hash) ? e.with_indifferent_access[:erro] : e }.compact.join(', ')
+      redirect_to redirect_path,
+                  alert: "Não foi possível concluir o pedido #{queue_attempt.tiny_order_id} no Tiny: #{tiny_error.presence || 'resposta inesperada'}"
+      return
+    end
+
+    Attempt.create!(
+      kinds: :send_xml_tiny2,
+      status: :success,
+      is_transportadora: true,
+      tiny_order_id: queue_attempt.tiny_order_id,
+      order_correios_id: queue_attempt.order_correios_id,
+      id_nota_fiscal: queue_attempt.id_nota_fiscal,
+      user: current_user.email,
+      message: 'Envio realizado manualmente (transportadora) - pedido Entregue no Tiny'
+    )
+
+    redirect_to redirect_path, notice: "Pedido #{queue_attempt.tiny_order_id} concluído e marcado como Entregue no Tiny."
+  rescue StandardError => e
+    redirect_to send_xml_b2b_dashboard_index_path, alert: "Erro ao concluir pedido: #{e.message}"
   end
 
   def invoice_emition
