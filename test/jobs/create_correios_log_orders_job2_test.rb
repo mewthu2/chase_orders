@@ -90,6 +90,21 @@ class CreateCorreiosLogOrdersJob2Test < ActiveSupport::TestCase
     assert_equal 'Maria Souza', @recipient_name
   end
 
+  test 'a store supply order with several receivers sends the whole names that fit in 60 characters' do
+    location = TransferLocation.create!(name: 'Loja Savassi', registration: '25.405.327/0001-74', street: 'Rua A',
+                                        number: '1', neighbourhood: 'B', city: 'BH', state: 'MG', zip: '30000-000')
+    user = User.create!(name: 'Teste Receb', email: 'teste_receb@example.com', password: 'password123')
+    order = B2bOrder.new(kind: :stock_transfer, user:, transfer_location: location,
+                         receiver_name: 'Maria Souza Andrade, João Pedro da Silva, Ana Beatriz Ferreira Lima',
+                         tiny_reference_id: '902371809', tiny_reference_number: '1900')
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
+    order.save!
+
+    run_job(tiny_pedido(obs: 'MAO PROPRIA | Abastecimento Loja #1'))
+
+    assert_equal 'Maria Souza Andrade, João Pedro da Silva', @recipient_name
+  end
+
   test 'other orders keep using the forma de frete' do
     params = run_job(tiny_pedido(obs: 'Pedido B2B #10', forma_frete: 'PAC CORREIOS LOG+', nome_transportador: 'EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS'))
 

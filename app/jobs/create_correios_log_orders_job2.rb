@@ -285,8 +285,17 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     notes.include?(B2bTinyService::HAND_DELIVERY_TAG.downcase)
   end
 
+  # Os Correios aceitam até 60 caracteres no destinatário: vão os responsáveis inteiros que couberem.
   def store_receiver_name(tiny_order_id)
-    B2bOrder.stock_transfer.find_by(tiny_reference_id: tiny_order_id.to_s)&.receiver_name.presence&.first(60)
+    names = B2bOrder.stock_transfer.find_by(tiny_reference_id: tiny_order_id.to_s)&.receiver_name.to_s
+                    .split(',').map(&:strip).reject(&:blank?)
+    return nil if names.empty?
+
+    fitting = names.each_with_object([]) do |name, acc|
+      break acc if [*acc, name].join(', ').length > 60
+      acc << name
+    end
+    fitting.any? ? fitting.join(', ') : names.first.first(60)
   end
 
   # Transferência B2B -> B2C: marcada nas observações com B2C_TRANSFER_TAG.

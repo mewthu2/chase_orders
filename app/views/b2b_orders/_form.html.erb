@@ -53,8 +53,18 @@
         </div>
         <div class="form-col-6">
           <label class="field-label">Responsável pelo Recebimento</label>
-          <%= form.text_field :receiver_name, class: 'field-input', placeholder: 'Nome de quem vai receber na loja', maxlength: 60, required: @b2b_order.tiny_reference_id.blank? %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai nas observações do pedido no Tiny e como destinatário nos Correios: com mão própria, só essa pessoa pode receber.</span>
+          <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
+          <div id="receiverNamesList">
+            <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
+            <% receiver_names.each_with_index do |name, i| %>
+            <div class="d-flex gap-2 mb-2 receiver-name-row">
+              <input type="text" class="field-input receiver-name-input" value="<%= name %>" placeholder="Nome de quem vai receber na loja" maxlength="60" <%= 'required' if i.zero? && @b2b_order.tiny_reference_id.blank? %>>
+              <button type="button" class="btn-back receiver-name-remove" title="Remover"><i class="fas fa-times"></i></button>
+            </div>
+            <% end %>
+          </div>
+          <button type="button" class="btn-back" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão nas observações do pedido no Tiny (separados por vírgula) e como destinatário nos Correios: com mão própria, só essas pessoas podem receber.</span>
         </div>
         <% else %>
         <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
@@ -239,11 +249,49 @@ document.addEventListener('DOMContentLoaded', function () {
   function currentPriceList() {
     return PRICE_LIST;
   }
-  // Preço inicial do item (editável): atacado = sugerido, abastecimento = varejo, transferência B2C = 70% do custo.
+  // Preço inicial do item (editável): atacado = sugerido, abastecimento = 50% do varejo, transferência B2C = 70% do custo.
   var ORDER_KIND = '<%= @b2b_order.kind %>';
   function defaultPrice(product, suggestedPrice) {
     if (ORDER_KIND === 'b2c_transfer') return product.b2c_transfer_price || 0;
-    return currentPriceList() === 'transfer' ? (product.retail_price || 0) : (suggestedPrice || 0);
+    if (currentPriceList() === 'transfer') return Math.round((product.retail_price || 0) * 50) / 100;
+    return suggestedPrice || 0;
+  }
+
+  // Responsáveis pelo recebimento: um campo por pessoa, salvos juntos separados por vírgula.
+  var receiverList = document.getElementById('receiverNamesList');
+  if (receiverList) {
+    var receiverField = document.getElementById('receiverNameField');
+    var syncReceiverNames = function () {
+      var names = Array.prototype.map.call(receiverList.querySelectorAll('.receiver-name-input'), function (input) {
+        return input.value.replace(/,/g, ' ').trim();
+      }).filter(function (name) { return name; });
+      receiverField.value = names.join(', ');
+    };
+    var updateRemoveButtons = function () {
+      var rows = receiverList.querySelectorAll('.receiver-name-row');
+      rows.forEach(function (row) { row.querySelector('.receiver-name-remove').style.visibility = rows.length > 1 ? '' : 'hidden'; });
+    };
+    document.getElementById('addReceiverNameButton').addEventListener('click', function () {
+      var row = receiverList.querySelector('.receiver-name-row').cloneNode(true);
+      var input = row.querySelector('.receiver-name-input');
+      input.value = '';
+      input.required = false;
+      receiverList.appendChild(row);
+      updateRemoveButtons();
+      input.focus();
+    });
+    receiverList.addEventListener('click', function (e) {
+      var button = e.target.closest('.receiver-name-remove');
+      if (!button || receiverList.querySelectorAll('.receiver-name-row').length < 2) return;
+      var wasRequired = button.closest('.receiver-name-row').querySelector('.receiver-name-input').required;
+      button.closest('.receiver-name-row').remove();
+      if (wasRequired) receiverList.querySelector('.receiver-name-input').required = true;
+      updateRemoveButtons();
+      syncReceiverNames();
+    });
+    receiverList.addEventListener('input', syncReceiverNames);
+    document.getElementById('b2bOrderForm').addEventListener('submit', syncReceiverNames);
+    updateRemoveButtons();
   }
 
   var addrCheck = document.getElementById('differentShippingAddressCheck');
