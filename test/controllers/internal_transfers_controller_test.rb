@@ -178,6 +178,31 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_select '.internal-transfer-timeline', text: /Transferência criada/
   end
 
+  test 'the edit screen shows the approval so a pending transfer can be approved from there' do
+    transfer = build_transfer
+    transfer.update!(approval_status: :pendente)
+
+    get edit_internal_transfer_path(transfer)
+
+    assert_response :success
+    assert_select '.approval-card--pending'
+    assert_select "form[action='#{approve_internal_transfer_path(transfer)}']"
+    assert_select "form[action='#{reject_internal_transfer_path(transfer)}']"
+  end
+
+  test 'the list links an open transfer only to its edit screen and a moving one only to its page' do
+    open_transfer = build_transfer
+    moving = build_transfer(items: [[@bh, @b, 1]])
+    moving.shipments.first.update!(status: :reservado)
+
+    get internal_transfers_path
+
+    assert_select "a[href='#{edit_internal_transfer_path(open_transfer)}']"
+    assert_select "a[href='#{internal_transfer_path(open_transfer)}']", count: 0
+    assert_select "a[href='#{internal_transfer_path(moving)}']"
+    assert_select "a[href='#{edit_internal_transfer_path(moving)}']", count: 0
+  end
+
   test 'a fully open transfer can be edited and deleted; once a shipment moves, it cannot' do
     transfer = build_transfer
 

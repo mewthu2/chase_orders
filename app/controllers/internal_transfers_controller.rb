@@ -61,10 +61,12 @@ class InternalTransfersController < ApplicationController
   end
 
   def show
-    @approvers = User.where(id: InternalTransferApprover.user_ids).order(:name)
+    load_approvers
   end
 
+  # A edição também mostra a aprovação, para a transferência ter uma tela só enquanto está aberta.
   def edit
+    load_approvers
     prepare_form
   end
 
@@ -80,6 +82,7 @@ class InternalTransfersController < ApplicationController
       log_event(@transfer, action: 'updated', message: 'Transferência editada; volta a aguardar aprovação.') if reapproval
       redirect_to internal_transfer_path(@transfer), notice: reapproval ? 'Transferência atualizada. Ela volta a aguardar aprovação.' : 'Transferência atualizada.'
     else
+      load_approvers
       prepare_form
       render :edit, status: :unprocessable_entity
     end
@@ -178,6 +181,10 @@ class InternalTransfersController < ApplicationController
               InternalTransfer
             end
     @transfer = scope.find(params[:id])
+  end
+
+  def load_approvers
+    @approvers = User.where(id: InternalTransferApprover.user_ids).order(:name)
   end
 
   def approver?

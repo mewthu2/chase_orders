@@ -97,9 +97,11 @@
                 <td class="text-center"><%= action_needed_badge(transfer) %></td>
                 <td class="text-end">
                   <div class="table-actions">
-                    <%= link_to internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
-                    <% if transfer.editable? %>
+                    <%# Enquanto dá para editar, a edição (que também mostra a aprovação) é a única entrada. %>
+                    <% if transfer.editable? && current_user.can_access_screen?(:internal_transfers) %>
                       <%= link_to edit_internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
+                    <% else %>
+                      <%= link_to internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
                     <% end %>
                     <% if transfer.deletable? %>
                       <%= button_to internal_transfer_path(transfer), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",

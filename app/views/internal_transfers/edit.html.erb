@@ -9,5 +9,6 @@
       <%= link_to internal_transfer_path(@transfer), class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>
   </div>
+  <%= render 'approval', transfer: @transfer, approvers: @approvers %>
   <%= render 'form' %>
 </div>
