@@ -86,6 +86,9 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
       return attempt
     end
 
+    tiny_error = invoice.to_s[%r{<status>Erro</status>.*?<erro>(.*?)</erro>}m, 1]
+    return tiny_xml_error(attempt, att, tiny_error) if tiny_error
+
     doc = Nokogiri::XML(invoice)
 
     order_number = att.order_correios_id.to_s
@@ -157,7 +160,29 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
       Attempt.where(
         tiny_order_id: att.tiny_order_id,
         status: :success,
-        kinds: :emission_invoice
+        kinds: :emission_invoice_tiny2
+      ).destroy_all
+    end
+
+    attempt
+  end
+
+  NOT_AUTHORIZED = 'Nota Fiscal não autorizada'.freeze
+
+  # O Tiny devolveu erro em vez do XML. Se a nota não foi autorizada, a emissão registrada como
+  # sucesso não vale: apaga para o pedido voltar à fila de emissão em vez de repetir este erro.
+  def tiny_xml_error(attempt, att, message)
+    attempt.update(
+      status: :error,
+      error: "Tiny: #{message} (nota #{att.id_nota_fiscal})",
+      id_nota_fiscal: att.id_nota_fiscal
+    )
+
+    if message.start_with?(NOT_AUTHORIZED)
+      Attempt.where(
+        tiny_order_id: att.tiny_order_id,
+        status: :success,
+        kinds: :emission_invoice_tiny2
       ).destroy_all
     end
 

@@ -10,12 +10,19 @@ module Tiny::Invoices
     response.with_indifferent_access[:retorno][:pedidos]
   end
 
-  def obtain_invoice(invoice_id)
+  # Situações da nota no Tiny que já foram autorizadas pela SEFAZ: 6 Autorizada, 7 Emitida DANFE.
+  AUTHORIZED_SITUATIONS = %w[6 7].freeze
+
+  def obtain_invoice(invoice_id, token = ENV.fetch('TOKEN_TINY2_PRODUCTION'))
     response = JSON.parse(HTTParty.get(ENV.fetch('OBTER_NOTA_FISCAL'),
-                                       query: { token: ENV.fetch('TOKEN_TINY2_PRODUCTION'),
+                                       query: { token:,
                                                 formato: 'json',
                                                 id: invoice_id }))
     response.with_indifferent_access[:retorno][:nota_fiscal]
+  end
+
+  def authorized?(nota)
+    AUTHORIZED_SITUATIONS.include?(nota&.dig(:situacao).to_s)
   end
 
   def obtain_xml(invoice_id, token = ENV.fetch('TOKEN_TINY3_PRODUCTION'))

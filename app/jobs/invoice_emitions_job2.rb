@@ -43,14 +43,15 @@ class InvoiceEmitionsJob2 < ActiveJob::Base
 
         if body.include?('<status>Erro</status>')
           error_message = body[/<erro>(.*?)<\/erro>/m, 1]
+          status, message = emission_error_result(error_message, att, ENV.fetch('TOKEN_TINY2_PRODUCTION'))
 
           attempt.update(
             order_correios_id: att.order_correios_id,
             id_nota_fiscal: att.id_nota_fiscal,
             tiny_order_id: att.tiny_order_id,
             status_code: response.code,
-            message: error_message.to_s.first(100),
-            status: error_message == 'Nota Fiscal localizada, porém apenas notas pendentes ou rejeitadas podem ser enviadas' ? :success : :error
+            message: message.to_s.first(100),
+            status:
           )
 
           if attempt.error? && deleted_in_tiny?(att, error_message)

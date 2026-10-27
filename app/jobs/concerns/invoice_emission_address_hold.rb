@@ -11,6 +11,8 @@ module InvoiceEmissionAddressHold
 
   NOTA_EDIT_URL = 'https://erp.tiny.com.br/notas_fiscais#edit/'.freeze
 
+  ALREADY_SENT_ERROR = 'Nota Fiscal localizada, porém apenas notas pendentes ou rejeitadas podem ser enviadas'.freeze
+
   private
 
   # Pedidos que a emissão automática deve pular.
@@ -38,6 +40,19 @@ module InvoiceEmissionAddressHold
   def release_hold_if_any(att)
     correction = AddressCorrection.for(att.tiny_order_id)
     correction.release! if correction&.awaiting_tiny_fix?
+  end
+
+  # Status e mensagem da tentativa de emissão a partir do erro devolvido pelo Tiny. ALREADY_SENT_ERROR
+  # vem para qualquer nota que não esteja pendente nem rejeitada, inclusive enquanto ainda está em
+  # processamento na SEFAZ (e pode voltar para pendente). Por isso só conta como emitida se a nota
+  # estiver autorizada; senão a emissão é tentada de novo na próxima execução.
+  def emission_error_result(error_message, att, token)
+    return [:error, error_message] unless error_message == ALREADY_SENT_ERROR
+
+    nota = Tiny::Invoices.obtain_invoice(att.id_nota_fiscal, token)
+    return [:success, error_message] if Tiny::Invoices.authorized?(nota)
+
+    [:error, "Nota ainda não autorizada no Tiny (situação: #{nota&.dig(:descricao_situacao) || 'desconhecida'})"]
   end
 
   def hold_message(field, value, invoice_id)
