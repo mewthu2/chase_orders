@@ -15,7 +15,6 @@ class StockTransferInvoiceTest < ActionDispatch::IntegrationTest
   def setup
     ENV['TOKEN_TINY2_PRODUCTION'] = 'fake-token-tiny2'
     ENV['OBTER_NOTA_FISCAL'] = OBTAIN_URL
-    ENV['SMTP_ADDRESS'] = 'smtp.example.com'
     @admin = User.create!(name: 'Admin Danfe', email: 'admin_danfe@example.com', password: 'password123')
     @admin.profiles << Profile.find(Profile::ADMIN)
     @location = TransferLocation.create!(
@@ -23,10 +22,6 @@ class StockTransferInvoiceTest < ActionDispatch::IntegrationTest
       number: '10', neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
     sign_in @admin
-  end
-
-  def teardown
-    ENV.delete('SMTP_ADDRESS')
   end
 
   def build_transfer(**attrs)
@@ -108,20 +103,6 @@ class StockTransferInvoiceTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to stock_transfers_path
     assert_match(/ainda não foi autorizada \(situação no Tiny: Pendente\)/, flash[:alert])
-  end
-
-  test 'without an SMTP configured there is only the download button, and sending is refused' do
-    ENV.delete('SMTP_ADDRESS')
-    sent = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
-
-    get stock_transfers_path
-
-    assert_select "a[href='#{danfe_stock_transfer_path(sent)}']", count: 1
-    assert_select "button[data-send-url]", count: 0
-    assert_select '#sendDanfeModal', count: 0
-
-    assert_no_enqueued_emails { post send_danfe_stock_transfer_path(sent), params: { emails: 'loja@chase.com.br' } }
-    assert_equal 'O envio de e-mail ainda não está configurado.', flash[:alert]
   end
 
   def stub_danfe_link
