@@ -317,6 +317,7 @@ Rails.application.routes.draw do
     member do
       post :transmit
       post :cancel_in_tiny
+      get :danfe
     end
   end
 

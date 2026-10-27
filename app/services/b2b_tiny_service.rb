@@ -139,6 +139,43 @@ class B2bTinyService
     { success: false, error: e.message }
   end
 
+  # Emite (transmite à SEFAZ) a nota já gerada, como o "Emitir" do Tiny.
+  def emit_invoice(invoice_id)
+    response = do_post('nota.fiscal.emitir.php', id: invoice_id)
+    retorno = parse_retorno(response)
+    return { success: false, error: "Resposta inválida do Tiny (HTTP #{response.code})." } unless retorno
+
+    retorno[:status] == 'OK' ? { success: true } : { success: false, error: tiny_error_message(retorno) }
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#emit_invoice exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+
+  # Link da página do DANFE da nota do pedido. Só para nota autorizada: antes disso o Tiny mostraria
+  # uma prévia sem valor fiscal.
+  def danfe_link(tiny_reference_id)
+    response = HTTParty.get("#{BASE_URL}/pedido.obter.php",
+                            query: { token: @token, formato: 'json', id: tiny_reference_id })
+    retorno = parse_retorno(response)
+    return { success: false, error: 'Não foi possível consultar o pedido no Tiny.' } unless retorno&.dig(:status) == 'OK'
+
+    invoice_id = retorno.dig(:pedido, :id_nota_fiscal).to_s
+    return { success: false, error: 'O pedido ainda não tem nota fiscal no Tiny.' } if invoice_id.to_i.zero?
+
+    nota = Tiny::Invoices.obtain_invoice(invoice_id, @token)
+    unless Tiny::Invoices.authorized?(nota)
+      return { success: false, error: "A nota ainda não foi autorizada (situação no Tiny: #{nota&.dig(:descricao_situacao) || 'desconhecida'})." }
+    end
+
+    link = parse_retorno(do_post('nota.fiscal.obter.link.php', id: invoice_id))
+    return { success: false, error: 'O Tiny não devolveu o link do DANFE.' } if link&.dig(:link_nfe).blank?
+
+    { success: true, url: link[:link_nfe], number: nota[:numero] }
+  rescue StandardError => e
+    Rails.logger.error "B2bTinyService#danfe_link exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+
   def update_order_status(tiny_reference_id, status)
     response = do_post('pedido.alterar.situacao.php',
                        id: tiny_reference_id, situacao: TINY_SITUACAO_CODES.fetch(status.to_s))

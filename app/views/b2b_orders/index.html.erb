@@ -105,6 +105,9 @@
                     <% unless order.stock_transfer? %>
                       <%= link_to romaneio_order_path_for(order), class: "action-btn action-btn--edit", title: 'Baixar romaneio (PDF)', data: { turbo: false } do %><i class="fas fa-file-pdf"></i><% end %>
                     <% end %>
+                    <% if order.stock_transfer? && order.tiny_order? && order.tiny_reference_id.present? %>
+                      <%= link_to danfe_stock_transfer_path(order), class: "action-btn action-btn--edit", title: 'Baixar DANFE (PDF)', data: { turbo: false } do %><i class="fas fa-file-invoice"></i><% end %>
+                    <% end %>
                     <% if current_user.can_access_screen?('fiscal_notes') && order.sale? %>
                       <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
                     <% end %>
