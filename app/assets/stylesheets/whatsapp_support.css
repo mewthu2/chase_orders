@@ -252,72 +252,352 @@
   justify-content: flex-end;
   gap: 10px;
 }
-.wa-add-number {
-  padding: 20px;
-  background: #fff;
-  border: 1px solid #dce5e0;
-  border-radius: 12px;
-  max-width: 700px;
-  margin-bottom: 24px;
+/* Números conectados: segue os tokens do painel (admin/_variables.scss). */
+.wa-connections-page {
+  max-width: none;
+  padding: 1.5rem;
+  color: #c9d1d9;
 }
-.wa-add-number input[type="text"],
-.wa-add-number .form-control {
-  margin: 8px 0 16px;
+.wa-connections-page .page-subtitle {
+  margin: 0;
 }
-.wa-add-number legend {
+.wa-connections-page .btn-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wa-server {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #1c2128;
+  border: 1px solid #30363d;
+  color: #e6edf3;
+}
+.wa-server i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d29922;
+}
+.wa-server.is-on i {
+  background: #3fb950;
+  animation: wa-pulse 2s infinite;
+}
+.wa-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+.wa-steps {
+  list-style: none;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.wa-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #21262d;
+  background: #0d1117;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.wa-steps li:hover {
+  border-color: #238636;
+  transform: translateX(3px);
+}
+.wa-steps strong {
+  display: block;
+  color: #e6edf3;
   font-size: 0.95rem;
+}
+.wa-steps p {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #8b949e;
+}
+.wa-steps b {
+  color: #c9d1d9;
+}
+.wa-step-num {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #238636;
+  color: #fff;
+}
+.wa-step-tips {
+  border-style: dashed !important;
+}
+.wa-step-tips .wa-step-num {
+  background: #e3b341;
+  color: #0d1117;
+}
+.wa-add-number {
+  padding: 1.25rem 1.5rem;
+}
+.wa-add-number label,
+.wa-add-number legend {
+  color: #8b949e;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.wa-app.wa-connections-page .form-control {
+  background: #0d1117;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  margin: 6px 0 16px;
+}
+.wa-app.wa-connections-page .form-control:focus {
+  border-color: #1f6feb;
+  box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+}
+.wa-app.wa-connections-page .form-control::placeholder {
+  color: #484f58;
 }
 .wa-member-list {
   display: flex;
-  gap: 10px 22px;
+  gap: 8px;
   flex-wrap: wrap;
   max-height: 180px;
   overflow: auto;
-  margin-bottom: 16px;
+  margin: 6px 0 16px;
+}
+.wa-member-list label,
+.wa-number-card fieldset label {
+  padding: 4px 12px;
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #c9d1d9;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.wa-member-list label:has(input:checked),
+.wa-number-card fieldset label:has(input:checked) {
+  background: rgba(35, 134, 54, 0.15);
+  border-color: #3fb950;
+  color: #e6edf3;
 }
 .wa-add-number small {
   display: block;
-  margin-top: 8px;
-  color: #697c70;
+  margin-top: 10px;
+  color: #6e7681;
+}
+.wa-section-title {
+  color: #e6edf3;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
 }
 .wa-number-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  align-items: start;
+  gap: 1rem;
 }
 .wa-number-card {
-  padding: 20px;
-  background: white;
-  border: 1px solid #dce5e0;
+  --wa-accent: #6e7681;
+  padding: 1.1rem 1.25rem;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-top: 3px solid var(--wa-accent);
   border-radius: 12px;
+  animation: wa-rise 0.35s ease;
 }
-.wa-number-card img {
-  width: 240px;
-  height: 240px;
-  max-width: 100%;
-  display: block;
-  margin: 15px auto;
+.wa-number-card.is-connected { --wa-accent: #3fb950; }
+.wa-number-card.is-qr,
+.wa-number-card.is-connecting { --wa-accent: #e3b341; }
+.wa-number-card.is-unavailable { --wa-accent: #f85149; }
+.wa-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.wa-card-head h3 {
+  color: #e6edf3;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+.wa-card-phone {
+  color: #c9d1d9;
+  margin: 6px 0 0;
 }
 .wa-number-card .wa-state {
-  display: inline-block;
-  background: #eff3f0;
-  border-radius: 15px;
-  padding: 3px 10px;
-  margin: 6px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #e6edf3;
 }
-.wa-number-card button {
-  margin: 4px 6px 4px 0;
+.wa-number-card .wa-state::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wa-accent);
 }
-.wa-number-card fieldset label {
+.wa-number-card.is-connected .wa-state::before,
+.wa-number-card.is-qr .wa-state::before,
+.wa-number-card.is-connecting .wa-state::before {
+  animation: wa-pulse 1.6s infinite;
+}
+.wa-qr-frame {
+  position: relative;
+  width: 240px;
+  max-width: 100%;
+  margin: 16px auto 8px;
+  padding: 10px;
+  background: #fff;
+  border: 3px solid #3fb950;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.wa-qr-frame img {
+  width: 100%;
+  height: auto;
   display: block;
 }
-.wa-provider-info {
-  margin-top: 24px;
-  font-size: 0.88rem;
-  color: #60736b;
+.wa-qr-scan {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  height: 3px;
+  background: #3fb950;
+  box-shadow: 0 0 12px #3fb950;
+  animation: wa-scan 2.4s ease-in-out infinite;
+}
+.wa-qr-help {
+  text-align: center;
+  font-weight: 600;
+  color: #3fb950;
+}
+.wa-number-card > small {
+  display: block;
+  margin: 8px 0;
+  color: #8b949e;
+  font-size: 0.78rem;
+}
+.wa-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+.wa-connections-page .wa-number-card .btn-outline-secondary {
+  background: transparent;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+.wa-connections-page .wa-number-card .btn-outline-secondary:hover {
+  border-color: #8b949e;
+  color: #e6edf3;
+  background: #1c2128;
+}
+.wa-number-card details summary {
+  color: #58a6ff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.wa-number-card fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wa-number-card fieldset label {
+  display: inline-block;
+}
+.wa-empty {
+  grid-column: 1 / -1;
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed #30363d;
+  border-radius: 12px;
+  color: #8b949e;
+  background: #161b22;
+}
+.wa-connections-page .wa-provider-info {
+  margin-top: 1.5rem;
+  font-size: 0.85rem;
+  color: #8b949e;
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+.wa-connections-page .wa-provider-info summary {
+  color: #c9d1d9;
+  cursor: pointer;
+}
+.wa-connections-page .wa-provider-info a {
+  color: #58a6ff;
 }
 .wa-provider-info p {
   margin-top: 12px;
+}
+@keyframes wa-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(63, 185, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+}
+@keyframes wa-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wa-scan {
+  0%, 100% { top: 10px; }
+  50% { top: calc(100% - 13px); }
+}
+@media (max-width: 900px) {
+  .wa-setup {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .wa-connections-page {
+    padding: 0.75rem;
+  }
+  .wa-steps,
+  .wa-add-number {
+    padding: 0.9rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-connections-page * {
+    animation: none !important;
+  }
 }
 .wa-customer-option {
   display: block;
@@ -432,10 +712,8 @@
   border-radius: 12px;
   padding: 18px;
 }
-
-.wa-number-card > small {
-  display: block;
-  margin: 8px 0;
+.wa-number-card details .btn {
+  margin-top: 8px;
 }
 .wa-app .btn-sm {
   min-height: 32px;

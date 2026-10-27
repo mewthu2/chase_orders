@@ -1,14 +1,62 @@
 <% content_for :title, 'Números conectados' %>
 <% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
 <% content_for :scripts do %><%= javascript_include_tag 'whatsapp_support', defer: true %><% end %>
-<section class="wa-app" id="wa-connections">
-  <header class="wa-title"><div><h1>Números conectados</h1><p>Conecte cada WhatsApp Business pelo celular.</p></div><% if current_user.can_access_screen?('whatsapp_attend') %><%= link_to 'Conversas', whatsapp_conversations_path, class: 'btn btn-outline-secondary' %><% end %></header>
+<% configured = Whatsapp::Providers::Evolution.configured? %>
+<section class="wa-app wa-connections-page" id="wa-connections">
+  <div class="page-header">
+    <div class="header-left">
+      <h1 class="page-title"><i class="fab fa-whatsapp me-2"></i>Números conectados</h1>
+      <p class="page-subtitle">Conecte cada WhatsApp Business da equipe lendo um QR pelo celular</p>
+    </div>
+    <div class="header-actions">
+      <span class="wa-server <%= configured ? 'is-on' : 'is-off' %>"><i></i><%= configured ? 'Servidor WhatsApp ativo' : 'Servidor WhatsApp não configurado' %></span>
+      <% if current_user.can_access_screen?('whatsapp_attend') %>
+        <%= link_to whatsapp_conversations_path, class: 'btn-export' do %><i class="fas fa-comments me-2"></i>Abrir conversas<% end %>
+      <% end %>
+    </div>
+  </div>
   <div id="wa-error" class="wa-notice" role="status" hidden></div>
-  <% unless Whatsapp::Providers::Evolution.configured? %><div class="alert alert-warning">A integração precisa ser configurada no servidor antes de adicionar um número. Consulte as instruções de instalação do módulo.</div><% end %>
-  <form id="wa-add-number" class="wa-add-number"><h2>Adicionar número</h2><label for="wa-number-name">Nome para a equipe</label><input id="wa-number-name" name="name" class="form-control" placeholder="Vendas, Atacado, Loja Centro…" maxlength="80" required>
-    <fieldset><legend>Quem pode atender neste número?</legend><div class="wa-member-list"><% @users.each do |user| %><label><input type="checkbox" name="user_ids[]" value="<%= user.id %>"> <%= user.name %></label><% end %></div></fieldset>
-    <button class="btn btn-success" <%= 'disabled' unless Whatsapp::Providers::Evolution.configured? %>>Adicionar número</button><small>Administradores do Honey têm acesso a todos os números.</small>
-  </form>
+  <% unless configured %><div class="alert alert-warning">A integração precisa ser configurada no servidor antes de adicionar um número. Consulte as instruções de instalação do módulo.</div><% end %>
+
+  <div class="wa-setup">
+    <div class="table-card">
+      <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-route me-2"></i>Como conectar um número</h5></div>
+      <ol class="wa-steps">
+        <li>
+          <span class="wa-step-num">1</span>
+          <div><strong>Dê um nome e escolha a equipe</strong><p>Preencha o formulário ao lado e clique em <b>Adicionar número</b>. Um cartão com o QR aparece logo abaixo.</p></div>
+        </li>
+        <li>
+          <span class="wa-step-num">2</span>
+          <div><strong>Escaneie o QR com o celular</strong><p>No celular do número, abra o <b>WhatsApp Business</b> → <b>⋮ Mais opções</b> (ou <b>Configurações</b> no iPhone) → <b>Aparelhos conectados</b> → <b>Conectar aparelho</b> e aponte a câmera para o QR.</p></div>
+        </li>
+        <li>
+          <span class="wa-step-num">3</span>
+          <div><strong>Pronto: aguarde “Conectado”</strong><p>Confira se o telefone mostrado no cartão é o certo e abra <b>Conversas</b> para atender.</p></div>
+        </li>
+        <li class="wa-step-tips">
+          <span class="wa-step-num"><i class="fas fa-lightbulb"></i></span>
+          <div><strong>Dicas</strong><p>O QR vale poucos segundos; se sumir, clique em <b>Conectar / renovar QR</b>. Use um celular diferente para cada número e deixe-o com internet. Para trocar de aparelho, use <b>Desconectar</b> só no cartão daquele número.</p></div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="table-card">
+      <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-plus-circle me-2"></i>Adicionar número</h5></div>
+      <form id="wa-add-number" class="wa-add-number">
+        <label for="wa-number-name">Nome para a equipe</label>
+        <input id="wa-number-name" name="name" class="form-control" placeholder="Vendas, Atacado, Loja Centro…" maxlength="80" required>
+        <fieldset>
+          <legend>Quem pode atender neste número?</legend>
+          <div class="wa-member-list"><% @users.each do |user| %><label><input type="checkbox" name="user_ids[]" value="<%= user.id %>"> <%= user.name %></label><% end %></div>
+        </fieldset>
+        <button class="btn-export" <%= 'disabled' unless configured %>><i class="fas fa-qrcode me-2"></i>Adicionar número</button>
+        <small>Administradores do Honey têm acesso a todos os números.</small>
+      </form>
+    </div>
+  </div>
+
+  <h5 class="wa-section-title"><i class="fas fa-mobile-alt me-2"></i>Seus números</h5>
   <div id="wa-number-cards" class="wa-number-cards" aria-live="polite"></div>
   <template id="wa-user-options"><% @users.each do |user| %><label><input type="checkbox" value="<%= user.id %>"> <%= user.name %></label><% end %></template>
   <details class="wa-provider-info"><summary>Informações para a administração</summary><p>Este módulo utiliza <a href="https://github.com/evolution-foundation/evolution-api/tree/2.3.7" target="_blank" rel="noopener">Evolution API 2.3.7</a> com Baileys. O pareamento por aparelhos conectados não é a API oficial da Meta. Mudanças no WhatsApp podem interromper sessões ou exigir novo QR. O uso também está sujeito às regras do WhatsApp.</p><p>O histórico disponível depende da sincronização do celular e do que o provedor armazenou. A recuperação inicial busca até os últimos 7 dias disponíveis; não há promessa de importar todo o histórico antigo.</p><p>Ao desconectar, o histórico no Honey permanece. Para conectar de novo, pode ser necessário escanear outro QR. Sessões, banco e armazenamento do provedor devem usar volumes persistentes.</p></details>

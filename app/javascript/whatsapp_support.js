@@ -130,21 +130,32 @@
       if (root.querySelector("details[open]")) return;
       root.replaceChildren();
       cached.forEach((c) => {
-        const card = el("article", undefined, "wa-number-card");
-        card.append(
-          el("h2", c.name),
-          el("p", c.phone || "Telefone ainda não confirmado pelo WhatsApp"),
+        const card = el("article", undefined, `wa-number-card is-${c.state}`);
+        const head = el("header", undefined, "wa-card-head");
+        head.append(
+          el("h3", c.name),
           el("span", stateLabels[c.state] || c.state, "wa-state"),
         );
+        card.append(
+          head,
+          el(
+            "p",
+            c.phone || "Telefone ainda não confirmado pelo WhatsApp",
+            "wa-card-phone",
+          ),
+        );
         if (c.qr && new Date(c.qr_expires_at) > new Date()) {
+          const frame = el("div", undefined, "wa-qr-frame");
           const img = el("img");
           img.src = c.qr;
           img.alt = `QR para conectar ${c.name}`;
+          frame.append(img, el("span", undefined, "wa-qr-scan"));
           card.append(
-            img,
+            frame,
             el(
               "p",
               "No celular: WhatsApp Business → Aparelhos conectados → Conectar aparelho.",
+              "wa-qr-help",
             ),
           );
           const expiry = el(
@@ -154,7 +165,7 @@
           card.append(expiry);
           setTimeout(
             () => {
-              img.remove();
+              frame.remove();
               expiry.textContent =
                 "QR expirado. Aguardando renovação; se necessário, clique em Conectar.";
             },
@@ -175,6 +186,8 @@
             `Última atualização: ${date(c.provider_updated_at) || "aguardando"} · Sincronização: ${date(c.last_synced_at) || "aguardando"}`,
           ),
         );
+        const actions = el("div", undefined, "wa-card-actions");
+        card.append(actions);
         ["connect", "sync", "disconnect"].forEach((action) => {
           const labels = {
             connect:
@@ -201,7 +214,7 @@
             );
             await refresh();
           });
-          card.append(b);
+          actions.append(b);
         });
         const settings = el("details");
         settings.append(el("summary", "Nome e pessoas autorizadas"));
@@ -237,7 +250,11 @@
       });
       if (!cached.length)
         root.append(
-          el("p", "Nenhum número conectado. Adicione o primeiro número acima."),
+          el(
+            "p",
+            "Nenhum número conectado ainda. Siga os 3 passos acima para adicionar o primeiro.",
+            "wa-empty",
+          ),
         );
     }
     $("wa-add-number").onsubmit = safe(async (e) => {
