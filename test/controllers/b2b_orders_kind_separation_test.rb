@@ -17,9 +17,8 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   PEDIDO_URL = 'https://api.tiny.com.br/api2/pedido.incluir.php'.freeze
   INVOICE_URL = 'https://api.tiny.com.br/api2/gerar.nota.fiscal.pedido.php'.freeze
 
-  # Abastecimento vira pedido no Tiny e já sai com a nota fiscal gerada e emitida.
+  # Abastecimento vira pedido no Tiny e já sai com a nota fiscal gerada.
   def stub_tiny_nota_ok(numero: '777')
-    stub_request(:post, 'https://api.tiny.com.br/api2/nota.fiscal.emitir.php').to_return(body: { retorno: { status: 'OK' } }.to_json)
     stub_request(:post, INVOICE_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '5', numero: '42' } } } }.to_json)
     stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '90000777', numero: numero } } } }.to_json)
   end
@@ -231,7 +230,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     assert order.aberto?, order.error_message
   end
 
-  test 'a stock transfer enters Tiny as a pedido in preparando envio, with the nota generated and emitted' do
+  test 'a stock transfer enters Tiny as a pedido in preparando envio, with the nota generated' do
     stub_tiny_nota_ok(numero: '1900')
     post stock_transfers_path, params: { b2b_order: {
       transfer_location_id: @location.id, carrier_shipping_method: '123', freight_service: 'PAC CORREIOS LOG+', receiver_name: 'Maria',
@@ -244,7 +243,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     assert_nil order.freight_service, 'abastecimento é sempre SEDEX, não aceita outro serviço'
     assert_requested :post, INVOICE_URL
     follow_redirect!
-    assert_select '.flash-messages-container', text: /Nota fiscal \(nº 42\) emitida no Tiny/
+    assert_select '.flash-messages-container', text: /Nota fiscal gerada no Tiny/
   end
 
   test 'the stock transfers list has no romaneio and links the Tiny number to the pedido' do

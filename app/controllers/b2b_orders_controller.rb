@@ -3,7 +3,7 @@ require 'csv'
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio, :danfe]
+  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio]
   helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
                 :order_path_for, :cancel_in_tiny_order_path_for, :romaneio_order_path_for, :order_form_url
 
@@ -141,19 +141,6 @@ class B2bOrdersController < ApplicationController
   def romaneio
     pdf = B2bRomaneioPdf.new(@b2b_order)
     send_data pdf.render, filename: pdf.filename, type: 'application/pdf', disposition: 'attachment'
-  end
-
-  # DANFE do abastecimento em PDF. O Tiny só entrega o DANFE como página HTML, que é convertida aqui.
-  def danfe
-    result = B2bTinyService.new.danfe_link(@b2b_order.tiny_reference_id)
-    unless result[:success]
-      redirect_to orders_path_for(order_kind), alert: "DANFE do abastecimento ##{@b2b_order.id} indisponível: #{result[:error]}"
-      return
-    end
-
-    pdf = WickedPdf.new.pdf_from_url(result[:url], page_size: 'A4')
-    send_data pdf, filename: "DANFE-#{result[:number].presence || @b2b_order.tiny_reference_number}.pdf",
-                   type: 'application/pdf', disposition: 'attachment'
   end
 
   def shipping_methods
@@ -399,9 +386,7 @@ class B2bOrdersController < ApplicationController
       return [:notice, message] unless generate_invoice && order.tiny_order?
 
       invoice = B2bTinyService.new.generate_invoice(order.tiny_reference_id)
-      if invoice[:success] && order.stock_transfer?
-        emit_stock_transfer_invoice(message, invoice)
-      elsif invoice[:success]
+      if invoice[:success]
         [:notice, "#{message} Nota fiscal gerada no Tiny#{" (nº #{invoice[:number]})" if invoice[:number]}, falta emitir por lá."]
       else
         [:alert, "#{message} Mas o Tiny não gerou a nota fiscal: #{invoice[:error]}. Gere a nota pelo Tiny."]
@@ -413,18 +398,6 @@ class B2bOrdersController < ApplicationController
     Rails.logger.error "B2bOrdersController#send_to_tiny (#{order.id}): #{e.class} #{e.message}"
     order.reload.update_columns(status: B2bOrder.statuses[:dados_incompletos], error_message: e.message.to_s.first(255)) unless order.tiny_reference_id.present?
     [:alert, "#{KIND_LABELS[order.kind]} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
-  end
-
-  # O abastecimento já sai com a nota emitida, para o DANFE ficar disponível na lista. A autorização da
-  # SEFAZ leva alguns segundos; se a emissão falhar aqui, a fila de emissão do Correios B2B tenta de novo.
-  def emit_stock_transfer_invoice(message, invoice)
-    number = " (nº #{invoice[:number]})" if invoice[:number]
-    emission = B2bTinyService.new.emit_invoice(invoice[:invoice_id])
-    if emission[:success]
-      [:notice, "#{message} Nota fiscal#{number} emitida no Tiny. O DANFE fica disponível na lista assim que a SEFAZ autorizar."]
-    else
-      [:alert, "#{message} Nota fiscal#{number} gerada, mas o Tiny não emitiu: #{emission[:error]}. Emita pelo Tiny."]
-    end
   end
 
   # Checkbox "Gerar nota fiscal no Tiny" do envio do atacado. Abastecimento e transferência B2C sempre vão
