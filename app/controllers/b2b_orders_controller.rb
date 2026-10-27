@@ -3,7 +3,7 @@ require 'csv'
 class B2bOrdersController < ApplicationController
   guard_screen :b2b_orders
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio, :danfe, :send_danfe]
+  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio, :danfe]
   helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
                 :order_path_for, :cancel_in_tiny_order_path_for, :romaneio_order_path_for, :order_form_url
 
@@ -154,27 +154,6 @@ class B2bOrdersController < ApplicationController
     pdf = WickedPdf.new.pdf_from_url(result[:url], page_size: 'A4')
     send_data pdf, filename: "DANFE-#{result[:number].presence || @b2b_order.tiny_reference_number}.pdf",
                    type: 'application/pdf', disposition: 'attachment'
-  end
-
-  # Envia o DANFE por e-mail (um ou mais endereços, separados por vírgula). A nota é conferida aqui,
-  # para o erro aparecer na hora; o PDF é gerado e enviado em segundo plano.
-  def send_danfe
-    emails = params[:emails].to_s.split(/[,;\s]+/).map(&:strip).reject(&:blank?).uniq
-    invalid = emails.reject { |email| email.match?(URI::MailTo::EMAIL_REGEXP) }
-    if emails.empty? || invalid.any?
-      redirect_to orders_path_for(order_kind), alert: "Informe e-mail(s) válido(s) para enviar a nota#{": #{invalid.join(', ')}" if invalid.any?}."
-      return
-    end
-
-    result = B2bTinyService.new.danfe_link(@b2b_order.tiny_reference_id)
-    unless result[:success]
-      redirect_to orders_path_for(order_kind), alert: "Nota do abastecimento ##{@b2b_order.id} não enviada: #{result[:error]}"
-      return
-    end
-
-    InvoiceMailer.with(order_id: @b2b_order.id, to: emails, danfe_url: result[:url], number: result[:number],
-                       sender_name: current_user.name).stock_transfer_danfe.deliver_later
-    redirect_to orders_path_for(order_kind), notice: "Nota nº #{result[:number]} sendo enviada para #{emails.join(', ')}."
   end
 
   def shipping_methods

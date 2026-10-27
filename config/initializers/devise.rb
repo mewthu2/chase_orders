@@ -24,7 +24,7 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = ENV['MAILER_FROM'].presence || ENV['SMTP_USERNAME'].presence || 'chamados@chaseorders.com'
+  config.mailer_sender = ENV.fetch('MAILER_FROM', 'chamados@chaseorders.com')
 
   # Configure the class responsible to send e-mails.
   config.mailer = 'AuthMailer'
