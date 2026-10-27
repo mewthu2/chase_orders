@@ -104,4 +104,72 @@ class StockTransferInvoiceTest < ActionDispatch::IntegrationTest
     assert_redirected_to stock_transfers_path
     assert_match(/ainda não foi autorizada \(situação no Tiny: Pendente\)/, flash[:alert])
   end
+
+  def stub_danfe_link
+    stub_invoice('6', 'Autorizada')
+    stub_request(:post, LINK_URL).with(body: hash_including('id' => '5'))
+                                 .to_return(body: { retorno: { status: 'OK', link_nfe: DANFE_URL } }.to_json)
+  end
+
+  test 'the list has a send-by-email button for transfers already sent to Tiny' do
+    sent = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
+
+    get stock_transfers_path
+
+    assert_select "button[data-send-url='#{send_danfe_stock_transfer_path(sent)}']", count: 1
+    assert_select '#sendDanfeModal input[name=emails]'
+  end
+
+  test 'sending the invoice queues an e-mail with the DANFE to every address typed' do
+    order = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
+    stub_danfe_link
+
+    assert_enqueued_emails 1 do
+      post send_danfe_stock_transfer_path(order), params: { emails: 'loja@chase.com.br, gerente@chase.com.br' }
+    end
+
+    assert_redirected_to stock_transfers_path
+    assert_equal 'Nota nº 042 sendo enviada para loja@chase.com.br, gerente@chase.com.br.', flash[:notice]
+  end
+
+  test 'an invalid e-mail is refused before asking Tiny' do
+    order = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
+
+    assert_no_enqueued_emails do
+      post send_danfe_stock_transfer_path(order), params: { emails: 'loja@chase.com.br, nao-e-email' }
+    end
+
+    assert_match(/Informe e-mail\(s\) válido\(s\).*nao-e-email/, flash[:alert])
+    assert_not_requested :get, ORDER_URL
+  end
+
+  test 'an invoice not yet authorized is not sent' do
+    order = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
+    stub_invoice('1', 'Pendente')
+
+    assert_no_enqueued_emails do
+      post send_danfe_stock_transfer_path(order), params: { emails: 'loja@chase.com.br' }
+    end
+
+    assert_match(/não enviada: A nota ainda não foi autorizada/, flash[:alert])
+  end
+
+  test 'the e-mail carries the DANFE as a PDF attachment and the transfer details' do
+    order = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '777')
+    converter = Object.new
+    converter.define_singleton_method(:pdf_from_url) { |_url, **_options| '%PDF-fake' }
+
+    mail = WickedPdf.stub(:new, converter) do
+      InvoiceMailer.with(order_id: order.id, to: ['loja@chase.com.br'], danfe_url: DANFE_URL, number: '042',
+                         sender_name: 'Admin Danfe').stock_transfer_danfe.tap(&:deliver_now)
+    end
+
+    assert_equal ['loja@chase.com.br'], mail.to
+    assert_equal '📦 Nota fiscal nº 042 · Abastecimento Loja Danfe', mail.subject
+    pdf = mail.attachments['DANFE-042.pdf']
+    assert_equal 'application/pdf', pdf.mime_type
+    assert_equal '%PDF-fake', pdf.body.decoded
+    assert_includes mail.html_part.body.decoded, 'Maria'
+    assert_includes mail.text_part.body.decoded, 'SKU1'
+  end
 end

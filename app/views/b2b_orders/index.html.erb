@@ -107,6 +107,10 @@
                     <% end %>
                     <% if order.stock_transfer? && order.tiny_order? && order.tiny_reference_id.present? %>
                       <%= link_to danfe_stock_transfer_path(order), class: "action-btn action-btn--edit", title: 'Baixar DANFE (PDF)', data: { turbo: false } do %><i class="fas fa-file-invoice"></i><% end %>
+                      <button type="button" class="action-btn action-btn--edit" title="Enviar nota por e-mail" data-bs-toggle="modal" data-bs-target="#sendDanfeModal"
+                              data-send-url="<%= send_danfe_stock_transfer_path(order) %>" data-order-label="<%= "Abastecimento ##{order.id}#{" · #{order.transfer_location.name}" if order.transfer_location}" %>">
+                        <i class="fas fa-envelope"></i>
+                      </button>
                     <% end %>
                     <% if current_user.can_access_screen?('fiscal_notes') && order.sale? %>
                       <%= link_to new_fiscal_note_path(b2b_order_id: order.id), class: "action-btn action-btn--edit", title: 'Gerar nota fiscal' do %><i class="fas fa-file-invoice"></i><% end %>
@@ -144,6 +148,53 @@
     <% end %>
   </div>
 </div>
+
+<% if order_kind == 'stock_transfer' %>
+<div class="modal fade" id="sendDanfeModal" tabindex="-1" aria-labelledby="sendDanfeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+      <%= form_with url: '#', method: :post, local: true, id: 'sendDanfeForm', data: { turbo: false } do %>
+        <div class="modal-header">
+          <h5 class="modal-title" id="sendDanfeModalLabel"><i class="fas fa-envelope me-2"></i>Enviar nota por e-mail</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted-custom mb-3" id="sendDanfeOrderLabel"></p>
+          <label for="sendDanfeEmails" class="field-label">Para qual e-mail?</label>
+          <input type="text" name="emails" id="sendDanfeEmails" class="form-control" required autocomplete="email" placeholder="loja@exemplo.com, gerente@exemplo.com">
+          <small class="text-muted-custom d-block mt-2">Vários e-mails podem ser separados por vírgula. O DANFE vai em PDF, em anexo.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn-export"><i class="fas fa-paper-plane me-2"></i>Enviar nota</button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :scripts do %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var modal = document.getElementById('sendDanfeModal');
+  var form = document.getElementById('sendDanfeForm');
+  var input = document.getElementById('sendDanfeEmails');
+  var key = 'stockTransfers.lastDanfeEmails';
+
+  modal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    form.action = button.getAttribute('data-send-url');
+    document.getElementById('sendDanfeOrderLabel').textContent = button.getAttribute('data-order-label');
+    try { input.value = localStorage.getItem(key) || ''; } catch (e) { input.value = ''; }
+  });
+  modal.addEventListener('shown.bs.modal', function () { input.focus(); });
+  form.addEventListener('submit', function () {
+    try { localStorage.setItem(key, input.value); } catch (e) {}
+  });
+});
+</script>
+<% end %>
+<% end %>
 
 <% unless transfers %>
 <% content_for :scripts do %>

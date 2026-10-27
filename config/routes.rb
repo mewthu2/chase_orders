@@ -318,6 +318,7 @@ Rails.application.routes.draw do
       post :transmit
       post :cancel_in_tiny
       get :danfe
+      post :send_danfe
     end
   end
 
