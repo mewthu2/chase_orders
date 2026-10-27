@@ -6,6 +6,12 @@ class InvoiceMailer < ApplicationMailer
 
   LOGO_PATH = TicketMailer::LOGO_PATH
 
+  # O envio da nota só aparece com um SMTP de verdade configurado (SMTP_ADDRESS): sem domínio próprio,
+  # o Mailtrap é só sandbox e os e-mails não chegariam às lojas.
+  def self.enabled?
+    ENV['SMTP_ADDRESS'].present?
+  end
+
   def stock_transfer_danfe
     @order = B2bOrder.find(params[:order_id])
     @number = params[:number].presence || @order.tiny_reference_number

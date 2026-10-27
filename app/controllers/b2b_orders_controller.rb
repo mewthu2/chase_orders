@@ -159,6 +159,11 @@ class B2bOrdersController < ApplicationController
   # Envia o DANFE por e-mail (um ou mais endereços, separados por vírgula). A nota é conferida aqui,
   # para o erro aparecer na hora; o PDF é gerado e enviado em segundo plano.
   def send_danfe
+    unless InvoiceMailer.enabled?
+      redirect_to orders_path_for(order_kind), alert: 'O envio de e-mail ainda não está configurado.'
+      return
+    end
+
     emails = params[:emails].to_s.split(/[,;\s]+/).map(&:strip).reject(&:blank?).uniq
     invalid = emails.reject { |email| email.match?(URI::MailTo::EMAIL_REGEXP) }
     if emails.empty? || invalid.any?
