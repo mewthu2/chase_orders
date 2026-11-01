@@ -13,14 +13,14 @@ class WhatsappCustomerContextTest < ActiveSupport::TestCase
   teardown { ENV['CHASE_ORDERS_TOKEN'] = @previous_token }
 
   test 'numeric and global customer ids use variables and the existing credential' do
-    ['123', 'gid://shopify/Customer/123'].each do |id|
-      request = stub_request(:post, URL).with do |request|
-        body = JSON.parse(request.body)
-        request.headers['X-Shopify-Access-Token'] == 'test-token' &&
-          body['variables'] == { 'id' => 'gid://shopify/Customer/123', 'after' => 'next-page' } &&
-          body['query'].include?('customer(id: $id)') && body['query'].exclude?('mutation')
-      end.to_return(body: payload.to_json, headers: { 'Content-Type' => 'application/json' })
+    request = stub_request(:post, URL).with do |request|
+      body = JSON.parse(request.body)
+      request.headers['X-Shopify-Access-Token'] == 'test-token' &&
+        body['variables'] == { 'id' => 'gid://shopify/Customer/123', 'after' => 'next-page' } &&
+        body['query'].include?('customer(id: $id)') && body['query'].exclude?('mutation')
+    end.to_return(body: payload.to_json, headers: { 'Content-Type' => 'application/json' })
 
+    ['123', 'gid://shopify/Customer/123'].each do |id|
       result = @gateway.orders(id, after: 'next-page')
       assert_equal '279.90', result[:orders].first[:total_price]
       assert_equal 'BRL', result[:orders].first[:currency]
@@ -28,8 +28,8 @@ class WhatsappCustomerContextTest < ActiveSupport::TestCase
       assert_equal true, result[:orders].first[:has_more_items]
       assert_equal({ has_next_page: true, end_cursor: 'next-cursor' }, result[:page_info])
       assert_equal 'https://admin.shopify.com/store/chasebrasil/orders/456', result[:orders].first[:shopify_url]
-      assert_requested request
     end
+    assert_requested request, times: 2
   end
 
   test 'no orders is distinct from an unrecognized or deleted customer' do
