@@ -86,20 +86,59 @@ module Whatsapp
     def customers
       return head :forbidden unless current_user.can_access_screen?('customers')
       conversation = authorized_conversations.find(params[:id])
-      q = params[:q].to_s.truncate(80)
+      q = params[:q].to_s.strip.first(100)
       if q.present?
         term = "%#{ActiveRecord::Base.sanitize_sql_like(q)}%"
-        matches = Customer.where('name LIKE :q OR first_name LIKE :q OR last_name LIKE :q OR phone LIKE :q', q: term).limit(20)
+        matches = Customer.where('name LIKE :q OR first_name LIKE :q OR last_name LIKE :q OR phone LIKE :q OR email LIKE :q', q: term)
+        digits = q.gsub(/\D/, '')
+        if q.match?(/\A[+\d\s().-]+\z/) && digits.length >= 4
+          matches = matches.or(Customer.where("REGEXP_REPLACE(phone, '[^0-9]', '') LIKE ?", "%#{digits}%"))
+        end
+        matches = matches.order(:id).limit(20)
       else
         # MySQL 8 normalization handles formatting without changing the customer registry.
         digits = conversation.contact.phone.to_s.delete_prefix('+')
         candidates = [digits, digits.start_with?('55') ? digits[2..] : digits].reject(&:blank?)
-        matches = Customer.where("REGEXP_REPLACE(phone, '[^0-9]', '') IN (?)", candidates).limit(20)
+        matches = Customer.where("REGEXP_REPLACE(phone, '[^0-9]', '') IN (?)", candidates).order(:id).limit(20)
       end
       render json: { customers: matches.map { |c| customer_payload(c) } }
     end
 
+    def customer_context
+      return head :forbidden unless can_view_customer_context?
+
+      conversation = authorized_conversations.includes(contact: :customer).find(params[:id])
+      customer = conversation.contact.customer
+      result = if customer
+        ShopifyCustomerContext.new.orders(customer.shopify_customer_id, after: params[:after])
+      else
+        { orders: [], page_info: { has_next_page: false, end_cursor: nil } }
+      end
+      render json: result.merge(customer: customer && customer_payload(customer), fetched_at: Time.current.iso8601)
+    rescue ShopifyCustomerContext::Error => e
+      render json: { error: e.message }, status: :service_unavailable
+    end
+
+    def attendance_summary
+      conversation = authorized_conversations.find(params[:id])
+      body = params[:body]
+      version = params[:version]
+      unless body.is_a?(String) && (version.is_a?(Integer) || version.is_a?(String)) && version.to_s.match?(/\A\d{1,9}\z/)
+        raise ArgumentError, 'Informe o texto e a versão atual do resumo.'
+      end
+
+      if conversation.update_attendance_summary!(body: body, version: version.to_i, author: current_user)
+        render json: { attendance_summary: conversation.attendance_summary_payload }
+      else
+        render json: { error: 'Outra pessoa atualizou este resumo. Confira a versão salva antes de tentar novamente.',
+          attendance_summary: conversation.attendance_summary_payload }, status: :conflict
+      end
+    end
+
     private
+    def can_view_customer_context?
+      current_user.can_access_screen?('customers') && current_user.can_access_screen?('orders')
+    end
     def summary(c)
       c.slice(:id, :state, :last_message_at, :last_message_preview, :assignee_id).merge(
         name: c.contact.display_name, phone: c.contact.phone, connection_id: c.connection_id,
@@ -109,7 +148,8 @@ module Whatsapp
     def details(c)
       people = User.active.order(:name).select { |u| Connection.visible_to(u).where(id: c.connection_id).exists? }
       result = summary(c).merge(assignees: people.map { |u| u.slice(:id, :name) },
-        can_link_customer: current_user.can_access_screen?('customers'))
+        can_link_customer: current_user.can_access_screen?('customers'),
+        can_view_customer_context: can_view_customer_context?, attendance_summary: c.attendance_summary_payload)
       if current_user.can_access_screen?('customers') && c.contact.customer
         result[:customer] = customer_payload(c.contact.customer)
         result[:orders_url] = orders_path(customer_id: c.contact.customer_id) if current_user.can_access_screen?('orders')
@@ -117,7 +157,7 @@ module Whatsapp
       result
     end
     def customer_payload(customer)
-      { id: customer.id, name: customer.full_name.presence || customer.name, phone: customer.phone }
+      { id: customer.id, name: customer.full_name.presence || customer.name, phone: customer.phone, email: customer.email }
     end
   end
 end

@@ -218,14 +218,182 @@
   font-size: 0.8rem;
 }
 .wa-contact {
-  width: 280px;
+  width: 350px;
+  flex-shrink: 0;
+  max-width: 100%;
   padding: 16px;
   overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
   background: #fff;
   border-left: 1px solid #e0e8e3;
 }
-.wa-contact h2 {
-  margin-top: 16px;
+.wa-context-header,
+.wa-orders-heading,
+.wa-order-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.wa-context-header h2 {
+  margin: 0;
+}
+.wa-contact h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+.wa-context-phone,
+.wa-context-help,
+.wa-context-status,
+.wa-context-updated {
+  color: #60736b;
+  font-size: 0.82rem;
+}
+.wa-context-phone {
+  margin: 8px 0 16px;
+}
+.wa-context-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #dce5e0;
+  margin-bottom: 16px;
+}
+.wa-context-tabs button {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #60736b;
+  padding: 10px 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.wa-context-tabs button[aria-selected="true"] {
+  color: #146c43;
+  border-bottom-color: #198754;
+}
+.wa-context-tabs button:focus-visible {
+  outline: 2px solid #198754;
+  outline-offset: -2px;
+}
+.wa-linked-customer {
+  margin-bottom: 10px;
+}
+.wa-linked-customer p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+}
+.wa-customer-picker {
+  background: #f5f8f6;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+.wa-customer-picker label,
+#wa-summary-content label {
+  display: block;
+  font-size: 0.85rem;
+  margin: 12px 0 6px;
+}
+.wa-customer-search {
+  display: flex;
+  gap: 4px;
+}
+.wa-customer-search input {
+  min-width: 0;
+}
+.wa-customer-picker small {
+  color: #60736b;
+}
+.wa-customer-option strong,
+.wa-customer-option small,
+.wa-customer-option span {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.wa-customer-option span {
+  color: #146c43;
+  font-size: 0.78rem;
+  margin-top: 5px;
+}
+.wa-orders-heading {
+  margin: 24px 0 8px;
+}
+.wa-order {
+  border: 1px solid #dce5e0;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 0.83rem;
+}
+.wa-order-heading {
+  align-items: flex-start;
+}
+.wa-order-date {
+  color: #60736b;
+}
+.wa-order-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0;
+}
+.wa-order-statuses span {
+  border-radius: 5px;
+  background: #eef4f0;
+  padding: 3px 6px;
+  font-size: 0.73rem;
+}
+.wa-order ul {
+  padding-left: 18px;
+  margin: 10px 0;
+}
+.wa-order li + li {
+  margin-top: 4px;
+}
+.wa-order a {
+  margin-top: 8px;
+}
+.wa-context-updated {
+  display: block;
+  margin: 10px 0;
+}
+#wa-summary-body {
+  resize: vertical;
+  min-height: 180px;
+  max-height: 55vh;
+  font-size: 0.9rem;
+}
+.wa-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 12px;
+}
+#wa-summary-status {
+  color: #50675a;
+  font-size: 0.8rem;
+}
+.wa-summary-conflict {
+  padding: 12px;
+  background: #fff6df;
+  border: 1px solid #e8c477;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.wa-summary-conflict pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 200px;
+  overflow: auto;
+  font-family: inherit;
+  padding: 8px;
+  background: #fff;
+}
+.wa-summary-conflict button {
+  margin: 4px 0;
 }
 .wa-contact a {
   display: block;
@@ -608,7 +776,7 @@
 .wa-app [hidden] {
   display: none !important;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
   .wa-contact {
     position: absolute;
     right: 0;
@@ -662,6 +830,15 @@
   }
   .wa-chat-header {
     padding: 9px;
+    gap: 6px;
+  }
+  #wa-contact-toggle {
+    max-width: 100px;
+    font-size: 0.8rem;
+  }
+  .wa-chat-header strong,
+  .wa-chat-header small {
+    overflow-wrap: anywhere;
   }
   .wa-actions {
     gap: 5px;

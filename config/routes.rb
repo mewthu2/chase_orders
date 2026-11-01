@@ -19,6 +19,8 @@ Rails.application.routes.draw do
         post :read
         patch :link_customer
         get :customers
+        get :customer_context
+        patch :attendance_summary
       end
       resources :messages, only: [:index, :create] do
         member do
