@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_31_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1172,7 +1172,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.string "last_message_preview"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "attendance_summary"
+    t.integer "attendance_summary_version", default: 0, null: false
+    t.datetime "attendance_summary_updated_at"
+    t.bigint "attendance_summary_author_id"
     t.index ["assignee_id"], name: "index_whatsapp_conversations_on_assignee_id"
+    t.index ["attendance_summary_author_id"], name: "idx_wa_summary_author"
     t.index ["connection_id", "contact_id"], name: "idx_wa_conversation_unique", unique: true
     t.index ["connection_id", "last_message_at"], name: "idx_wa_inbox"
     t.index ["connection_id"], name: "index_whatsapp_conversations_on_connection_id"
@@ -1353,6 +1358,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
   add_foreign_key "whatsapp_contacts", "customers"
   add_foreign_key "whatsapp_contacts", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_conversations", "users", column: "assignee_id"
+  add_foreign_key "whatsapp_conversations", "users", column: "attendance_summary_author_id", on_delete: :nullify
   add_foreign_key "whatsapp_conversations", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_conversations", "whatsapp_contacts", column: "contact_id"
   add_foreign_key "whatsapp_events", "whatsapp_connections", column: "connection_id"

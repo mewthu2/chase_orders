@@ -40,6 +40,9 @@
           minute: "2-digit",
         })
       : "";
+  const contextDate = (value) => value ? new Date(value).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  }) : "";
   async function api(path, options = {}) {
     const headers = {
       Accept: "application/json",
@@ -83,6 +86,7 @@
           "Não foi possível concluir. O conteúdo digitado foi preservado.",
       );
       failure.status = response.status;
+      failure.data = data;
       throw failure;
     }
     return data;
@@ -288,6 +292,9 @@
     draftRequest,
     busy = false;
   const drafts = new Map(); // Memory only: never store customer text in localStorage.
+  const summaryDrafts = new Map();
+  let contextRequest = 0, customerRequest = 0, contextData = null,
+    contextLoading = false, activeContextTab = "context";
   const history = $("wa-history");
   const nearBottom = () =>
     history.scrollHeight - history.scrollTop - history.clientHeight < 100;
@@ -364,7 +371,9 @@
       );
     $("wa-more-conversations").hidden = !result.more;
   }
-  function renderHeader(c) {
+  function renderHeader(c, { reloadContext = true } = {}) {
+    const customerChanged = selected?.id === c.id && selected?.customer?.id !== c.customer?.id;
+    const contextPermissionChanged = selected?.id === c.id && selected?.can_view_customer_context !== c.can_view_customer_context;
     selected = c;
     $("wa-contact-name").textContent = c.name;
     $("wa-company-number").textContent =
@@ -383,6 +392,7 @@
       $("wa-linked").append(
         el("strong", c.customer.name),
         el("p", c.customer.phone || ""),
+        el("p", c.customer.email || ""),
       );
       if (c.orders_url) {
         const a = el("a", "Ver pedidos no Honey");
@@ -391,10 +401,225 @@
         a.rel = "noopener";
         $("wa-linked").append(a);
       }
+    } else {
+      $("wa-linked").append(el("p", "Nenhum cliente vinculado a este número."));
     }
-    $("wa-customer-picker").hidden = !c.can_link_customer;
+    $("wa-customer-link-toggle").hidden = !c.can_link_customer;
+    $("wa-customer-link-toggle").textContent = c.customer ? "Alterar cliente vinculado" : "Vincular cliente";
+    if (!c.can_link_customer) closeCustomerPicker();
+    if (customerChanged || contextPermissionChanged || !c.can_view_customer_context) {
+      contextRequest++;
+      contextData = null;
+      contextLoading = false;
+      renderOrders();
+      if (reloadContext && c.can_view_customer_context && !$("wa-contact-panel").hidden && activeContextTab === "context") loadCustomerContext();
+    }
+    receiveSummary(c.id, c.attendance_summary);
     $("wa-send").disabled = busy || c.connection_state !== "connected";
   }
+  function normalizeSummary(summary = {}) {
+    return { body: summary?.body || "", version: Number(summary?.version || 0),
+      updated_at: summary?.updated_at, author_name: summary?.author_name };
+  }
+  function receiveSummary(id, incoming) {
+    const summary = normalizeSummary(incoming);
+    let draft = summaryDrafts.get(id);
+    if (!draft) {
+      draft = { ...summary, base: summary.body, saving: false, latest: null, message: "" };
+      summaryDrafts.set(id, draft);
+    } else if (summary.version >= draft.version && !draft.saving) {
+      if (draft.body === draft.base) {
+        Object.assign(draft, summary, { base: summary.body, latest: null });
+      } else if (summary.version > draft.version && (!draft.latest || summary.version >= draft.latest.version)) {
+        draft.latest = summary;
+      }
+    }
+    if (selected?.id === id) renderSummary();
+  }
+  function summaryMeta(summary) {
+    return summary.updated_at
+      ? `Salvo por ${summary.author_name || "um atendente"} em ${contextDate(summary.updated_at)}`
+      : "Nenhum resumo salvo nesta conversa.";
+  }
+  function renderSummary() {
+    const draft = summaryDrafts.get(selected?.id);
+    if (!draft) return;
+    if ($("wa-summary-body").value !== draft.body) $("wa-summary-body").value = draft.body;
+    $("wa-summary-meta").textContent = summaryMeta(draft);
+    $("wa-summary-conflict").hidden = !draft.latest;
+    $("wa-summary-latest").textContent = draft.latest?.body || "(Resumo vazio)";
+    $("wa-summary-latest-meta").textContent = draft.latest ? summaryMeta(draft.latest) : "";
+    $("wa-summary-save").disabled = draft.saving || !!draft.latest || draft.body === draft.base;
+    $("wa-summary-save").textContent = draft.saving ? "Salvando…" : "Salvar resumo";
+    $("wa-summary-status").textContent = draft.saving ? "Salvando…" : draft.message ||
+      (draft.body !== draft.base ? "Alterações não salvas" : "");
+  }
+  $("wa-summary-body").oninput = () => {
+    const draft = summaryDrafts.get(selected?.id);
+    if (!draft) return;
+    draft.body = $("wa-summary-body").value;
+    draft.message = "";
+    renderSummary();
+  };
+  $("wa-summary-save").onclick = async () => {
+    const id = selected?.id, draft = summaryDrafts.get(id);
+    if (!draft || draft.saving || draft.latest || draft.body === draft.base) return;
+    const body = draft.body;
+    draft.saving = true;
+    draft.message = "";
+    renderSummary();
+    try {
+      const result = await api(`/whatsapp/conversations/${id}/attendance_summary`, json("PATCH", { body, version: draft.version }));
+      const summary = normalizeSummary(result.attendance_summary);
+      Object.assign(draft, { base: summary.body, version: summary.version,
+        updated_at: summary.updated_at, author_name: summary.author_name, latest: null,
+        message: draft.body === body ? "Resumo salvo." : "Há novas alterações não salvas." });
+      if (draft.body === body) draft.body = summary.body;
+    } catch (failure) {
+      if (failure.status === 409 && failure.data?.attendance_summary) {
+        draft.latest = normalizeSummary(failure.data.attendance_summary);
+        draft.message = "Confira a atualização de outro atendente.";
+      } else draft.message = failure.message;
+    } finally {
+      draft.saving = false;
+      if (selected?.id === id) renderSummary();
+    }
+  };
+  $("wa-summary-load-latest").onclick = () => {
+    const draft = summaryDrafts.get(selected?.id);
+    if (!draft?.latest) return;
+    if (!window.confirm("Substituir seu rascunho pela versão salva por outro atendente?")) return;
+    Object.assign(draft, draft.latest, { base: draft.latest.body, latest: null, message: "Versão salva carregada." });
+    renderSummary();
+  };
+  $("wa-summary-keep-draft").onclick = () => {
+    const draft = summaryDrafts.get(selected?.id);
+    if (!draft?.latest) return;
+    const latest = draft.latest;
+    Object.assign(draft, { base: latest.body, version: latest.version, updated_at: latest.updated_at,
+      author_name: latest.author_name, latest: null, message: "Seu texto foi mantido. Clique em Salvar resumo para substituir a versão salva." });
+    renderSummary();
+  };
+  window.addEventListener("beforeunload", (event) => {
+    if (![...summaryDrafts.values()].some((draft) => draft.body !== draft.base || draft.saving)) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  function closeCustomerPicker() {
+    $("wa-customer-picker").hidden = true;
+    $("wa-customer-link-toggle").setAttribute("aria-expanded", "false");
+  }
+  function externalLink(label, href) {
+    try {
+      const url = new URL(href);
+      if (!["https:", "http:"].includes(url.protocol)) return null;
+      const link = el("a", label);
+      link.href = url.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      return link;
+    } catch (_) { return null; }
+  }
+  const paymentLabels = { PAID: "Pago", PENDING: "Pagamento pendente", AUTHORIZED: "Autorizado",
+    PARTIALLY_PAID: "Parcialmente pago", PARTIALLY_REFUNDED: "Reembolso parcial", REFUNDED: "Reembolsado",
+    VOIDED: "Cancelado", EXPIRED: "Pagamento expirado" };
+  const fulfillmentLabels = { FULFILLED: "Preparado", UNFULFILLED: "Não preparado", PARTIALLY_FULFILLED: "Parcialmente preparado",
+    IN_PROGRESS: "Em preparação", ON_HOLD: "Em espera", SCHEDULED: "Agendado", RESTOCKED: "Devolvido ao estoque" };
+  function orderMoney(order) {
+    try { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: order.currency }).format(Number(order.total_price)); }
+    catch (_) { return `${order.total_price || ""} ${order.currency || ""}`.trim(); }
+  }
+  function renderOrders() {
+    const visibleData = selected?.can_view_customer_context ? contextData : null;
+    $("wa-orders").replaceChildren();
+    $("wa-orders-more").hidden = !visibleData?.page_info?.has_next_page;
+    $("wa-orders-more").disabled = contextLoading;
+    $("wa-orders-refresh").disabled = contextLoading || !selected?.can_view_customer_context;
+    $("wa-orders-updated").textContent = visibleData?.fetched_at ? `Consulta realizada em ${contextDate(visibleData.fetched_at)}` : "";
+    $("wa-orders-status").textContent = contextLoading ? "Consultando pedidos…" :
+      !selected?.can_view_customer_context ? "Seu acesso não permite consultar clientes e pedidos." :
+      !selected?.customer ? "Vincule o cliente para consultar os pedidos." :
+      !contextData ? "Abra esta aba ou clique em Atualizar para consultar os pedidos." :
+      contextData.orders.length ? "" : "Nenhum pedido disponível nesta consulta.";
+    visibleData?.orders.forEach((order) => {
+      const card = el("article", undefined, "wa-order");
+      const heading = el("div", undefined, "wa-order-heading");
+      heading.append(el("strong", order.name), el("strong", orderMoney(order)));
+      card.append(heading, el("small", contextDate(order.created_at), "wa-order-date"));
+      const statuses = el("div", undefined, "wa-order-statuses");
+      if (order.financial_status) statuses.append(el("span", paymentLabels[order.financial_status.toUpperCase()] || order.financial_status));
+      if (order.fulfillment_status) statuses.append(el("span", fulfillmentLabels[order.fulfillment_status.toUpperCase()] || order.fulfillment_status));
+      card.append(statuses);
+      if (order.items?.length) {
+        const items = el("ul");
+        order.items.forEach((item) => items.append(el("li", `${item.quantity} × ${item.title}`)));
+        card.append(items);
+      }
+      if (order.has_more_items) card.append(el("small", "Há mais itens neste pedido. Consulte os detalhes na Shopify."));
+      order.tracking?.forEach((tracking) => {
+        const label = [tracking.company, tracking.number].filter(Boolean).join(" · ") || "Acompanhar envio";
+        card.append(externalLink(label, tracking.url) || el("p", label));
+      });
+      const details = externalLink("Abrir pedido na Shopify ↗", order.shopify_url);
+      if (details) card.append(details);
+      $("wa-orders").append(card);
+    });
+  }
+  async function loadCustomerContext(append = false) {
+    if (!selected || !selected.can_view_customer_context) { renderOrders(); return; }
+    const id = selected.id, ticket = generation, request = ++contextRequest;
+    const cursor = append ? contextData?.page_info?.end_cursor : null;
+    contextLoading = true;
+    renderOrders();
+    try {
+      const result = await api(`/whatsapp/conversations/${id}/customer_context${cursor ? `?after=${encodeURIComponent(cursor)}` : ""}`);
+      if (selected?.id !== id || generation !== ticket || request !== contextRequest) return;
+      if (String(result.customer?.id || "") !== String(selected.customer?.id || "")) {
+        // A different operator may relink this conversation while Shopify is
+        // loading. Never pair the old customer's header with the new orders.
+        contextData = null;
+        renderOrders();
+        const current = await api(`/whatsapp/conversations/${id}.json`);
+        if (selected?.id !== id || generation !== ticket || request !== contextRequest) return;
+        contextLoading = false;
+        renderHeader(current, { reloadContext: false });
+        renderOrders();
+        if (current.can_view_customer_context)
+          $("wa-orders-status").textContent = "O vínculo do cliente mudou durante a consulta. Confira o cadastro acima e clique em Atualizar.";
+        return;
+      }
+      const existing = append ? contextData?.orders || [] : [];
+      contextData = { ...result, orders: [...new Map([...existing, ...result.orders].map((order) => [order.id, order])).values()] };
+      contextLoading = false;
+      renderOrders();
+    } catch (failure) {
+      if (selected?.id !== id || generation !== ticket || request !== contextRequest) return;
+      contextLoading = false;
+      renderOrders();
+      $("wa-orders-status").textContent = failure.message;
+    }
+  }
+  function selectContextTab(tab, focus = false) {
+    activeContextTab = tab;
+    ["context", "summary"].forEach((name) => {
+      const active = name === tab;
+      $(`wa-${name}-tab`).setAttribute("aria-selected", String(active));
+      $(`wa-${name}-tab`).tabIndex = active ? 0 : -1;
+      $(`wa-${name}-content`).hidden = !active;
+    });
+    if (focus) $(`wa-${tab}-tab`).focus();
+    if (tab === "context" && !contextData && !contextLoading) loadCustomerContext();
+  }
+  ["context", "summary"].forEach((name) => {
+    $(`wa-${name}-tab`).onclick = () => selectContextTab(name);
+    $(`wa-${name}-tab`).onkeydown = (event) => {
+      if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      selectContextTab(event.key === "Home" ? "context" : event.key === "End" ? "summary" : name === "context" ? "summary" : "context", true);
+    };
+  });
+  $("wa-orders-refresh").onclick = () => loadCustomerContext();
+  $("wa-orders-more").onclick = () => loadCustomerContext(true);
   function renderMessages(rows, { older = false } = {}) {
     const wasBottom = nearBottom(),
       oldHeight = history.scrollHeight,
@@ -516,14 +741,22 @@
     saveDraft();
     stopRecording();
     const ticket = ++generation;
+    contextRequest++;
+    customerRequest++;
     const c = await api(`/whatsapp/conversations/${id}.json`);
     if (ticket !== generation) return;
     messages = new Map();
     $("wa-messages").replaceChildren();
+    contextData = null;
+    contextLoading = false;
+    closeCustomerPicker();
+    $("wa-customer-search").value = "";
+    $("wa-customer-results").replaceChildren();
     renderHeader(c);
+    renderOrders();
     $("wa-empty").hidden = true;
     $("wa-selected").hidden = false;
-    $("wa-contact-panel").hidden = true;
+    if (!$("wa-contact-panel").hidden && activeContextTab === "context") loadCustomerContext();
     document.querySelector(".wa-workspace").classList.add("chat-open");
     const draft = drafts.get(id);
     $("wa-text").value = draft?.text || "";
@@ -581,6 +814,8 @@
     await markRead();
   });
   $("wa-back").onclick = () => {
+    $("wa-contact-panel").hidden = true;
+    $("wa-contact-toggle").setAttribute("aria-expanded", "false");
     document.querySelector(".wa-workspace").classList.remove("chat-open");
   };
   $("wa-contact-toggle").onclick = safe(async () => {
@@ -589,20 +824,27 @@
       "aria-expanded",
       !$("wa-contact-panel").hidden,
     );
-    if (!$("wa-contact-panel").hidden && selected.can_link_customer)
-      await findCustomers();
+    if (!$("wa-contact-panel").hidden) {
+      $(`wa-${activeContextTab}-tab`).focus();
+      if (activeContextTab === "context") await loadCustomerContext();
+    }
   });
   $("wa-contact-hide").onclick = () => {
     $("wa-contact-panel").hidden = true;
     $("wa-contact-toggle").setAttribute("aria-expanded", "false");
+    $("wa-contact-toggle").focus();
+  };
+  $("wa-contact-panel").onkeydown = (event) => {
+    if (event.key === "Escape") $("wa-contact-hide").click();
   };
   async function action(operation, extra = {}) {
     if (!selected) return;
+    const id = selected.id, ticket = generation;
     const c = await api(
       `/whatsapp/conversations/${selected.id}`,
       json("PATCH", { operation, ...extra }),
     );
-    renderHeader(c);
+    if (selected?.id === id && ticket === generation) renderHeader(c);
     await refreshList();
   }
   $("wa-take").onclick = safe(() => action("take"));
@@ -615,36 +857,56 @@
     action(selected.state === "closed" ? "reopen" : "close"),
   );
   async function findCustomers() {
-    const id = selected.id;
-    const result = await api(
-      `/whatsapp/conversations/${id}/customers?q=${encodeURIComponent($("wa-customer-search").value)}`,
-    );
-    if (selected.id !== id) return;
-    $("wa-customer-results").replaceChildren();
-    result.customers.forEach((c) => {
-      const b = el(
-        "button",
-        `${c.name} · ${c.phone || "Sem telefone"}`,
-        "btn btn-light wa-customer-option",
-      );
-      b.onclick = safe(async () => {
-        const data = await api(
-          `/whatsapp/conversations/${id}/link_customer`,
-          json("PATCH", { customer_id: c.id }),
-        );
-        renderHeader(data);
+    if (!selected?.can_link_customer) return;
+    const id = selected.id, ticket = generation, request = ++customerRequest;
+    $("wa-customer-results").replaceChildren(el("p", "Buscando clientes…"));
+    try {
+      const result = await api(`/whatsapp/conversations/${id}/customers?q=${encodeURIComponent($("wa-customer-search").value)}`);
+      if (selected?.id !== id || ticket !== generation || request !== customerRequest) return;
+      $("wa-customer-results").replaceChildren();
+      result.customers.forEach((c) => {
+        const b = el("button", undefined, "btn btn-light wa-customer-option");
+        b.type = "button";
+        b.append(el("strong", c.name), el("small", [c.phone || "Sem telefone", c.email].filter(Boolean).join(" · ")), el("span", "Vincular este cliente"));
+        b.onclick = async () => {
+          if (selected?.id !== id || ticket !== generation || request !== customerRequest) return;
+          const buttons = [...$("wa-customer-results").querySelectorAll("button")];
+          buttons.forEach((button) => { button.disabled = true; });
+          try {
+            const data = await api(`/whatsapp/conversations/${id}/link_customer`, json("PATCH", { customer_id: c.id }));
+            if (selected?.id !== id || ticket !== generation || request !== customerRequest) return;
+            closeCustomerPicker();
+            renderHeader(data);
+            if (!contextLoading) await loadCustomerContext();
+          } catch (failure) {
+            if (selected?.id !== id || ticket !== generation || request !== customerRequest) return;
+            buttons.forEach((button) => { button.disabled = false; });
+            $("wa-customer-results").append(el("p", failure.message));
+          }
+        };
+        $("wa-customer-results").append(b);
       });
-      $("wa-customer-results").append(b);
-    });
-    if (!result.customers.length)
-      $("wa-customer-results").append(
-        el(
-          "p",
-          "Nenhum cadastro encontrado. A conversa pode continuar normalmente.",
-        ),
-      );
+      if (!result.customers.length) $("wa-customer-results").append(el("p", "Nenhum cadastro encontrado. Tente nome, telefone ou e-mail."));
+    } catch (failure) {
+      if (selected?.id === id && ticket === generation && request === customerRequest)
+        $("wa-customer-results").replaceChildren(el("p", failure.message));
+    }
   }
-  $("wa-customer-find").onclick = safe(findCustomers);
+  $("wa-customer-link-toggle").onclick = () => {
+    const opening = $("wa-customer-picker").hidden;
+    $("wa-customer-picker").hidden = !opening;
+    $("wa-customer-link-toggle").setAttribute("aria-expanded", String(opening));
+    if (opening) { $("wa-customer-search").focus(); findCustomers(); }
+    else customerRequest++;
+  };
+  $("wa-customer-find").onclick = findCustomers;
+  $("wa-customer-search").oninput = () => {
+    customerRequest++;
+    $("wa-customer-results").replaceChildren();
+  };
+  $("wa-customer-search").onkeydown = (event) => {
+    if (event.key === "Enter") { event.preventDefault(); findCustomers(); }
+  };
   $("wa-file").onchange = () => {
     recordedFile = null;
     const file = $("wa-file").files[0];

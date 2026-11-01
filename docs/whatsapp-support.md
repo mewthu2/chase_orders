@@ -113,6 +113,32 @@ Em falha/reinício:
 
 ## Validação
 
+### Contexto do cliente e resumo do atendimento (31/10/2026)
+
+Na conversa, **Contexto e resumo** abre duas abas sem sair da caixa de entrada:
+
+- **Cliente e pedidos** mostra o cadastro vinculado e consulta os pedidos diretamente na Shopify, dez por página, com itens, valor, situação financeira, preparação e rastreio. A consulta ocorre ao abrir o painel ou atualizar/carregar mais; o polling de mensagens não consulta a Shopify. O botão de vínculo busca cadastros do Honey por nome, telefone ou e-mail e sugere correspondências do telefone quando a busca está vazia. A escolha é explícita, sem mesclar cadastros ou vincular contatos ambíguos automaticamente. O vínculo pertence ao contato daquele número da empresa.
+- **Resumo** guarda uma nota interna por conversa, com autor, data e versão. Não envia mensagem ao cliente. Cada atendente precisa clicar em **Salvar resumo**. Rascunhos sobrevivem à alternância entre conversas na mesma página, apenas em memória. Ao sair/recarregar com alterações pendentes, o navegador avisa. Quando outro atendente salva, a interface preserva o rascunho e mostra a versão nova para revisão antes de permitir a substituição.
+
+Os endpoints continuam exigindo login, usuário ativo, CSRF nas mutações e autorização no número. Consultar pedidos exige as permissões existentes `customers` e `orders`; vincular exige `customers`. O resumo usa a permissão de atendimento. As respostas não são armazenadas em cache e o texto do resumo usa o parâmetro `body`, já filtrado dos logs Rails.
+
+**Instalação:** aplicar `bundle exec rails db:migrate` e recompilar os assets pelo processo habitual de implantação. A migração `20261031120000` adiciona os campos do resumo em `whatsapp_conversations`; instalar a migração antes de servir o novo código. Não há serviço adicional nem alteração no provedor WhatsApp.
+
+A consulta reutiliza `CHASE_ORDERS_TOKEN` no servidor, com Admin API `2026-07`, a mesma versão do gateway de cashback. O acesso deve incluir clientes e pedidos (`read_customers`, `read_orders`). Histórico superior a 60 dias depende da aprovação e do escopo `read_all_orders` da Shopify; a funcionalidade mostra apenas o que a credencial pode consultar. Credencial ausente, acesso insuficiente, cliente removido ou erro da API aparecem como falha de consulta, nunca como confirmação de que a pessoa não tem pedidos. O cadastro Honey vinculado precisa conter `shopify_customer_id` válido. Nenhuma credencial é enviada ao navegador e a consulta não altera a Shopify.
+
+**Reversão:** o código anterior pode voltar mantendo as novas colunas. Reverter a migração apaga os resumos; só executar após backup e decisão explícita de descartar esses dados.
+
+O workflow `.github/workflows/whatsapp-context.yml` executa os testes do módulo com MySQL/Redis descartáveis e credenciais fictícias, verifica a reversão/reaplicação da migração e roda os testes de interface Node sem dependências extras:
+
+```sh
+node --test test/javascript/whatsapp_support_test.cjs
+RAILS_ENV=test TEST_DATABASE_URL=mysql2://USUARIO:SENHA@HOST/BANCO_TESTE \
+  bundle exec rails test test/controllers/whatsapp test/services/whatsapp \
+  test/services/whatsapp_customer_context_test.rb
+```
+
+Os novos testes cobrem isolamento por número e permissões, busca/vínculo, paginação e erros Shopify, resumo compartilhado, conflitos, CSRF, rascunhos e respostas fora de ordem. A interface foi verificada no navegador com dados sintéticos, inclusive em 390×844; esse ensaio não comprova os escopos da credencial de produção. Na homologação, conferir um cliente conhecido, outro sem vínculo, um pedido com rastreio e a edição do resumo em duas sessões autorizadas.
+
 Testes automatizados usam respostas simuladas do provedor e banco exclusivo de testes:
 
 ```sh

@@ -18,7 +18,7 @@
     <main class="wa-chat" aria-label="Conversa selecionada">
       <div id="wa-empty" class="wa-empty">Selecione uma conversa para começar.</div>
       <div id="wa-selected" hidden>
-        <header class="wa-chat-header"><button id="wa-back" class="btn btn-light wa-mobile">← Voltar</button><div><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-owner"></small></div><button id="wa-contact-toggle" class="btn btn-light" aria-expanded="false">Contato</button></header>
+        <header class="wa-chat-header"><button id="wa-back" class="btn btn-light wa-mobile">← Voltar</button><div><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-owner"></small></div><button id="wa-contact-toggle" class="btn btn-light" aria-expanded="false" aria-controls="wa-contact-panel">Contexto e resumo</button></header>
         <div class="wa-actions"><button id="wa-take" class="btn btn-sm btn-outline-secondary">Assumir</button><select id="wa-assignee" class="form-select form-select-sm" aria-label="Transferir para"><option value="">Transferir para…</option></select><button id="wa-transfer" class="btn btn-sm btn-outline-secondary">Transferir</button><button id="wa-close" class="btn btn-sm btn-outline-secondary">Encerrar</button></div>
         <div class="wa-history" id="wa-history" role="log" aria-label="Histórico de mensagens"><button id="wa-older" class="btn btn-light" hidden>Carregar anteriores</button><div id="wa-messages"></div></div>
         <button id="wa-new-indicator" class="btn btn-sm btn-success" hidden>Novas mensagens ↓</button>
@@ -28,7 +28,45 @@
         </form>
       </div>
     </main>
-    <aside class="wa-contact" id="wa-contact-panel" aria-label="Dados do contato" hidden><button id="wa-contact-hide" class="btn btn-light">Fechar</button><h2>Contato</h2><p id="wa-contact-phone"></p><div id="wa-linked"></div><div id="wa-customer-picker" hidden><label for="wa-customer-search">Vincular ao cadastro do Honey</label><input id="wa-customer-search" class="form-control" placeholder="Nome ou telefone"><button id="wa-customer-find" class="btn btn-light">Buscar</button><div id="wa-customer-results"></div><small>Escolha o cadastro correto. Nenhum cliente será mesclado automaticamente.</small></div></aside>
+    <aside class="wa-contact" id="wa-contact-panel" aria-label="Contexto e resumo do atendimento" hidden>
+      <header class="wa-context-header"><h2>Atendimento</h2><button id="wa-contact-hide" class="btn btn-sm btn-light" aria-label="Fechar contexto e voltar à conversa">Fechar</button></header>
+      <p id="wa-contact-phone" class="wa-context-phone"></p>
+      <div class="wa-context-tabs" role="tablist" aria-label="Informações do atendimento">
+        <button id="wa-context-tab" role="tab" aria-selected="true" aria-controls="wa-context-content" type="button">Cliente e pedidos</button>
+        <button id="wa-summary-tab" role="tab" aria-selected="false" aria-controls="wa-summary-content" tabindex="-1" type="button">Resumo</button>
+      </div>
+      <section id="wa-context-content" role="tabpanel" aria-labelledby="wa-context-tab" tabindex="0">
+        <div id="wa-linked" class="wa-linked-customer"></div>
+        <button id="wa-customer-link-toggle" type="button" class="btn btn-sm btn-outline-secondary" aria-expanded="false" aria-controls="wa-customer-picker" hidden>Vincular cliente</button>
+        <div id="wa-customer-picker" class="wa-customer-picker" hidden>
+          <label for="wa-customer-search">Buscar cadastro no Honey</label>
+          <div class="wa-customer-search"><input id="wa-customer-search" class="form-control" type="search" placeholder="Nome, telefone ou e-mail"><button id="wa-customer-find" type="button" class="btn btn-light">Buscar</button></div>
+          <div id="wa-customer-results" aria-live="polite"></div>
+          <small>Confira os dados e escolha o cadastro correto para vincular a este número.</small>
+        </div>
+        <div class="wa-orders-heading"><h3>Pedidos na Shopify</h3><button id="wa-orders-refresh" type="button" class="btn btn-sm btn-light">Atualizar</button></div>
+        <p id="wa-orders-status" class="wa-context-status" role="status"></p>
+        <div id="wa-orders"></div>
+        <button id="wa-orders-more" type="button" class="btn btn-sm btn-outline-secondary" hidden>Carregar mais pedidos</button>
+        <small id="wa-orders-updated" class="wa-context-updated"></small>
+        <small class="wa-context-help">A disponibilidade de pedidos antigos depende do acesso autorizado à Shopify.</small>
+      </section>
+      <section id="wa-summary-content" role="tabpanel" aria-labelledby="wa-summary-tab" tabindex="0" hidden>
+        <h3>Resumo do atendimento</h3>
+        <p class="wa-context-help">Nota interna para a equipe. Não é enviada ao cliente pelo WhatsApp.</p>
+        <label for="wa-summary-body">O que a próxima pessoa precisa saber?</label>
+        <textarea id="wa-summary-body" class="form-control" rows="10" maxlength="10000" placeholder="Motivo do contato, o que foi combinado e próximos passos…" aria-describedby="wa-summary-meta wa-summary-status"></textarea>
+        <small id="wa-summary-meta" class="wa-context-updated"></small>
+        <div id="wa-summary-conflict" class="wa-summary-conflict" role="status" hidden>
+          <p>Outra pessoa atualizou o resumo. Seu texto foi preservado. Confira a versão salva antes de continuar.</p>
+          <p id="wa-summary-latest-meta"></p><pre id="wa-summary-latest"></pre>
+          <button id="wa-summary-load-latest" type="button" class="btn btn-sm btn-light">Usar versão salva</button>
+          <button id="wa-summary-keep-draft" type="button" class="btn btn-sm btn-outline-secondary">Manter meu texto</button>
+        </div>
+        <div class="wa-summary-actions"><button id="wa-summary-save" type="button" class="btn btn-success" disabled>Salvar resumo</button><span id="wa-summary-status" role="status"></span></div>
+        <small class="wa-context-help">Salve antes de fechar ou atualizar a página. Rascunhos ficam disponíveis ao alternar entre conversas nesta tela.</small>
+      </section>
+    </aside>
   </div>
   <dialog id="wa-new-dialog"><form id="wa-start"><h2>Nova conversa</h2><label for="wa-start-number">Enviar pelo número</label><select id="wa-start-number" class="form-select" required><option value="">Escolha um número</option></select><label for="wa-start-phone">Telefone do cliente</label><input id="wa-start-phone" class="form-control" type="tel" placeholder="+55 11 99999-9999" required><div class="wa-dialog-actions"><button type="button" id="wa-cancel-new" class="btn btn-light">Cancelar</button><button class="btn btn-success">Abrir conversa</button></div></form></dialog>
 </section>
