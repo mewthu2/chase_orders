@@ -56,6 +56,15 @@ jobs:
       SHOPIFY_API_KEY: ci-fake-key
       SHOPIFY_API_SECRET: ci-fake-secret
       CHASE_ORDERS_TOKEN: ci-fake-token
+      # User::AVAILABLE_LOCATIONS is initialized at boot; these are synthetic IDs.
+      LOCATION_LAGOA_SECA: '1'
+      LOCATION_BH_SHOPPING: '2'
+      LOCATION_BARRA_SHOPPING: '3'
+      LOCATION_ELDORADO_SP: '4'
+      LOCATION_FORTALEZA_RIO_MAR: '5'
+      LOCATION_PORTO_ALEGRE_BOURBON: '6'
+      LOCATION_SHOPPING_ANALIA_FRANCO: '7'
+      LOCATION_IGUATEMI_CAMPINAS: '8'
       SECRET_KEY_BASE: ci-test-only-secret-key-base-0123456789abcdef0123456789abcdef0123456789
     steps:
       - uses: actions/checkout@v4
