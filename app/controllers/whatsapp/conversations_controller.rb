@@ -11,6 +11,8 @@ module Whatsapp
           scope = authorized_conversations.includes(:connection, :contact, :assignee)
           scope = scope.where(connection_id: params[:connection_id]) if params[:connection_id].present?
           scope = scope.where(state: params[:state]) if %w[open closed].include?(params[:state])
+          scope = scope.where(stage: params[:state]) if %w[pending responding].include?(params[:state])
+          scope = scope.where(needs_human: true) if params[:human] == '1'
           scope = scope.where(assignee_id: current_user.id) if params[:mine] == '1'
           if params[:q].present?
             q = ActiveRecord::Base.sanitize_sql_like(params[:q].to_s.truncate(100))
@@ -63,6 +65,17 @@ module Whatsapp
           conversation.assignee = target
         when 'close' then conversation.state = 'closed'
         when 'reopen' then conversation.state = 'open'
+        when 'pause_agent' then conversation.agent_paused = true
+        when 'resume_agent' then conversation.assign_attributes(agent_paused: false)
+        when 'discard_draft'
+          conversation.clear_agent_draft
+        when 'resolve_human' then conversation.assign_attributes(needs_human: false, agent_note: nil)
+        when 'ask_agent'
+          last = conversation.messages.where(historical: false).order(sent_at: :desc, id: :desc).first
+          raise ArgumentError, 'O agente só sugere resposta quando a última mensagem é do cliente.' unless last&.direction == 'incoming'
+          raise ArgumentError, 'Nenhuma automação ligada neste número. Ligue uma em Automações.' unless Automation.active_for(conversation.connection_id)
+          conversation.agent_note = 'Pensando numa resposta…'
+          AgentJob.perform_later(conversation.id, last.id, true)
         else raise ArgumentError, 'Ação inválida.'
         end
         conversation.save!
@@ -103,7 +116,8 @@ module Whatsapp
 
     private
     def summary(c)
-      c.slice(:id, :state, :last_message_at, :last_message_preview, :assignee_id).merge(
+      c.slice(:id, :state, :stage, :needs_human, :agent_paused, :last_message_at, :last_message_preview, :assignee_id).merge(
+        stage_label: c.stage_label, has_draft: !c.agent_draft.nil?,
         name: c.contact.display_name, phone: c.contact.phone, connection_id: c.connection_id,
         connection_name: c.connection.name, connection_phone: c.connection.phone, connection_state: c.connection.state,
         assignee_name: c.assignee&.name, unread_count: c.unread_count(current_user))
@@ -111,12 +125,21 @@ module Whatsapp
     def details(c)
       people = User.active.order(:name).select { |u| Connection.visible_to(u).where(id: c.connection_id).exists? }
       result = summary(c).merge(assignees: people.map { |u| u.slice(:id, :name) },
-        can_link_customer: current_user.can_access_screen?('customers'))
+        can_link_customer: current_user.can_access_screen?('customers'),
+        agent_note: c.agent_note, agent_draft: c.agent_draft, agent_draft_finish: c.agent_draft_finish,
+        automation: automation_payload(c))
       if current_user.can_access_screen?('customers') && c.contact.customer
         result[:customer] = customer_payload(c.contact.customer)
         result[:orders_url] = orders_path(customer_id: c.contact.customer_id) if current_user.can_access_screen?('orders')
       end
       result
+    end
+    def automation_payload(c)
+      automation = Automation.active_for(c.connection_id)
+      return unless automation
+      { id: automation.id, name: automation.name, mode: automation.mode, mode_label: automation.mode_label,
+        url: (whatsapp_automation_path(automation) if Connection.administrable_by?(current_user)),
+        open_gaps: automation.gaps.open.where(conversation_id: c.id).count }
     end
     def customer_payload(customer)
       { id: customer.id, name: customer.full_name.presence || customer.name, phone: customer.phone }

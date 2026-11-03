@@ -49,7 +49,12 @@ module Whatsapp
           message = @conversation.messages.create!(connection: @conversation.connection, user: current_user, client_nonce: nonce,
             body: body, direction: 'outgoing', state: 'queued', sent_at: Time.current)
           Media.store!(message, upload.tempfile, filename: upload.original_filename) if upload
-          @conversation.update!(last_message_at: message.sent_at, last_message_preview: message.preview.truncate(180), state: 'open')
+          @conversation.update!(last_message_at: message.sent_at, last_message_preview: message.preview.truncate(180))
+          # Resposta aprovada do agente segue com ele ligado; resposta escrita pela equipe pausa o agente na conversa.
+          from_draft = params[:from_draft] == '1' && @conversation.agent_draft_for_id.present?
+          finish = from_draft && @conversation.agent_draft_finish?
+          @conversation.team_replied!(pause_agent: !from_draft)
+          @conversation.update!(state: 'closed') if finish
         end
       end
       SendJob.perform_later(message.id) if message.state == 'queued'
@@ -79,7 +84,7 @@ module Whatsapp
     def set_conversation = @conversation = authorized_conversations.find(params[:conversation_id])
     def payload(message)
       message.slice(:id, :body, :kind, :direction, :state, :sent_at, :media_state, :client_nonce).merge(
-        author: message.user&.name, media_url: message.media ? attachment_whatsapp_conversation_message_path(@conversation, message) : nil,
+        author: message.author_name, by_agent: message.by_agent?, media_url: message.media ? attachment_whatsapp_conversation_message_path(@conversation, message) : nil,
         filename: message.media&.filename)
     end
   end

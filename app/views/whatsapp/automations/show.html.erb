@@ -1,0 +1,156 @@
+<% content_for :title, @automation.name %>
+<% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
+<section class="wa-auto">
+  <%= hc_page_header @automation.name, "Automação do número #{@automation.connection.name}", icon: 'fas fa-robot' do %>
+    <%= link_to whatsapp_automations_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Automações<% end %>
+    <%= form_with model: @automation, scope: :automation, url: whatsapp_automation_path(@automation), method: :patch, local: true, class: 'wa-auto-power-form' do |f| %>
+      <%= f.hidden_field :enabled, value: !@automation.enabled? %>
+      <button class="wa-auto-power<%= ' is-on' if @automation.enabled? %>" title="<%= @automation.enabled? ? 'Desligar' : 'Ligar' %> esta automação">
+        <span class="wa-auto-switch"><i></i></span><%= @automation.enabled? ? 'Ligada' : 'Desligada' %>
+      </button>
+    <% end %>
+  <% end %>
+
+  <% unless Whatsapp::Agent.configured? %>
+    <div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i><div><strong>Chave da OpenAI não configurada.</strong> O agente só responde depois que a variável <code>OPENAI_API_KEY</code> for configurada no servidor.</div></div>
+  <% end %>
+  <% if @automation.enabled? && @automation.auto? %>
+    <div class="callout pg-banner wa-auto-live"><i class="fas fa-bolt"></i><div><strong>O agente está respondendo sozinho</strong> as clientes de <%= @automation.connection.name %>. Quando alguém da equipe escreve numa conversa, o agente pausa nela.</div></div>
+  <% end %>
+
+  <div class="wa-auto-grid">
+    <div class="wa-auto-main">
+      <section class="panel pg-card wa-auto-section">
+        <h2><i class="fas fa-sliders"></i>Como o agente trabalha</h2>
+        <%= form_with model: @automation, scope: :automation, url: whatsapp_automation_path(@automation), method: :patch, local: true do |f| %>
+          <label class="wa-auto-label" for="automation_name">Nome da automação</label>
+          <%= f.text_field :name, class: 'form-control', maxlength: 80, required: true %>
+          <span class="wa-auto-label">Modo</span>
+          <div class="wa-auto-modes">
+            <% { 'approve' => ['fas fa-user-check', 'O agente escreve a resposta e alguém da equipe envia, edita ou descarta.'],
+                 'auto' => ['fas fa-bolt', 'O agente envia direto para a cliente. Use depois de testar bem os comandos.'] }.each do |mode, (icon, text)| %>
+              <label class="wa-auto-mode">
+                <%= f.radio_button :mode, mode %>
+                <span><i class="<%= icon %>"></i><strong><%= Whatsapp::Automation::MODES[mode] %></strong><small><%= text %></small></span>
+              </label>
+            <% end %>
+          </div>
+          <label class="wa-auto-label" for="automation_instructions">Instruções gerais <small>(tom de voz, o que nunca fazer, quem é a CHASE…)</small></label>
+          <%= f.text_area :instructions, class: 'form-control', rows: 6, maxlength: 8000, placeholder: 'Ex.: Atenda de forma cordial e próxima, chame a cliente pelo nome, mensagens curtas…' %>
+          <div class="wa-auto-actions"><button class="btn btn-export"><i class="fas fa-floppy-disk"></i>Salvar</button></div>
+        <% end %>
+      </section>
+
+      <section class="panel pg-card wa-auto-section" id="comandos">
+        <h2><i class="fas fa-list-check"></i>Comandos <span class="wa-auto-count"><%= @rules.size %></span></h2>
+        <p class="wa-auto-hint">Cada comando é uma regra: <b>quando</b> a cliente pedir algo, <b>faça</b> isso. O agente segue os comandos à risca e não inventa o que não está aqui.</p>
+        <div class="wa-auto-rules">
+          <% @rules.each_with_index do |rule, i| %>
+            <details class="wa-auto-rule<%= ' is-off' unless rule.active? %>" id="comando-<%= rule.id %>" style="--i: <%= i %>">
+              <summary>
+                <span class="wa-auto-rule-n"><%= i + 1 %></span>
+                <span class="wa-auto-rule-text"><b>Quando</b> <%= rule.trigger.truncate(140) %><br><b>Faça</b> <%= rule.response.squish.truncate(140) %></span>
+                <% unless rule.active? %><span class="wa-auto-off">desativado</span><% end %>
+                <i class="fas fa-pen"></i>
+              </summary>
+              <%= form_with url: rule_whatsapp_automation_path(@automation, rule_id: rule.id), method: :patch, local: true, scope: :rule do |f| %>
+                <label class="wa-auto-label">Quando</label>
+                <%= f.text_area :trigger, value: rule.trigger, class: 'form-control', rows: 2, maxlength: 1000, required: true %>
+                <label class="wa-auto-label">Faça / responda</label>
+                <%= f.text_area :response, value: rule.response, class: 'form-control', rows: 5, maxlength: 4000, required: true %>
+                <div class="wa-auto-actions">
+                  <label class="wa-auto-check"><%= f.hidden_field :active, value: '0', id: nil %><%= f.check_box :active, { checked: rule.active?, id: "rule-active-#{rule.id}" }, '1', nil %> Ativo</label>
+                  <button class="btn btn-export"><i class="fas fa-floppy-disk"></i>Salvar comando</button>
+                </div>
+              <% end %>
+              <%= button_to 'Excluir comando', rule_whatsapp_automation_path(@automation, rule_id: rule.id), method: :delete, class: 'wa-auto-link-danger', form: { class: 'wa-auto-delete' } %>
+            </details>
+          <% end %>
+        </div>
+        <%= form_with url: rules_whatsapp_automation_path(@automation), method: :post, local: true, scope: :rule, class: 'wa-auto-add' do |f| %>
+          <h3><i class="fas fa-plus"></i>Novo comando</h3>
+          <label class="wa-auto-label" for="rule_trigger">Quando</label>
+          <%= f.text_area :trigger, class: 'form-control', rows: 2, maxlength: 1000, required: true, placeholder: 'Ex.: a cliente perguntar se tem desconto na primeira compra' %>
+          <label class="wa-auto-label" for="rule_response">Faça / responda</label>
+          <%= f.text_area :response, class: 'form-control', rows: 3, maxlength: 4000, required: true, placeholder: 'Ex.: diga que sim, 10% com o cupom BEMVINDA10 no site' %>
+          <div class="wa-auto-actions"><button class="btn btn-export"><i class="fas fa-plus"></i>Adicionar comando</button></div>
+        <% end %>
+      </section>
+    </div>
+
+    <aside class="wa-auto-side">
+      <section class="panel pg-card wa-auto-section wa-auto-gapbox" id="falta-ensinar">
+        <h2><i class="fas fa-circle-question"></i>Falta ensinar <span class="wa-auto-count<%= ' is-hot' if @gaps.any? %>"><%= @gaps.size %></span></h2>
+        <p class="wa-auto-hint">Perguntas em que o agente disse <b>"não sei o que fazer neste caso"</b>. Responda uma vez e vira comando.<% if @taught.positive? %> Já aprendeu <%= pluralize(@taught, 'vez', plural: 'vezes') %>.<% end %></p>
+        <% if @gaps.empty? %>
+          <div class="wa-auto-allgood"><i class="fas fa-face-smile-beam"></i>Nada pendente. O agente soube responder tudo até aqui.</div>
+        <% end %>
+        <% @gaps.each do |gap| %>
+          <article class="wa-auto-gap">
+            <p class="wa-auto-gap-q">“<%= gap.question %>”</p>
+            <small><%= gap.conversation.contact.display_name %> · <%= l(gap.created_at, format: '%d/%m %H:%M') %> ·
+              <%= link_to 'ver conversa', whatsapp_conversations_path(c: gap.conversation_id) %></small>
+            <details>
+              <summary class="btn btn-export btn-sm"><i class="fas fa-graduation-cap"></i>Ensinar</summary>
+              <%= form_with url: teach_gap_whatsapp_automation_path(@automation, gap_id: gap.id), method: :post, local: true, scope: :rule do |f| %>
+                <label class="wa-auto-label">Quando</label>
+                <%= f.text_area :trigger, value: gap.question, class: 'form-control', rows: 2, maxlength: 1000, required: true %>
+                <label class="wa-auto-label">Faça / responda</label>
+                <%= f.text_area :response, class: 'form-control', rows: 3, maxlength: 4000, required: true, placeholder: 'Como a equipe responderia?' %>
+                <div class="wa-auto-actions"><button class="btn btn-export btn-sm">Ensinar</button></div>
+              <% end %>
+            </details>
+            <%= button_to 'Descartar', dismiss_gap_whatsapp_automation_path(@automation, gap_id: gap.id), method: :post, class: 'wa-auto-link', form: { class: 'wa-auto-delete' } %>
+          </article>
+        <% end %>
+      </section>
+
+      <section class="panel pg-card wa-auto-section wa-auto-sim" id="testar">
+        <h2><i class="fas fa-flask"></i>Testar o agente</h2>
+        <p class="wa-auto-hint">Escreva como se fosse a cliente. Nada é enviado.</p>
+        <div class="wa-auto-sim-chat" id="wa-sim-chat"></div>
+        <form id="wa-sim-form" class="wa-auto-sim-form" data-url="<%= simulate_whatsapp_automation_path(@automation) %>">
+          <input id="wa-sim-text" class="form-control" placeholder="Ex.: Oi, quero trocar uma calça que ficou pequena" maxlength="2000" required>
+          <button class="wa-auto-sim-send" title="Testar"><i class="fas fa-paper-plane"></i></button>
+        </form>
+        <button type="button" class="wa-auto-link" id="wa-sim-reset">Limpar teste</button>
+      </section>
+
+      <section class="panel pg-card wa-auto-section wa-auto-danger">
+        <%= button_to whatsapp_automation_path(@automation), method: :delete, class: 'wa-auto-link-danger', form: { onsubmit: "return confirm('Excluir esta automação e todos os comandos?')" } do %><i class="fas fa-trash"></i> Excluir automação<% end %>
+      </section>
+    </aside>
+  </div>
+</section>
+<script>
+(() => {
+  const form = document.getElementById('wa-sim-form'), chat = document.getElementById('wa-sim-chat'), input = document.getElementById('wa-sim-text');
+  let history = [];
+  const labels = { reply: 'Responderia', finish: 'Responderia e finalizaria', unsure: 'Não sei o que fazer neste caso', wait: 'Não responderia agora' };
+  const bubble = (cls, text, note) => {
+    const b = document.createElement('div'); b.className = `wa-sim-msg ${cls}`;
+    if (text) { const p = document.createElement('p'); p.textContent = text; b.append(p); }
+    if (note) { const s = document.createElement('small'); s.textContent = note; b.append(s); }
+    chat.append(b); chat.scrollTop = chat.scrollHeight; return b;
+  };
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim(); if (!text) return;
+    input.value = ''; bubble('from-client', text);
+    const thinking = bubble('from-agent is-thinking', null, 'Pensando…');
+    try {
+      const res = await fetch(form.dataset.url, { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content },
+        body: JSON.stringify({ message: text, history }) });
+      const data = await res.json(); thinking.remove();
+      if (!res.ok) { bubble('from-agent is-error', data.error || 'Não foi possível testar agora.'); return; }
+      const note = `${labels[data.action] || data.action}${data.reason ? ' · ' + data.reason : ''}`;
+      if (data.action === 'unsure') bubble('from-agent is-unsure', data.question, note);
+      else bubble(`from-agent is-${data.action}`, data.reply, note);
+      history.push({ from: 'cliente', text });
+      if (data.reply) history.push({ from: 'loja', text: data.reply });
+    } catch (_) { thinking.remove(); bubble('from-agent is-error', 'Sem comunicação com o Honey.'); }
+  });
+  document.getElementById('wa-sim-reset').onclick = () => { history = []; chat.replaceChildren(); };
+})();
+</script>

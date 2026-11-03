@@ -29,6 +29,8 @@ module Navigation
         group('whatsapp', 'Atendimento WhatsApp', 'fab fa-whatsapp', 'Conversas com clientes pelo WhatsApp da empresa.', children: [
           link('wa-conversas', 'Conversas', 'fas fa-comments', 'Responda clientes em equipe, numa caixa única.',
                path: ->(v) { v.whatsapp_conversations_path }, perm: 'whatsapp_attend', active: ctrl('whatsapp/conversations')),
+          link('wa-automacoes', 'Automações e agente', 'fas fa-robot', 'Ensine o agente de IA a responder os clientes de cada número.',
+               path: ->(v) { v.whatsapp_automations_path }, perm: 'whatsapp_manage', active: ctrl('whatsapp/automations')),
           link('wa-numeros', 'Números conectados', 'fas fa-mobile-alt', 'Conecte números pelo QR e escolha quem atende.',
                path: ->(v) { v.whatsapp_connections_path }, perm: 'whatsapp_manage', active: ctrl('whatsapp/connections'))
         ])

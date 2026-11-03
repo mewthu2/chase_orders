@@ -369,9 +369,33 @@
     "Transferir",
     "Encerrar",
     "Anexar",
-    "Enviar"
+    "Enviar",
+    "Enviar sugestão do agente",
+    "Pedir sugestão",
+    "Pausar / retomar agente",
+    "Finalizar"
    ],
    "statuses": [
+    [
+     "Pendente",
+     "A cliente escreveu e ninguém respondeu ainda.",
+     "yellow"
+    ],
+    [
+     "Respondendo",
+     "Conversa em atendimento.",
+     "green"
+    ],
+    [
+     "Finalizado",
+     "Atendimento encerrado. Se a cliente escrever de novo, volta para Pendente.",
+     "gray"
+    ],
+    [
+     "Precisa de você",
+     "O agente não soube responder e deixou para a equipe.",
+     "red"
+    ],
     [
      "Enviada / Entregue / Lida",
      "Como a mensagem está do lado da cliente.",
@@ -396,6 +420,49 @@
     [
      "Vincular",
      "Liga a conversa ao cadastro da cliente para ver os pedidos."
+    ],
+    [
+     "Agente",
+     "A IA que responde seguindo os comandos da automação do número."
+    ]
+   ]
+  },
+  "wa-automacoes": {
+   "title": "Automações e agente",
+   "purpose": "Ensinar o agente de IA a responder as clientes de cada número, com comandos do tipo \"quando perguntarem isso, faça aquilo\".",
+   "when": "Ao criar a resposta automática de um número, ensinar algo que o agente não soube ou testar uma pergunta antes de ligar.",
+   "actions": [
+    "Nova automação",
+    "Ligar / desligar",
+    "Adicionar comando",
+    "Ensinar",
+    "Testar o agente"
+   ],
+   "statuses": [
+    [
+     "Eu aprovo cada resposta",
+     "O agente escreve e alguém da equipe envia.",
+     "blue"
+    ],
+    [
+     "Responde sozinho",
+     "O agente envia direto para a cliente.",
+     "green"
+    ],
+    [
+     "Falta ensinar",
+     "Perguntas que o agente não soube responder.",
+     "yellow"
+    ]
+   ],
+   "terms": [
+    [
+     "Comando",
+     "Uma regra: quando a cliente pedir X, faça Y."
+    ],
+    [
+     "Não sei o que fazer",
+     "Quando nenhum comando cobre a pergunta, a conversa fica para a equipe e a pergunta vai para Falta ensinar."
     ]
    ]
   },
@@ -1415,6 +1482,7 @@
   "eco-cupons": "cupom desconto promocao",
   "loja-cashback": "cupom cashback mtz unf",
   "wa-conversas": "whatsapp zap mensagem cliente atendimento",
+  "wa-automacoes": "whatsapp agente ia robo automacao resposta automatica gpt comandos",
   "eco-clientes": "cliente consumidor contato loja online",
   "eco-pedidos": "pedido venda site shopify loja online",
   "atc-pedidos": "pedido lojista atacado venda b2b",

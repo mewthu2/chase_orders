@@ -8,6 +8,7 @@ module Whatsapp
     validates :kind, inclusion: { in: %w[text image document audio unsupported] }
     validates :body, length: { maximum: 10_000 }
     validate { errors.add(:conversation, 'de outro número') if conversation && conversation.connection_id != connection_id }
+    def author_name = by_agent? ? 'Agente Honey' : user&.name
     def preview = body.presence || { 'image' => 'Imagem', 'document' => 'Documento', 'audio' => 'Áudio' }.fetch(kind, 'Mensagem não suportada')
     def apply_receipt!(rank)
       return unless direction == 'outgoing' && rank.to_i > receipt_rank

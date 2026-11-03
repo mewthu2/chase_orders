@@ -367,6 +367,7 @@
       state: $("wa-state").value,
       mine: $("wa-mine").checked ? "1" : "",
       unread: $("wa-unread").checked ? "1" : "",
+      human: $("wa-human").checked ? "1" : "",
       page: listPage,
     });
     const result = await api(`/whatsapp/conversations.json?${p}`);
@@ -394,7 +395,18 @@
       top.append(el("strong", c.name), el("time", listTime(c.last_message_at)));
       bottom.append(el("small", c.last_message_preview || c.phone || "Sem mensagens"));
       if (c.unread_count) bottom.append(el("span", c.unread_count, "wa-badge"));
-      body.append(top, bottom, el("em", c.connection_name, "wa-thread-number"));
+      const foot = el("em", undefined, "wa-thread-number");
+      foot.append(el("span", c.stage_label, `wa-stage is-${c.stage}`), document.createTextNode(c.connection_name));
+      if (c.needs_human) {
+        const h = el("span", " Precisa de você", "wa-human-flag");
+        h.prepend(el("i", undefined, "fas fa-robot"));
+        foot.append(h);
+      } else if (c.has_draft) {
+        const d = el("span", " Sugestão pronta", "wa-draft-flag");
+        d.prepend(el("i", undefined, "fas fa-wand-magic-sparkles"));
+        foot.append(d);
+      }
+      body.append(top, bottom, foot);
       button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name), body);
       button.onclick = safe(() => selectConversation(c.id));
       $("wa-threads").append(button);
@@ -419,8 +431,9 @@
     $("wa-company-number").textContent =
       `Pelo número ${c.connection_name}${c.connection_phone ? " · " + c.connection_phone : ""} · ${stateLabels[c.connection_state] || c.connection_state}`;
     $("wa-owner").textContent =
-      `Responsável: ${c.assignee_name || "ninguém"} · ${c.state === "closed" ? "encerrada" : "aberta"}`;
-    $("wa-close").textContent = c.state === "closed" ? "Reabrir" : "Encerrar";
+      `${c.stage_label} · Responsável: ${c.assignee_name || "ninguém"}`;
+    $("wa-close").textContent = c.state === "closed" ? "Reabrir" : "Finalizar";
+    renderAgent(c);
     const oldAssignee = $("wa-assignee").value;
     $("wa-assignee").replaceChildren(new Option("Transferir para…", ""));
     c.assignees?.forEach((u) => $("wa-assignee").add(new Option(u.name, u.id)));
@@ -466,8 +479,9 @@
           row.dataset.signature = signature;
           const next = el("div", undefined, `wa-bubble is-${m.state}`);
           row.append(next);
+          if (m.by_agent) next.classList.add("by-agent");
           if (m.author && m.direction === "outgoing")
-            next.append(el("span", m.author, "wa-author"));
+            next.append(el("span", m.by_agent ? `🤖 ${m.author}` : m.author, "wa-author"));
           if (m.body) next.append(el("p", m.body));
           if (m.media_url) {
             if (m.kind === "image") {
@@ -594,6 +608,8 @@
     $("wa-contact-panel").hidden = true;
     document.querySelector(".wa-workspace").classList.add("chat-open");
     const draft = drafts.get(id);
+    fromDraft = false;
+    agentSignature = "";
     $("wa-text").value = draft?.text || "";
     grow();
     setFiles(draft?.file);
@@ -744,6 +760,7 @@
       const form = new FormData();
       form.set("client_nonce", draftNonce);
       form.set("body", $("wa-text").value);
+      form.set("from_draft", fromDraft ? "1" : "0");
       if (file) form.set("file", file);
       draftRequest = form;
     }
@@ -763,7 +780,9 @@
       draftRequest = null;
       lockDraft(false);
       drafts.delete(id);
+      fromDraft = false;
       error("");
+      refreshSelected().catch(() => {});
       scrollBottom();
     } catch (failure) {
       if (failure.status && failure.status < 500) {
@@ -817,6 +836,91 @@
     setRecording(true);
     setTimeout(stopRecording, 60000);
   });
+  // Barra do agente: sugestão para aprovar, "não sei o que fazer", pausa e pedido de sugestão.
+  let fromDraft = false,
+    agentSignature = "";
+  function renderAgent(c) {
+    const box = $("wa-agent");
+    const signature = JSON.stringify([c.id, c.automation, c.agent_draft, c.agent_draft_finish, c.needs_human, c.agent_paused, c.agent_note, c.state]);
+    if (signature === agentSignature) return;
+    agentSignature = signature;
+    box.replaceChildren();
+    box.className = "wa-agent";
+    if (!c.automation || c.state === "closed") {
+      box.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    const head = el("div", undefined, "wa-agent-head");
+    const bot = el("span", undefined, "wa-agent-bot");
+    bot.append(el("i", undefined, "fas fa-robot"));
+    head.append(bot, el("strong", c.automation.name), el("small", c.automation.mode_label));
+    box.append(head);
+    const actions = el("div", undefined, "wa-agent-actions");
+    const btn = (label, icon, cls, fn) => {
+      const b = el("button", undefined, cls);
+      b.type = "button";
+      if (icon) b.append(el("i", undefined, icon));
+      b.append(document.createTextNode(label));
+      b.onclick = safe(fn);
+      actions.append(b);
+      return b;
+    };
+    const act = (operation) => action(operation).then(() => refreshSelected());
+    if (c.agent_draft !== null && c.agent_draft !== undefined) {
+      box.classList.add("is-draft");
+      if (c.agent_draft) {
+        box.append(el("p", c.agent_draft, "wa-agent-text"));
+        btn(c.agent_draft_finish ? " Enviar e finalizar" : " Enviar", "fas fa-paper-plane", "wa-agent-send", () => {
+          $("wa-text").value = c.agent_draft;
+          fromDraft = true;
+          grow();
+          $("wa-compose").requestSubmit();
+        });
+        btn(" Editar", "fas fa-pen", "wa-pill", () => {
+          $("wa-text").value = c.agent_draft;
+          fromDraft = true;
+          grow();
+          $("wa-text").focus();
+        });
+      } else {
+        box.append(el("p", "O agente sugere finalizar esta conversa.", "wa-agent-text"));
+        btn(" Finalizar", "fas fa-check", "wa-agent-send", () => act("close"));
+      }
+      btn(" Descartar", "fas fa-xmark", "wa-pill", () => act("discard_draft"));
+    } else if (c.needs_human) {
+      box.classList.add("is-unsure");
+      box.append(el("p", c.agent_note || "Não sei o que fazer neste caso.", "wa-agent-text"));
+      if (c.automation.url) {
+        const a = el("a", undefined, "wa-agent-send");
+        a.href = `${c.automation.url}#falta-ensinar`;
+        a.append(el("i", undefined, "fas fa-graduation-cap"), document.createTextNode(" Ensinar o agente"));
+        actions.append(a);
+      }
+      btn(" Já resolvi", "fas fa-check", "wa-pill", () => act("resolve_human"));
+      btn(" Tentar de novo", "fas fa-rotate", "wa-pill", () => act("ask_agent"));
+    } else if (c.agent_paused) {
+      box.classList.add("is-paused");
+      box.append(el("p", "Agente pausado nesta conversa: alguém da equipe está atendendo.", "wa-agent-text"));
+      btn(" Retomar agente", "fas fa-play", "wa-pill", () => act("resume_agent"));
+      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
+    } else {
+      box.classList.add("is-idle");
+      box.append(
+        el("p", c.agent_note || (c.automation.mode === "auto" ? "O agente responde sozinho nesta conversa." : "O agente sugere uma resposta quando a cliente escrever."), "wa-agent-text"),
+      );
+      if (c.agent_note === "Pensando numa resposta…") box.classList.add("is-thinking");
+      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
+      btn(" Pausar", "fas fa-pause", "wa-pill", () => act("pause_agent"));
+    }
+    box.append(actions);
+  }
+  // Link direto para uma conversa (?c=ID), usado pela tela de Automações.
+  const deepLink = Number(new URLSearchParams(location.search).get("c"));
+  if (deepLink) {
+    $("wa-state").value = "";
+    setTimeout(safe(() => selectConversation(deepLink)), 300);
+  }
   function setRecording(on) {
     const b = $("wa-record");
     b.classList.toggle("is-recording", on);
@@ -854,7 +958,7 @@
   $("wa-text").addEventListener("input", grow);
   $("wa-new-side").onclick = () => $("wa-new").click();
   let debounce;
-  ["wa-search", "wa-number", "wa-state", "wa-unread", "wa-mine"].forEach(
+  ["wa-search", "wa-number", "wa-state", "wa-unread", "wa-mine", "wa-human"].forEach(
     (id) => {
       $(id).addEventListener(id === "wa-search" ? "input" : "change", () => {
         clearTimeout(debounce);

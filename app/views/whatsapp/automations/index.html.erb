@@ -1,0 +1,58 @@
+<% content_for :title, 'Automações e agente' %>
+<% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
+<section class="wa-auto">
+  <%= hc_page_header 'Automações e agente', 'Ensine o agente de IA a responder as clientes de cada número.', icon: 'fas fa-robot' do %>
+    <% if current_user.can_access_screen?('whatsapp_attend') %>
+      <%= link_to whatsapp_conversations_path, class: 'btn btn-secondary' do %><i class="fas fa-comments"></i>Abrir conversas<% end %>
+    <% end %>
+  <% end %>
+
+  <% unless Whatsapp::Agent.configured? %>
+    <div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i><div><strong>Chave da OpenAI não configurada.</strong> Você pode montar as automações, mas o agente só responde depois que a variável <code>OPENAI_API_KEY</code> for configurada no servidor.</div></div>
+  <% end %>
+
+  <div class="wa-auto-how">
+    <% [['fas fa-list-check', 'Dê comandos', 'Escreva do seu jeito: <b>quando</b> a cliente pedir isso, <b>faça</b> aquilo.'],
+        ['fas fa-user-check', 'Aprove ou deixe sozinho', 'No começo o agente só sugere e alguém envia. Quando confiar, ligue <b>Responde sozinho</b>.'],
+        ['fas fa-circle-question', 'Ensine o que faltou', 'O que o agente não souber vira <b>"não sei o que fazer neste caso"</b>. Você responde uma vez e ele aprende.']].each_with_index do |(icon, title, text), i| %>
+      <div class="wa-auto-step" style="--i: <%= i %>"><i class="<%= icon %>"></i><div><strong><%= title %></strong><p><%= text.html_safe %></p></div></div>
+    <% end %>
+  </div>
+
+  <% if @connections.empty? %>
+    <div class="wa-auto-empty">Nenhum número conectado ainda. <%= link_to 'Conecte um número', whatsapp_connections_path %> para criar automações.</div>
+  <% end %>
+
+  <% @connections.each do |connection| %>
+    <% list = @automations[connection.id] || [] %>
+    <section class="wa-auto-number panel pg-card">
+      <header class="wa-auto-number-head">
+        <div>
+          <h2><i class="fab fa-whatsapp"></i><%= connection.name %></h2>
+          <small><%= connection.phone.presence || 'sem telefone' %> · <%= { 'connected' => 'Conectado' }.fetch(connection.state, 'Desconectado') %></small>
+        </div>
+      </header>
+      <% if list.any? %>
+        <div class="wa-auto-list">
+          <% list.each do |a| %>
+            <%= link_to whatsapp_automation_path(a), class: "wa-auto-card#{' is-on' if a.enabled?}" do %>
+              <span class="wa-auto-bot"><i class="fas fa-robot"></i></span>
+              <span class="wa-auto-card-body">
+                <strong><%= a.name %></strong>
+                <small><%= pluralize(a.rules.size, 'comando', plural: 'comandos') %> · <%= a.mode_label %></small>
+              </span>
+              <% if (gaps = @open_gaps[a.id].to_i).positive? %><span class="wa-auto-gaps" title="Falta ensinar"><%= gaps %> para ensinar</span><% end %>
+              <span class="wa-auto-state"><%= a.enabled? ? 'Ligada' : 'Desligada' %></span>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+      <%= form_with url: whatsapp_automations_path, method: :post, class: 'wa-auto-new', local: true do %>
+        <%= hidden_field_tag :connection_id, connection.id %>
+        <input type="text" name="name" class="form-control" placeholder="Nome da automação (ex.: Resposta automática)" maxlength="80">
+        <label class="wa-auto-check"><input type="checkbox" name="template" value="1" <%= 'checked' if list.empty? %>> Começar com o que aprendi das conversas</label>
+        <button class="btn btn-export"><i class="fas fa-plus"></i>Nova automação</button>
+      <% end %>
+    </section>
+  <% end %>
+</section>

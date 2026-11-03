@@ -14,6 +14,16 @@ Rails.application.routes.draw do
         post :sync
       end
     end
+    resources :automations, only: [:index, :show, :create, :update, :destroy] do
+      member do
+        post :simulate
+        post :rules, action: :create_rule
+        patch 'rules/:rule_id', action: :update_rule, as: :rule
+        delete 'rules/:rule_id', action: :destroy_rule
+        post 'gaps/:gap_id/teach', action: :teach_gap, as: :teach_gap
+        post 'gaps/:gap_id/dismiss', action: :dismiss_gap, as: :dismiss_gap
+      end
+    end
     resources :conversations, only: [:index, :show, :create, :update] do
       member do
         post :read

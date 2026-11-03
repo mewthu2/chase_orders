@@ -46,7 +46,15 @@ module Whatsapp
       if !conversation.last_message_at || time >= conversation.last_message_at
         conversation.update!(last_message_at: time, last_message_preview: message.preview.truncate(180))
       end
-      conversation.update!(state: 'open') if !historical && message.direction == 'incoming'
+      unless historical
+        if message.direction == 'incoming'
+          conversation.customer_wrote!
+          AgentJob.schedule(conversation, message)
+        elsif !outgoing
+          # Escrita direto no celular da empresa: a equipe assumiu, o agente pausa nesta conversa.
+          conversation.team_replied!(pause_agent: true)
+        end
+      end
       # Provider stores the encrypted media; fetch by its message key, never by arbitrary webhook URLs.
       if media && !outgoing
         size = media['fileLength'].is_a?(Hash) ? media['fileLength']['low'].to_i : media['fileLength'].to_i

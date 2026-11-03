@@ -8,6 +8,7 @@ module Whatsapp
     has_many :messages, dependent: :restrict_with_exception
     has_many :events, dependent: :restrict_with_exception
     has_many :receipts, dependent: :restrict_with_exception
+    has_many :automations, class_name: 'Whatsapp::Automation', dependent: :destroy
     validates :name, presence: true, length: { maximum: 80 }
     validates :provider, inclusion: { in: ['evolution'] }
     before_validation on: :create do

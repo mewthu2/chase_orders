@@ -7,7 +7,7 @@ module Whatsapp
       connection.with_lock do
         message.reload
         return unless message.state == 'queued'
-        unless connection.connected? && Connection.visible_to(message.user).where(id: connection.id).exists?
+        unless connection.connected? && allowed?(message)
           message.update!(state: 'failed', error_code: 'number_unavailable_or_access_revoked')
           return
         end
@@ -17,7 +17,7 @@ module Whatsapp
       connection.with_lock do
         message.reload
         return unless message.state == 'sending'
-        unless connection.connected? && Connection.visible_to(message.user).where(id: connection.id).exists?
+        unless connection.connected? && allowed?(message)
           message.update!(state: 'failed', error_code: 'number_unavailable_or_access_revoked')
           return
         end
@@ -36,6 +36,14 @@ module Whatsapp
       # Even an HTTP error can occur after WhatsApp accepted a message. Never retry it.
       Message.where(id: id, state: 'sending').update_all(state: 'uncertain', error_code: 'send_result_unknown')
       Rails.logger.warn("whatsapp send #{id}: #{e.class.name}")
+    end
+
+    private
+
+    # Mensagens do agente não têm autor; as da equipe exigem acesso ao número.
+    def allowed?(message)
+      return Automation.where(connection_id: message.connection_id, enabled: true).exists? if message.by_agent?
+      Connection.visible_to(message.user).where(id: message.connection_id).exists?
     end
   end
 end

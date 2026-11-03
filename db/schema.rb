@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_03_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1160,6 +1160,45 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
     t.index ["user_id"], name: "index_whatsapp_activities_on_user_id"
   end
 
+  create_table "whatsapp_automation_gaps", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "automation_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id"
+    t.bigint "rule_id"
+    t.text "question", null: false
+    t.string "state", default: "open", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["automation_id", "state"], name: "index_whatsapp_automation_gaps_on_automation_id_and_state"
+    t.index ["automation_id"], name: "index_whatsapp_automation_gaps_on_automation_id"
+    t.index ["conversation_id"], name: "index_whatsapp_automation_gaps_on_conversation_id"
+    t.index ["rule_id"], name: "index_whatsapp_automation_gaps_on_rule_id"
+  end
+
+  create_table "whatsapp_automation_rules", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "automation_id", null: false
+    t.text "trigger", null: false
+    t.text "response", null: false
+    t.integer "position", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["automation_id"], name: "index_whatsapp_automation_rules_on_automation_id"
+  end
+
+  create_table "whatsapp_automations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "connection_id", null: false
+    t.bigint "created_by_id"
+    t.string "name", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "mode", default: "approve", null: false
+    t.text "instructions"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id"], name: "index_whatsapp_automations_on_connection_id"
+    t.index ["created_by_id"], name: "index_whatsapp_automations_on_created_by_id"
+  end
+
   create_table "whatsapp_connections", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
     t.string "name", null: false
     t.string "provider", default: "evolution", null: false
@@ -1214,11 +1253,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
     t.string "last_message_preview"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "stage", default: "pending", null: false
+    t.boolean "agent_paused", default: false, null: false
+    t.boolean "needs_human", default: false, null: false
+    t.string "agent_note", limit: 500
+    t.text "agent_draft"
+    t.boolean "agent_draft_finish", default: false, null: false
+    t.bigint "agent_draft_for_id"
     t.index ["assignee_id"], name: "index_whatsapp_conversations_on_assignee_id"
     t.index ["connection_id", "contact_id"], name: "idx_wa_conversation_unique", unique: true
     t.index ["connection_id", "last_message_at"], name: "idx_wa_inbox"
     t.index ["connection_id"], name: "index_whatsapp_conversations_on_connection_id"
     t.index ["contact_id"], name: "index_whatsapp_conversations_on_contact_id"
+    t.index ["stage"], name: "index_whatsapp_conversations_on_stage"
   end
 
   create_table "whatsapp_events", charset: "utf8mb4", collation: "utf8mb4_bin", force: :cascade do |t|
@@ -1281,6 +1328,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
     t.json "provider_key"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "by_agent", default: false, null: false
     t.index ["connection_id", "client_nonce"], name: "idx_wa_client_message", unique: true
     t.index ["connection_id", "provider_id"], name: "idx_wa_provider_message", unique: true
     t.index ["connection_id"], name: "index_whatsapp_messages_on_connection_id"
@@ -1395,6 +1443,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
   add_foreign_key "whatsapp_activities", "users"
   add_foreign_key "whatsapp_activities", "users", column: "assignee_id"
   add_foreign_key "whatsapp_activities", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_automation_gaps", "whatsapp_automation_rules", column: "rule_id"
+  add_foreign_key "whatsapp_automation_gaps", "whatsapp_automations", column: "automation_id"
+  add_foreign_key "whatsapp_automation_gaps", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_automation_rules", "whatsapp_automations", column: "automation_id"
+  add_foreign_key "whatsapp_automations", "users", column: "created_by_id"
+  add_foreign_key "whatsapp_automations", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_connections", column: "connection_id"
   add_foreign_key "whatsapp_contact_aliases", "whatsapp_contacts", column: "contact_id"
   add_foreign_key "whatsapp_contacts", "customers"
