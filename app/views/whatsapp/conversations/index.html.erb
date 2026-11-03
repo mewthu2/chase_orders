@@ -7,30 +7,64 @@
   <% end %>
   <button type="button" class="btn btn-export" id="wa-new"><i class="fas fa-comment-medical"></i>Nova conversa</button>
 <% end %>
-<section class="wa-app" id="wa-inbox" aria-label="Atendimento WhatsApp">
+<section class="wa-app wa-chat-app" id="wa-inbox" data-wa-theme="dark" aria-label="Atendimento WhatsApp">
   <div class="wa-notice" id="wa-error" role="status" hidden></div>
   <div class="wa-workspace">
     <aside class="wa-inbox-list" aria-label="Lista de conversas">
-      <label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Buscar nome ou telefone" type="search">
-      <label class="visually-hidden" for="wa-number">Número da empresa</label><select id="wa-number" class="form-select"><option value="">Todos os meus números</option></select>
-      <div class="wa-filters"><select id="wa-state" class="form-select" aria-label="Situação"><option value="open">Abertas</option><option value="closed">Encerradas</option><option value="">Todas</option></select>
-        <label><input id="wa-unread" type="checkbox"> Não lidas</label><label><input id="wa-mine" type="checkbox"> Minhas</label></div>
-      <div id="wa-threads" class="wa-threads" aria-live="polite"></div><button id="wa-more-conversations" class="btn btn-light" hidden>Mais conversas</button>
+      <header class="wa-side-head">
+        <h2>Conversas</h2>
+        <div class="wa-side-tools">
+          <button type="button" class="wa-icon-btn" id="wa-theme-toggle" title="Usar tema claro" aria-label="Usar tema claro"><i class="fas fa-sun"></i></button>
+          <button type="button" class="wa-icon-btn" id="wa-new-side" title="Nova conversa" aria-label="Nova conversa"><i class="fas fa-comment-medical"></i></button>
+        </div>
+      </header>
+      <div class="wa-side-search">
+        <div class="wa-search-box"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Pesquisar nome ou telefone" type="search"></div>
+        <label class="visually-hidden" for="wa-number">Número da empresa</label><select id="wa-number" class="form-select"><option value="">Todos os meus números</option></select>
+        <div class="wa-filters">
+          <select id="wa-state" class="form-select wa-chip-select" aria-label="Situação"><option value="open">Abertas</option><option value="closed">Encerradas</option><option value="">Todas</option></select>
+          <label class="wa-chip"><input id="wa-unread" type="checkbox"> Não lidas</label>
+          <label class="wa-chip"><input id="wa-mine" type="checkbox"> Minhas</label>
+        </div>
+      </div>
+      <div id="wa-threads" class="wa-threads" aria-live="polite"></div>
+      <button id="wa-more-conversations" class="wa-more" type="button" hidden>Mais conversas</button>
     </aside>
     <main class="wa-chat" aria-label="Conversa selecionada">
-      <div id="wa-empty" class="wa-empty">Selecione uma conversa para começar.</div>
+      <div id="wa-empty" class="wa-empty">
+        <div class="wa-empty-art"><i class="fab fa-whatsapp" aria-hidden="true"></i></div>
+        <h2>Honey para WhatsApp</h2>
+        <p>Selecione uma conversa à esquerda para começar o atendimento,<br>ou abra uma nova conversa com um cliente.</p>
+        <small><i class="fas fa-lock" aria-hidden="true"></i> As mensagens ficam registradas no Honey para toda a equipe.</small>
+      </div>
       <div id="wa-selected" hidden>
-        <header class="wa-chat-header"><button id="wa-back" class="btn btn-light wa-mobile">← Voltar</button><div><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-owner"></small></div><button id="wa-contact-toggle" class="btn btn-light" aria-expanded="false">Contato</button></header>
-        <div class="wa-actions"><button id="wa-take" class="btn btn-sm btn-outline-secondary">Assumir</button><select id="wa-assignee" class="form-select form-select-sm" aria-label="Transferir para"><option value="">Transferir para…</option></select><button id="wa-transfer" class="btn btn-sm btn-outline-secondary">Transferir</button><button id="wa-close" class="btn btn-sm btn-outline-secondary">Encerrar</button></div>
-        <div class="wa-history" id="wa-history" role="log" aria-label="Histórico de mensagens"><button id="wa-older" class="btn btn-light" hidden>Carregar anteriores</button><div id="wa-messages"></div></div>
-        <button id="wa-new-indicator" class="btn btn-sm btn-success" hidden>Novas mensagens ↓</button>
-        <form id="wa-compose" class="wa-compose"><label for="wa-text" class="visually-hidden">Mensagem</label><textarea id="wa-text" class="form-control" rows="2" maxlength="10000" placeholder="Escreva uma mensagem"></textarea>
-          <div class="wa-compose-tools"><label class="btn btn-sm btn-light">Anexar<input id="wa-file" type="file" class="visually-hidden" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,audio/*"></label><span id="wa-file-name"></span><button id="wa-clear-file" class="btn btn-sm btn-light" type="button" hidden>Remover arquivo</button><button id="wa-record" type="button" class="btn btn-sm btn-light">Gravar áudio</button><button type="submit" id="wa-send" class="btn btn-success">Enviar</button></div>
+        <header class="wa-chat-header">
+          <button id="wa-back" class="wa-icon-btn wa-mobile" type="button" aria-label="Voltar"><i class="fas fa-arrow-left"></i></button>
+          <span class="wa-avatar" id="wa-contact-avatar" aria-hidden="true"></span>
+          <div class="wa-chat-title"><strong id="wa-contact-name"></strong><small id="wa-company-number"></small><small id="wa-owner"></small></div>
+          <button id="wa-contact-toggle" class="wa-icon-btn" type="button" aria-expanded="false" title="Dados do contato" aria-label="Dados do contato"><i class="fas fa-address-card"></i></button>
+        </header>
+        <div class="wa-actions"><button id="wa-take" class="wa-pill" type="button"><i class="fas fa-hand"></i> Assumir</button><select id="wa-assignee" class="form-select form-select-sm" aria-label="Transferir para"><option value="">Transferir para…</option></select><button id="wa-transfer" class="wa-pill" type="button"><i class="fas fa-right-left"></i> Transferir</button><button id="wa-close" class="wa-pill" type="button">Encerrar</button></div>
+        <div class="wa-history" id="wa-history" role="log" aria-label="Histórico de mensagens"><button id="wa-older" class="wa-older" type="button" hidden>Carregar anteriores</button><div id="wa-messages"></div></div>
+        <button id="wa-new-indicator" class="wa-new-indicator" type="button" hidden aria-label="Novas mensagens"><i class="fas fa-chevron-down"></i></button>
+        <form id="wa-compose" class="wa-compose">
+          <div class="wa-file-chip" id="wa-file-chip"><i class="fas fa-paperclip" aria-hidden="true"></i><span id="wa-file-name"></span><button id="wa-clear-file" class="wa-icon-btn" type="button" hidden title="Remover arquivo" aria-label="Remover arquivo"><i class="fas fa-xmark"></i></button></div>
+          <div class="wa-compose-row">
+            <label class="wa-icon-btn" title="Anexar (até 10 MB)"><i class="fas fa-paperclip" aria-hidden="true"></i><span class="visually-hidden">Anexar</span><input id="wa-file" type="file" class="visually-hidden" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,audio/*"></label>
+            <label for="wa-text" class="visually-hidden">Mensagem</label><textarea id="wa-text" class="form-control" rows="1" maxlength="10000" placeholder="Digite uma mensagem"></textarea>
+            <button id="wa-record" type="button" class="wa-icon-btn" title="Gravar áudio" aria-label="Gravar áudio"><i class="fas fa-microphone"></i></button>
+            <button type="submit" id="wa-send" class="wa-send" title="Enviar" aria-label="Enviar"><i class="fas fa-paper-plane"></i></button>
+          </div>
           <small>Arquivos de até 10 MB. Entrega e leitura aparecem somente quando confirmadas pelo WhatsApp.</small>
         </form>
       </div>
     </main>
-    <aside class="wa-contact" id="wa-contact-panel" aria-label="Dados do contato" hidden><button id="wa-contact-hide" class="btn btn-light">Fechar</button><h2>Contato</h2><p id="wa-contact-phone"></p><div id="wa-linked"></div><div id="wa-customer-picker" hidden><label for="wa-customer-search">Vincular ao cadastro do Honey</label><input id="wa-customer-search" class="form-control" placeholder="Nome ou telefone"><button id="wa-customer-find" class="btn btn-light">Buscar</button><div id="wa-customer-results"></div><small>Escolha o cadastro correto. Nenhum cliente será mesclado automaticamente.</small></div></aside>
+    <aside class="wa-contact" id="wa-contact-panel" aria-label="Dados do contato" hidden>
+      <header class="wa-contact-head"><button id="wa-contact-hide" class="wa-icon-btn" type="button" aria-label="Fechar"><i class="fas fa-xmark"></i></button><h2>Dados do contato</h2></header>
+      <div class="wa-contact-card"><span class="wa-avatar wa-avatar-lg" id="wa-contact-avatar-lg" aria-hidden="true"></span><p id="wa-contact-phone"></p></div>
+      <div class="wa-contact-section" id="wa-linked"></div>
+      <div class="wa-contact-section" id="wa-customer-picker" hidden><label for="wa-customer-search">Vincular ao cadastro do Honey</label><div class="wa-search-box"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input id="wa-customer-search" class="form-control" placeholder="Nome ou telefone"></div><button id="wa-customer-find" class="wa-pill" type="button">Buscar</button><div id="wa-customer-results"></div><small>Escolha o cadastro correto. Nenhum cliente será mesclado automaticamente.</small></div>
+    </aside>
   </div>
-  <dialog id="wa-new-dialog"><form id="wa-start"><h2>Nova conversa</h2><label for="wa-start-number">Enviar pelo número</label><select id="wa-start-number" class="form-select" required><option value="">Escolha um número</option></select><label for="wa-start-phone">Telefone do cliente</label><input id="wa-start-phone" class="form-control" type="tel" placeholder="+55 11 99999-9999" required><div class="wa-dialog-actions"><button type="button" id="wa-cancel-new" class="btn btn-light">Cancelar</button><button class="btn btn-success">Abrir conversa</button></div></form></dialog>
+  <dialog id="wa-new-dialog"><form id="wa-start"><h2>Nova conversa</h2><label for="wa-start-number">Enviar pelo número</label><select id="wa-start-number" class="form-select" required><option value="">Escolha um número</option></select><label for="wa-start-phone">Telefone do cliente</label><input id="wa-start-phone" class="form-control" type="tel" placeholder="+55 11 99999-9999" required><div class="wa-dialog-actions"><button type="button" id="wa-cancel-new" class="wa-pill">Cancelar</button><button class="wa-send-btn">Abrir conversa</button></div></form></dialog>
 </section>

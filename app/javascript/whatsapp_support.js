@@ -27,6 +27,50 @@
     if (cls) n.className = cls;
     return n;
   };
+  const palette = ["#00a884", "#53bdeb", "#ff7c5c", "#a78bfa", "#f59e0b", "#ef4f8a", "#25a3a3", "#7c9cff"];
+  const initials = (name) =>
+    (name || "?")
+      .replace(/[^\p{L}\p{N} ]/gu, "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase() || "#";
+  const paintAvatar = (node, name) => {
+    let h = 0;
+    for (const ch of name || "") h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    node.textContent = initials(name);
+    node.style.setProperty("--wa-avatar", palette[h % palette.length]);
+    return node;
+  };
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  const hour = (value) =>
+    value
+      ? new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      : "";
+  const dayLabel = (value) => {
+    const d = new Date(value),
+      today = new Date(),
+      yesterday = new Date(Date.now() - 864e5);
+    if (sameDay(d, today)) return "Hoje";
+    if (sameDay(d, yesterday)) return "Ontem";
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+  const listTime = (value) => {
+    if (!value) return "";
+    const label = dayLabel(value);
+    return label === "Hoje" ? hour(value) : label;
+  };
+  const ticks = {
+    queued: "fas fa-clock",
+    sending: "fas fa-clock",
+    sent: "fas fa-check",
+    delivered: "fas fa-check-double",
+    read: "fas fa-check-double",
+    uncertain: "fas fa-circle-question",
+    failed: "fas fa-circle-exclamation",
+  };
   const error = (msg) => {
     $("wa-error").textContent = msg;
     $("wa-error").hidden = !msg;
@@ -343,12 +387,15 @@
         `wa-thread ${selected?.id === c.id ? "selected" : ""}`,
       );
       button.type = "button";
-      if (c.unread_count) button.append(el("span", c.unread_count, "wa-badge"));
-      button.append(
-        el("strong", c.name),
-        el("small", `${c.connection_name} · ${date(c.last_message_at)}`),
-        el("small", c.last_message_preview || c.phone || "Sem mensagens"),
-      );
+      if (c.unread_count) button.classList.add("has-unread");
+      const body = el("span", undefined, "wa-thread-body"),
+        top = el("span", undefined, "wa-thread-top"),
+        bottom = el("span", undefined, "wa-thread-bottom");
+      top.append(el("strong", c.name), el("time", listTime(c.last_message_at)));
+      bottom.append(el("small", c.last_message_preview || c.phone || "Sem mensagens"));
+      if (c.unread_count) bottom.append(el("span", c.unread_count, "wa-badge"));
+      body.append(top, bottom, el("em", c.connection_name, "wa-thread-number"));
+      button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name), body);
       button.onclick = safe(() => selectConversation(c.id));
       $("wa-threads").append(button);
     });
@@ -367,6 +414,8 @@
   function renderHeader(c) {
     selected = c;
     $("wa-contact-name").textContent = c.name;
+    paintAvatar($("wa-contact-avatar"), c.name);
+    paintAvatar($("wa-contact-avatar-lg"), c.name);
     $("wa-company-number").textContent =
       `Pelo número ${c.connection_name}${c.connection_phone ? " · " + c.connection_phone : ""} · ${stateLabels[c.connection_state] || c.connection_state}`;
     $("wa-owner").textContent =
@@ -404,15 +453,21 @@
     });
     // Existing elements are retained unless their message changed; audio playback isn't reset by polling.
     const container = $("wa-messages");
+    let lastDay = null,
+      lastDirection = null;
     [...messages.values()]
       .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at) || a.id - b.id)
       .forEach((m, index) => {
         let node = document.getElementById(`wa-message-${m.id}`);
         const signature = JSON.stringify(m);
         if (!node || node.dataset.signature !== signature) {
-          const next = el("article", undefined, `wa-message ${m.direction}`);
-          next.id = `wa-message-${m.id}`;
-          next.dataset.signature = signature;
+          const row = el("article", undefined, `wa-message ${m.direction}`);
+          row.id = `wa-message-${m.id}`;
+          row.dataset.signature = signature;
+          const next = el("div", undefined, `wa-bubble is-${m.state}`);
+          row.append(next);
+          if (m.author && m.direction === "outgoing")
+            next.append(el("span", m.author, "wa-author"));
           if (m.body) next.append(el("p", m.body));
           if (m.media_url) {
             if (m.kind === "image") {
@@ -447,12 +502,16 @@
             next.append(
               el("p", "Este tipo de mensagem pode ser consultado no celular."),
             );
-          next.append(
-            el(
-              "small",
-              `${m.author ? m.author + " · " : ""}${date(m.sent_at)} · ${messageLabels[m.state] || m.state}`,
-            ),
-          );
+          const meta = el("small", undefined, "wa-meta");
+          meta.title = `${date(m.sent_at)} · ${messageLabels[m.state] || m.state}`;
+          meta.append(el("time", hour(m.sent_at)));
+          if (m.direction === "outgoing" && ticks[m.state]) {
+            const tick = el("i", undefined, `${ticks[m.state]} wa-tick is-${m.state}`);
+            tick.setAttribute("aria-hidden", "true");
+            meta.append(tick);
+          }
+          meta.append(el("span", messageLabels[m.state] || m.state, "visually-hidden"));
+          next.append(meta);
           if (["failed", "uncertain"].includes(m.state)) {
             next.append(
               el(
@@ -480,6 +539,7 @@
                 confirm("Substituir o texto atual pelo desta mensagem?")
               ) {
                 $("wa-text").value = m.body || "";
+                grow();
                 draftNonce = null;
               }
             };
@@ -500,11 +560,19 @@
               next.append(retry);
             }
           }
-          if (node) node.replaceWith(next);
-          node = next;
+          if (node) node.replaceWith(row);
+          node = row;
         }
         const current = container.children[index];
         if (current !== node) container.insertBefore(node, current || null);
+        // Separador de dia, como no WhatsApp: só na primeira mensagem de cada dia.
+        const label = dayLabel(m.sent_at);
+        if (label === lastDay) delete node.dataset.day;
+        else node.dataset.day = label;
+        // A "pontinha" do balão só aparece na primeira mensagem de uma sequência.
+        node.classList.toggle("wa-first", label !== lastDay || m.direction !== lastDirection);
+        lastDay = label;
+        lastDirection = m.direction;
       });
     if (older) history.scrollTop = oldTop + (history.scrollHeight - oldHeight);
     else if (wasBottom) scrollBottom();
@@ -527,6 +595,7 @@
     document.querySelector(".wa-workspace").classList.add("chat-open");
     const draft = drafts.get(id);
     $("wa-text").value = draft?.text || "";
+    grow();
     setFiles(draft?.file);
     draftNonce = draft?.nonce;
     draftRequest = draft?.request || null;
@@ -688,6 +757,7 @@
       });
       renderMessages([message]);
       $("wa-text").value = "";
+    grow();
       setFiles(null);
       draftNonce = null;
       draftRequest = null;
@@ -731,7 +801,7 @@
     };
     mediaRecorder.onstop = () => {
       audioStream.getTracks().forEach((t) => t.stop());
-      $("wa-record").textContent = "Gravar áudio";
+      setRecording(false);
       if (selected?.id === id) {
         setFiles(
           new File(
@@ -744,9 +814,45 @@
       }
     };
     mediaRecorder.start();
-    $("wa-record").textContent = "Parar gravação";
+    setRecording(true);
     setTimeout(stopRecording, 60000);
   });
+  function setRecording(on) {
+    const b = $("wa-record");
+    b.classList.toggle("is-recording", on);
+    b.title = on ? "Parar gravação" : "Gravar áudio";
+    b.setAttribute("aria-label", b.title);
+    b.firstElementChild.className = on ? "fas fa-stop" : "fas fa-microphone";
+  }
+  // Tema claro/escuro do atendimento (preferência só deste navegador).
+  const applyTheme = (theme) => {
+    inbox.dataset.waTheme = theme;
+    const next = theme === "dark" ? "claro" : "escuro";
+    $("wa-theme-toggle").title = `Usar tema ${next}`;
+    $("wa-theme-toggle").setAttribute("aria-label", `Usar tema ${next}`);
+    $("wa-theme-toggle").firstElementChild.className =
+      theme === "dark" ? "fas fa-sun" : "fas fa-moon";
+  };
+  try {
+    applyTheme(localStorage.getItem("honey:wa-theme") === "light" ? "light" : "dark");
+  } catch (_) {
+    applyTheme("dark");
+  }
+  $("wa-theme-toggle").onclick = () => {
+    const theme = inbox.dataset.waTheme === "dark" ? "light" : "dark";
+    applyTheme(theme);
+    try {
+      localStorage.setItem("honey:wa-theme", theme);
+    } catch (_) {}
+  };
+  // A caixa de texto cresce com a mensagem, até 6 linhas.
+  function grow() {
+    const t = $("wa-text");
+    t.style.height = "auto";
+    t.style.height = `${Math.min(t.scrollHeight, 140)}px`;
+  }
+  $("wa-text").addEventListener("input", grow);
+  $("wa-new-side").onclick = () => $("wa-new").click();
   let debounce;
   ["wa-search", "wa-number", "wa-state", "wa-unread", "wa-mine"].forEach(
     (id) => {
