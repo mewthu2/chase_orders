@@ -3,12 +3,18 @@
   <head>
     <title><%= content_for?(:title) ? "#{yield(:title)} - Honey.Chase - Painel Administrativo" : 'Honey.Chase - Painel Administrativo' %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="dark">
     <meta name="turbo-cache-control" content="no-cache">
     <meta name="turbolinks-visit-control" content="reload">
-    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%233aa3ea'/><stop offset='1' stop-color='%23075a99'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><text x='32' y='44' font-family='Arial' font-weight='800' font-size='34' text-anchor='middle' fill='white'>H</text></svg>">
+
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=JetBrains+Mono:wght@500;600&display=swap">
     <%= stylesheet_link_tag 'admin', media: 'all', 'data-turbo-track': 'reload'  %>
+    <%= stylesheet_link_tag 'honey', media: 'all', 'data-turbo-track': 'reload' %>
     <%= javascript_include_tag "application", 'data-turbo-track': 'reload' %>
 
      <!--  load popper.js  -->
@@ -25,31 +31,38 @@
       crossorigin="anonymous"
     ></script>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
     <%= yield :styles %>
   </head>
 
-  <body class="<%= "#{controller_name} #{action_name}" %>" style="background-image: url(<%= asset_path 'admin/subtle-prism.png'%>); background-repeat: repeat;">
-    <div style="min-height: 200vh;" class="d-flex flex-column">
-      <% if current_user.present? %>
+  <%# Barra lateral recolhida e modo guiado ficam num cookie para a página já abrir do jeito escolhido. %>
+  <body class="<%= "#{controller_name} #{action_name}" %> honey"
+        data-sidebar="<%= cookies[:honey_sidebar] == 'collapsed' ? 'collapsed' : 'expanded' %>"
+        data-guided="<%= cookies[:honey_guided] == 'off' ? 'off' : 'on' %>">
+    <% if current_user.present? %>
+      <div class="app app-enter" id="appView">
         <%= render 'layouts/partials/sidebar' %>
-        <button class="mobile-sidebar-toggle d-lg-none" id="mobileToggle">
-          <i class="fas fa-bars"></i>
-        </button>
-        <div class="sidebar-overlay d-lg-none" id="sidebarOverlay"></div>
-      <% end %>
-      <%= render 'layouts/partials/content' %>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <% if current_user.present? %>
-        <%= render 'layouts/partials/footer' %>
-      <% end %>
-    </div>
+        <div class="main">
+          <%= render 'layouts/partials/impersonation_banner' if impersonating? %>
+          <%= render 'layouts/partials/header' %>
+          <%= render 'layouts/partials/content' %>
+          <%= render 'layouts/partials/footer' %>
+        </div>
+      </div>
 
-    <%= render 'layouts/partials/impersonation_banner' if user_signed_in? && impersonating? %>
+      <%= render 'layouts/partials/layers' %>
+    <% else %>
+      <%= yield %>
+    <% end %>
+
     <%= render 'layouts/partials/messages' %>
 
+    <% if current_user.present? %>
+      <%= javascript_include_tag 'honey_shell', defer: true %>
+    <% end %>
     <%= yield :scripts %>
-    
   </body>
 </html>

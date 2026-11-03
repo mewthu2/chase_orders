@@ -2,11 +2,18 @@
 
 <div class="users-container catalogs-page">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-pen me-2"></i>Alterar encomenda de <%= @catalog_order.customer_name %></h1>
-      <p class="page-subtitle">Mude as quantidades (0 tira o item). O cliente vê a nova versão no link.</p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-pen' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Alterar encomenda de <%= @catalog_order.customer_name %></h1>
+        <p class="page-subtitle">Mude as quantidades (0 tira o item). O cliente vê a nova versão no link.</p>
+      </div>
     </div>
-    <div class="header-actions"><%= link_to b2b_catalog_catalog_order_path(@catalog, @catalog_order), class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %></div>
+    <div class="header-actions">
+      <%= hc_help_button %>
+<%= link_to b2b_catalog_catalog_order_path(@catalog, @catalog_order), class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
   </div>
 
   <%= form_with url: b2b_catalog_catalog_order_path(@catalog, @catalog_order), method: :patch, local: true do %>

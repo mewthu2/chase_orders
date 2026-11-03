@@ -38,7 +38,8 @@ class PublicCatalogsController < ApplicationController
   private
 
   def set_catalog
-    @catalog = B2bCatalog.includes(products: :variants).find_by(public_token: params[:token].to_s)
+    # Só a página mostra produtos e tamanhos; enviar e identificar trabalham com os ids.
+    @catalog = (action_name == 'show' ? B2bCatalog.includes(products: :variants) : B2bCatalog).find_by(public_token: params[:token].to_s)
     return if @catalog
 
     request.format.json? ? head(:not_found) : render(:unavailable, status: :not_found)

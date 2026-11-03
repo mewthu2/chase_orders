@@ -1,0 +1,84 @@
+<%# Fila de uma etapa do Log03/Log02 (Emissão de Notas, Enviar XML) no padrão do protótipo: caminho do pedido,
+    fila automática, indicadores, filtros, lista com seleção, execução por linha e em lote.
+    Locais: kind (:log03/:log02), action, title, subtitle, icon, perm, queue, errors ({ tiny_order_id => { message:, status:, updated_at: } }),
+    run_path, run_now_path, extra_action (->(attempt) { html }), step (rótulo curto da etapa: 'nota', 'XML'), done_label, done_help, row_tip, row_icon, run_msg, bulk_label,
+    runbox_title, runbox_text, runbox_btn, table_title, table_meta, empty_text; opcionais: corrections, order_types, transport, return_to, header. %>
+<% corrections ||= {} %>
+<% order_types ||= nil %>
+<% transport ||= false %>
+<% return_to ||= nil %>
+<% header ||= nil %>
+<% statuses = { 'pending' => ['Na fila', 'yellow', "Esperando a #{step} ser feita."],
+                'held' => ['Aguardando correção', 'orange', 'O endereço da nota precisa ser corrigido no Tiny antes de seguir.'],
+                'error' => ['Com erro', 'red', 'A última tentativa falhou. Veja o motivo e tente de novo.'] } %>
+<% type_labels = B2bOrderType::LABELS.transform_keys(&:to_s) %>
+<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% extra_action ||= nil %>
+<% rows = queue.map do |att|
+     err = errors[att.tiny_order_id] || errors[att.tiny_order_id.to_s]
+     err = { message: err.error.presence || err.message, status: err.status, updated_at: err.updated_at } if err.is_a?(Attempt)
+     held = corrections[att.tiny_order_id.to_s]
+     type = order_types && order_types[att.tiny_order_id.to_s]
+     { id: att.id, record: att, tiny: att.tiny_order_id.to_s, cliente: att.customer_name.presence || '—', corr: att.order_correios_id.to_s, nf: att.id_nota_fiscal.presence || '—',
+       st: held&.awaiting_tiny_fix? ? 'held' : (err ? 'error' : 'pending'), erro: err&.dig(:message).presence || '—', tipo: type.to_s, transp: att.try(:is_transportadora) ? 'outra' : 'correios',
+       dt: att.created_at, held: held }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'pedidos', unit1: 'pedido', page_size: 25, sort: { k: :dt, dir: -1 },
+     cols: [
+       { k: :tiny, label: 'Pedido (Tiny)', t: :html, main: true },
+       { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
+       (order_types ? { k: :tipo_badge, label: 'Tipo', t: :html } : nil),
+       { k: :tipo, label: 'Tipo do pedido', hide: true, nodetail: true },
+       { k: :corr, label: 'Pedido no Correios', t: :mono },
+       { k: :nf, label: 'ID da nota', t: :mono },
+       { k: :st, label: 'Status', t: :status, map: statuses },
+       { k: :erro, label: 'Última mensagem', hide: true },
+       { k: :dt, label: 'Criado em', t: :dt, sort: true }
+     ].compact,
+     filters: [
+       { id: :q, type: :search, label: 'ID do pedido', ph: 'Ex.: 911317520', cols: %i[tiny corr cliente], tip: 'Procura pelo ID do pedido no Tiny, pelo pedido no Correios ou pelo nome do cliente.' },
+       { id: :st, type: :select, label: 'Status', col: :st, all: 'Todos' },
+       (transport ? { id: :transportadora, type: :select, label: 'Envio', col: :transp, options: [['correios', 'Correios'], ['outra', 'Outra transportadora']], all: 'Todos os envios', tip: 'Pedidos que saem pelo Correios ou por outra transportadora.' } : nil),
+       { id: :per, type: :period, label: 'Período', col: :dt }
+     ].compact,
+     kpis: [
+       { label: 'Na fila', icon: 'fas fa-hourglass-half', tone: 'yellow', help: "Esperando a #{step} ser feita.", col: :st, vals: %w[pending held error] },
+       { label: done_label, icon: 'fas fa-circle-check', tone: 'green', help: done_help, count: @done_today.to_i },
+       { label: 'Com erro', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Não saíram. Veja o motivo na linha.', col: :st, val: 'error' },
+       (corrections.any? ? { label: 'Aguardando correção', icon: 'fas fa-location-dot', tone: 'orange', help: 'Endereço a corrigir no Tiny antes de seguir.', col: :st, val: 'held' }
+                         : { label: 'Última rodada', icon: 'fas fa-clock-rotate-left', tone: 'blue', help: 'Quando a rotina rodou pela última vez.', text: @last_run_at ? hc_ago(@last_run_at) : '—' })
+     ]) %>
+<% rows.each do |r|
+     tiny = r[:tiny]
+     r[:tiny] = content_tag(:span, tiny, class: 'mono pg-mono') + content_tag(:button, content_tag(:i, '', class: 'far fa-copy'), type: 'button', class: 'pg-copy', data: { pg_copy: tiny, tip: 'Copiar' }) +
+                address_correction_badge(r[:held]).to_s.html_safe +
+                (r[:held]&.awaiting_tiny_fix? ? render('dashboard/address_hold_actions', att: r[:record], correction: r[:held], return_to: return_to) : ''.html_safe)
+     r[:tipo_badge] = r[:tipo].present? ? b2b_order_type_badge(r[:tipo]).to_s.html_safe : content_tag(:span, '—', class: 'pg-dash') if order_types
+   end %>
+
+<%= hc_page_header title, subtitle, icon: icon do %><%= header %><% end %>
+
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: kind, current: action, counts: { action => rows.size } %>
+  <%= render 'dashboard/runbox', title: runbox_title, text: runbox_text, perm: perm, run_path: run_path, running: @job_running, btn: runbox_btn, last_run: @last_run_at,
+             confirm: "O sistema processa agora todos os #{rows.size} pedidos da fila." %>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: table_title, icon: icon, meta: table_meta, tools: (render('dashboard/order_type_filter') if order_types),
+        select: (->(r) { { id: r[:id], tiny_order_id: r[:record].tiny_order_id } } if screen_can?(perm, :execute)),
+        bulk: (render('dashboard/bulk_bar', icon: row_icon, label: bulk_label, hint: 'Marque as linhas para processar vários pedidos de uma vez.') if screen_can?(perm, :execute)),
+        empty: { title: 'Nenhum item na fila', text: empty_text },
+        detail: { title: ->(r) { "Pedido #{r[:record].tiny_order_id}" }, fields: [['Última mensagem', :erro]] },
+        actions: ->(r) {
+          att = r[:record]
+          safe_join([
+            (content_tag(:button, content_tag(:i, '', class: row_icon), type: 'button', class: 'action-btn', data: { tip: row_tip }, 'aria-label': row_tip,
+                         onclick: "runQueueItemNow(#{run_now_path.to_json}, #{att.id}, #{run_msg.to_json})") if screen_can?(perm, :execute)),
+            (extra_action.call(att) if extra_action),
+            link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
+            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{att.tiny_order_id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+          ].compact)
+        }) %>
+</div>
+
+<%= render 'dashboard/run_now_modal' %>
+<%= render 'dashboard/queue_scripts', run_now_path: run_now_path, bulk_message: run_msg %>

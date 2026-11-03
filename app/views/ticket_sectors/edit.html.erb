@@ -1,8 +1,15 @@
 <% content_for :title, "Editar Setor" %>
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-building me-2"></i><%= @sector.name_was %></h1>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-building' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title"><%= @sector.name_was %></h1>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= hc_help_button %>
     </div>
   </div>
   <%= render 'form' %>

@@ -2,11 +2,16 @@
 
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>Gerar Nota Fiscal</h1>
-      <p class="page-subtitle"><%= @order.sale? ? 'Pedido de atacado' : 'Transferência de estoque' %> #<%= @order.id %></p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-file-invoice' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Gerar Nota Fiscal</h1>
+        <p class="page-subtitle"><%= @order.sale? ? 'Pedido de atacado' : 'Transferência de estoque' %> #<%= @order.id %></p>
+      </div>
     </div>
     <div class="header-actions">
+      <%= hc_help_button %>
       <%= link_to(@order.stock_transfer? ? stock_transfers_path : b2b_orders_path, class: "btn-back") do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>
   </div>
@@ -41,7 +46,7 @@
               <%= select_tag :company_id, options_for_select(@companies.map { |c| ["#{c.legal_name} - #{c.cnpj_formatted} (#{c.homologacao? ? 'homologação' : 'produção'})", c.id] }, params[:company_id]), class: 'field-input' %>
             </div>
           </div>
-          <p class="text-muted-custom mt-3"><i class="fas fa-info-circle me-1"></i>A nota é gerada e assinada com o certificado da empresa, mas <strong>não é transmitida à SEFAZ</strong>.</p>
+          <p class="text-muted-custom mt-3"><i class="fas fa-info-circle me-1"></i>A nota é gerada e assinada com o certificado da empresa; a autorização na SEFAZ é feita na tela da nota.</p>
           <div class="form-actions">
             <%= submit_tag 'Gerar nota fiscal', class: "btn-submit", disabled: @active_note.present? %>
           </div>

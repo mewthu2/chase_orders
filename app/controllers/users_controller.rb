@@ -1,17 +1,15 @@
 class UsersController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_user, only: [:show, :edit, :update, :destroy]
-  guard_screen :users_management, except: [:edit, :update]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :toggle_status, :send_password_reset]
+  guard_screen :users_management, except: [:edit, :update], actions: { toggle_status: :edit, send_password_reset: :edit }
+  before_action :protect_admin_accounts, only: [:toggle_status, :send_password_reset, :destroy]
   before_action :check_user_permission, only: [:edit, :update]
 
   def index
-    @page = params[:page].to_i
-    @page = 1 if @page < 1
-    @per_page = 10
-    @offset = (@page - 1) * @per_page
-    @users = User.includes(:profiles).with_attached_avatar.limit(@per_page).offset(@offset).order(:name)
-    @total_users = User.count
-    @total_pages = (@total_users.to_f / @per_page).ceil
+    @users = User.includes(:profiles, avatar_attachment: :blob).order(:name)
+    # Nomes dos setores de cada perfil numa consulta só (admin nem usa).
+    @sector_names = ProfileTicketSector.joins(:ticket_sector).order('ticket_sectors.name')
+                                       .pluck(:profile_id, 'ticket_sectors.name').group_by(&:first).transform_values { |rows| rows.map(&:last) }
   end
 
   def show; end
@@ -22,6 +20,8 @@ class UsersController < ApplicationController
 
   def create
     @user = User.new(admin_user_params.except(:remove_avatar))
+    # Perfis decidem o que a pessoa acessa: só o administrador escolhe. Os demais criam como Usuário.
+    @user.profile_ids = [Profile::USER] unless current_user.admin?
 
     validation = current_user.admin? && params[:user][:allowed_location_keys].present?
     @user.set_allowed_locations(params[:user][:allowed_location_keys]) if validation
@@ -72,10 +72,31 @@ class UsersController < ApplicationController
     redirect_to users_path, notice: 'Usuário removido com sucesso.'
   end
 
+  # Desativado não consegue entrar; o histórico continua guardado.
+  def toggle_status
+    return redirect_to(users_path, alert: 'Para mudar a sua conta, use Meu Perfil.') if @user == current_user
+
+    @user.update!(active: !@user.active)
+    redirect_to users_path, notice: @user.active ? "#{@user.name} foi ativado. A pessoa já pode entrar de novo com a mesma senha." : "#{@user.name} foi desativado. O acesso foi bloqueado agora."
+  end
+
+  # Manda o e-mail do Devise com o link para criar uma senha nova; a atual vale até lá.
+  def send_password_reset
+    @user.send_reset_password_instructions
+    redirect_to users_path, notice: "Link enviado. #{@user.name} vai receber o e-mail em instantes."
+  end
+
   private
 
+  # Só administrador mexe na conta de outro administrador.
+  def protect_admin_accounts
+    return if current_user.admin? || !@user.admin?
+
+    redirect_to users_path, alert: 'Só um administrador pode mudar a conta de outro administrador.'
+  end
+
   def set_user
-    @user = User.includes(:profiles).find(params[:id])
+    @user = User.find(params[:id])
   end
 
   def check_user_permission

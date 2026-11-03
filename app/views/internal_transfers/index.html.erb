@@ -1,144 +1,130 @@
-<% content_for :title, "Transferência Interna" %>
+<% content_for :title, "Transferência de Estoque" %>
+<% filters = params.permit(:q, :destination_id, :origin_id, :status, :kpi, :mine, :from, :to, :per_page).to_h.compact_blank %>
+<% filtered = filters.except('per_page').any? %>
+<% kpi_url = ->(key, value) { internal_transfers_path(filters.except('status', 'kpi', 'page').merge(key => (filters[key] == value ? nil : value)).compact) } %>
+<% statuses = { 'aguardando_aprovacao' => ['Aguardando aprovação', 'yellow', 'Um aprovador ou um administrador precisa liberar. Nada sai do estoque antes disso.'],
+                'aberto' => ['Aberta', 'blue', 'Aprovada. As lojas de origem já podem reservar os itens.'],
+                'em_andamento' => ['Em andamento', 'purple', 'Já tem remessa reservada ou enviada. Falta tudo chegar na loja de destino.'],
+                'concluida' => ['Concluída', 'green', 'Todas as remessas foram recebidas e o estoque entrou na loja de destino.'],
+                'reprovada' => ['Reprovada', 'red', 'Não foi aprovada. Nada foi reservado, então nenhum estoque mudou.'],
+                'cancelada' => ['Cancelada', 'gray', 'As remessas foram canceladas. O que estava reservado voltou para a loja de origem.'] } %>
+<% location_options = @filter_locations.map { |l| [l.name, l.id] } %>
+<% location_name = ->(id) { @filter_locations.find { |l| l.id.to_s == id.to_s }&.name } %>
+<% approver = current_user.admin? || internal_transfer_approver_ids.include?(current_user.id) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-exchange-alt me-2"></i>Transferência Interna</h1>
-      <p class="page-subtitle">Transferências de estoque entre lojas, lançadas direto no Shopify (com histórico do inventário)</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @transfers.total_entries %> transferência(s)</span>
-      <% if current_user.admin? %>
-        <%= link_to edit_internal_transfer_config_path, class: "btn-back" do %><i class="fas fa-cog me-1"></i>Configurar<% end %>
+<%= hc_page_header 'Transferência de Estoque', 'Transferências de estoque entre lojas, lançadas direto no Shopify (com histórico do inventário)', icon: 'fas fa-exchange-alt' do %>
+  <% if current_user.admin? %>
+    <%= link_to edit_internal_transfer_config_path, class: 'btn btn-secondary' do %><i class="fas fa-user-check"></i>Configurar aprovadores<% end %>
+  <% end %>
+  <% if screen_can?(:internal_transfers, :create) %>
+    <%= link_to new_internal_transfer_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova transferência<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_kpis([
+    { label: 'Aguardando aprovação', icon: 'fas fa-user-clock', tone: 'yellow', value: @kpis[:waiting], help: 'Esperam um aprovador liberar.',
+      url: kpi_url.call('status', 'aguardando_aprovacao'), active: filters['status'] == 'aguardando_aprovacao' },
+    { label: 'Reservar ou enviar', icon: 'fas fa-boxes-packing', tone: 'blue', value: @kpis[:origin], help: 'A loja de origem precisa agir.',
+      url: kpi_url.call('kpi', 'origin'), active: filters['kpi'] == 'origin' },
+    { label: 'A caminho', icon: 'fas fa-truck-fast', tone: 'purple', value: @kpis[:on_the_way], help: 'Enviadas. Falta a loja receber.',
+      url: kpi_url.call('kpi', 'on_the_way'), active: filters['kpi'] == 'on_the_way' },
+    { label: 'Concluídas', icon: 'fas fa-circle-check', tone: 'green', value: @kpis[:done], help: 'Tudo recebido na loja de destino.',
+      url: kpi_url.call('status', 'concluida'), active: filters['status'] == 'concluida' }
+  ]) %>
+
+  <% mine_tool = link_to(safe_join([content_tag(:i, '', class: 'fas fa-bell'), filters['mine'] ? 'Mostrar todas' : 'Aguardando minha ação']),
+                         internal_transfers_path(filters.except('mine', 'page').merge(filters['mine'] ? {} : { 'mine' => '1' })),
+                         class: "btn btn-sm #{filters['mine'] ? 'btn-primary' : 'btn-secondary'}", data: { tip: 'Só as transferências em que você precisa aprovar, reservar, enviar ou receber.' }) %>
+  <%= hc_table_card 'Lista de transferências', icon: 'fas fa-right-left', tools: mine_tool,
+                    meta: 'Cada bolinha verde é uma etapa vencida: pedida, aprovada, reservada, enviada e recebida.' do %>
+    <%= hc_filters internal_transfers_path, clear: (internal_transfers_path if filtered) do %>
+      <% filters.slice('kpi', 'mine', 'from', 'to', 'per_page').each do |name, value| %><%= hidden_field_tag name, value, id: nil %><% end %>
+      <%= hc_filter_field 'Buscar', tip: 'Digite o número da transferência, o nome de quem pediu, o código de rastreio, um SKU ou uma palavra das observações.', search: true do %>
+        <%= hc_filter_search :q, filters['q'], 'Nº, solicitante ou rastreio…' %>
       <% end %>
-      <%= link_to new_internal_transfer_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Transferência<% end %>
-    </div>
-  </div>
-
-  <% filter_keys = %i[q destination_id origin_id from to mine per_page] %>
-  <% base_params = params.permit(*filter_keys).to_h.compact_blank %>
-  <% filtering = base_params.except('per_page').any? %>
-
-  <div class="filters-panel transfer-filters">
-    <%= form_with url: internal_transfers_path, method: :get, local: true, id: 'transferFiltersForm' do %>
-      <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
-      <div class="search-row mb-3">
-        <%= text_field_tag :q, params[:q], class: 'search-input', placeholder: 'Nº, SKU, produto, solicitante, rastreio ou observação...' %>
-        <button type="submit" class="btn-primary-sm"><i class="fas fa-search me-1"></i>Buscar</button>
-        <% if filtering || params[:status].present? %>
-          <%= link_to internal_transfers_path, class: 'btn-clear' do %><i class="fas fa-times me-1"></i>Limpar filtros<% end %>
-        <% end %>
-      </div>
-      <div class="transfer-filters-grid">
-        <div>
-          <label class="filter-label" for="destination_id"><i class="fas fa-map-marker-alt me-1"></i>Destino</label>
-          <%= select_tag :destination_id, options_from_collection_for_select(@filter_locations, :id, :name, params[:destination_id]), include_blank: 'Todas as lojas', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
-        </div>
-        <div>
-          <label class="filter-label" for="origin_id"><i class="fas fa-truck-loading me-1"></i>Origem</label>
-          <%= select_tag :origin_id, options_from_collection_for_select(@filter_locations, :id, :name, params[:origin_id]), include_blank: 'Todas as lojas', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
-        </div>
-        <div>
-          <label class="filter-label" for="from"><i class="fas fa-calendar-alt me-1"></i>Criada de</label>
-          <%= date_field_tag :from, params[:from], class: 'field-input', onchange: 'this.form.requestSubmit()' %>
-        </div>
-        <div>
-          <label class="filter-label" for="to"><i class="fas fa-calendar-check me-1"></i>Até</label>
-          <%= date_field_tag :to, params[:to], class: 'field-input', onchange: 'this.form.requestSubmit()' %>
-        </div>
-        <div class="transfer-filters-toggle">
-          <label class="mine-toggle">
-            <%= check_box_tag :mine, '1', params[:mine] == '1', onchange: 'this.form.requestSubmit()' %>
-            <span class="mine-toggle-track"><span class="mine-toggle-thumb"></span></span>
-            <span><i class="fas fa-bell me-1"></i>Aguardando minha ação</span>
-          </label>
-        </div>
-      </div>
-      <%= hidden_field_tag :per_page, params[:per_page] if params[:per_page].present? %>
+      <%= hc_filter_field 'Destino', tip: 'A loja que pediu e vai receber as peças. Você só vê as lojas liberadas no seu perfil.' do %>
+        <%= hc_filter_select :destination_id, location_options, filters['destination_id'], all: 'Todas as lojas' %>
+      <% end %>
+      <%= hc_filter_field 'Origem', tip: 'A loja que vai mandar as peças. Uma transferência pode ter mais de uma origem.' do %>
+        <%= hc_filter_select :origin_id, location_options, filters['origin_id'], all: 'Todas as lojas' %>
+      <% end %>
+      <%= hc_filter_field 'Status', tip: 'Em que ponto a transferência está. Só depois de Aprovada a loja de origem reserva as peças.' do %>
+        <%= hc_filter_select :status, statuses.map { |k, v| [v[0], k] }, filters['status'], all: 'Todos status' %>
+      <% end %>
     <% end %>
-  </div>
 
-  <div class="table-card">
-    <div class="status-tabs transfer-status-tabs px-3 pt-3 pb-2">
-      <%= link_to internal_transfers_path(base_params), class: "status-tab #{'status-tab--active' if params[:status].blank?}" do %>
-        Todas <span class="status-tab-count"><%= @total_count %></span>
-      <% end %>
-      <% InternalTransfer::STATUS_LABELS.each do |key, label| %>
-        <%= link_to internal_transfers_path(base_params.merge(status: key)), class: "status-tab status-tab--#{key} #{'status-tab--active' if params[:status] == key}" do %>
-          <span class="status-dot status-dot--<%= key %>"></span><%= label %> <span class="status-tab-count"><%= @status_counts[key] %></span>
-        <% end %>
-      <% end %>
-    </div>
+    <div class="pg-body">
+      <% chips = [] %>
+      <% chips << { label: 'Buscar', value: "“#{filters['q']}”", clear: internal_transfers_path(filters.except('q')) } if filters['q'] %>
+      <% chips << { label: 'Destino', value: location_name.call(filters['destination_id']), clear: internal_transfers_path(filters.except('destination_id')) } if filters['destination_id'] %>
+      <% chips << { label: 'Origem', value: location_name.call(filters['origin_id']), clear: internal_transfers_path(filters.except('origin_id')) } if filters['origin_id'] %>
+      <% chips << { label: 'Status', value: statuses.dig(filters['status'], 0), clear: internal_transfers_path(filters.except('status')) } if statuses[filters['status']] %>
+      <% chips << { label: { 'origin' => 'Reservar ou enviar', 'on_the_way' => 'A caminho' }[filters['kpi']], clear: internal_transfers_path(filters.except('kpi')) } if InternalTransfer::STAGE_FILTERS.include?(filters['kpi']) %>
+      <% chips << { label: 'Aguardando minha ação', clear: internal_transfers_path(filters.except('mine')) } if filters['mine'] %>
+      <% chips << { label: 'Criadas de', value: filters['from'], clear: internal_transfers_path(filters.except('from')) } if filters['from'] %>
+      <% chips << { label: 'Criadas até', value: filters['to'], clear: internal_transfers_path(filters.except('to')) } if filters['to'] %>
+      <%= hc_active_filters @transfers.total_entries, 'transferências', unit1: 'transferência', filtered: filtered,
+                            locs: (current_user.admin? ? :all : current_user.allowed_location_keys.map { |k| User.location_name(k) }), chips: chips, legend: statuses.values %>
 
-    <% if @transfers.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nº</th>
-              <th>Destino</th>
-              <th>Origens</th>
-              <th class="text-end">Qtde total</th>
-              <th>Solicitante</th>
-              <th class="text-center">Status</th>
-              <th></th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @transfers.each do |transfer| %>
+      <% if @transfers.any? %>
+        <div class="table-responsive">
+          <table class="orders-table pg-tbl">
+            <thead>
               <tr>
-                <td class="text-main">#<%= transfer.id %></td>
-                <td class="text-muted-custom"><%= transfer.destination_location.name %></td>
-                <td class="text-muted-custom"><%= transfer.shipments.map { |shipment| "#{shipment.origin_location.name} (#{shipment.status_label})" }.to_sentence %></td>
-                <td class="text-end"><%= transfer.total_quantity %></td>
-                <td class="text-muted-custom"><%= @requester_names[transfer.requested_by_id] %></td>
-                <td class="text-center"><%= transfer_status_pill(transfer) %></td>
-                <td class="text-center"><%= action_needed_badge(transfer) %></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%# Enquanto dá para editar, a edição (que também mostra a aprovação) é a única entrada. %>
-                    <% if transfer.editable? && current_user.can_access_screen?(:internal_transfers) %>
-                      <%= link_to edit_internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <% else %>
-                      <%= link_to internal_transfer_path(transfer), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
-                    <% end %>
-                    <% if transfer.deletable? %>
-                      <%= button_to internal_transfer_path(transfer), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",
-                                    form: { data: { turbo_confirm: "Excluir esta transferência?" } } do %><i class="fas fa-trash"></i><% end %>
-                    <% end %>
-                  </div>
-                </td>
+                <th>Pedido</th><th>Destino</th><th>Origens</th><th class="is-r">Peças</th><th>Etapa</th><th>Status</th><th style="text-align: right">Ações</th>
               </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <div class="transfer-pagination px-3 py-3">
-        <span class="text-muted-custom">
-          Mostrando <%= @transfers.offset + 1 %>–<%= @transfers.offset + @transfers.size %> de <%= @transfers.total_entries %>
-        </span>
-        <%= will_paginate @transfers, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %>
-        <%= form_with url: internal_transfers_path, method: :get, local: true, class: 'per-page-form' do %>
-          <% params.permit(*filter_keys, :status).to_h.except('per_page').compact_blank.each do |key, value| %>
-            <%= hidden_field_tag key, value %>
-          <% end %>
-          <label for="per_page_select" class="text-muted-custom">Por página</label>
-          <%= select_tag :per_page, options_for_select(InternalTransfersController::PER_PAGE_OPTIONS, @per_page), id: 'per_page_select', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
-        <% end %>
-      </div>
-    <% elsif filtering || params[:status].present? %>
-      <div class="empty-state">
-        <i class="fas fa-search fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma transferência encontrada com esses filtros</h5>
-        <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-times me-1"></i>Limpar filtros<% end %>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-exchange-alt fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma transferência cadastrada</h5>
-        <%= link_to new_internal_transfer_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Nova Transferência<% end %>
-      </div>
-    <% end %>
-  </div>
+            </thead>
+            <tbody class="stagger">
+              <% @transfers.each_with_index do |transfer, i| %>
+                <% status = transfer.overall_status %>
+                <% at, error = transfer.stage %>
+                <%# Enquanto dá para editar, a edição (que também mostra a aprovação) é a única entrada. %>
+                <% editable = transfer.editable? && screen_can?(:internal_transfers, :edit) %>
+                <% entry = editable ? edit_internal_transfer_path(transfer) : internal_transfer_path(transfer) %>
+                <tr style="--i: <%= i %>">
+                  <%= hc_td 'Pedido', type: :num, sub: @requester_names[transfer.requested_by_id] do %><%= link_to hc_num(transfer.id), entry, class: 'text-main t' %><% end %>
+                  <%= hc_td 'Destino' do %><%= hc_location(transfer.destination_location.name, key: transfer.destination_location.slug) %><% end %>
+                  <%= hc_td 'Origens' do %><% transfer.shipments.map(&:origin_location).uniq.each do |origin| %><%= hc_location(origin.name, key: origin.slug) %><% end %><% end %>
+                  <%= hc_td 'Peças', type: :qty do %><%= hc_qty(transfer.total_quantity) %><% end %>
+                  <%= hc_td 'Etapa' do %><%= hc_steps(at, 5, error: error) %><% end %>
+                  <%= hc_td 'Status', sub: ('Aguardando sua ação' if transfer.my_action_needed?(current_user, approver_ids: internal_transfer_approver_ids)) do %><%= hc_status(*statuses[status][0, 2], tip: statuses[status][2]) %><% end %>
+                  <td class="td-actions" style="text-align: right" data-label="">
+                    <% unless editable %>
+                      <%= hc_row_action 'fas fa-eye', 'Ver transferência', entry %>
+                    <% end %>
+                    <% if status == 'aguardando_aprovacao' && approver %>
+                      <%= hc_row_action 'fas fa-circle-check', 'Aprovar', approve_internal_transfer_path(transfer), method: :post,
+                                        confirm: "Aprovar a transferência ##{transfer.id}? Aprovar não mexe no estoque: as peças só saem da loja de origem quando ela reservar os itens." %>
+                      <%= hc_row_action 'fas fa-circle-xmark', 'Reprovar', "#{entry}#aprovacao", danger: true %>
+                    <% end %>
+                    <% unless editable || error %>
+                      <% if at == 2 || at == 3 %>
+                        <%= hc_row_action(at == 2 ? 'fas fa-lock' : 'fas fa-truck-fast', at == 2 ? 'Reservar itens' : 'Marcar como enviada', entry) %>
+                      <% elsif at == 4 %>
+                        <%= hc_row_action 'fas fa-box-open', 'Confirmar recebimento', entry %>
+                      <% end %>
+                    <% end %>
+                    <% if editable %>
+                      <%= hc_row_action 'fas fa-pencil', 'Editar', entry %>
+                    <% end %>
+                    <% if transfer.deletable? && screen_can?(:internal_transfers, :destroy) %>
+                      <%= hc_row_action 'fas fa-trash', 'Excluir transferência', internal_transfer_path(transfer), danger: true, method: :delete,
+                                        confirm: "Excluir a transferência ##{transfer.id}? Nenhuma peça foi reservada, então o estoque não muda." %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <%= hc_table_footer @transfers %>
+      <% elsif filtered %>
+        <%= hc_empty_filtered internal_transfers_path %>
+      <% else %>
+        <%= hc_empty 'Nenhuma transferência encontrada', 'Quando uma loja pedir peças de outra, a transferência aparece aqui.',
+                     cta: (screen_can?(:internal_transfers, :create) ? link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova transferência']), new_internal_transfer_path, class: 'btn btn-export') : nil) %>
+      <% end %>
+    </div>
+  <% end %>
 </div>

@@ -1,0 +1,19 @@
+<%# "Caminho do pedido" (flowBar do protótipo). kind: :log03 | :log02; current: a ação da tela; counts: { action => pedidos na fila }. %>
+<% steps = { log03: [['Criação de Pedidos', 'Cria no Correios', :order_correios_create], ['Emissão de Notas', 'Tiny emite a nota', :invoice_emition],
+                     ['Enviar XML', 'Nota vai ao Correios', :send_xml], ['Rastreamento', 'Código vai ao Tiny', :push_tracking]],
+             log02: [['Pedidos p/ Aprovar', 'Você decide', :order_correios_create_b2b], ['Criação de Pedidos', 'Cria no Correios', :order_correios_create_queue_b2b],
+                     ['Emissão de Notas', 'Tiny emite a nota', :invoice_emition_b2b], ['Enviar XML', 'Nota vai ao Correios', :send_xml_b2b], ['Rastreamento', 'Código vai ao Tiny', :push_tracking_b2b]] }[kind] %>
+<% counts ||= {} %>
+<% cur = steps.index { |s| s[2] == current } %>
+<nav class="pg-flow" aria-label="Etapas do envio" data-tour="flow">
+  <div class="pg-flow-h"><i class="fas fa-route"></i>Caminho do pedido · <%= kind == :log03 ? 'Log03 (loja online)' : 'Log02 (atacado)' %><span>Cada pedido só entra numa etapa depois de concluir a anterior.</span></div>
+  <div class="pg-flow-steps">
+    <% steps.each_with_index do |(title, text, action), i| %>
+      <% done = cur && i < cur %>
+      <%= link_to url_for(controller: 'dashboard', action: action), class: "pg-flow-step#{' is-current' if i == cur}#{' is-done' if done}", 'aria-current': (i == cur ? 'step' : nil) do %>
+        <span class="n"><% if done %><i class="fas fa-check"></i><% else %><%= i + 1 %><% end %></span>
+        <span class="t"><b><%= title %></b><small><%= counts.key?(action) ? "#{counts[action]} #{counts[action] == 1 ? 'pedido na fila' : 'pedidos na fila'}" : text %></small></span>
+      <% end %>
+    <% end %>
+  </div>
+</nav>

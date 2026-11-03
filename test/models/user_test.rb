@@ -32,11 +32,11 @@ class UserTest < ActiveSupport::TestCase
 
   test 'non-admin can access a screen only if one of their profiles grants it' do
     profile = Profile.create!(name: 'Perfil Sem Acesso')
-    user = User.new(name: 'Teste', email: 'teste@example.com', password: 'password123')
+    user = User.create!(name: 'Teste', email: 'teste@example.com', password: 'password123')
     user.profiles << profile
     refute user.can_access_screen?('orders')
 
-    profile.screen_permissions.create!(screen_key: 'orders')
-    assert user.can_access_screen?('orders')
+    profile.update!(screen_keys: ['orders'])
+    assert user.reload.can_access_screen?('orders')
   end
 end

@@ -1,7 +1,7 @@
 # Ações de uma remessa (uma loja de origem) dentro de uma transferência interna: reservar,
 # marcar como enviada (com rastreio), receber e cancelar. Cada uma é síncrona, sem fila.
 class InternalTransferShipmentsController < ApplicationController
-  guard_screen :internal_transfers
+  guard_screen :internal_transfers, actions: { cancel: :destroy }
   before_action :set_transfer
   before_action :set_shipment
 
@@ -32,10 +32,7 @@ class InternalTransferShipmentsController < ApplicationController
 
     tracking_code = params[:tracking_code].presence
     if @shipment.sendable?
-      @shipment.update!(status: :enviado, tracking_code: tracking_code, sent_at: Time.current, sent_by: current_user)
-      message = "Remessa de #{@shipment.origin_location.name} marcada como enviada#{" (rastreio #{tracking_code})" if tracking_code}."
-      InternalTransferEvent.create!(internal_transfer: @transfer, internal_transfer_shipment: @shipment, user: current_user, action: 'shipped', message: message)
-      redirect_to internal_transfer_path(@transfer), notice: 'Remessa marcada como enviada.'
+      ship_with_note(tracking_code)
     else
       @shipment.update!(tracking_code: tracking_code)
       redirect_to internal_transfer_path(@transfer), notice: 'Código de rastreio atualizado.'
@@ -68,6 +65,36 @@ class InternalTransferShipmentsController < ApplicationController
   end
 
   private
+
+  # A nota de transferência sai antes da mercadoria: só marca como enviada com a nota autorizada (ou sem
+  # nota, quando as duas lojas são da mesma empresa). O lock evita duas notas num clique duplo.
+  def ship_with_note(tracking_code)
+    note = nil
+    sent = @shipment.with_lock do
+      next false unless @shipment.sendable?
+
+      note = InternalTransferInvoicer.call(@shipment)
+      next false if note && !note.autorizada?
+
+      @shipment.update!(status: :enviado, tracking_code: tracking_code, sent_at: Time.current, sent_by: current_user)
+      true
+    end
+
+    if sent
+      note_text = note ? " com a NF-e nº #{note.number}" : ''
+      message = "Remessa de #{@shipment.origin_location.name} marcada como enviada#{note_text}#{" (rastreio #{tracking_code})" if tracking_code}."
+      InternalTransferEvent.create!(internal_transfer: @transfer, internal_transfer_shipment: @shipment, user: current_user, action: 'shipped', message: message)
+      redirect_to internal_transfer_path(@transfer), notice: note ? "NF-e nº #{note.number} autorizada e remessa marcada como enviada." : 'Remessa marcada como enviada.'
+    elsif note
+      reason = note.error_message.presence || note.sefaz_message.presence || 'sem resposta da SEFAZ'
+      redirect_to internal_transfer_path(@transfer),
+                  alert: "A nota de transferência não foi autorizada (#{reason}). A remessa continua reservada: corrija e clique em Enviar de novo."
+    else
+      redirect_to internal_transfer_path(@transfer), alert: 'Esta remessa já foi enviada.'
+    end
+  rescue InternalTransferInvoicer::Error => e
+    redirect_to internal_transfer_path(@transfer), alert: e.message
+  end
 
   def set_transfer
     @transfer = InternalTransfer.find(params[:internal_transfer_id])

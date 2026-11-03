@@ -18,12 +18,12 @@ class StockReservationsControllerTest < ActionDispatch::IntegrationTest
     get b2b_stock_reservations_path
 
     assert_response :success
-    assert_select '.reservation-kpi', text: /2\s*pedidos/
-    assert_select '.reservation-kpi', text: /2\s*SKUs/
-    assert_select '.reservation-kpi', text: /5\s*unidades/
-    assert_select '.reservation-sku', count: 2
-    assert_select '.reservation-sku', text: /LEG-A.*Legging A/m
-    assert_select '.reservation-order', text: /1001.*Loja X/m
+    assert_select '.pg-kpi', text: /Pedidos na fila\s*2/
+    assert_select '.pg-kpi', text: /SKUs reservados\s*2/
+    assert_select '.pg-kpi', text: /Unidades reservadas\s*5/
+    assert_select '#pgt-main tbody tr', count: 2
+    assert_select '#pgt-main tbody tr', text: /LEG-A.*Legging A/m
+    assert_match(/1001.*Loja X/m, response.body)
     assert_no_match(/9009/, response.body)
   end
 
@@ -42,8 +42,8 @@ class StockReservationsControllerTest < ActionDispatch::IntegrationTest
 
     get b2c_stock_reservations_path
 
-    assert_select '.reservation-order', text: /7077.*#5501.*880011/m
-    assert_select '.reservation-order', text: /9009.*990022/m
+    assert_match(/7077.*#5501.*880011/m, response.body)
+    assert_match(/9009.*990022/m, response.body)
   end
 
   test 'an order that already has a Correios order number is not shown, even before the next refresh' do
@@ -55,16 +55,16 @@ class StockReservationsControllerTest < ActionDispatch::IntegrationTest
     get b2c_stock_reservations_path
 
     assert_no_match(/7078/, response.body)
-    assert_select '.reservation-kpi', text: /1\s*pedidos/
-    assert_select '.reservation-kpi', text: /7\s*unidades/
+    assert_select '.pg-kpi', text: /Pedidos na fila\s*1/
+    assert_select '.pg-kpi', text: /Unidades reservadas\s*7/
   end
 
   test 'sku filter narrows the list' do
     sign_in @admin
     get b2b_stock_reservations_path(sku: 'top')
 
-    assert_select '.reservation-sku', count: 1
-    assert_select '.reservation-sku', text: /TOP-B/
+    assert_select '#pgt-main tbody tr', count: 1
+    assert_select '#pgt-main tbody tr', text: /TOP-B/
   end
 
   test 'refresh enqueues the job for the account' do

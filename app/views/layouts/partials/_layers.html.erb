@@ -1,0 +1,153 @@
+<%# Camadas da casca: ajuda da tela, mapa do sistema, busca rápida e tour (abertas por honey_shell.js). %>
+<% help = nav_help %>
+<% help_data = Navigation.help %>
+
+<template id="helpTemplate">
+  <div class="backdrop" data-close></div>
+  <aside class="drawer" id="helpDrawer" role="dialog" aria-label="<%= help[:title] %>">
+    <div class="drawer-head">
+      <div class="page-icon"><i class="<%= help[:icon] %>"></i></div>
+      <div><h2><%= help[:title] %></h2><p><%= help[:sub] %></p></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="drawer-body">
+      <% sections = 0 %>
+      <% if help[:tickets] %>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-bullseye"></i>Para que serve</h4>
+          <p>Aqui ficam os pedidos de ajuda entre as áreas da empresa. Você vê os chamados que abriu, os que são sua responsabilidade e os que acompanha.</p></section>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-list-ol"></i>Como abrir um chamado</h4>
+          <ol class="steps">
+            <li>Clique em <b>Abrir chamado</b>.</li>
+            <li>Escolha a <b>Responsabilidade</b> (o assunto). Aparece quem vai cuidar e o prazo de resposta.</li>
+            <li>Escreva um <b>Título</b> curto e explique na <b>Descrição</b> o que aconteceu, onde e desde quando.</li>
+            <li>Se quiser, anexe prints e chame acompanhantes. Os responsáveis recebem um e-mail na hora.</li>
+          </ol></section>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-chart-simple"></i>O que significa cada número</h4>
+          <div class="def-list">
+            <% [['Aguardando você', 'chamados em que a próxima ação é sua (como responsável, ou como quem abriu, quando pedem sua resposta).', 'yellow'],
+                ['Aguardando outros', 'abertos, mas esperando outra pessoa.', 'blue'],
+                ['Vencidos', 'abertos e com o prazo de resposta já vencido.', 'red'],
+                ['Resolvidos na semana', 'resolvidos nos últimos 7 dias.', 'green']].each do |label, text, tone| %>
+              <div class="def" style="--c: <%= help_tone(tone) %>"><span class="sw"></span><span><b><%= label %>:</b> <%= text %></span></div>
+            <% end %>
+          </div></section>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-user-group"></i>Papéis</h4>
+          <div class="def-list">
+            <div class="def"><span class="sw" style="--c: var(--brand-400)"></span><span><b>Solicitante:</b> quem abriu o chamado.</span></div>
+            <div class="def"><span class="sw" style="--c: var(--brand-400)"></span><span><b>Responsável:</b> quem resolve. Recebe e-mail na hora.</span></div>
+            <div class="def"><span class="sw" style="--c: var(--brand-400)"></span><span><b>Acompanhante:</b> quem só acompanha e recebe as novidades.</span></div>
+          </div></section>
+      <% else %>
+        <% screen = help[:screen] %>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-bullseye"></i>Para que serve</h4>
+          <p><%= screen['purpose'] || help[:item][:desc] %></p>
+          <% if screen['when'] %><p class="help-when"><b>Quando usar:</b> <%= screen['when'] %></p><% end %>
+        </section>
+        <% if help[:group]&.dig(:aka) %>
+          <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-tag"></i>Nome novo</h4>
+            <p><%= help[:group][:label] %> é o nome novo do <%= help[:group][:aka] %>. Os envios continuam os mesmos.</p></section>
+        <% end %>
+        <% if screen['flow'] %>
+          <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-route"></i>Onde esta tela entra no envio</h4>
+            <ol class="steps">
+              <% help_data['flows'][screen['flow']].each do |name, text, id| %>
+                <li><% if id == help[:id] %><b><%= name %> (você está aqui)</b><% else %><%= name %><% end %>: <%= text %></li>
+              <% end %>
+            </ol></section>
+        <% end %>
+        <% if screen['actions'] %>
+          <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-hand-pointer"></i>Botões principais</h4>
+            <div class="action-list"><% screen['actions'].each do |action| %><span class="action-pill"><%= action %></span><% end %></div></section>
+        <% end %>
+        <% if screen['statuses'] %>
+          <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-circle-half-stroke"></i>Situações</h4>
+            <div class="def-list"><% screen['statuses'].each do |name, text, tone| %>
+              <div class="def" style="--c: <%= help_tone(tone) %>"><span class="sw"></span><span><b><%= name %>:</b> <%= text %></span></div>
+            <% end %></div></section>
+        <% end %>
+        <% if screen['terms'] %>
+          <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-book"></i>Termos desta tela</h4>
+            <div class="def-list"><% screen['terms'].each do |term, text| %>
+              <div class="def"><span class="sw" style="--c: var(--brand-400)"></span><span><b><%= term %>:</b> <%= text %></span></div>
+            <% end %></div></section>
+        <% end %>
+      <% end %>
+
+      <% if help[:perm] && Screen.definition(help[:perm]) %>
+        <% letters = current_user.actions_for(help[:perm]) %>
+        <% offered = Screen.acts(help[:perm]).chars %>
+        <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-user-lock"></i>O que você pode fazer aqui</h4>
+          <div class="act-chips">
+            <% offered.each do |letter| %>
+              <% action = Screen::ACTIONS[letter] %>
+              <span class="act-chip <%= letters.include?(letter) ? 'is-on' : 'is-off' %>" data-tip="<%= action[:help] %>">
+                <i class="<%= letters.include?(letter) ? action[:icon] : 'fas fa-lock' %>"></i><%= action[:label] %>
+              </span>
+            <% end %>
+          </div>
+          <% if Screen.location?(help[:perm]) %>
+            <div class="loc-line"><i class="fas fa-store"></i><div><b>Lojas:</b>
+              <% keys = current_user.allowed_location_keys %>
+              <% if keys.any? %><% keys.each do |key| %><span class="loc-chip"><%= User.location_name(key) %></span><% end %><% else %><span class="loc-chip is-none">Nenhuma loja liberada</span><% end %>
+            </div></div>
+          <% end %>
+          <p class="hint"><%= (offered - letters.chars).any? ? 'Os cadeados são ações que o seu perfil não tem. Peça ao administrador.' : 'Seu perfil tem todas as ações desta tela.' %></p>
+        </section>
+      <% end %>
+
+      <section class="help-sec" id="glossario" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-book-open"></i>Glossário do sistema</h4>
+        <div class="def-list"><% help_data['glossary'].each do |term, text| %>
+          <div class="def"><span class="sw" style="--c: var(--brand-400)"></span><span><b><%= term %>:</b> <%= text %></span></div>
+        <% end %></div></section>
+
+      <section class="help-sec" style="--i: <%= sections += 1 %>"><h4><i class="fas fa-life-ring"></i>Ainda com dúvida?</h4>
+        <div class="help-actions">
+          <button class="btn btn-secondary btn-sm" type="button" data-act="tour"><i class="fas fa-route"></i>Fazer o tour</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-act="map"><i class="fas fa-map"></i>Mapa do sistema</button>
+        </div>
+        <div class="support-card"><i class="fab fa-whatsapp"></i><div><b>Ajuda e suporte</b>Chame o suporte (Daniel) pelo WhatsApp.</div>
+          <%= link_to 'Chamar', NavigationHelper::SUPPORT_WHATSAPP, class: 'btn btn-secondary btn-sm', target: '_blank', rel: 'noopener' %></div>
+      </section>
+    </div>
+  </aside>
+</template>
+
+<template id="mapTemplate">
+  <div class="backdrop" data-close></div>
+  <section class="map" id="mapLayer" role="dialog" aria-label="Mapa do sistema">
+    <div class="map-head">
+      <div class="page-icon"><i class="fas fa-map"></i></div>
+      <div><h2>Mapa do sistema</h2><p>Todas as telas que o seu perfil abre, por área do negócio.</p></div>
+      <label class="search"><i class="fas fa-search"></i><input type="search" id="mapFilter" placeholder="Filtrar telas…" autocomplete="off"></label>
+      <button class="icon-btn" type="button" data-close aria-label="Fechar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="map-body">
+      <div class="map-sections">
+        <% nav_map.each do |entry| %>
+          <% area = entry[:area] %>
+          <div class="map-sec" style="<%= nav_area_style(area) %>">
+            <h3><span class="sb-area-ic lg"><i class="<%= area[:icon] %>"></i></span><span class="map-sec-t"><%= area[:title] %><small><%= area[:desc] %></small></span></h3>
+            <% entry[:groups].each do |group| %>
+              <div class="map-group">
+                <% if group[:label] %>
+                  <b><i class="<%= group[:icon] %>"></i><%= group[:label] %><% if group[:aka] %><i class="sb-aka"><%= group[:aka] %></i><% end %></b>
+                  <small><%= group[:desc] %></small>
+                <% end %>
+                <div class="map-items">
+                  <% group[:links].each do |link| %>
+                    <%= link_to nav_path(link), class: 'map-item', data: { filter: "#{link[:label]} #{link[:desc]} #{group[:label]}".downcase } do %>
+                      <i class="mi <%= link[:icon] %>"></i><span><b><%= link[:label] %></b><small><%= link[:desc] %></small></span>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script type="application/json" id="honeyData"><%= raw json_escape({ search: nav_search_data, tour: help_data['tour'] }.to_json) %></script>
+<div id="layers"></div>

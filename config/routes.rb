@@ -299,7 +299,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :companies, except: [:show]
+  resources :companies, except: [:show] do
+    member { patch :toggle_environment }
+  end
+  resources :operation_natures, except: [:show]
 
   resources :fiscal_products, only: [:index, :update] do
     member { post :import_from_tiny }
@@ -307,8 +310,15 @@ Rails.application.routes.draw do
   end
 
   resources :fiscal_notes, only: [:index, :show, :new, :create] do
+    collection do
+      get :shopify
+      post :create_from_shopify
+    end
     member do
       get :xml
+      get :danfe
+      post :transmit
+      post :consult
     end
   end
 
@@ -342,6 +352,7 @@ Rails.application.routes.draw do
     member do
       patch :toggle_admin
       patch :toggle_status
+      post :send_password_reset
     end
   end
 end

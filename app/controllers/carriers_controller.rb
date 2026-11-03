@@ -4,6 +4,7 @@ class CarriersController < ApplicationController
 
   def index
     @carriers = Carrier.order(:name)
+    @order_counts = B2bOrder.where.not(carrier_id: nil).group(:carrier_id).count
   end
 
   def new

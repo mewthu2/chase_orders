@@ -1,7 +1,10 @@
 require 'test_helper'
 require 'webmock/minitest'
+require 'minitest/mock'
+require_relative '../support/nfe_company_factory'
 
 class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
+  include NfeCompanyFactory
   GRAPHQL_URL = 'https://chasebrasil.myshopify.com/admin/api/2025-01/graphql.json'.freeze
   LEVELS_URL = %r{\Ahttps://chasebrasil\.myshopify\.com/admin/api/2025-01/inventory_levels\.json}
 
@@ -77,7 +80,20 @@ class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
     assert shipment.reload.aberto?
   end
 
+  # As duas lojas na mesma empresa (o cadastro não deixa, mas pode vir de antes): sem nota, só marca como enviada.
+  def same_company!
+    company = create_nfe_company
+    [@lagoa, @bh].each { |location| location.update_column(:company_id, company.id) }
+  end
+
+  def two_companies!
+    @bh.update!(company: create_nfe_company)
+    @lagoa.update!(company: create_nfe_company(legal_name: 'Chase Lagoa Ltda', cnpj: '45.723.174/0001-10', state_registration: '87654321'))
+    @product.update!(ncm: '61091000', cost: '20.00')
+  end
+
   test 'shipping requires reserved status, accepts a tracking code and only the origin manager (or admin) can do it' do
+    same_company!
     shipment = build_transfer(status: :reservado)
     manager = gerente('bh_shopping')
 
@@ -88,6 +104,50 @@ class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
     assert shipment.enviado?
     assert_equal 'BR123456789BR', shipment.tracking_code
     assert_equal manager, shipment.sent_by
+  end
+
+  test 'shipping between companies emits the transfer note first and keeps it on the shipment' do
+    two_companies!
+    shipment = build_transfer(status: :reservado)
+    authorize = ->(note, **) { note.update!(status: :autorizada); note }
+
+    Nfe::Transmitter.stub(:call, authorize) do
+      post ship_internal_transfer_shipment_path(shipment.internal_transfer, shipment), params: { tracking_code: 'BR1' }
+    end
+
+    note = shipment.fiscal_notes.sole
+    assert shipment.reload.enviado?
+    assert_equal @bh.company, note.company
+    assert_match(/NF-e nº #{note.number} autorizada/, flash[:notice])
+    follow_redirect!
+    assert_select '.transfer-note', text: /NF-e de transferência nº #{note.number} autorizada/
+  end
+
+  test 'a rejected transfer note keeps the shipment reserved and shows why' do
+    two_companies!
+    shipment = build_transfer(status: :reservado)
+    reject = ->(note, **) { note.update!(status: :rejeitada, sefaz_status_code: '225', error_message: 'Rejeição 225: falha no schema'); note }
+
+    Nfe::Transmitter.stub(:call, reject) do
+      post ship_internal_transfer_shipment_path(shipment.internal_transfer, shipment)
+    end
+
+    assert shipment.reload.reservado?
+    assert_match(/não foi autorizada \(Rejeição 225: falha no schema\)/, flash[:alert])
+    follow_redirect!
+    assert_select '.transfer-note.is-err', text: /Rejeição 225/
+    assert_select 'button', text: /Emitir nota e enviar/
+  end
+
+  test 'a store not linked to a company cannot ship' do
+    shipment = build_transfer(status: :reservado)
+
+    post ship_internal_transfer_shipment_path(shipment.internal_transfer, shipment)
+
+    assert shipment.reload.reservado?
+    assert_match(/ainda não está ligada a uma empresa/, flash[:alert])
+    follow_redirect!
+    assert_select '.transfer-note.is-warn', text: /não estão ligadas a uma empresa/
   end
 
   test 'shipping a shipment that is not reserved is refused' do

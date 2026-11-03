@@ -19,7 +19,7 @@ class CashbackUnificationsControllerTest < ActionDispatch::IntegrationTest
   test 'manager sees navigation, customer search and coupon form' do
     get cashback_unifications_path
     assert_response :success
-    assert_select 'a', text: 'Cupons de cashback'
+    assert_select '.sb-link .sb-label', text: 'Cupons de cashback'
     get new_cashback_unification_path, params: { search: 'Ana' }
     assert_response :success
     assert_select "input[name='customer_id'][value='#{@customer.id}']"

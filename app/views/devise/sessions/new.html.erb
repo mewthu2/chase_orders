@@ -18,7 +18,7 @@
           <%= f.password_field :password, autocomplete: 'current-password', required: true, class: 'form-control', placeholder: 'Digite sua senha' %>
           <button type="button" class="password-toggle" data-password-toggle aria-controls="<%= f.field_id(:password) %>" aria-label="Mostrar senha" aria-pressed="false" hidden>Mostrar</button>
         </div>
-        <p class="login-hint" data-caps-lock role="status" hidden>Caps Lock está ativado.</p>
+        <p class="login-hint" data-caps-lock role="status" hidden><i class="fas fa-exclamation-triangle"></i>Caps Lock está ativado.</p>
       </div>
 
       <div class="login-options">
@@ -34,7 +34,7 @@
       </div>
 
       <div class="form-actions">
-        <%= f.submit 'Entrar', class: 'btn btn-login', data: { disable_with: 'Entrando…', turbo_submits_with: 'Entrando…' } %>
+        <%= f.button type: 'submit', class: 'btn btn-primary btn-login', data: { disable_with: 'Entrando…', turbo_submits_with: 'Entrando…' } do %><span>Entrar</span><i class="fas fa-arrow-right"></i><% end %>
       </div>
     <% end %>
   </div>

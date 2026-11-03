@@ -6,14 +6,7 @@ class PlannerOrdersController < ApplicationController
   before_action :set_planner_order, only: [:show, :edit, :update, :transmit, :export_xlsx]
 
   def index
-    @per_page     = (params[:per_page] || 15).to_i
-    @current_page = (params[:page] || 1).to_i
-    offset        = (@current_page - 1) * @per_page
-
-    base_query             = filter_planner_orders
-    @total_planner_orders  = base_query.count
-    @total_pages           = (@total_planner_orders.to_f / @per_page).ceil
-    @planner_orders        = base_query.limit(@per_page).offset(offset)
+    @scope = PlannerOrder.includes(:user, :planner_order_items).order(created_at: :desc)
   end
 
   def new

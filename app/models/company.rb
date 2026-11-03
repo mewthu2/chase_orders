@@ -11,6 +11,10 @@ class Company < ApplicationRecord
   enum :environment, { producao: 1, homologacao: 2 }
 
   has_many :fiscal_notes, dependent: :restrict_with_error
+  has_many :operation_natures, dependent: :destroy
+  # A loja da empresa: na Transferência Interna, emite as notas das remessas que saem dela e recebe as que chegam.
+  has_one :location, dependent: :nullify
+  after_save :apply_location, if: -> { defined?(@location_choice) }
   has_one_attached :certificate
   encrypts :certificate_password
 
@@ -25,12 +29,21 @@ class Company < ApplicationRecord
   validates :cnpj, presence: true, uniqueness: true
   validates :state, inclusion: { in: STATES.keys }
   validates :tax_regime, inclusion: { in: TAX_REGIMES.keys }
-  validates :nfe_series, :next_nfe_number, numericality: { only_integer: true, greater_than: 0 }
+  validates :nfe_series, :next_nfe_number, :next_nfe_number_homologation, numericality: { only_integer: true, greater_than: 0 }
   validates :cfop_sale_in_state, :cfop_sale_out_of_state, :cfop_transfer_in_state, :cfop_transfer_out_of_state,
             format: { with: /\A\d{4}\z/, message: 'deve ter 4 dígitos' }
 
   scope :active, -> { where(active: true) }
   scope :ready_to_issue, -> { active.where('certificate_expires_at > ?', Time.current) }
+
+  def location_id
+    defined?(@location_choice) ? @location_choice : location&.id
+  end
+
+  # Escolha do formulário (vazio = nenhuma loja). Uma loja só tem uma empresa: escolher aqui tira ela da anterior.
+  def location_id=(value)
+    @location_choice = value.presence&.to_i
+  end
 
   def cnpj_formatted
     Nfe::Cnpj.format(cnpj)
@@ -52,11 +65,32 @@ class Company < ApplicationRecord
     active? && %i[valid expiring].include?(certificate_status)
   end
 
+  # Cada ambiente tem a sua numeração; a nota usa a do ambiente em que a empresa está agora.
+  def current_nfe_number
+    homologacao? ? next_nfe_number_homologation : next_nfe_number
+  end
+
+  def advance_nfe_number!(used_number)
+    column = homologacao? ? :next_nfe_number_homologation : :next_nfe_number
+    update_column(column, used_number + 1)
+  end
+
+  def environment_label
+    homologacao? ? 'Homologação' : 'Produção'
+  end
+
   def nfe_certificate
     Nfe::Certificate.new(certificate.download, certificate_password)
   end
 
   private
+
+  def apply_location
+    Location.where(company_id: id).where.not(id: @location_choice).update_all(company_id: nil)
+    Location.where(id: @location_choice).update_all(company_id: id) if @location_choice
+    remove_instance_variable(:@location_choice)
+    association(:location).reset
+  end
 
   def normalize_cnpj
     self.cnpj = Nfe::Cnpj.digits(cnpj)

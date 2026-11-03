@@ -1,0 +1,9 @@
+<%# Cadeia Setor › Responsabilidade › Responsáveis (telas de Adm dos chamados); here = passo atual. %>
+<% step = ->(n, color, title, text) { content_tag(:div, content_tag(:span, n, class: 'am-n') + content_tag(:div, content_tag(:b, title) + content_tag(:small, text)), class: 'am-step', style: "--c: #{color}; --i: #{n - 1}#{'; opacity: .62' unless here == n}") } %>
+<div class="access-model stagger">
+  <%= step.call(1, '#58a6ff', 'Setor', 'Agrupa os assuntos. Cada perfil enxerga os setores liberados.') %>
+  <i class="fas fa-chevron-right am-arrow"></i>
+  <%= step.call(2, '#e3b341', 'Responsabilidade', 'O assunto do chamado, com o prazo de resposta.') %>
+  <i class="fas fa-chevron-right am-arrow"></i>
+  <%= step.call(3, '#3fb950', 'Responsáveis', 'Quem responde e recebe o e-mail quando o chamado abre.') %>
+</div>

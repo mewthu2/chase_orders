@@ -154,7 +154,7 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
 
     get b2b_orders_path
     assert_select "form[action='#{b2b_order_path(free)}'] input[name=_method][value=delete]", count: 1
-    assert_select "form[action='#{b2b_order_path(in_tiny)}'][data-turbo-confirm*='CANCELADO no Tiny (nº 1900)'] input[name=_method][value=delete]", count: 1
+    assert_select "form[action='#{b2b_order_path(in_tiny)}'][data-hc-confirm*='CANCELADO no Tiny (nº 1900)'] input[name=_method][value=delete]", count: 1
     assert_select "form[action='#{b2b_order_path(with_note)}'] input[name=_method][value=delete]", count: 0
 
     get edit_b2b_order_path(free)
@@ -176,7 +176,7 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
 
     get b2b_orders_path
 
-    assert_select "form[action='#{b2b_order_path(order)}'][data-turbo-confirm*='não foi enviado ao Tiny']"
+    assert_select "form[action='#{b2b_order_path(order)}'][data-hc-confirm*='não foi enviado ao Tiny']"
   end
 
   test 'it requires the b2b_orders permission' do

@@ -1,0 +1,67 @@
+<% content_for :title, "Naturezas de Operação" %>
+<% statuses = { true => ['Ativa', 'green', 'Aparece para escolher ao gerar a nota.'], false => ['Inativa', 'gray', 'Guardada, mas fora da escolha. As notas antigas continuam.'] } %>
+<% kinds = { 'sale' => ['Venda', 'blue', 'Venda de mercadoria.'], 'transfer' => ['Transferência', 'purple', 'Transferência entre filiais da mesma empresa.'], 'other' => ['Outra', 'gray', 'Outros tipos de operação.'] } %>
+<% pct = ->(v) { "#{number_with_precision(v.to_f, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" } %>
+<% rows = @natures.map do |n|
+     { id: n.id, record: n, desc: n.description, empresa: n.company.trade_name.presence || n.company.legal_name, tipo: n.kind, padrao: n.default_for_kind,
+       cfop: n.cfop, cfopInter: n.cfop_interstate_non_contributor.presence || '—', icms: "#{n.icms_situation} · #{pct.call(n.icms_rate)}",
+       pis: "#{n.pis_cst} · #{pct.call(n.pis_rate)}", cofins: "#{n.cofins_cst} · #{pct.call(n.cofins_rate)}", difal: n.difal ? 'Sim' : 'Não',
+       consumidor: n.final_consumer ? 'Sim' : 'Não', obs: n.notes.presence || '—', st: n.active, notas: @note_counts[n.id].to_i, padraoTxt: n.default_for_kind ? 'Padrão do tipo' : '' }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'naturezas', unit1: 'natureza', page_size: 10,
+     tabs: { col: :st, items: [['', 'Todas'], ['true', 'Ativas'], ['false', 'Inativas']] },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :desc, label: 'Natureza', sub: :padraoTxt, sort: true },
+       { k: :padraoTxt, label: '', hide: true, nodetail: true },
+       { k: :empresa, label: 'Empresa', t: :tag, sort: true },
+       { k: :tipo, label: 'Tipo', t: :status, map: kinds },
+       { k: :cfop, label: 'CFOP', t: :mono, sub: :cfopInter },
+       { k: :cfopInter, label: 'CFOP para não contribuinte de outro estado', hide: true },
+       { k: :icms, label: 'ICMS (CST · alíquota)', cls: 'due' },
+       { k: :pis, label: 'PIS', hide: true },
+       { k: :cofins, label: 'COFINS', hide: true },
+       { k: :difal, label: 'Calcula DIFAL', hide: true },
+       { k: :consumidor, label: 'Consumidor final', hide: true },
+       { k: :obs, label: 'Informações complementares', hide: true },
+       { k: :notas, label: 'Notas', t: :qty, sort: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Descrição ou CFOP…', cols: %i[desc cfop empresa], tip: 'Procura na descrição, no CFOP e na empresa.' },
+       { id: :emp, type: :select, label: 'Empresa', col: :empresa, all: 'Todas as empresas' },
+       { id: :tipo, type: :select, label: 'Tipo', col: :tipo, all: 'Todos os tipos' }
+     ],
+     kpis: [
+       { label: 'Ativas', icon: 'fas fa-circle-check', tone: 'green', help: 'Aparecem ao gerar uma nota.', col: :st, val: true },
+       { label: 'De venda', icon: 'fas fa-cart-shopping', tone: 'blue', help: 'Usadas nas notas de venda.', col: :tipo, val: 'sale' },
+       { label: 'De transferência', icon: 'fas fa-right-left', tone: 'purple', help: 'Usadas entre filiais.', col: :tipo, val: 'transfer' },
+       { label: 'Sem uso ainda', icon: 'fas fa-box-open', tone: 'yellow', help: 'Nunca entraram em uma nota. Estas dá para excluir.', col: :notas, val: 0 }
+     ]) %>
+
+<%= hc_page_header 'Naturezas de Operação', 'CFOP e textos de cada tipo de operação da nota.', icon: 'fas fa-tags' do %>
+  <% if screen_can?(:companies, :create) %>
+    <%= link_to new_operation_nature_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova natureza<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Naturezas de operação', icon: 'fas fa-tags', meta: 'Cada empresa tem as suas. A marcada como padrão do tipo é a escolhida automaticamente ao gerar a nota.',
+        empty: { title: 'Nenhuma natureza cadastrada', text: 'Cadastre a natureza de venda e a de transferência de cada empresa emissora.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova natureza']), new_operation_nature_path, class: 'btn btn-export') if screen_can?(:companies, :create)) },
+        detail: { title: ->(r) { r[:desc] }, note: 'Estes dados vão para cada nota emitida com esta natureza.' },
+        actions: ->(r) {
+          nature = r[:record]
+          next ''.html_safe unless screen_can?(:companies, :edit)
+
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_operation_nature_path(nature)),
+            (r[:st] ? hc_row_action('fas fa-toggle-off', 'Desativar', operation_nature_path(nature), method: :patch, params: { operation_nature: { active: false } },
+                                    confirm: { title: "Desativar #{r[:desc]}?", text: 'Ela sai da escolha ao gerar uma nota. As notas que já existem continuam. Dá para ativar de novo.' })
+                    : hc_row_action('fas fa-toggle-on', 'Ativar', operation_nature_path(nature), method: :patch, params: { operation_nature: { active: true } })),
+            (hc_row_action('fas fa-trash', 'Excluir', operation_nature_path(nature), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:desc]}?", text: 'Nenhuma nota usou esta natureza, por isso ela pode ser excluída. Não dá para desfazer.', ok: 'Excluir' }) if r[:notas].zero?)
+          ].compact)
+        }) %>
+</div>

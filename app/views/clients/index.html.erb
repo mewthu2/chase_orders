@@ -1,130 +1,64 @@
-<% content_for :title, "Clientes" %>
+<% content_for :title, "Cadastro de Clientes" %>
+<% ie_labels = { 1 => 'Contribuinte do ICMS', 2 => 'Contribuinte isento', 9 => 'Não contribuinte' } %>
+<% rows = @clients.map do |c|
+     { id: c.id, record: c, resp: c.responsible_name, razao: c.business_name.presence || '—', cnpj: c.respond_to?(:cnpj_formatted) ? c.cnpj_formatted : c.registration,
+       cidade: c.city.presence || '—', uf: c.state.presence || '—', fone: c.phone.presence || '—', ie: c.state_registration.presence || '—', ped: @order_counts[c.id].to_i,
+       im: c.municipal_registration.presence || '—', email: c.email.presence || '—', cep: c.zip.presence || '—', rua: c.street.presence || '—', num: c.number.presence || '—',
+       bairro: c.neighbourhood.presence || '—', ibge: c.city_ibge_code.presence || '—', indie: ie_labels[c.ie_indicator], vinc: @linked_ids.include?(c.id) ? '1' : '0', criado: c.created_at }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'clientes', unit1: 'cliente', page_size: 8, sort: { k: :resp, dir: 1 },
+     cols: [
+       { k: :id, label: 'Código', t: :num, plain: true, hide: true },
+       { k: :resp, label: 'Responsável', main: true, sort: true },
+       { k: :razao, label: 'Razão social' },
+       { k: :cnpj, label: 'CNPJ ou CPF', t: :mono, cls: 'due' },
+       { k: :cidade, label: 'Cidade / UF', sub: :uf, sort: true },
+       { k: :uf, label: 'UF', hide: true },
+       { k: :fone, label: 'Telefone', cls: 'due' },
+       { k: :ie, label: 'Insc. estadual' },
+       { k: :ped, label: 'Pedidos', t: :qty, hide: true },
+       { k: :im, label: 'Insc. municipal', hide: true },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :cep, label: 'CEP', hide: true },
+       { k: :rua, label: 'Rua', hide: true },
+       { k: :num, label: 'Número', hide: true },
+       { k: :bairro, label: 'Bairro', hide: true },
+       { k: :ibge, label: 'Código IBGE', hide: true },
+       { k: :indie, label: 'Indicador de IE', hide: true },
+       { k: :vinc, label: 'Tem pedido', hide: true, nodetail: true },
+       { k: :criado, label: 'Cadastrado em', t: :dt, hide: true }
+     ],
+     filters: [{ id: :q, type: :search, label: 'Buscar cliente', ph: 'Nome, razão social ou CNPJ…', cols: %i[resp razao cnpj], tip: 'Procura pelo nome do responsável, pela razão social ou pelo CNPJ. Pode digitar só um pedaço.' }],
+     kpis: [
+       { label: 'Clientes cadastrados', icon: 'fas fa-address-book', tone: 'yellow', help: 'Lojistas e empresas do atacado.' },
+       { label: 'Com pedidos', icon: 'fas fa-file-invoice-dollar', tone: 'green', help: 'Já compraram. Não podem ser excluídos.', col: :vinc, val: '1' },
+       { label: 'Sem pedido ainda', icon: 'fas fa-user-clock', tone: 'gray', help: 'Cadastrados, mas ainda não compraram.', col: :vinc, val: '0' },
+       { label: 'Estados atendidos', icon: 'fas fa-map-location-dot', tone: 'blue', help: 'Onde os lojistas estão.', text: "#{rows.map { |r| r[:uf] }.reject { |uf| uf == '—' }.uniq.size} estados" }
+     ]) %>
 
-<div class="clients-container">
+<%= hc_page_header 'Cadastro de Clientes', 'Lojistas e empresas que compram no atacado', icon: 'fas fa-address-book' do %>
+  <% if screen_can?(:clients, :create) %>
+    <%= link_to new_client_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo cliente<% end %>
+  <% end %>
+<% end %>
 
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-users me-2"></i>Clientes
-      </h1>
-      <small class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-      </small>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-user me-1"></i><%= @clients.total_count rescue @clients.size %> cliente(s)
-      </span>
-      <%= link_to new_client_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Novo Cliente
-      <% end %>
-    </div>
-  </div>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Quem aparece aqui.</strong> Lojistas e empresas que compram no atacado. As consumidoras da loja online ficam em Ecommerce › Clientes.</div></div>
 
-  <%# ===== FILTRO / BUSCA ===== %>
-  <div class="filters-panel">
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-search me-1"></i>Buscar cliente
-      </label>
-      <%= form_with url: clients_path, method: :get, local: true do |f| %>
-        <div class="search-row">
-          <%= f.text_field :q,
-              value: params[:q],
-              class: "search-input",
-              placeholder: "Nome, razão social ou CNPJ...",
-              autofocus: !params[:q].present? %>
-          <%= f.submit "Buscar", class: "btn-primary-sm" %>
-          <% if params[:q].present? %>
-            <%= link_to clients_path, class: "btn-clear" do %>
-              <i class="fas fa-times me-1"></i>Limpar
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== TABELA ===== %>
-  <div class="table-card">
-    <div class="table-card-header">
-      <h5 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Clientes
-      </h5>
-      <% if params[:q].present? %>
-        <div class="active-filters-row">
-          <span class="filter-tag filter-tag--gray">
-            <i class="fas fa-search me-1"></i>"<%= params[:q] %>"
-          </span>
-        </div>
-      <% end %>
-    </div>
-
-    <% if @clients.any? %>
-      <div class="table-responsive">
-        <table class="clients-table">
-          <thead>
-            <tr>
-              <th>Responsável</th>
-              <th>Razão Social</th>
-              <th>CNPJ</th>
-              <th>Cidade / UF</th>
-              <th>Telefone</th>
-              <th>Insc. Estadual</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @clients.each do |client| %>
-              <tr>
-                <td class="text-main fw-semibold"><%= client.responsible_name %></td>
-                <td class="text-muted-custom"><%= client.business_name.presence || "—" %></td>
-                <td>
-                  <span class="cnpj-badge"><%= client.cnpj_formatted.presence || "—" %></span>
-                </td>
-                <td class="text-muted-custom">
-                  <%= [client.city, client.state].compact.join(' / ').presence || "—" %>
-                </td>
-                <td class="text-muted-custom"><%= client.phone.presence || "—" %></td>
-                <td class="text-muted-custom"><%= client.state_registration.presence || "—" %></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_client_path(client), class: "action-btn action-btn--edit" do %>
-                      <i class="fas fa-pencil-alt"></i>
-                    <% end %>
-                    <%= button_to client_path(client), method: :delete,
-                        class: "action-btn action-btn--danger",
-                        form: { data: { turbo_confirm: "Deseja remover #{client.display_name}?" } } do %>
-                      <i class="fas fa-trash"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-users fa-3x mb-3 d-block"></i>
-        <% if params[:q].present? %>
-          <h5>Nenhum cliente encontrado</h5>
-          <p>Nenhum resultado para "<strong><%= params[:q] %></strong>"</p>
-          <%= link_to clients_path, class: "btn-clear" do %>
-            <i class="fas fa-times me-1"></i>Limpar busca
-          <% end %>
-        <% else %>
-          <h5>Nenhum cliente cadastrado</h5>
-          <p>Comece cadastrando o primeiro cliente</p>
-          <%= link_to new_client_path, class: "btn-export" do %>
-            <i class="fas fa-plus me-1"></i>Novo Cliente
-          <% end %>
-        <% end %>
-      </div>
-    <% end %>
-  </div>
-
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de clientes', icon: 'fas fa-address-book', meta: 'Os pedidos de atacado e a nota fiscal usam estes dados. Em ordem de nome do responsável.',
+        empty: { title: 'Nenhum cliente cadastrado', text: 'Comece cadastrando o primeiro lojista. Depois ele aparece na busca dos pedidos de atacado.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Novo cliente']), new_client_path, class: 'btn btn-export') if screen_can?(:clients, :create)) },
+        detail: { title: ->(r) { r[:resp] }, note: 'Os pedidos de atacado e a nota fiscal usam estes dados. Pedido que já foi para o Tiny não muda se você editar o cadastro depois.' },
+        actions: ->(r) {
+          client = r[:record]
+          safe_join([
+            (hc_row_action('fas fa-pencil', 'Editar', edit_client_path(client)) if screen_can?(:clients, :edit)),
+            (if screen_can?(:clients, :destroy)
+               r[:vinc] == '0' ? hc_row_action('fas fa-trash', 'Excluir', client_path(client), danger: true, method: :delete,
+                                               confirm: { title: "Excluir #{r[:resp]}?", text: 'O cadastro some da lista e da busca dos pedidos. Só dá para excluir quem nunca teve pedido nem catálogo.', ok: 'Excluir cliente' })
+                               : content_tag(:span, content_tag(:i, '', class: 'fas fa-lock'), class: 'action-btn', data: { tip: 'Tem pedido: não dá para excluir' }, 'aria-label': 'Tem pedido: não dá para excluir')
+             end)
+          ].compact)
+        }) %>
 </div>
-

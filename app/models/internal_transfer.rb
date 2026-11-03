@@ -42,6 +42,29 @@ class InternalTransfer < ApplicationRecord
     end
   end
 
+  STAGE_FILTERS = %w[origin on_the_way].freeze
+
+  # Aprovadas com alguma remessa esperando a loja de origem (reservar ou enviar) ou já enviada
+  # e esperando a loja de destino receber.
+  def self.at_stage(stage)
+    statuses = stage.to_s == 'origin' ? %w[aberto reservado] : %w[enviado]
+    approval_aprovada.where(id: InternalTransferShipment.where(status: statuses).select(:internal_transfer_id))
+  end
+
+  # Etapa do pedido de 1 a 5 (pedida, aprovada, reservada, enviada, recebida), pela remessa mais
+  # atrasada. error marca onde parou quando foi reprovada ou cancelada.
+  STAGE_BY_SHIPMENT = { 'aberto' => 2, 'reservado' => 3, 'enviado' => 4, 'recebido' => 5 }.freeze
+
+  def stage
+    return [1, false] if approval_pendente?
+    return [1, true] if approval_reprovada?
+
+    active = shipments.map(&:status) - ['cancelado']
+    return [2, true] if active.empty?
+
+    [active.map { |status| STAGE_BY_SHIPMENT.fetch(status) }.min, false]
+  end
+
   # Busca pelo número, observação, solicitante, código de rastreio ou produto (SKU/nome).
   def self.search(query)
     text = query.to_s.strip

@@ -1,0 +1,44 @@
+<%# Execução em lote dos pedidos marcados (mesma regra de antes) e atualização automática da fila. %>
+<% content_for :scripts do %>
+  <%= render 'dashboard/run_now_script' %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var selected = new Map();
+      var bar = document.querySelector('.pg-bulk');
+      function refresh () {
+        var btn = document.getElementById('bulkRunBtn');
+        if (!btn) return;
+        document.getElementById('bulkRunCount').textContent = selected.size;
+        btn.disabled = selected.size === 0;
+        if (bar) bar.classList.toggle('is-on', selected.size > 0);
+      }
+      document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('row-select-checkbox')) {
+          if (e.target.checked) selected.set(e.target.dataset.id, e.target.dataset.tinyOrderId); else selected.delete(e.target.dataset.id);
+          refresh();
+        }
+        if (e.target.id === 'selectAllCheckbox') {
+          document.querySelectorAll('.row-select-checkbox').forEach(function (cb) {
+            cb.checked = e.target.checked;
+            if (cb.checked) selected.set(cb.dataset.id, cb.dataset.tinyOrderId); else selected.delete(cb.dataset.id);
+          });
+          refresh();
+        }
+      });
+      var clear = document.getElementById('bulkClearBtn');
+      if (clear) clear.addEventListener('click', function () {
+        selected.clear();
+        document.querySelectorAll('.row-select-checkbox, #selectAllCheckbox').forEach(function (cb) { cb.checked = false; });
+        refresh();
+      });
+      var btn = document.getElementById('bulkRunBtn');
+      if (btn) btn.addEventListener('click', function () {
+        var items = Array.from(selected.entries()).map(function (pair) { return { id: pair[0], tinyOrderId: pair[1] }; });
+        runQueueItemsBulk(<%= raw run_now_path.to_json %>, items, <%= raw bulk_message.to_json %>);
+      });
+      setInterval(function () {
+        if (document.visibilityState === 'visible' && !runNowIsBusy() && selected.size === 0 && !document.querySelector('#layers .drawer, #layers .hc-modal')) location.reload();
+      }, <%= within_schedule? ? 30000 : 300000 %>);
+    });
+  </script>
+<% end %>

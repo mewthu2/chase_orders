@@ -5,7 +5,8 @@ class TicketResponsability < ApplicationRecord
   has_many :tickets, dependent: :restrict_with_error
   belongs_to :ticket_sector
   has_many :ticket_responsability_users, dependent: :destroy
-  has_many :users, through: :ticket_responsability_users
+  # validate: false: aqui só se escolhe quem responde; o cadastro de cada usuário não é revalidado ao salvar.
+  has_many :users, through: :ticket_responsability_users, validate: false
 
   validates :name, presence: true, uniqueness: true
   validates :response_time_hours, numericality: { only_integer: true, greater_than: 0 }

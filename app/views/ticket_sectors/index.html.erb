@@ -1,57 +1,58 @@
-<% content_for :title, "Setores" %>
+<% content_for :title, "Setores de chamados" %>
+<% statuses = { true => ['Ativo', 'green', 'Aparece ao abrir um chamado.'],
+                false => ['Inativo', 'gray', 'Desligado. As responsabilidades dele não aparecem ao abrir um chamado.'] } %>
+<% rows = @sectors.map do |sector|
+     resps = sector.ticket_responsabilities
+     people = resps.flat_map(&:users).select(&:active?).uniq
+     { id: sector.id, record: sector, nome: sector.name, desc: sector.description.to_s, st: sector.active, resps: resps.size, pessoas: people.size,
+       perfis: (sector.profiles.map(&:name).presence || ['Só administradores']),
+       respNomes: resps.map(&:name).join(', ').presence || 'Nenhuma ainda', pessoasNomes: people.map(&:name).join(', ').presence || 'Nenhuma ainda' }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'setores', unit1: 'setor', page_size: 10, sort: { k: :nome, dir: 1 },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :nome, label: 'Setor', sub: :desc, sort: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :resps, label: 'Responsabilidades', t: :qty, sort: true },
+       { k: :pessoas, label: 'Pessoas', t: :qty },
+       { k: :perfis, label: 'Perfis que enxergam', t: :chips },
+       { k: :desc, label: 'Descrição', hide: true },
+       { k: :respNomes, label: 'Responsabilidades do setor', hide: true },
+       { k: :pessoasNomes, label: 'Pessoas responsáveis', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Nome ou descrição do setor…', cols: %i[nome desc respNomes], tip: 'Procura no nome, na descrição e no nome das responsabilidades.' },
+       { id: :st, type: :select, label: 'Situação', col: :st, options: [['true', 'Ativos'], ['false', 'Inativos']], all: 'Todos', tip: 'Setor inativo não aparece ao abrir um chamado.' }
+     ],
+     kpis: [
+       { label: 'Setores ativos', icon: 'fas fa-building-circle-check', tone: 'green', help: 'Aparecem ao abrir um chamado.', col: :st, val: true },
+       { label: 'Áreas de chamado', icon: 'fas fa-sitemap', tone: 'blue', help: 'Responsabilidades, somando todos os setores.', col: :st, vals: [true, false], sum: :resps, static: true },
+       { label: 'Pessoas responsáveis', icon: 'fas fa-user-check', tone: 'purple', help: 'Gente ativa que responde chamados.', count: @sectors.flat_map { |s| s.ticket_responsabilities.flat_map(&:users) }.select(&:active?).uniq.size },
+       { label: 'Setores vazios', icon: 'fas fa-box-open', tone: 'yellow', help: 'Sem nenhuma responsabilidade. Estes dá para excluir.', col: :resps, val: 0 }
+     ]) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-building me-2"></i>Setores</h1>
-      <p class="page-subtitle">Agrupam as responsabilidades; em Perfis e Permissões você escolhe quais setores cada perfil enxerga</p>
-    </div>
-    <div class="header-actions">
-      <%= link_to new_ticket_sector_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Novo Setor<% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Setores de chamados', 'Agrupam as responsabilidades. Cada perfil enxerga só os setores liberados para ele.', icon: 'fas fa-building' do %>
+  <%= link_to ticket_responsabilities_path, class: 'btn btn-secondary' do %><i class="fas fa-sitemap"></i>Responsabilidades<% end %>
+  <%= link_to new_ticket_sector_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo setor<% end %>
+<% end %>
 
-  <div class="table-card">
-    <% if @sectors.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Descrição</th>
-              <th>Responsabilidades</th>
-              <th>Perfis que enxergam</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @sectors.each do |sector| %>
-              <tr>
-                <td class="text-main"><%= sector.name %></td>
-                <td class="text-muted-custom"><%= truncate(sector.description, length: 90) %></td>
-                <td class="text-muted-custom"><%= sector.ticket_responsabilities.map(&:name).sort.to_sentence.presence || '—' %></td>
-                <td class="text-muted-custom"><%= sector.profiles.map(&:name).sort.to_sentence.presence || 'Só administradores' %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= sector.active? ? 'status-pill--active' : 'status-pill--inactive' %>"><%= sector.active? ? 'Ativo' : 'Inativo' %></span>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_ticket_sector_path(sector), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <%= button_to ticket_sector_path(sector), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",
-                                  form: { onsubmit: "return confirm('Excluir este setor?')" } do %><i class="fas fa-trash"></i><% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="ticket-empty">
-        <i class="fas fa-building"></i>
-        <p>Nenhum setor cadastrado ainda.</p>
-      </div>
-    <% end %>
-  </div>
+<div class="pg-blocks">
+  <%= render 'shared/ticket_chain', here: 1 %>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Setores', icon: 'fas fa-building', meta: 'Setor com responsabilidades não pode ser excluído: desative em vez de excluir.',
+        empty: { title: 'Nenhum setor cadastrado', text: 'Crie o primeiro setor para organizar as responsabilidades dos chamados.',
+                 cta: link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Novo setor']), new_ticket_sector_path, class: 'btn btn-export') },
+        detail: { title: ->(r) { r[:nome] }, note: 'Para escolher quais perfis enxergam este setor, vá em Perfis e Permissões.',
+                  fields: [['Quantas responsabilidades', :resps], ['Quantas pessoas respondem', :pessoas], ['Quais responsabilidades', :respNomes], ['Quem são as pessoas', :pessoasNomes]] },
+        actions: ->(r) {
+          sector = r[:record]
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_ticket_sector_path(sector)),
+            (r[:st] ? hc_row_action('fas fa-toggle-off', 'Desativar', ticket_sector_path(sector), method: :patch, params: { ticket_sector: { active: false } },
+                                    confirm: { title: "Desativar o setor #{r[:nome]}?", text: 'As responsabilidades dele deixam de aparecer ao abrir um chamado. Os chamados que já existem continuam normalmente. Dá para ativar de novo.' })
+                    : hc_row_action('fas fa-toggle-on', 'Ativar', ticket_sector_path(sector), method: :patch, params: { ticket_sector: { active: true } })),
+            (hc_row_action('fas fa-trash', 'Excluir', ticket_sector_path(sector), danger: true, method: :delete,
+                           confirm: { title: "Excluir o setor #{r[:nome]}?", text: 'Ele não tem nenhuma responsabilidade, por isso pode ser excluído. Não dá para desfazer.', ok: 'Excluir setor' }) if r[:resps].zero?)
+          ].compact)
+        }) %>
 </div>

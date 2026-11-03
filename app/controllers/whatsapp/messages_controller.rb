@@ -3,7 +3,7 @@ module Whatsapp
     before_action :require_attendance
     before_action :set_conversation
     def index
-      scope = @conversation.messages
+      scope = @conversation.messages.includes(:user, :media) # autor e anexo de cada mensagem
       if params[:after_id].present?
         fresh = scope.where('id > ?', params[:after_id].to_i).order(:id).limit(100).to_a
         known = scope.where(id: Array(params[:ids]).first(200)).to_a

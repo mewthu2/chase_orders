@@ -1,6 +1,6 @@
 class MarketingTasksController < ApplicationController
   before_action :set_task, only: [:show, :update, :start_work, :mark_converted, :mark_not_converted, :add_note]
-  guard_screen :marketing_tasks
+  guard_screen :marketing_tasks, actions: { add_note: :edit }
   before_action :redirect_agent_from_dashboard, only: [:index, :dashboard]
 
   def index

@@ -23,7 +23,7 @@ class UserPhotosControllerTest < ActionDispatch::IntegrationTest
     assert @user.reload.avatar.attached?
     assert_equal 'image/png', @user.avatar.blob.content_type
     get edit_user_path(@user)
-    assert_select '.nav-user .user-avatar img'
+    assert_select '.user-menu .avatar.has-photo img'
     assert_select '[data-photo-preview]:not([hidden])'
     assert_select "input[name='user[remove_avatar]']"
   end
@@ -59,8 +59,8 @@ class UserPhotosControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     refute @user.reload.avatar.attached?
     get edit_user_path(@user)
-    assert_select '.nav-user .user-avatar img', count: 0
-    assert_select '.nav-user .user-avatar [aria-label="Sem foto de perfil"]'
+    assert_select '.user-menu .avatar img', count: 0
+    assert_select '.user-menu .avatar:not(.has-photo)', text: /\A\s*[A-Z]{1,2}\s*\z/
   end
 
   test 'a failed profile update does not remove the saved photo' do
@@ -81,7 +81,7 @@ class UserPhotosControllerTest < ActionDispatch::IntegrationTest
     patch user_path(@user), params: { user: { avatar: invalid_photo } }
 
     assert_response :unprocessable_entity
-    assert_select '.alert-danger', text: /Foto de perfil deve ser uma imagem JPG, PNG ou WEBP/
+    assert_select '.pg-fnote.is-warn', text: /Foto de perfil deve ser uma imagem JPG, PNG ou WEBP/
     assert_equal original_blob, @user.reload.avatar.blob
   end
 
@@ -127,7 +127,7 @@ class UserPhotosControllerTest < ActionDispatch::IntegrationTest
     created_user = User.find_by!(email: 'nova_foto@example.com')
     assert created_user.avatar.attached?
     get users_path
-    assert_select '.user-name-cell img[alt="Foto de Com Foto"]'
+    assert_select '.person img[alt="Foto de Com Foto"]'
     get user_path(created_user)
     assert_select '.user-avatar--large img[alt="Foto de Com Foto"]'
   end

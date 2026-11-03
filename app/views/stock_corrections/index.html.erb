@@ -1,319 +1,164 @@
-<div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center flex-wrap">
-          <div>
-            <h4 class="text-white mb-1">
-              <i class="fas fa-clipboard-check me-2"></i>Conferências de Estoque
-            </h4>
-            <small class="text-white-50">
-              <i class="fas fa-clock me-1"></i>
-              Última atualização: <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-            </small>
-          </div>
-          <div class="d-flex gap-2 flex-wrap">
-            <%= link_to new_stock_correction_path, class: "btn btn-success" do %>
-              <i class="fas fa-plus me-1"></i>Nova Conferência
-            <% end %>
-            <%= link_to inventory_products_path, class: "btn btn-info" do %>
-              <i class="fas fa-boxes me-1"></i>Inventário
-            <% end %>
-          </div>
-        </div>
-        
-      </div>
-    </div>
-  </div>
-   <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-chart-line me-2"></i>Acurácia de Estoque por Localidade
-          </h5>
-        </div>
+<% content_for :title, "Controle de Estoque" %>
+<% filters = params.permit(:q, :location, :status, :period, :kpi, :sort, :dir).to_h.compact_blank %>
+<% list_filters = filters.except('sort', 'dir') %>
+<% filtered = list_filters.any? %>
+<% clear_url = stock_corrections_path(filters.slice('sort', 'dir')) %>
+<% kpi_url = ->(key, value) { stock_corrections_path(filters.except('status', 'kpi').merge(key => (filters[key] == value ? nil : value)).compact) } %>
+<% statuses = { 'pending' => ['Pendente', 'yellow', 'Conferência em andamento. Ainda dá para contar produtos e corrigir o estoque.'],
+                'executed' => ['Executada', 'green', 'Conferência finalizada. As correções já foram aplicadas no Shopify.'] } %>
+<% shop_states = { 'ok' => ['Aplicadas', 'green'], 'final' => ['Aplicadas', 'green'], 'erro' => ['Erro no Shopify', 'red'], 'vazio' => ['Sem correções', 'gray'] } %>
+<% accuracy_states = { 'boa' => ['Boa', 'green', '95% ou mais dos itens estavam certos.'], 'atencao' => ['Atenção', 'yellow', 'De 85% a 94% dos itens estavam certos.'],
+                       'baixa' => ['Baixa', 'red', 'Menos de 85% dos itens estavam certos. Vale uma nova conferência.'], 'nd' => ['KPI não calculado', 'gray', 'A location ainda não tem conferência para calcular.'] } %>
+<% location_options = current_user.available_locations_for_user %>
+<% locs = current_user.admin? ? :all : location_options.map(&:first) %>
 
-        <div class="card-body bg-black">
-          <div class="row g-3">
-            <% @locations_kpi.each do |location| %>
-              <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                <div class="card bg-dark border-secondary h-100 text-center">
-                  <div class="card-body py-3 px-2">
-
-                    <i class="fas fa-store text-info mb-2"></i>
-
-                    <div class="text-white fw-semibold small mb-1">
-                      <%= location.name %>
-                    </div>
-
-                    <% if location.kpi_ratio.present? %>
-                      <div class="fw-bold fs-5
-                        <%= location.kpi_ratio >= 95 ? 'text-success' :
-                            location.kpi_ratio >= 85 ? 'text-warning' :
-                            'text-danger' %>">
-                        <%= number_to_percentage(location.kpi_ratio, precision: 0) %>
-                      </div>
-
-                      <small class="text-white-50">
-                        <%= location.kpi_updated_at&.strftime('%d/%m %H:%M') %>
-                      </small>
-                    <% else %>
-                      <span class="badge bg-secondary mt-2">
-                        KPI não calculado
-                      </span>
-                    <% end %>
-
-                  </div>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-body bg-black">
-          <%= form_with url: stock_corrections_path, method: :get, local: true, 
-                        class: "row g-3 align-items-end" do |f| %>
-            <div class="col-md-3">
-              <label class="form-label text-white fw-bold">Location</label>
-              <%= f.select :location, 
-                          options_for_select(current_user.available_locations_for_user, params[:location]),
-                          { include_blank: "Todas as locations" },
-                          { class: "form-select bg-dark text-white border-dark" } %>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label text-white fw-bold">Status</label>
-              <%= f.select :status, 
-                          options_for_select([
-                            ['Todos', ''],
-                            ['Pendente', 'pending'],
-                            ['Executada', 'executed']
-                          ], params[:status]),
-                          {},
-                          { class: "form-select bg-dark text-white border-dark" } %>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label text-white fw-bold">Data</label>
-              <%= f.date_field :date_filter, 
-                               value: params[:date_filter],
-                               class: "form-control bg-dark text-white border-dark" %>
-            </div>
-            <div class="col-md-1">
-              <%= f.submit "Filtrar", class: "btn btn-primary w-100" %>
-            </div>
-            <div class="col-md-2">
-              <%= link_to stock_corrections_path, class: "btn btn-outline-light w-100" do %>
-                <i class="fas fa-times me-1"></i>Limpar
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-list me-2"></i>Lista de Conferências
-          </h5>
-          <span class="badge bg-info text-dark px-3 py-2">
-            <i class="fas fa-clipboard-check me-1"></i>
-            <%= @total_corrections %> conferência(s)
-          </span>
-        </div>
-        
-        <div class="card-body bg-black p-0">
-          <% if @stock_corrections.any? %>
-            <div class="table-responsive">
-              <table class="table table-dark table-hover mb-0">
-                <thead class="bg-dark">
-                  <tr>
-                    <th class="text-white fw-bold px-3 py-3">ID</th>
-                    <th class="text-white fw-bold px-3 py-3">Location</th>
-                    <th class="text-white fw-bold px-3 py-3">Motivo</th>
-                    <th class="text-white fw-bold px-3 py-3">Data da Conferência</th>
-                    <th class="text-white fw-bold px-3 py-3">Status</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Itens</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Correções</th>
-                    <th class="text-white fw-bold px-3 py-3">Criada em</th>
-                    <th class="text-white fw-bold px-3 py-3 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% @stock_corrections.each do |correction| %>
-                    <tr class="border-secondary">
-                      <td class="px-3 py-3">
-                        <span class="text-white font-monospace">
-                          #<%= correction.id %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3">
-                        <span class="badge bg-secondary text-white px-2 py-1">
-                          <%= User.location_name(correction.location) %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3">
-                        <%= correction.reason %>
-                      </td>
-                      <td class="px-3 py-3">
-                        <span class="text-white">
-                          <%= correction.correction_date&.strftime('%d/%m/%Y') || 'N/A' %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3">
-                        <% case correction.status %>
-                        <% when 'executed' %>
-                          <span class="badge bg-success px-2 py-1">
-                            <i class="fas fa-check me-1"></i>Executada
-                          </span>
-                        <% when 'pending', nil %>
-                          <span class="badge bg-warning text-dark px-2 py-1">
-                            <i class="fas fa-hourglass-half me-1"></i>Pendente
-                          </span>
-                        <% else %>
-                          <span class="badge bg-secondary px-2 py-1">
-                            <%= correction.status&.humanize || 'N/A' %>
-                          </span>
-                        <% end %>
-                      </td>
-                      <td class="px-3 py-3 text-center">
-                        <span class="text-white">
-                          <%= correction.stock_correction_items.count %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3 text-center">
-                        <span class="badge bg-info text-dark px-2 py-1">
-                          <%= correction.stock_correction_items.where(needs_correction: true).count %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3">
-                        <span class="text-white-50">
-                          <%= correction.created_at.strftime('%d/%m/%Y %H:%M') %>
-                        </span>
-                      </td>
-                      <td class="px-3 py-3 text-center">
-                        <div class="btn-group" role="group">
-                          <%= link_to correction, class: "btn btn-outline-info btn-sm", title: "Visualizar" do %>
-                            <i class="fas fa-eye"></i>
-                          <% end %>
-                          
-                          <% if correction.status != 'executed' || current_user.admin? %>
-                            <%= link_to edit_stock_correction_path(correction), class: "btn btn-outline-warning btn-sm", title: "Editar" do %>
-                              <i class="fas fa-edit"></i>
-                            <% end %>
-                          <% end %>
-                          
-                          <% if current_user.admin? %>
-                            <%= button_to stock_correction_path(correction), 
-                                          method: :delete,
-                                          data: { 
-                                            confirm: "Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita.",
-                                            turbo_confirm: "Tem certeza que deseja excluir esta conferência? Esta ação não pode ser desfeita."
-                                          },
-                                          class: "btn btn-outline-danger btn-sm", 
-                                          title: "Excluir",
-                                          form: { style: "display: inline;" } do %>
-                              <i class="fas fa-trash"></i>
-                            <% end %>
-                          <% end %>
-                          
-                          <% if correction.status == 'executed' && current_user.admin? %>
-                            <%= link_to reopen_stock_correction_path(correction), 
-                                        method: :patch,
-                                        data: { 
-                                          confirm: "Tem certeza que deseja reabrir esta conferência?",
-                                          turbo_method: :patch
-                                        },
-                                        class: "btn btn-outline-secondary btn-sm", 
-                                        title: "Reabrir" do %>
-                              <i class="fas fa-undo"></i>
-                            <% end %>
-                          <% end %>
-                        </div>
-                      </td>
-                    </tr>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
-          <% else %>
-            <div class="text-center py-5">
-              <i class="fas fa-clipboard-check fa-3x text-white-50 mb-3"></i>
-              <h5 class="text-white-50">Nenhuma conferência encontrada</h5>
-              <p class="text-white-50">Crie sua primeira conferência de estoque</p>
-              <%= link_to new_stock_correction_path, class: "btn btn-success mt-3" do %>
-                <i class="fas fa-plus me-1"></i>Nova Conferência
-              <% end %>
-            </div>
-          <% end %>
-        </div>
-
-        <% if @total_pages > 1 %>
-          <div class="card-footer bg-dark border-top border-secondary">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-              <div class="text-white-50 mb-2 mb-md-0">
-                Mostrando <%= (@current_page - 1) * @per_page + 1 %> a 
-                <%= [@current_page * @per_page, @total_corrections].min %> de 
-                <%= @total_corrections %> conferências
-              </div>
-              <div class="d-flex gap-2 flex-wrap">
-                <% if @current_page > 1 %>
-                  <%= link_to stock_corrections_path(page: @current_page - 1, **request.query_parameters.except('page')),
-                              class: "btn btn-outline-light btn-sm" do %>
-                    <i class="fas fa-chevron-left"></i> Anterior
-                  <% end %>
-                <% end %>
-
-                <!-- Simplified pagination logic to show correct page numbers -->
-                <% 
-                  # Show up to 5 pages around current page
-                  window_size = 2
-                  page_start = [@current_page - window_size, 1].max
-                  page_end = [@current_page + window_size, @total_pages].min
-                  
-                  # Adjust if we're near the beginning or end
-                  if page_end - page_start < 4 && @total_pages > 4
-                    if page_start == 1
-                      page_end = [5, @total_pages].min
-                    elsif page_end == @total_pages
-                      page_start = [@total_pages - 4, 1].max
-                    end
-                  end
-                %>
-                
-                <% (page_start..page_end).each do |page_num| %>
-                  <% if page_num == @current_page %>
-                    <button class="btn btn-primary btn-sm"><%= page_num %></button>
-                  <% else %>
-                    <%= link_to page_num, 
-                                stock_corrections_path(page: page_num, **request.query_parameters.except('page')),
-                                class: "btn btn-outline-light btn-sm" %>
-                  <% end %>
-                <% end %>
-
-                <% if @current_page < @total_pages %>
-                  <%= link_to stock_corrections_path(page: @current_page + 1, **request.query_parameters.except('page')),
-                              class: "btn btn-outline-light btn-sm" do %>
-                    Próxima <i class="fas fa-chevron-right"></i>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  </div>
-</div>
-
-<% content_for :styles do %>
+<%= hc_page_header 'Controle de Estoque', 'Conte o estoque que existe na loja e corrija no Shopify o que não bate.', icon: 'fas fa-warehouse' do %>
+  <% if screen_can?(:stock_corrections, :create) %>
+    <%= link_to new_stock_correction_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova conferência<% end %>
+  <% end %>
 <% end %>
+
+<div class="pg-blocks">
+  <%= hc_kpis([
+    { label: 'Pendentes', icon: 'fas fa-hourglass-half', tone: 'yellow', value: @kpis[:pending], help: 'Ainda dá para contar e corrigir.',
+      url: kpi_url.call('status', 'pending'), active: filters['status'] == 'pending' },
+    { label: 'Executadas', icon: 'fas fa-circle-check', tone: 'green', value: @kpis[:executed], help: 'Conferências finalizadas.',
+      url: kpi_url.call('status', 'executed'), active: filters['status'] == 'executed' },
+    { label: 'Com erro no Shopify', icon: 'fas fa-triangle-exclamation', tone: 'red', value: @kpis[:error], help: 'Reenvie com Executar todas.',
+      url: kpi_url.call('kpi', 'error'), active: filters['kpi'] == 'error' },
+    { label: 'Correções feitas', icon: 'fas fa-screwdriver-wrench', tone: 'blue', value: @kpis[:corrections], help: 'Produtos ajustados no Shopify.',
+      url: kpi_url.call('kpi', 'corrections'), active: filters['kpi'] == 'corrections' }
+  ]) %>
+
+  <%= hc_table_card 'Lista de conferências', icon: 'fas fa-clipboard-check', meta: 'Cada conferência é a contagem de uma location numa data. O que não bate é corrigido direto no Shopify.' do %>
+    <%= hc_filters stock_corrections_path, clear: (clear_url if filtered) do %>
+      <% filters.slice('sort', 'dir', 'kpi').each do |name, value| %><%= hidden_field_tag name, value, id: nil %><% end %>
+      <%= hc_filter_field 'Buscar', tip: 'Digite o número da conferência ou uma parte do motivo.', search: true do %>
+        <%= hc_filter_search :q, filters['q'], 'Número ou motivo…' %>
+      <% end %>
+      <%= hc_filter_field 'Location', tip: 'A loja onde a contagem foi feita. Você só vê as lojas liberadas no seu perfil.' do %>
+        <%= hc_filter_select :location, location_options, filters['location'], all: 'Todas as lojas' %>
+      <% end %>
+      <%= hc_filter_field 'Status', tip: 'Pendente: ainda dá para contar. Executada: conferência finalizada.' do %>
+        <%= hc_filter_select :status, statuses.map { |k, v| [v[0], k] }, filters['status'], all: 'Todos status' %>
+      <% end %>
+      <%= hc_filter_field 'Data da conferência' do %>
+        <%= hc_filter_select :period, hc_period_options, filters['period'], all: 'Todo o período' %>
+      <% end %>
+    <% end %>
+
+    <div class="pg-body">
+      <% chips = [] %>
+      <% chips << { label: 'Buscar', value: "“#{filters['q']}”", clear: stock_corrections_path(filters.except('q')) } if filters['q'] %>
+      <% chips << { label: 'Location', value: User.location_name(filters['location']), clear: stock_corrections_path(filters.except('location')) } if filters['location'] %>
+      <% chips << { label: 'Status', value: statuses.dig(filters['status'], 0), clear: stock_corrections_path(filters.except('status')) } if statuses[filters['status']] %>
+      <% chips << { label: 'Data da conferência', value: HoneyUiHelper::PERIODS[filters['period']], clear: stock_corrections_path(filters.except('period')) } if HoneyUiHelper::PERIODS[filters['period']] %>
+      <% chips << { label: { 'error' => 'Com erro no Shopify', 'corrections' => 'Correções feitas' }[filters['kpi']], clear: stock_corrections_path(filters.except('kpi')) } if filters['kpi'] %>
+      <%= hc_active_filters @stock_corrections.total_entries, 'conferências', unit1: 'conferência', filtered: filtered, locs: locs, chips: chips,
+                            legend: statuses.values %>
+
+      <% if @stock_corrections.any? %>
+        <div class="table-responsive">
+          <table class="orders-table pg-tbl">
+            <thead>
+              <tr>
+                <%= hc_th 'ID', sort: 'id' %>
+                <%= hc_th 'Location' %>
+                <%= hc_th 'Motivo' %>
+                <%= hc_th 'Data da conferência', sort: 'correction_date' %>
+                <%= hc_th 'Itens', sort: 'items', right: true %>
+                <%= hc_th 'Correções', sort: 'corrections', right: true %>
+                <%= hc_th 'Status' %>
+                <th style="text-align: right">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="stagger">
+              <% @stock_corrections.each_with_index do |correction, i| %>
+                <% status = correction.executed? ? 'executed' : 'pending' %>
+                <% shop = if correction.errors_total.to_i.positive? then 'erro'
+                          elsif correction.executed? then 'final'
+                          elsif correction.corrections_total.to_i.positive? then 'ok'
+                          else 'vazio'
+                          end %>
+                <tr style="--i: <%= i %>">
+                  <%= hc_td 'ID', type: :num do %><%= link_to hc_num(correction.id), stock_correction_path(correction), class: 'text-main t' %><% end %>
+                  <%= hc_td 'Location' do %><%= hc_location(User.location_name(correction.location), key: correction.location) %><% end %>
+                  <%= hc_td 'Motivo', sub: correction.user&.name do %><span class="pg-txt"><%= correction.reason.presence || '—' %></span><% end %>
+                  <%= hc_td 'Data da conferência' do %><%= hc_d(correction.correction_date) %><% end %>
+                  <%= hc_td 'Itens', type: :qty do %><%= hc_qty(correction.items_total) %><% end %>
+                  <%= hc_td 'Correções', type: :qty, sub: shop_states[shop][0] do %><%= hc_qty(correction.corrections_total) %><% end %>
+                  <%= hc_td 'Status' do %><%= hc_status(*statuses[status][0, 2], tip: statuses[status][2]) %><% end %>
+                  <td class="td-actions" style="text-align: right" data-label="">
+                    <%= hc_row_action 'fas fa-eye', 'Ver conferência', stock_correction_path(correction) %>
+                    <% if (!correction.executed? || current_user.admin?) && screen_can?(:stock_corrections, :edit) %>
+                      <%= hc_row_action 'fas fa-list-check', 'Contar estoque', edit_stock_correction_path(correction) %>
+                    <% end %>
+                    <% if shop == 'erro' && screen_can?(:stock_corrections, :execute) %>
+                      <%= hc_row_action 'fas fa-rotate', 'Executar todas', execute_all_stock_correction_path(correction), method: :post,
+                                        confirm: "Executar todas na conferência ##{correction.id}? O sistema manda de novo ao Shopify todas as correções que deram erro." %>
+                    <% end %>
+                    <% if !correction.executed? && screen_can?(:stock_corrections, :execute) %>
+                      <%= hc_row_action 'fas fa-flag-checkered', 'Finalizar conferência', finalize_correction_stock_correction_path(correction), method: :get,
+                                        confirm: "Finalizar a conferência ##{correction.id}? Depois de finalizada, ninguém mais conta nem corrige produtos nela." %>
+                    <% end %>
+                    <% if correction.executed? && current_user.admin? %>
+                      <%= hc_row_action 'fas fa-lock-open', 'Reabrir conferência', reopen_stock_correction_path(correction), method: :patch,
+                                        confirm: "Reabrir a conferência ##{correction.id}? Ela volta para Pendente e dá para contar e corrigir produtos de novo." %>
+                    <% end %>
+                    <% if current_user.admin? && screen_can?(:stock_corrections, :destroy) %>
+                      <%= hc_row_action 'fas fa-trash', 'Excluir conferência', stock_correction_path(correction), danger: true, method: :delete,
+                                        confirm: "Excluir a conferência ##{correction.id}? Esta ação não pode ser desfeita." %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <%= hc_table_footer @stock_corrections %>
+      <% elsif filtered %>
+        <%= hc_empty_filtered clear_url %>
+      <% else %>
+        <%= hc_empty 'Nenhuma conferência encontrada', 'Crie a primeira conferência de estoque da sua loja.',
+                     cta: (screen_can?(:stock_corrections, :create) ? link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova conferência']), new_stock_correction_path, class: 'btn btn-export') : nil) %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= hc_table_card 'Acurácia de estoque por location', icon: 'fas fa-bullseye', id: 'acuracia',
+                    meta: 'Quantos itens estavam certos, somando todas as conferências da loja. Verde: 95% ou mais. Amarelo: de 85% a 94%. Vermelho: menos de 85%.' do %>
+    <div class="pg-body">
+      <%= hc_active_filters @accuracy.total_entries, 'locations', unit1: 'location', locs: locs, legend: accuracy_states.values %>
+      <% if @accuracy.any? %>
+        <div class="table-responsive">
+          <table class="orders-table pg-tbl">
+            <thead>
+              <tr><th>Location</th><th>Acurácia</th><th class="is-r">Conferências</th><th>Situação</th><th style="text-align: right">Ações</th></tr>
+            </thead>
+            <tbody class="stagger">
+              <% @accuracy.each_with_index do |row, i| %>
+                <% location = row[:location] %>
+                <% pct = location.kpi_ratio&.to_f %>
+                <% state = pct.nil? ? 'nd' : pct >= 95 ? 'boa' : pct >= 85 ? 'atencao' : 'baixa' %>
+                <tr style="--i: <%= i %>">
+                  <%= hc_td 'Location' do %><%= hc_location(location.name, key: location.slug) %><% end %>
+                  <%= hc_td 'Acurácia', sub: (location.kpi_updated_at ? "Atualizada #{hc_ago(location.kpi_updated_at)}" : 'Sem conferência para calcular') do %>
+                    <% if pct %><%= hc_progress(pct, tone: accuracy_states[state][1]) %><% else %><span class="pg-dash">—</span><% end %>
+                  <% end %>
+                  <%= hc_td 'Conferências', type: :qty do %><%= hc_qty(row[:conferences]) %><% end %>
+                  <%= hc_td 'Situação' do %><%= hc_status(*accuracy_states[state][0, 2], tip: accuracy_states[state][2]) %><% end %>
+                  <td class="td-actions" style="text-align: right" data-label="">
+                    <%= hc_row_action 'fas fa-eye', "Ver as conferências de #{location.name}", stock_corrections_path(location: location.slug) %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <%= hc_table_footer @accuracy, param_name: :acc_page %>
+      <% else %>
+        <%= hc_empty 'Nenhuma location liberada', 'Seu perfil ainda não enxerga nenhuma loja. Peça ao administrador para liberar.' %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

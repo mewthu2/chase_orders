@@ -4,9 +4,11 @@ class B2bCatalogsController < ApplicationController
   before_action :set_catalog, only: %i[show edit update toggle_status regenerate_token refresh pdf]
 
   def index
-    @catalogs = B2bCatalog.includes(:client).order(created_at: :desc)
+    @catalogs = B2bCatalog.order(created_at: :desc).to_a
     @order_counts = B2bCatalogOrder.group(:b2b_catalog_id).count
     @pending_counts = B2bCatalogOrder.pending.group(:b2b_catalog_id).count
+    @catalog_orders = B2bCatalogOrder.includes(:client, :b2b_order, :items).order(updated_at: :desc)
+    @registered_cnpjs = Client.where.not(registration: [nil, '']).pluck(:registration).map { |r| r.gsub(/\D/, '') }.to_set
   end
 
   def show
@@ -80,8 +82,10 @@ class B2bCatalogsController < ApplicationController
 
   private
 
+  # Formulário e PDF mostram os tamanhos de cada cor; as outras ações não.
   def set_catalog
-    @catalog = B2bCatalog.find(params[:id])
+    scope = %w[edit pdf].include?(action_name) ? B2bCatalog.includes(products: :variants) : B2bCatalog
+    @catalog = scope.find(params[:id])
   end
 
   def catalog_params

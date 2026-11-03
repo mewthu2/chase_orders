@@ -35,43 +35,28 @@ class LoginLayoutTest < ActionDispatch::IntegrationTest
     assert_select '.flash-messages-container .alert', count: 0
   end
 
-  test 'the login page cancels the logged-in layout offsets that pushed the card off center' do
-    css = login_css
+  test 'the login shows the brand panel next to the card' do
+    get new_user_session_path
 
-    assert_match(/> div \{[^}]*min-height: 100vh !important/m, css)
-    assert_match(/\.content-wrapper \{[^}]*margin-top: 0 !important/m, css)
-    assert_match(/\.container-xl \{[^}]*max-width: none/m, css)
+    assert_select '.login-view .login-brand .brand-points li', count: 3
+    assert_select '.login-view .login-side .login-container .login-card'
+    assert_select '.login-card button[type="submit"].btn-login', text: /Entrar/
+    assert_select '#appView', count: 0
   end
 
-  test 'the container centers on both axes with a gutter and uses the dynamic viewport height' do
-    block = login_css[/\.login-container \{[^}]*\}/m]
+  test 'the login look lives in honey.css and the brand panel hides on small screens' do
+    css = Rails.root.join('app/assets/stylesheets/honey.css').read
 
-    assert_match(/display: flex/, block)
-    assert_match(/justify-content: center/, block)
-    assert_match(/align-items: center/, block)
-    assert_match(/min-height: 100dvh/, block)
-    assert_match(/padding: 1rem/, block)
-    assert_match(/box-sizing: border-box/, block)
+    assert_match(/\.login-view \.login-card \{/, css)
+    assert_match(/@media \(max-width: 1080px\) \{[^@]*\.login-view \.login-brand \{ display: none; \}/m, css)
   end
 
-  test 'the card never adds a margin that overflows the viewport on small screens' do
-    small_screen = login_css[/@media \(max-width: 576px\) \{.*?\n  \}/m]
-
-    refute_match(/\.login-card \{[^}]*margin:\s*1rem/, small_screen)
-  end
-
-  test 'the stylesheet compiles' do
+  test 'the stylesheets compile' do
     require 'sassc'
     css = SassC::Engine.new(login_css, syntax: :scss, load_paths: [Rails.root.join('app/assets/stylesheets').to_s]).render
+    assert_match(/\.login-view \.password-rules/, css)
 
-    assert_match(/body\.sessions\.new \.login-container/, css)
-  end
-
-  test 'the login background is translucent so the triangle pattern of the body shows through' do
-    get new_user_session_path
-    assert_includes response.body, 'subtle-prism'
-
-    container = login_css[/\.login-container \{[^}]*\}/]
-    assert_match(/background:.*rgba\(\$bg-canvas, 0\.\d+\)/, container)
+    honey = Rails.application.assets['honey.css'].to_s
+    assert_match(/\.login-view \.login-card/, honey)
   end
 end

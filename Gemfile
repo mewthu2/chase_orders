@@ -12,7 +12,7 @@ gem 'wkhtmltopdf-binary'
 # Use mysql as the database for Active Record
 gem 'mysql2'
 
-gem 'jwt'
+gem 'jwt', '~> 2.10', '>= 2.10.3'
 
 gem 'prawn'
 gem 'prawn-table'
@@ -22,7 +22,7 @@ gem 'rqrcode', '~> 2.2'
 gem "shopify_api"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 7.2.0'
+gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
 
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'
@@ -58,7 +58,7 @@ gem 'devise'
 gem 'sassc-rails'
 
 # Use the Puma web server [https://github.com/puma/puma]
-gem 'puma', '~> 6.0'
+gem 'puma', '~> 7.2'
 
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -123,6 +123,5 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
-  gem "webdrivers"
   gem "webmock"
 end

@@ -1,0 +1,1433 @@
+{
+ "screens": {
+  "chamados-setores": {
+   "title": "Chamados dos meus setores"
+  },
+  "chamados-todos": {
+   "title": "Todos os chamados"
+  },
+  "atc-pedidos": {
+   "title": "Pedidos de Atacado",
+   "purpose": "Cadastrar vendas para lojistas, enviar ao Tiny e acompanhar a situação e o código de rastreio.",
+   "when": "Quando um lojista comprar no atacado ou uma encomenda de catálogo precisar virar pedido.",
+   "actions": [
+    "Novo Pedido",
+    "Buscar",
+    "Salvar",
+    "Enviar ao Tiny",
+    "Romaneio",
+    "Gerar nota fiscal"
+   ],
+   "statuses": [
+    [
+     "Aberto",
+     "Salvo aqui, ainda não foi para o Tiny.",
+     "gray"
+    ],
+    [
+     "Preparando Envio",
+     "Já está no Tiny, aguardando separação.",
+     "yellow"
+    ],
+    [
+     "Faturado",
+     "Nota emitida.",
+     "blue"
+    ],
+    [
+     "Enviado",
+     "Saiu para entrega.",
+     "green"
+    ],
+    [
+     "Cancelado",
+     "Pedido cancelado.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "Nº × Nº pedido",
+     "Nº é o número no Honey; Nº pedido é o número no Tiny."
+    ],
+    [
+     "Disponível",
+     "Estoque do Log02 menos o que já está reservado."
+    ],
+    [
+     "Romaneio",
+     "PDF com a lista de itens para conferir e despachar."
+    ]
+   ]
+  },
+  "atc-catalogos": {
+   "title": "Catálogos B2B",
+   "subtitle": "Monte catálogos, mande o link para os lojistas e transforme as encomendas em pedidos.",
+   "purpose": "Montar catálogos de produtos, mandar o link para lojistas escolherem as peças e transformar as encomendas em pedidos.",
+   "when": "Quando quiser oferecer uma coleção a lojistas sem lançar cada pedido à mão.",
+   "actions": [
+    "Novo catálogo",
+    "Adicionar cores",
+    "Copiar link",
+    "Atualizar estoque",
+    "Encerrar",
+    "Criar pedido"
+   ],
+   "statuses": [
+    [
+     "Ativo",
+     "O link está aberto para encomendas.",
+     "green"
+    ],
+    [
+     "Encerrado",
+     "O lojista não consegue mais encomendar.",
+     "gray"
+    ],
+    [
+     "Nova",
+     "Encomenda que ninguém viu ainda.",
+     "yellow"
+    ],
+    [
+     "Convertida em pedido",
+     "Já virou Pedido de Atacado.",
+     "blue"
+    ]
+   ],
+   "terms": [
+    [
+     "Encomenda",
+     "Lista de peças que o lojista montou pelo link. Ainda não é pedido."
+    ],
+    [
+     "Novo link",
+     "Gera outro endereço e desativa o antigo."
+    ]
+   ]
+  },
+  "log-transf-b2c": {
+   "title": "Transferência B2B → B2C",
+   "purpose": "Mandar mercadoria do estoque de atacado (B2B) para a filial da loja online (B2C), com a nota de transferência gerada no Tiny.",
+   "when": "Quando a loja online precisar de peças que estão no estoque do atacado.",
+   "actions": [
+    "Nova Transferência",
+    "Adicionar Produtos",
+    "Baixar planilha modelo",
+    "Salvar",
+    "Romaneio"
+   ],
+   "terms": [
+    [
+     "B2B",
+     "Venda e estoque para lojistas (atacado)."
+    ],
+    [
+     "B2C",
+     "Venda para o consumidor final (loja online)."
+    ],
+    [
+     "Atenção",
+     "Aqui o \"Salvar\" já envia ao Tiny e gera a nota."
+    ]
+   ]
+  },
+  "adm-notas": {
+   "title": "Notas Fiscais",
+   "subtitle": "NF-e emitidas pelo Honey direto na SEFAZ",
+   "purpose": "Emitir, transmitir à SEFAZ e consultar as notas fiscais eletrônicas (NF-e) dos pedidos de atacado e da loja online.",
+   "when": "Quando um pedido precisar de nota emitida pelo Honey.",
+   "actions": [
+    "Gerar nota fiscal",
+    "Nota de pedido Shopify",
+    "Transmitir à SEFAZ",
+    "Consultar",
+    "DANFE",
+    "Baixar XML"
+   ],
+   "statuses": [
+    [
+     "Rascunho",
+     "Nota começada, ainda não assinada.",
+     "gray"
+    ],
+    [
+     "Assinada",
+     "Arquivo pronto, ainda não foi para a SEFAZ.",
+     "blue"
+    ],
+    [
+     "Autorizada",
+     "Nota válida.",
+     "green"
+    ],
+    [
+     "Rejeitada",
+     "A SEFAZ recusou: veja o motivo e corrija.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "NF-e",
+     "Nota fiscal eletrônica."
+    ],
+    [
+     "SEFAZ",
+     "Órgão do governo que autoriza a nota."
+    ],
+    [
+     "XML",
+     "O arquivo digital da nota."
+    ]
+   ]
+  },
+  "adm-empresas": {
+   "title": "Empresas",
+   "subtitle": "Empresas emissoras de nota fiscal e seus certificados digitais",
+   "purpose": "Cadastrar as empresas (CNPJ) que emitem nota fiscal, com certificado digital e numeração.",
+   "when": "Antes da primeira nota de um CNPJ e quando o certificado precisar ser renovado.",
+   "actions": [
+    "Nova Empresa",
+    "Salvar Alterações",
+    "Enviar certificado (.pfx)"
+   ],
+   "statuses": [
+    [
+     "Válido",
+     "Certificado em dia.",
+     "green"
+    ],
+    [
+     "Vence em breve",
+     "Renove logo para não parar as notas.",
+     "yellow"
+    ],
+    [
+     "Vencido",
+     "Notas desta empresa param.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "Certificado A1",
+     "Arquivo digital que assina a nota. Vence todo ano."
+    ],
+    [
+     "Homologação",
+     "Ambiente de teste: a nota não vale."
+    ],
+    [
+     "CFOP",
+     "Código que diz o tipo da operação da nota."
+    ]
+   ]
+  },
+  "adm-transportadoras": {
+   "title": "Transportadoras",
+   "subtitle": "Transportadoras usadas nos Pedidos B2B",
+   "purpose": "Cadastrar as transportadoras que levam os pedidos de atacado.",
+   "when": "Quando surgir uma transportadora nova ou mudar um cadastro.",
+   "actions": [
+    "Nova Transportadora",
+    "Editar",
+    "Excluir"
+   ],
+   "statuses": [
+    [
+     "Ativo",
+     "Aparece para escolher no pedido.",
+     "green"
+    ],
+    [
+     "Inativo",
+     "Some da lista do pedido.",
+     "gray"
+    ]
+   ]
+  },
+  "eco-pedidos": {
+   "title": "Pedidos Shopify",
+   "purpose": "Consultar os pedidos vindos da loja online (Shopify), com cliente, loja e datas, e exportar para planilha.",
+   "when": "Para achar o pedido de uma cliente ou listar vendas por loja e período.",
+   "actions": [
+    "Buscar",
+    "Últimos 30 dias",
+    "Exportar XLSX",
+    "Limpar tudo"
+   ],
+   "terms": [
+    [
+     "Localização",
+     "A loja do pedido. \"Sem location\" = pedido sem loja definida."
+    ],
+    [
+     "Data Shopify × Criado em",
+     "Quando foi feito no site × quando entrou no Honey."
+    ]
+   ]
+  },
+  "eco-clientes": {
+   "title": "Clientes",
+   "purpose": "Consultar as clientes da loja online: contato, endereço, pedidos e cupons que elas podem usar.",
+   "when": "Quando a cliente perguntar sobre cadastro, compra ou cupom.",
+   "actions": [
+    "Buscar",
+    "Ver",
+    "Limpar tudo"
+   ],
+   "terms": [
+    [
+     "Cupom elegível",
+     "Cupom ativo que a cliente pode usar."
+    ],
+    [
+     "Atenção",
+     "Não confundir com o Cadastro de Clientes do Atacado (lojistas e empresas)."
+    ]
+   ]
+  },
+  "eco-cupons": {
+   "title": "Uso de Cupons",
+   "purpose": "Ver quais cupons de desconto foram mais usados e quanto vendeu cada um no período.",
+   "when": "Para avaliar o resultado dos cupons de campanha.",
+   "actions": [
+    "7 dias",
+    "30 dias",
+    "Mais usados",
+    "Maior receita",
+    "Exportar XLSX"
+   ],
+   "terms": [
+    [
+     "Receita líquida",
+     "Soma dos pedidos em que o cupom apareceu."
+    ],
+    [
+     "Share",
+     "Parte dos usos sobre todos os pedidos com cupom."
+    ]
+   ]
+  },
+  "loja-cashback": {
+   "title": "Cupons de cashback",
+   "subtitle": "Unifique dois cupons MTZ da mesma cliente em um novo cupom UNF.",
+   "purpose": "Juntar dois cupons de cashback (MTZ) da mesma cliente em um único cupom novo (UNF).",
+   "when": "Quando a cliente tem dois cupons e quer usar um só.",
+   "actions": [
+    "Unificar cupons",
+    "Buscar cliente",
+    "Consultar e conferir valores",
+    "Confirmar unificação",
+    "Histórico"
+   ],
+   "statuses": [
+    [
+     "Aguardando confirmação",
+     "Prévia criada. Vale por 10 minutos.",
+     "yellow"
+    ],
+    [
+     "Concluída",
+     "Os 2 MTZ foram desativados e o UNF foi criado.",
+     "green"
+    ],
+    [
+     "Não realizada",
+     "Nada foi alterado.",
+     "gray"
+    ],
+    [
+     "Precisa de conferência",
+     "Não use os cupons; avise o administrador.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "MTZ",
+     "Cupom de cashback que a cliente já tem."
+    ],
+    [
+     "UNF",
+     "Cupom novo que soma os dois MTZ. Uso único."
+    ],
+    [
+     "Cashback",
+     "Valor devolvido como cupom para a próxima compra."
+    ]
+   ]
+  },
+  "wa-conversas": {
+   "title": "Atendimento WhatsApp",
+   "purpose": "Atender clientes pelo WhatsApp da empresa, em equipe, numa caixa de entrada única.",
+   "when": "Para responder clientes ou começar uma conversa por um número da empresa.",
+   "actions": [
+    "Nova conversa",
+    "Assumir",
+    "Transferir",
+    "Encerrar",
+    "Anexar",
+    "Enviar"
+   ],
+   "statuses": [
+    [
+     "Enviada / Entregue / Lida",
+     "Como a mensagem está do lado da cliente.",
+     "blue"
+    ],
+    [
+     "Não enviada",
+     "Use \"Tentar enviar\".",
+     "red"
+    ],
+    [
+     "Envio sem confirmação",
+     "Confira no celular antes de reenviar.",
+     "yellow"
+    ]
+   ],
+   "terms": [
+    [
+     "Assumir",
+     "Você vira o responsável pela conversa."
+    ],
+    [
+     "Vincular",
+     "Liga a conversa ao cadastro da cliente para ver os pedidos."
+    ]
+   ]
+  },
+  "wa-numeros": {
+   "title": "Números conectados",
+   "purpose": "Conectar cada WhatsApp Business da empresa lendo um QR no celular e escolher quem atende em cada número.",
+   "when": "Ao cadastrar um número, renovar o QR ou mudar quem atende.",
+   "actions": [
+    "Adicionar número",
+    "Conectar / renovar QR",
+    "Sincronizar",
+    "Desconectar",
+    "Salvar acesso"
+   ],
+   "statuses": [
+    [
+     "Conectado",
+     "Número funcionando.",
+     "green"
+    ],
+    [
+     "Escaneie o QR",
+     "Leia o código no celular (expira em ~30 s).",
+     "yellow"
+    ],
+    [
+     "Desconectado",
+     "Precisa conectar de novo.",
+     "red"
+    ]
+   ]
+  },
+  "log03-funil": {
+   "title": "Funil de Pedidos (Log03)",
+   "flow": "log03",
+   "purpose": "Mostrar quantos pedidos da loja online estão em cada etapa e listar só os que estão parados ou com erro.",
+   "when": "No começo do dia ou quando perguntarem por um pedido que não saiu.",
+   "actions": [
+    "Hoje",
+    "7 dias",
+    "30 dias",
+    "Reprocessar"
+   ],
+   "statuses": [
+    [
+     "Erro",
+     "A última tentativa falhou.",
+     "red"
+    ],
+    [
+     "Parado",
+     "Sem avanço há mais de 6 horas.",
+     "yellow"
+    ]
+   ],
+   "terms": [
+    [
+     "Travado",
+     "Pedido parado ou com erro em alguma etapa."
+    ]
+   ]
+  },
+  "log03-acomp": {
+   "title": "Acompanhamento de Pedidos no Correios (Log03)",
+   "flow": "log03",
+   "purpose": "Ver, para cada pedido já criado no Correios, em qual etapa ele está até ficar completo.",
+   "when": "Para localizar um pedido e ver onde ele parou.",
+   "actions": [
+    "Filtros",
+    "Aplicar Filtros",
+    "Verificar tentativas",
+    "Excluir pedido da fila"
+   ],
+   "statuses": [
+    [
+     "Na Fila",
+     "Etapa ainda não concluída.",
+     "yellow"
+    ],
+    [
+     "Concluído",
+     "Etapa feita.",
+     "green"
+    ],
+    [
+     "Processamento Completo",
+     "Rastreio já gravado no Tiny.",
+     "blue"
+    ]
+   ]
+  },
+  "log03-criacao": {
+   "title": "Criação de Pedidos no Correios (Log03)",
+   "flow": "log03",
+   "step": 1,
+   "purpose": "Pegar os pedidos que estão \"preparando envio\" no Tiny e criar cada um no Correios.",
+   "when": "Quando um pedido novo não andou ou aparece com Falha ou Erro.",
+   "actions": [
+    "Criar Selecionados",
+    "Criar este pedido agora",
+    "Verificar tentativas",
+    "Ver no Tiny"
+   ],
+   "statuses": [
+    [
+     "Aguardando",
+     "Ainda não foi tentado.",
+     "gray"
+    ],
+    [
+     "Falha",
+     "O Correios recusou (ex.: falta de estoque). Tenta de novo sozinho.",
+     "red"
+    ],
+    [
+     "Processando",
+     "Em andamento agora.",
+     "blue"
+    ]
+   ],
+   "terms": [
+    [
+     "Preparando envio",
+     "Situação do pedido no Tiny que o coloca nesta fila."
+    ]
+   ]
+  },
+  "log03-notas": {
+   "title": "Emissão de Nota Fiscal no Tiny (Log03)",
+   "flow": "log03",
+   "step": 2,
+   "purpose": "Pedir ao Tiny a nota fiscal dos pedidos que já foram criados no Correios.",
+   "when": "Quando há pedido criado sem nota ou com nota recusada.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Emitir Selecionados",
+    "Já corrigi no Tiny",
+    "Atualizar Nota Fiscal"
+   ],
+   "statuses": [
+    [
+     "Aguardando correção da nota no Tiny",
+     "O Tiny recusou o endereço. Corrija lá e clique \"Já corrigi no Tiny\".",
+     "yellow"
+    ],
+    [
+     "Endereço corrigido",
+     "Pode emitir de novo.",
+     "green"
+    ]
+   ],
+   "terms": [
+    [
+     "Rodar Rotina Agora",
+     "Executa a etapa para a fila inteira, uma vez."
+    ]
+   ]
+  },
+  "log03-xml": {
+   "title": "Envio de XML para os Correios (Log03)",
+   "flow": "log03",
+   "step": 3,
+   "purpose": "Enviar ao Correios o arquivo (XML) da nota fiscal de cada pedido.",
+   "when": "Depois da emissão da nota, se o pedido ainda está na fila de XML.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Enviar Selecionados",
+    "Verificar tentativas"
+   ],
+   "terms": [
+    [
+     "XML",
+     "O arquivo digital da nota fiscal."
+    ]
+   ]
+  },
+  "log03-rastreio": {
+   "title": "Solicitação de Código de Rastreio (Log03)",
+   "flow": "log03",
+   "step": 4,
+   "purpose": "Pedir ao Correios o código de rastreio e gravar no Tiny. O pedido \"Faturado\" vira \"Enviado\".",
+   "when": "Depois do envio do XML, se o pedido ainda está sem rastreio.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Solicitar Selecionados",
+    "Verificar tentativas"
+   ],
+   "terms": [
+    [
+     "Código de rastreio",
+     "Código para a cliente acompanhar a entrega."
+    ]
+   ]
+  },
+  "log03-sem-estoque": {
+   "title": "Produtos Sem Estoque (Log03)",
+   "flow": "log03",
+   "purpose": "Mostrar os produtos que o armazém do Correios (Log03) disse não ter e os pedidos presos por causa deles.",
+   "when": "Quando pedidos não são criados no Correios, para saber o que repor.",
+   "actions": [
+    "Baixar planilha",
+    "Criação no Correios",
+    "Ver pedido no Tiny"
+   ],
+   "terms": [
+    [
+     "Quantidade necessária",
+     "Soma do que os pedidos presos pedem."
+    ]
+   ]
+  },
+  "log03-reservas": {
+   "title": "Reservas de Estoque (Log03)",
+   "purpose": "Mostrar quanto de cada produto já está comprometido em pedidos que ainda vão ser criados no Correios.",
+   "when": "Quando o \"disponível\" não bater com o estoque do Correios.",
+   "actions": [
+    "Atualizar agora",
+    "Buscar SKU",
+    "Limpar"
+   ],
+   "terms": [
+    [
+     "Reservado",
+     "Itens de pedidos ainda na fila do Tiny."
+    ],
+    [
+     "SKU",
+     "Código único de cada produto, cor e tamanho."
+    ]
+   ]
+  },
+  "log03-tentativas": {
+   "title": "Tentativas (Log03)",
+   "flow": "log03",
+   "purpose": "Mostrar o histórico de cada vez que o sistema tentou falar com o Correios e o Tiny, com o erro e os dados enviados.",
+   "when": "Para descobrir por que um pedido falhou e tentar de novo.",
+   "actions": [
+    "Reprocessar",
+    "Detalhes",
+    "Ver Requisição",
+    "Corrigir Bairro"
+   ],
+   "statuses": [
+    [
+     "Success",
+     "Deu certo.",
+     "green"
+    ],
+    [
+     "Fail",
+     "O outro sistema recusou (ex.: sem estoque).",
+     "red"
+    ],
+    [
+     "Error",
+     "Problema do nosso lado ou dado faltando.",
+     "gray"
+    ]
+   ],
+   "terms": [
+    [
+     "Tentativa",
+     "Um registro para cada ação que o sistema tentou."
+    ]
+   ]
+  },
+  "log03-api": {
+   "title": "API Correios - Consultas (Log03)",
+   "purpose": "Consultar direto no Correios o estoque de um produto e o código de rastreio de um pedido.",
+   "when": "Para confirmar o saldo no armazém ou achar um rastreio.",
+   "actions": [
+    "Buscar Estoque de Item",
+    "Adicionar à Lista",
+    "Exportar Lista (CSV)",
+    "Consultar Estoque em Lote"
+   ]
+  },
+  "log03-sync": {
+   "title": "Sincronização de Estoque Correios (Log03)",
+   "purpose": "Copiar o estoque do armazém do Correios para a loja online (Shopify), para o site mostrar o saldo certo.",
+   "when": "Quando o saldo do site estiver diferente do armazém.",
+   "actions": [
+    "Executar Agora",
+    "Ativar Automático",
+    "Salvar Configuração"
+   ],
+   "statuses": [
+    [
+     "Sincronização Ativa",
+     "Roda sozinha nos dias e horários marcados.",
+     "green"
+    ],
+    [
+     "Sincronização Inativa",
+     "Só roda quando alguém clica.",
+     "gray"
+    ]
+   ]
+  },
+  "log02-acomp": {
+   "title": "Acompanhamento de Pedidos no Correios (Log02)",
+   "flow": "log02",
+   "purpose": "Ver, para cada pedido do atacado, em qual etapa ele está até ficar completo.",
+   "when": "Para localizar um pedido do atacado e ver onde ele parou.",
+   "actions": [
+    "Filtros",
+    "Verificar tentativas",
+    "Excluir pedido da fila"
+   ],
+   "statuses": [
+    [
+     "Na Fila",
+     "Etapa ainda não concluída.",
+     "yellow"
+    ],
+    [
+     "Concluído",
+     "Etapa feita.",
+     "green"
+    ],
+    [
+     "Não se Aplica",
+     "Outra transportadora: não tem rastreio.",
+     "gray"
+    ]
+   ]
+  },
+  "log02-aprovar": {
+   "title": "Pedidos p/ Aprovar (Log02)",
+   "flow": "log02",
+   "step": 1,
+   "purpose": "Decidir quais pedidos do atacado seguem para o Correios. Os ignorados nunca são processados.",
+   "when": "Sempre que chegarem pedidos de atacado novos.",
+   "actions": [
+    "Marcar para processamento",
+    "Ignorar",
+    "Ver no Tiny",
+    "Rodar Rotina Agora"
+   ],
+   "statuses": [
+    [
+     "Pendente",
+     "Ninguém decidiu ainda.",
+     "yellow"
+    ],
+    [
+     "Marcado",
+     "Aprovado: segue para a criação.",
+     "green"
+    ],
+    [
+     "Ignorado",
+     "Não será enviado (dá para mudar).",
+     "gray"
+    ]
+   ]
+  },
+  "log02-criacao": {
+   "title": "Criação de Pedidos no Correios (Log02)",
+   "flow": "log02",
+   "step": 2,
+   "purpose": "Criar no Correios os pedidos do atacado que foram aprovados.",
+   "when": "Quando um pedido aprovado não andou ou aparece com Falha.",
+   "actions": [
+    "Criar Selecionados",
+    "Criar este pedido agora",
+    "Verificar tentativas"
+   ],
+   "statuses": [
+    [
+     "Aguardando",
+     "Ainda não foi tentado.",
+     "gray"
+    ],
+    [
+     "Falha",
+     "O Correios recusou.",
+     "red"
+    ]
+   ]
+  },
+  "log02-notas": {
+   "title": "Emissão de Nota Fiscal no Tiny (Log02)",
+   "flow": "log02",
+   "step": 3,
+   "purpose": "Pedir ao Tiny a nota fiscal dos pedidos do atacado já criados no Correios.",
+   "when": "Quando há pedido criado sem nota.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Emitir Selecionados",
+    "Já corrigi no Tiny"
+   ]
+  },
+  "log02-xml": {
+   "title": "Envio de XML para os Correios (Log02)",
+   "flow": "log02",
+   "step": 4,
+   "purpose": "Enviar ao Correios o arquivo da nota. Para outra transportadora, use \"Envio realizado\".",
+   "when": "Depois da emissão da nota.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Enviar Selecionados",
+    "Envio realizado"
+   ],
+   "terms": [
+    [
+     "Envio realizado",
+     "Confirma que outra transportadora levou o pedido. Marca \"Entregue\" no Tiny."
+    ]
+   ]
+  },
+  "log02-rastreio": {
+   "title": "Solicitação de Código de Rastreio (Log02)",
+   "flow": "log02",
+   "step": 5,
+   "purpose": "Pedir ao Correios o código de rastreio dos pedidos do atacado e gravar no Tiny.",
+   "when": "Depois do envio do XML.",
+   "actions": [
+    "Rodar Rotina Agora",
+    "Solicitar Selecionados"
+   ]
+  },
+  "log02-sem-estoque": {
+   "title": "Produtos Sem Estoque (Log02)",
+   "flow": "log02",
+   "purpose": "Mostrar os produtos que faltam no armazém do atacado e os pedidos presos por causa deles.",
+   "when": "Quando pedidos do atacado não são criados no Correios.",
+   "actions": [
+    "Baixar planilha",
+    "Ver pedido no Tiny"
+   ]
+  },
+  "log02-reservas": {
+   "title": "Reservas de Estoque (Log02)",
+   "purpose": "Mostrar quanto de cada produto do atacado já está comprometido em pedidos na fila.",
+   "when": "Antes de montar um pedido B2B grande.",
+   "actions": [
+    "Atualizar agora",
+    "Buscar SKU"
+   ],
+   "terms": [
+    [
+     "Disponível",
+     "Estoque do Correios (Log02) menos o reservado."
+    ]
+   ]
+  },
+  "log02-tentativas": {
+   "title": "Tentativas (Log02)",
+   "flow": "log02",
+   "purpose": "Histórico de cada tentativa do atacado com Correios e Tiny, com o erro e o botão de tentar de novo.",
+   "when": "Para descobrir por que um pedido do atacado falhou.",
+   "actions": [
+    "Reprocessar",
+    "Detalhes",
+    "Ver Requisição"
+   ]
+  },
+  "log02-api": {
+   "title": "API Correios - Consultas (Log02)",
+   "purpose": "Consultar no Correios o estoque do atacado e rastreios, usando a conta do Log02.",
+   "when": "Para confirmar saldo ou rastreio do atacado.",
+   "actions": [
+    "Buscar Estoque de Item",
+    "Consultar Estoque em Lote"
+   ]
+  },
+  "plan-lista": {
+   "title": "Pedidos do Planejador",
+   "purpose": "Ver as planilhas enviadas e se cada uma já virou nota de transferência no Tiny.",
+   "when": "Para acompanhar ou retransmitir uma planilha.",
+   "actions": [
+    "Novo Pedido",
+    "Transmitir para Tiny",
+    "Retransmitir para Tiny",
+    "Exportar CSV Correios"
+   ],
+   "statuses": [
+    [
+     "Rascunho",
+     "Começado.",
+     "gray"
+    ],
+    [
+     "Salvo",
+     "Pronto para transmitir.",
+     "blue"
+    ],
+    [
+     "Transmitido",
+     "Enviado ao Tiny. Confira a coluna \"Nota Tiny\".",
+     "green"
+    ],
+    [
+     "Erro",
+     "Veja a mensagem e retransmita.",
+     "red"
+    ]
+   ]
+  },
+  "plan-novo": {
+   "title": "Novo Pedido do Planejador",
+   "purpose": "Subir uma planilha CSV com produtos e quantidades para gerar uma nota de transferência no Tiny.",
+   "when": "Quando o planejamento gerar uma planilha nova.",
+   "actions": [
+    "Salvar Pedido"
+   ],
+   "terms": [
+    [
+     "Colunas do CSV",
+     "Name, SKU e Ordered (quantidade)."
+    ]
+   ]
+  },
+  "loja-controle": {
+   "title": "Conferências de Estoque",
+   "purpose": "Conferir o estoque físico de uma loja numa data e corrigir no Shopify o que não bate.",
+   "when": "Em inventário, auditoria ou conferência de rotina.",
+   "actions": [
+    "Nova Conferência",
+    "Buscar",
+    "Salvar",
+    "Executar Todas",
+    "Finalizar"
+   ],
+   "statuses": [
+    [
+     "Pendente",
+     "Conferência em andamento.",
+     "yellow"
+    ],
+    [
+     "Executada",
+     "Conferência finalizada.",
+     "green"
+    ]
+   ],
+   "terms": [
+    [
+     "Acurácia",
+     "% de itens que não precisaram de correção."
+    ],
+    [
+     "Location",
+     "Loja ou depósito onde o estoque é contado."
+    ]
+   ]
+  },
+  "loja-retirada": {
+   "title": "Retirada de Estoque",
+   "subtitle": "Retiradas de estoque das locations, lançadas direto no Shopify (com histórico do inventário)",
+   "purpose": "Dar baixa no estoque das lojas por perda, quebra, dano ou ação de marketing.",
+   "when": "Quando a mercadoria sai do estoque sem ser vendida.",
+   "actions": [
+    "Nova Retirada",
+    "Salvar rascunho",
+    "Concluir e retirar do Shopify",
+    "Reverter"
+   ],
+   "statuses": [
+    [
+     "Rascunho",
+     "Nada saiu ainda. Pode editar.",
+     "gray"
+    ],
+    [
+     "Concluída",
+     "Baixa feita no Shopify.",
+     "green"
+    ],
+    [
+     "Concluída com falhas",
+     "Alguma linha falhou.",
+     "yellow"
+    ],
+    [
+     "Revertida",
+     "Itens devolvidos ao estoque.",
+     "blue"
+    ]
+   ],
+   "terms": [
+    [
+     "Concluir",
+     "Dá baixa no Shopify na hora. Para desfazer, use \"Reverter\" em cada linha."
+    ]
+   ]
+  },
+  "loja-transf": {
+   "title": "Transferência de Estoque",
+   "subtitle": "Transferências de estoque entre lojas, lançadas direto no Shopify (com histórico do inventário)",
+   "purpose": "Pedir mercadoria de outras lojas para a sua, com aprovação, reserva, envio e recebimento.",
+   "when": "Quando a sua loja precisa de peças que estão em outra loja.",
+   "actions": [
+    "Nova Transferência",
+    "Aprovar",
+    "Reservar",
+    "Marcar como enviada",
+    "Recebido"
+   ],
+   "statuses": [
+    [
+     "Aguardando aprovação",
+     "Um aprovador precisa liberar.",
+     "yellow"
+    ],
+    [
+     "Em andamento",
+     "Remessas sendo enviadas.",
+     "blue"
+    ],
+    [
+     "Concluída",
+     "Tudo recebido.",
+     "green"
+    ],
+    [
+     "Reprovada",
+     "Não foi aprovada.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "Transferência Interna",
+     "Nome que esta tela tinha antes. Não confundir com Transferência B2B → B2C."
+    ],
+    [
+     "Remessa",
+     "A parte da transferência que sai de UMA loja de origem."
+    ],
+    [
+     "Reservar",
+     "Tira a quantidade do estoque da loja de origem no Shopify."
+    ]
+   ]
+  },
+  "log-abastecimento": {
+   "title": "Abastecimento Lojas",
+   "purpose": "Enviar mercadoria do estoque do Log02 (antes Correios B2B) para repor as lojas físicas, com nota e SEDEX mão própria.",
+   "when": "Quando uma loja precisa de reposição vinda do estoque de atacado.",
+   "actions": [
+    "Novo Abastecimento",
+    "Adicionar Produtos",
+    "Adicionar pessoa",
+    "Salvar"
+   ],
+   "terms": [
+    [
+     "Mão própria",
+     "SEDEX em que só a pessoa indicada pode receber."
+    ],
+    [
+     "Atenção",
+     "O \"Salvar\" já envia ao Tiny e gera a nota."
+    ]
+   ]
+  },
+  "log-locais": {
+   "title": "Locais de Transferência",
+   "subtitle": "Destinos usados para transferência de estoque no Tiny",
+   "purpose": "Cadastrar os destinos (CNPJ e endereço) usados nos pedidos de transferência e nas notas.",
+   "when": "Antes de transferir para uma loja ou depósito novo.",
+   "actions": [
+    "Novo Local",
+    "Salvar Alterações"
+   ],
+   "terms": [
+    [
+     "Local × Location",
+     "Local de Transferência é um cadastro com CNPJ. Location é a loja no Shopify."
+    ]
+   ]
+  },
+  "adm-usuarios": {
+   "title": "Usuários",
+   "purpose": "Criar e editar quem acessa o painel: dados, perfis, lojas liberadas e se a conta está ativa.",
+   "when": "Quando alguém entra, sai ou muda de função.",
+   "actions": [
+    "Novo Usuário",
+    "Salvar Alterações",
+    "Selecionar Todas (lojas)"
+   ],
+   "statuses": [
+    [
+     "Ativo",
+     "Pode entrar no sistema.",
+     "green"
+    ],
+    [
+     "Inativo",
+     "Não consegue entrar.",
+     "gray"
+    ]
+   ],
+   "terms": [
+    [
+     "Perfil",
+     "Pacote de telas liberadas. Vários perfis somam as telas."
+    ]
+   ]
+  },
+  "adm-perfis": {
+   "title": "Perfis e Permissões",
+   "subtitle": "Defina o que cada perfil vê e faz: por área do negócio, por loja e por ação",
+   "purpose": "Definir, para cada perfil, quais áreas e telas aparecem no menu, em quais lojas a pessoa trabalha e quais ações ela pode fazer em cada tela (ver, criar, editar, aprovar, executar, excluir e exportar).",
+   "when": "Ao criar um perfil, liberar uma tela para um grupo ou limitar uma pessoa a uma loja.",
+   "actions": [
+    "Novo Perfil",
+    "Liberar área inteira",
+    "Escolher lojas",
+    "Marcar ações",
+    "Salvar Alterações"
+   ],
+   "terms": [
+    [
+     "Área",
+     "Cada grupo do menu: Geral, Loja Física, Ecommerce, Logística, Atacado e Adm."
+    ],
+    [
+     "Loja (location)",
+     "Onde o estoque existe. Limita quais lojas a pessoa enxerga nas telas de estoque."
+    ],
+    [
+     "Ação",
+     "O que a pessoa pode fazer numa tela: ver, criar, editar, aprovar, executar, excluir ou exportar."
+    ]
+   ]
+  },
+  "adm-setores": {
+   "title": "Setores",
+   "subtitle": "Agrupam as responsabilidades; em Perfis e Permissões você escolhe quais setores cada perfil enxerga",
+   "purpose": "Organizar as áreas que recebem chamados em setores.",
+   "when": "Ao criar uma área nova de atendimento interno.",
+   "actions": [
+    "Novo Setor",
+    "Editar"
+   ]
+  },
+  "adm-resp": {
+   "title": "Responsabilidades",
+   "subtitle": "Áreas que recebem chamados, com seus responsáveis e prazo de resposta",
+   "purpose": "Definir quem responde cada tipo de chamado e em quanto tempo.",
+   "when": "Quando muda quem cuida de um assunto ou o prazo de resposta.",
+   "actions": [
+    "Nova Responsabilidade",
+    "Editar"
+   ]
+  },
+  "meu-perfil": {
+   "title": "Meu Perfil",
+   "purpose": "Alterar sua foto, nome, e-mail, telefone e senha.",
+   "when": "No primeiro acesso ou ao trocar telefone ou senha.",
+   "actions": [
+    "Escolher foto de perfil",
+    "Salvar Alterações"
+   ],
+   "terms": [
+    [
+     "Senha em branco",
+     "Mantém a senha atual."
+    ]
+   ]
+  },
+  "fiscal-produtos": {
+   "title": "Dados fiscais dos produtos",
+   "subtitle": "NCM, CEST, origem e unidade usados na emissão de nota fiscal",
+   "purpose": "Conferir e completar os dados fiscais que a nota exige em cada produto.",
+   "when": "Antes de gerar notas, para completar produtos sem NCM.",
+   "actions": [
+    "Buscar",
+    "Só sem NCM",
+    "Buscar do Tiny",
+    "Salvar"
+   ],
+   "terms": [
+    [
+     "NCM",
+     "Código de 8 dígitos que classifica o produto para imposto."
+    ]
+   ]
+  },
+  "atc-clientes": {
+   "title": "Cadastro de Clientes",
+   "subtitle": "Lojistas e empresas que compram no atacado",
+   "purpose": "Cadastrar e consultar os clientes de atacado (responsável, razão social, CNPJ ou CPF, endereço, inscrições e contato). Os pedidos de atacado e a nota fiscal usam estes dados.",
+   "when": "Antes do primeiro pedido de um lojista novo, ou quando mudar endereço, telefone ou inscrição.",
+   "actions": [
+    "Novo Cliente",
+    "Buscar por nome, razão social ou CNPJ",
+    "Editar",
+    "Remover",
+    "Preencher endereço pelo CEP"
+   ],
+   "terms": [
+    [
+     "Indicador de IE",
+     "1 = contribuinte de ICMS, 2 = isento de inscrição, 9 = não contribuinte. A nota fiscal usa essa informação."
+    ],
+    [
+     "Código IBGE",
+     "Código de 7 dígitos da cidade, exigido na nota fiscal."
+    ],
+    [
+     "Cadastro de Clientes × Clientes",
+     "Cadastro de Clientes (Atacado) são lojistas e empresas. Clientes (Ecommerce) são as consumidoras da loja online."
+    ]
+   ]
+  },
+  "config-transf": {
+   "title": "Configurar Transferências",
+   "subtitle": "Toda transferência interna precisa ser aprovada antes de as lojas de origem reservarem os itens",
+   "purpose": "Escolher quem aprova as transferências internas.",
+   "when": "Quando muda quem aprova.",
+   "actions": [
+    "Salvar"
+   ]
+  }
+ },
+ "glossary": [
+  [
+   "Tiny",
+   "Sistema de gestão (ERP) onde nascem pedidos e notas. Tiny 2 = conta do atacado; Tiny 3 = loja online."
+  ],
+  [
+   "Shopify",
+   "A loja virtual da Chase. Guarda produtos, estoque das lojas, pedidos e cupons."
+  ],
+  [
+   "Log02 / Log03",
+   "Nomes das duas contas de envio pelo Correios. Log03 = loja online (antes \"Correios B2C\"). Log02 = atacado (antes \"Correios B2B\"). Cada uma tem estoque e fila próprios."
+  ],
+  [
+   "Área",
+   "Cada grupo do menu: Geral, Loja Física, Ecommerce, Logística, Atacado e Adm. O seu perfil libera áreas, telas, lojas e ações."
+  ],
+  [
+   "Ação",
+   "O que o perfil pode fazer numa tela: ver, criar, editar, aprovar, executar, excluir ou exportar."
+  ],
+  [
+   "B2B / B2C",
+   "B2B = venda para lojistas (atacado). B2C = venda para o consumidor final (loja online)."
+  ],
+  [
+   "SKU",
+   "Código único de cada produto, cor e tamanho."
+  ],
+  [
+   "Location",
+   "Loja ou depósito onde existe estoque (ex.: BH Shopping, Lagoa Seca)."
+  ],
+  [
+   "NF-e / XML",
+   "Nota fiscal eletrônica e o arquivo digital dela."
+  ],
+  [
+   "SEFAZ",
+   "Órgão do governo que autoriza a nota fiscal."
+  ],
+  [
+   "Romaneio",
+   "PDF com a lista de itens para conferir e despachar."
+  ],
+  [
+   "Tentativa",
+   "Registro de cada vez que o sistema tentou uma ação em outro sistema."
+  ],
+  [
+   "Falha × Erro",
+   "Falha: o outro sistema recusou. Erro: problema do nosso lado ou dado faltando."
+  ],
+  [
+   "Fila",
+   "Pedidos que passaram da etapa anterior e ainda não concluíram a atual."
+  ],
+  [
+   "Rodar Rotina Agora",
+   "Executa a etapa para a fila inteira, uma vez."
+  ],
+  [
+   "Reservado / Disponível",
+   "Reservado = já prometido em pedidos na fila. Disponível = estoque menos reservado."
+  ],
+  [
+   "MTZ / UNF",
+   "MTZ é o cupom de cashback que a cliente tem; UNF é o cupom novo que junta dois MTZ."
+  ],
+  [
+   "Mão própria",
+   "Entrega em que só a pessoa indicada pode receber."
+  ],
+  [
+   "Remessa",
+   "Parte de uma transferência que sai de uma única loja de origem."
+  ]
+ ],
+ "flows": {
+  "log03": [
+   [
+    "Criação de Pedidos",
+    "Cria no Correios",
+    "log03-criacao"
+   ],
+   [
+    "Emissão de Notas",
+    "Tiny emite a nota",
+    "log03-notas"
+   ],
+   [
+    "Enviar XML",
+    "Nota vai ao Correios",
+    "log03-xml"
+   ],
+   [
+    "Rastreamento",
+    "Código vai ao Tiny",
+    "log03-rastreio"
+   ]
+  ],
+  "log02": [
+   [
+    "Pedidos p/ Aprovar",
+    "Você decide",
+    "log02-aprovar"
+   ],
+   [
+    "Criação de Pedidos",
+    "Cria no Correios",
+    "log02-criacao"
+   ],
+   [
+    "Emissão de Notas",
+    "Tiny emite a nota",
+    "log02-notas"
+   ],
+   [
+    "Enviar XML",
+    "Nota vai ao Correios",
+    "log02-xml"
+   ],
+   [
+    "Rastreamento",
+    "Código vai ao Tiny",
+    "log02-rastreio"
+   ]
+  ]
+ },
+ "tour": [
+  {
+   "center": true,
+   "icon": "fas fa-compass",
+   "title": "Bem-vindo ao novo Honey.Chase",
+   "text": "Em 1 minuto você aprende a encontrar tudo sozinho. Quer fazer o tour?"
+  },
+  {
+   "target": "#sbNav",
+   "title": "Menu por área de trabalho",
+   "text": "As telas ficam separadas por área do negócio, cada uma com sua cor: Geral, Loja Física, Ecommerce, Logística, Atacado e Adm. Você só vê o que o seu perfil usa.",
+   "side": "right"
+  },
+  {
+   "target": "[data-tour=\"search\"]",
+   "title": "Não sabe onde fica algo?",
+   "text": "Clique aqui ou aperte Ctrl + K e digite o que precisa, como \"rastreio\", \"nota fiscal\" ou \"cupom\".",
+   "side": "right"
+  },
+  {
+   "target": "[data-tour=\"guided\"]",
+   "title": "Modo guiado",
+   "text": "Ligado, ele mostra uma explicação curta embaixo de cada item do menu. Quem já conhece o sistema pode desligar.",
+   "side": "right"
+  },
+  {
+   "target": "[data-tour=\"help\"]",
+   "title": "Ajuda em toda tela",
+   "text": "Em qualquer tela, clique em Ajuda para ver para que ela serve, o passo a passo e o significado dos termos.",
+   "side": "bottom"
+  },
+  {
+   "target": "[data-tour=\"zoom\"]",
+   "title": "Letra pequena?",
+   "text": "Aumente ou diminua o tamanho da letra aqui. O sistema guarda a sua escolha.",
+   "side": "bottom"
+  },
+  {
+   "target": "[data-tour=\"map\"]",
+   "title": "Mapa do sistema",
+   "text": "Veja todas as telas, por área, com uma frase explicando cada uma.",
+   "side": "right"
+  },
+  {
+   "center": true,
+   "icon": "fas fa-check",
+   "title": "Pronto!",
+   "text": "Você pode refazer o tour quando quiser pelo menu do seu perfil, no canto de cima."
+  }
+ ],
+ "keywords": {
+  "log03-rastreio": "rastreio codigo entrega correios b2c",
+  "log02-rastreio": "rastreio codigo entrega atacado correios b2b",
+  "log03-api": "rastreio estoque armazem consulta",
+  "log02-api": "rastreio estoque armazem consulta atacado",
+  "log03-notas": "nota nf nfe emissao fiscal tiny",
+  "log02-notas": "nota nf nfe emissao fiscal atacado tiny",
+  "adm-notas": "nota nf nfe emissao fiscal sefaz",
+  "adm-empresas": "cnpj certificado emissora",
+  "adm-transportadoras": "frete transportadora",
+  "loja-controle": "estoque contagem inventario conferencia",
+  "log03-reservas": "estoque reservado disponivel",
+  "log02-reservas": "estoque reservado disponivel atacado",
+  "log03-sem-estoque": "estoque falta faltando",
+  "log03-sync": "estoque shopify site",
+  "loja-retirada": "estoque perda quebra dano baixa",
+  "loja-transf": "estoque loja transferir interna",
+  "log-abastecimento": "reposicao repor loja estoque",
+  "eco-cupons": "cupom desconto promocao",
+  "loja-cashback": "cupom cashback mtz unf",
+  "wa-conversas": "whatsapp zap mensagem cliente atendimento",
+  "eco-clientes": "cliente consumidor contato loja online",
+  "eco-pedidos": "pedido venda site shopify loja online",
+  "atc-pedidos": "pedido lojista atacado venda b2b",
+  "atc-catalogos": "catalogo colecao lojista encomenda",
+  "atc-clientes": "cliente lojista atacado cnpj cadastro empresa",
+  "log03-tentativas": "erro falha travado reprocessar",
+  "log02-tentativas": "erro falha travado reprocessar",
+  "log03-funil": "travado parado pedidos etapas resumo",
+  "adm-usuarios": "usuario funcionario acesso conta",
+  "adm-perfis": "permissao acesso tela perfil area loja acao liberar",
+  "plan-lista": "planilha csv planejamento",
+  "inicio": "inicio home meus chamados",
+  "log-transf-b2c": "transferencia atacado loja online b2b b2c",
+  "log-locais": "destino cnpj endereco transferencia"
+ }
+}

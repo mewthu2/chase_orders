@@ -1,146 +1,29 @@
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-12">
-      <div class="card bg-black border border-dark shadow-lg">
-        <div class="card-header bg-dark">
-          <h5 class="text-white mb-0">
-            <i class="fas fa-user-edit me-2"></i>Editar Meu Perfil
-          </h5>
+<%# Meu Perfil: formulário à esquerda (foto, dados e senha) e "Seu acesso" à direita. %>
+<div class="pg-blocks">
+  <div class="pg-split" style="--cols: 1.55fr 1fr">
+    <div class="pg-split-a">
+      <%= form_with model: @user, local: true, class: 'panel pg-card pg-inline', id: 'pgForm', html: { novalidate: true } do |form| %>
+        <h3><i class="fas fa-user-pen"></i>Editar meu perfil</h3>
+        <p class="pg-p" style="margin-bottom: 14px">Troque sua foto, telefone e senha. Salve para confirmar.</p>
+        <% if @user.errors.any? %>
+          <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span><%= @user.errors.full_messages.to_sentence %></span></div>
+        <% end %>
+        <%= render 'profile_photo', form: form %>
+        <div class="pg-fields">
+          <div class="form-group pg-fg pg-w2"><%= form.label :name, class: 'field-label' do %>Nome <span class="required">*</span><% end %><%= form.text_field :name, class: 'field-input', required: true, maxlength: 120 %></div>
+          <div class="form-group pg-fg pg-w2"><%= form.label :email, class: 'field-label' do %>E-mail <span class="required">*</span><% end %><%= form.email_field :email, class: 'field-input', required: true, maxlength: 160 %></div>
+          <div class="form-group pg-fg pg-w2"><%= form.label :phone, 'Telefone', class: 'field-label' %><%= form.telephone_field :phone, class: 'field-input', placeholder: '(00) 00000-0000', maxlength: 15 %><small class="pg-hint">Com DDD. Exemplo: (31) 99999-0000.</small></div>
+          <div class="pg-fsec">Alterar senha</div>
+          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Deixe em branco se não deseja alterar a senha.</span></div>
+          <div class="form-group pg-fg pg-w2"><label class="field-label" for="user_password">Nova senha<span class="info-dot" tabindex="0" data-tip="Use de 6 a 128 caracteres.">i</span></label><%= form.password_field :password, class: 'field-input', autocomplete: 'new-password' %></div>
+          <div class="form-group pg-fg pg-w2"><%= form.label :password_confirmation, 'Confirmar nova senha', class: 'field-label' %><%= form.password_field :password_confirmation, class: 'field-input', autocomplete: 'new-password' %></div>
         </div>
-        <div class="card-body bg-black">
-          <%= form_with model: @user, local: true, class: 'needs-validation', novalidate: true do |form| %>
-            <% if @user.errors.any? %>
-              <div class="alert alert-danger">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Erros encontrados:</h6>
-                <ul class="mb-0">
-                  <% @user.errors.full_messages.each do |message| %>
-                    <li><%= message %></li>
-                  <% end %>
-                </ul>
-              </div>
-            <% end %>
-
-            <%= render 'profile_photo', form: form %>
-
-            <!-- Informações Básicas -->
-            <div class="row g-4">
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Nome *</label>
-                <%= form.text_field :name, class: 'form-control bg-dark text-white border-secondary', required: true %>
-                <div class="invalid-feedback">
-                  Por favor, informe o nome.
-                </div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Email *</label>
-                <%= form.email_field :email, class: 'form-control bg-dark text-white border-secondary', required: true %>
-                <div class="invalid-feedback">
-                  Por favor, informe um email válido.
-                </div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Telefone</label>
-                <%= form.text_field :phone, class: 'form-control bg-dark text-white border-secondary', placeholder: '(00) 00000-0000' %>
-              </div>
-            </div>
-
-            <!-- Alterar Senha -->
-            <div class="row g-4 mt-3">
-              <div class="col-12">
-                <h6 class="text-white mb-3">
-                  <i class="fas fa-lock me-2"></i>Alterar Senha
-                </h6>
-                <small class="text-white d-block mb-3">Deixe em branco se não deseja alterar a senha</small>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Nova Senha</label>
-                <%= form.password_field :password, 
-                                        class: 'form-control bg-dark text-white border-secondary', 
-                                        autocomplete: 'new-password' %>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label text-white fw-bold">Confirmar Nova Senha</label>
-                <%= form.password_field :password_confirmation, 
-                                        class: 'form-control bg-dark text-white border-secondary', 
-                                        autocomplete: 'new-password' %>
-                <div class="invalid-feedback">
-                  As senhas não coincidem.
-                </div>
-              </div>
-            </div>
-
-            <div class="row mt-5">
-              <div class="col-12 d-flex justify-content-between">
-                <%= link_to root_path, class: 'btn btn-secondary btn-lg' do %>
-                  <i class="fas fa-arrow-left me-2"></i> Voltar
-                <% end %>
-                
-                <button type="submit" class="btn btn-success btn-lg">
-                  <i class="fas fa-save me-2"></i>
-                  Salvar Alterações
-                </button>
-              </div>
-            </div>
-          <% end %>
+        <div class="pg-inline-foot">
+          <%= link_to 'Voltar', root_path, class: 'btn btn-ghost' %>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar alterações</button>
         </div>
-      </div>
+      <% end %>
     </div>
+    <div class="pg-split-b"><%= render 'my_access' %></div>
   </div>
 </div>
-
-<% content_for :styles do %>
-<% end %>
-
-<% content_for :scripts do %>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Bootstrap form validation
-  const forms = document.querySelectorAll('.needs-validation');
-  Array.from(forms).forEach(form => {
-    form.addEventListener('submit', event => {
-      if (!form.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      form.classList.add('was-validated');
-    }, false);
-  });
-
-  // Formatação do telefone
-  const phoneInput = document.querySelector('input[name="user[phone]"]');
-  if (phoneInput) {
-    phoneInput.addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\D/g, '');
-      if (value.length <= 11) {
-        value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-        if (value.length < 14) {
-          value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-        }
-      }
-      e.target.value = value;
-    });
-  }
-
-  // Password validation
-  const passwordField = document.querySelector('input[name="user[password]"]');
-  const confirmPasswordField = document.querySelector('input[name="user[password_confirmation]"]');
-
-  if (passwordField && confirmPasswordField) {
-    function validatePasswords() {
-      if (passwordField.value && confirmPasswordField.value) {
-        if (passwordField.value !== confirmPasswordField.value) {
-          confirmPasswordField.setCustomValidity('As senhas não coincidem');
-        } else {
-          confirmPasswordField.setCustomValidity('');
-        }
-      } else {
-        confirmPasswordField.setCustomValidity('');
-      }
-    }
-
-    passwordField.addEventListener('input', validatePasswords);
-    confirmPasswordField.addEventListener('input', validatePasswords);
-  }
-});
-</script>
-<% end %>

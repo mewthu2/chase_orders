@@ -1,0 +1,37 @@
+<%# Campos do "Abrir chamado" no padrão do protótipo. locals: form, prefix (ids únicos) %>
+<% if @ticket&.errors&.any? %>
+  <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span><%= @ticket.errors.full_messages.to_sentence %></span></div>
+<% end %>
+<div class="form-group">
+  <label class="field-label" for="<%= prefix %>Resp">Responsabilidade <span class="required">*</span><span class="info-dot" tabindex="0" data-tip="O assunto do chamado. Cada um tem a sua equipe e o seu prazo de resposta.">i</span></label>
+  <div class="select-wrap">
+    <%= form.select :ticket_responsability_id,
+          @responsabilities.group_by { |r| r.ticket_sector.name }.sort.to_h.transform_values { |list|
+            list.map { |r| [r.name, r.id, { data: { description: r.description.to_s, deadline: r.response_time_label, users: r.users.select(&:active?).map(&:name).sort.to_sentence } }] }
+          },
+          { include_blank: 'Escolha o assunto…' }, class: 'field-input', required: true, id: "#{prefix}Resp", data: { resp_info: "#{prefix}RespInfo" } %>
+  </div>
+  <div class="resp-info" id="<%= prefix %>RespInfo" hidden>
+    <span data-field="description"></span>
+    <span><i class="fas fa-clock" style="color: var(--yellow)"></i> Prazo de resposta: <b data-field="deadline"></b></span>
+    <span><i class="fas fa-user-check" style="color: var(--green)"></i> Responsáveis: <b data-field="users"></b></span>
+  </div>
+</div>
+<div class="form-group">
+  <label class="field-label" for="<%= prefix %>Title">Título <span class="required">*</span></label>
+  <%= form.text_field :title, class: 'field-input', required: true, maxlength: 150, placeholder: 'Resumo do problema', id: "#{prefix}Title",
+                      oninput: "document.getElementById('#{prefix}Count').textContent = this.value.length" %>
+  <p class="field-hint"><span id="<%= prefix %>Count"><%= @ticket&.title.to_s.length %></span>/150 · Ex.: "Pedido #58213 parado em Emissão de Notas"</p>
+</div>
+<div class="form-group">
+  <label class="field-label" for="<%= prefix %>Desc">Descrição <span class="required">*</span></label>
+  <%= form.text_area :description, class: 'field-input', rows: 6, required: true, placeholder: 'Explique o que aconteceu, onde e desde quando', id: "#{prefix}Desc" %>
+</div>
+<div class="form-group">
+  <label class="field-label">Prints e arquivos</label>
+  <%= render 'tickets/attachments_field', form: form, field_id: "#{prefix}Attachments" %>
+</div>
+<div class="form-group">
+  <label class="field-label" for="<%= prefix %>Fol">Acompanhantes <span style="color: var(--text-3); font-weight: 400">(opcional)</span><span class="info-dot" tabindex="0" data-tip="Pessoas que vão receber as novidades do chamado, sem ser responsáveis. Segure Ctrl (ou Cmd) para escolher mais de uma.">i</span></label>
+  <%= select_tag 'ticket[follower_ids][]', options_from_collection_for_select(@users, :id, :name, params.dig(:ticket, :follower_ids)), multiple: true, size: 5, class: 'field-input', id: "#{prefix}Fol" %>
+</div>

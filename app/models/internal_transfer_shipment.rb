@@ -13,6 +13,7 @@ class InternalTransferShipment < ApplicationRecord
   belongs_to :received_by, class_name: 'User', optional: true
   belongs_to :cancelled_by, class_name: 'User', optional: true
   has_many :items, class_name: 'InternalTransferItem', dependent: :destroy, inverse_of: :internal_transfer_shipment, autosave: true
+  has_many :fiscal_notes, dependent: :restrict_with_error
 
   enum :status, { aberto: 0, reservado: 1, enviado: 2, recebido: 3, cancelado: 4 }
 

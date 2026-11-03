@@ -3,7 +3,7 @@ class InternalTransferConfigsController < ApplicationController
   before_action :admin_only!
 
   def edit
-    @users = User.order(:name)
+    @users = User.includes(:profiles).order(:name)
     @approver_ids = InternalTransferApprover.user_ids
   end
 

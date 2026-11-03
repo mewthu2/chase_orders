@@ -1,27 +1,19 @@
 class AttemptsController < ApplicationController
+  # Tentativas ficam nos dois painéis de Correios: o canal da URL diz qual permissão vale.
+  guard_screen(actions: { fix_bairro: :edit, mark_tiny_fixed: :edit, reprocess: :execute }) do
+    case params[:channel]
+    when 'b2b' then :dashboard_correios_b2b
+    when 'b2c' then :dashboard_correios
+    else %i[dashboard_correios dashboard_correios_b2b]
+    end
+  end
   before_action :load_form_references, only: [:index]
   protect_from_forgery except: :verify_attempts
 
   def index
-    @attempts = Attempt.search(params[:search])
-
-    if params[:status] == 'nil'
-      @attempts = @attempts.where(status: nil)
-    elsif params[:status].present?
-      @attempts = @attempts.where(status: params[:status])
-    end
-
-    if params[:channel] == 'b2b'
-      @attempts = @attempts.where(kinds: Attempt::B2B_KINDS)
-    elsif params[:channel] == 'b2c'
-      @attempts = @attempts.where(kinds: Attempt::B2C_KINDS)
-    end
-
-    @attempts = @attempts.where(kinds: params[:kinds]) if params[:kinds].present?
-
-    @attempts = @attempts.order(created_at: :desc)
-                         .paginate(page: params[:page], per_page: params_per_page(params[:per_page]))
-    preload_address_corrections
+    @attempts_scope = Attempt.order(created_at: :desc)
+    @attempts_scope = @attempts_scope.where(kinds: Attempt::B2B_KINDS) if params[:channel] == 'b2b'
+    @attempts_scope = @attempts_scope.where(kinds: Attempt::B2C_KINDS) if params[:channel] == 'b2c'
   end
 
   def verify_attempts

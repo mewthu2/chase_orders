@@ -1,101 +1,70 @@
-<% label = @account == 'b2b' ? 'B2B' : 'B2C' %>
-<% content_for :title, "Reservas de Estoque #{label}" %>
+<% b2b = @account == 'b2b' %>
+<% kind = b2b ? 'Log02' : 'Log03' %>
+<% perm = "stock_reservations_#{@account}" %>
+<% content_for :title, "Reservas de Estoque (#{kind})" %>
+<% rows = @groups.map do |sku, items|
+     orders = items.map(&:tiny_order_id).uniq
+     { id: sku, sku: sku, nome: @product_names[sku.to_s.upcase].presence || '—', qtd: items.sum(&:quantity).ceil, ped: orders.size,
+       nums: items.map { |i| "##{i.tiny_order_number.presence || i.tiny_order_id}" }.uniq.first(4),
+       dt: items.filter_map(&:order_date).min, lista: items.map { |i| "#{i.tiny_order_number} #{i.customer_name}" }.join(' '), items: items }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'SKUs', unit1: 'SKU', page_size: 8, sort: { k: :qtd, dir: -1 },
+     cols: [
+       { k: :sku, label: 'SKU', t: :mono, main: true, copy: true, sub: :nome, cls: 'due' },
+       { k: :nome, label: 'Produto', hide: true },
+       { k: :qtd, label: 'Reservado', t: :qty, unit: 'un', sort: true },
+       { k: :ped, label: 'Pedidos', t: :qty, sort: true },
+       { k: :nums, label: 'Quais pedidos', t: :chips, nodetail: true },
+       { k: :dt, label: 'Reservado desde', t: :d, sort: true },
+       { k: :lista, label: 'Pedidos e clientes', hide: true, nodetail: true }
+     ],
+     filters: [{ id: :sku, type: :search, label: 'Buscar SKU', ph: 'Ex.: TOP-947 ou jaqueta', cols: %i[sku nome lista], tip: 'Procura pelo código do produto, pelo nome, pelo número do pedido ou pelo nome da cliente.' }],
+     kpis: [
+       { label: 'Pedidos na fila', icon: 'fas fa-receipt', tone: 'blue', help: 'Ainda não viraram pedido no Correios.', count: @kpis[:orders] },
+       { label: 'SKUs reservados', icon: 'fas fa-barcode', tone: 'purple', help: 'Produtos diferentes na fila.', count: @kpis[:skus] },
+       { label: 'Unidades reservadas', icon: 'fas fa-boxes-stacked', tone: 'green', help: 'Soma de todos os itens.', count: @kpis[:units] },
+       { label: 'Última atualização', icon: 'fas fa-clock-rotate-left', tone: 'orange', help: 'Quando a foto da fila do Tiny foi tirada.', text: @refresh.last_refreshed_at ? hc_ago(@refresh.last_refreshed_at) : 'Ainda não' }
+     ]) %>
+<% orders_section = ->(r) {
+     rows_html = safe_join(r[:items].sort_by { |i| i.order_date || Date.current }.map do |i|
+       invoice = @order_refs.dig(i.tiny_order_id, :invoice)
+       content_tag(:tr, content_tag(:td, "##{i.tiny_order_number.presence || i.tiny_order_id}") + content_tag(:td, i.ecommerce_number.presence || '—') + content_tag(:td, i.customer_name.presence || '—') +
+                        content_tag(:td, i.order_date ? l(i.order_date, format: '%d/%m/%Y') : '—') + content_tag(:td, number_with_delimiter(i.quantity.to_f == i.quantity.to_i ? i.quantity.to_i : i.quantity.to_f)) + content_tag(:td, invoice.presence || '—'))
+     end)
+     content_tag(:section, content_tag(:h4, content_tag(:i, '', class: 'fas fa-receipt') + 'Pedidos que estão reservando') +
+       content_tag(:div, content_tag(:table, content_tag(:thead, content_tag(:tr, safe_join(['Pedido', 'Loja', 'Cliente', 'Data', 'Qtde', 'Nota'].map { |h| content_tag(:th, h) }))) + content_tag(:tbody, rows_html), class: 'orders-table pg-tbl pg-mini'), class: 'table-responsive'), class: 'help-sec')
+   } %>
 
-<div class="users-container reservations-page">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-lock me-2"></i>Reservas de Estoque <%= label %></h1>
-      <p class="page-subtitle">
-        Itens de pedidos na fila do Tiny (<%= @account == 'b2b' ? 'Tiny2' : 'Tiny3' %>, preparando envio) que ainda não viraram pedido no Correios Log.
-        <% if @account == 'b2b' %>Esses itens saem do disponível na criação de pedidos B2B.<% else %>Tela informativa: o Shopify já desconta as próprias vendas.<% end %>
-      </p>
+<%= hc_page_header "Reservas de Estoque (#{kind})", (b2b ? 'Itens de pedidos na fila do Tiny2 (preparando envio) que ainda não viraram pedido no Correios. Esses itens saem do saldo disponível na criação de pedidos do atacado.' : 'Itens dos pedidos da loja online que o Tiny já recebeu e que ainda não viraram pedido no Correios.'), icon: 'fas fa-lock' %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Tela informativa.</strong> Aqui estão os itens de pedidos que o Tiny já recebeu (situação "preparando envio") mas que ainda não viraram pedido no Correios. Quando o pedido é criado no Correios, ele sai daqui sozinho.</div></div>
+
+<div class="pg-blocks">
+  <div class="panel pg-card pg-run<%= ' is-running' if @refresh.running_recently? %>">
+    <div class="pg-run-l"><span class="pg-pulse"><i></i></span><div><h3>Reservas atualizadas</h3><p>Uma foto da fila de pedidos do Tiny, tirada de tempos em tempos. Use Atualizar agora se um pedido acabou de entrar ou sair da fila.</p></div></div>
+    <div class="pg-run-m">
+      <span><small>Última rodada</small><b><%= @refresh.last_refreshed_at ? "às #{l(@refresh.last_refreshed_at, format: '%H:%M')}" : '—' %></b></span>
+      <span><small>Próxima</small><b><%= @refresh.next_refresh_at ? "às #{l(@refresh.next_refresh_at, format: '%H:%M')}" : '—' %></b></span>
+      <% if @refresh.status.in?(%w[error partial]) && @refresh.message.present? %><span><small>Situação</small><b data-tip="<%= @refresh.message %>"><%= @refresh.status == 'error' ? 'Falhou' : 'Parcial' %></b></span><% end %>
     </div>
-    <div class="header-actions">
-      <%= button_to refresh_stock_reservations_path(account: @account), method: :post, class: 'btn-export', form: { class: 'd-inline' } do %>
-        <i class="fas fa-sync me-2"></i>Atualizar agora
+    <div class="pg-run-r">
+      <% if screen_can?(perm, :execute) %>
+        <%= button_to refresh_stock_reservations_path(account: @account), method: :post, class: 'btn btn-primary', disabled: @refresh.running_recently?, form: { style: 'display: inline' } do %>
+          <% if @refresh.running_recently? %><span class="spinner"></span>Atualizando…<% else %><i class="fas fa-bolt"></i>Atualizar agora<% end %>
+        <% end %>
+      <% else %>
+        <span class="pg-ro" data-tip="O seu perfil não tem a ação Executar. Peça ao administrador."><i class="fas fa-lock"></i>Só consulta</span>
       <% end %>
     </div>
   </div>
-
-  <%= render 'stock_reservations/freshness', refresh: @refresh %>
-
-  <div class="reservation-kpis">
-    <div class="reservation-kpi"><i class="fas fa-receipt"></i><strong data-count="<%= @kpis[:orders] %>"><%= @kpis[:orders] %></strong> pedidos</div>
-    <div class="reservation-kpi"><i class="fas fa-barcode"></i><strong data-count="<%= @kpis[:skus] %>"><%= @kpis[:skus] %></strong> SKUs</div>
-    <div class="reservation-kpi"><i class="fas fa-boxes"></i><strong data-count="<%= @kpis[:units] %>"><%= @kpis[:units] %></strong> unidades</div>
-  </div>
-
-  <div class="table-card">
-    <%= form_with url: (@account == 'b2b' ? b2b_stock_reservations_path : b2c_stock_reservations_path), method: :get, local: true, class: 'd-flex gap-2 flex-wrap px-3 pb-3' do %>
-      <%= text_field_tag :sku, @sku_query, placeholder: 'Buscar SKU', class: 'field-input', style: 'max-width: 260px;' %>
-      <button type="submit" class="btn-back"><i class="fas fa-search me-1"></i>Buscar</button>
-      <% if @sku_query.present? %>
-        <%= link_to 'Limpar', (@account == 'b2b' ? b2b_stock_reservations_path : b2c_stock_reservations_path), class: 'btn-back' %>
-      <% end %>
-    <% end %>
-
-    <% if @groups.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr><th>SKU</th><th>Produto</th><th class="text-end">Reservado</th><th class="text-end">Pedidos</th><th></th></tr>
-          </thead>
-          <% @groups.each_with_index do |(sku, rows), index| %>
-            <tbody class="reservation-sku" style="animation-delay: <%= [index, 20].min * 30 %>ms">
-              <tr class="reservation-sku__row" data-bs-toggle="collapse" data-bs-target="#reservation-<%= index %>">
-                <td class="text-main"><%= sku %></td>
-                <td class="text-muted-custom"><%= @product_names[sku] || '—' %></td>
-                <td class="text-end"><span class="reservation-qty"><%= rows.sum(&:quantity).ceil %></span></td>
-                <td class="text-end"><%= rows.map(&:tiny_order_id).uniq.size %></td>
-                <td class="text-end"><i class="fas fa-chevron-down reservation-sku__chevron"></i></td>
-              </tr>
-              <tr class="collapse <%= 'show' if @sku_query.present? %>" id="reservation-<%= index %>">
-                <td colspan="5" class="reservation-orders">
-                  <% rows.each do |row| %>
-                    <% refs = @order_refs[row.tiny_order_id] %>
-                    <div class="reservation-order">
-                      <span class="reservation-order__number">#<%= row.tiny_order_number.presence || row.tiny_order_id %></span>
-                      <span><%= row.customer_name %></span>
-                      <span class="reservation-refs">
-                        <span class="reservation-ref" title="Pedido na loja (e-commerce)"><i class="fas fa-shopping-bag"></i><%= row.ecommerce_number.presence || '—' %></span>
-                        <span class="reservation-ref <%= 'reservation-ref--empty' if refs[:invoice].blank? %>" title="Nota fiscal (ID no Tiny)"><i class="fas fa-file-invoice"></i><%= refs[:invoice].presence || 'sem NF' %></span>
-                      </span>
-                      <span class="text-muted-custom"><%= row.order_date&.strftime('%d/%m/%Y') %></span>
-                      <span class="reservation-order__qty"><%= row.quantity.to_i == row.quantity ? row.quantity.to_i : row.quantity %> un.</span>
-                    </div>
-                  <% end %>
-                </td>
-              </tr>
-            </tbody>
-          <% end %>
-        </table>
-      </div>
-    <% else %>
-      <div class="text-center text-muted-custom py-5 reservation-empty">
-        <i class="fas fa-check-circle fa-2x mb-2"></i>
-        <div><%= @sku_query.present? ? "Nenhuma reserva para \"#{@sku_query}\"." : 'Nenhum item reservado na fila.' %></div>
-      </div>
-    <% end %>
-  </div>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Itens reservados por produto', icon: 'fas fa-lock', meta: 'Um produto por linha. Clique na linha para ver quais pedidos estão reservando.',
+        foot: 'pedidos que já viraram pedido no Correios saem da lista sozinhos, mesmo antes da próxima atualização',
+        tools: link_to(safe_join([content_tag(:i, '', class: 'fas fa-box-open'), 'Produtos sem estoque']), b2b ? order_correios_stock_errors_b2b_dashboard_index_path : order_correios_stock_errors_dashboard_index_path, class: 'btn btn-secondary btn-sm'),
+        empty: { title: 'Nenhum item reservado na fila', text: 'Quando houver pedidos esperando para virar pedido no Correios, os itens aparecem aqui.' },
+        detail: { title: ->(r) { "Reserva de #{r[:sku]}" }, tip: 'Ver pedidos', note: 'Estes pedidos ainda não existem no Correios. Quando forem criados, a reserva sai daqui.', extra: orders_section }) %>
 </div>
 
-<script>
-  (function () {
-    // KPIs sobem de 0 até o valor (efeito de contagem).
-    document.querySelectorAll('.reservation-kpi strong[data-count]').forEach(function (el) {
-      var target = parseInt(el.dataset.count, 10) || 0;
-      var start = performance.now();
-      function tick(now) {
-        var progress = Math.min((now - start) / 700, 1);
-        el.textContent = Math.round(target * (1 - Math.pow(1 - progress, 3)));
-        if (progress < 1) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    });
-
-    // Enquanto atualiza, recarrega sozinha.
-    <% if @refresh.status == 'running' %>
-      setTimeout(function () { window.location.reload(); }, 15000);
-    <% end %>
-  })();
-</script>
+<% if @refresh.running_recently? %>
+  <script>setTimeout(function () { location.reload(); }, 8000);</script>
+<% end %>

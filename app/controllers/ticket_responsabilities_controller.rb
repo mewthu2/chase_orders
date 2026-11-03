@@ -4,6 +4,7 @@ class TicketResponsabilitiesController < ApplicationController
 
   def index
     @responsabilities = TicketResponsability.includes(:users, :ticket_sector).ordered
+    @ticket_counts = Ticket.group(:ticket_responsability_id).count
   end
 
   def new

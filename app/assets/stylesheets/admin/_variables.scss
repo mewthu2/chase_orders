@@ -1,27 +1,35 @@
-// Shared design tokens for the admin panel.
-// Extracted from the "GitHub dark" palette that most views had already
-// converged on independently — this file makes that convergence explicit.
+// Tokens do painel no visual Honey.Chase (Dark Mode Executivo). Os nomes antigos continuam,
+// agora com os valores novos, para todas as telas mudarem juntas; as variáveis CSS (--bg,
+// --surface, --brand-500...) ficam em admin/_honey.scss para a casca e os componentes novos.
 
 // Backgrounds
-$bg-canvas:        #0d1117; // page background, inputs
-$bg-surface:        #161b22; // cards, panels, modals
-$bg-elevated:       #1c2128; // card headers, table headers, footers
+$bg-canvas:        #090b0f; // fundo da página e campos
+$bg-surface:       #10141a; // cards, painéis, modais
+$bg-elevated:      #151a22; // cabeçalhos de card e tabela, rodapés
+$bg-raised:        #1b212b;
 
 // Borders
-$border-default:    #21262d;
-$border-muted:       #30363d;
+$border-default:   rgba(255, 255, 255, 0.07);
+$border-muted:     rgba(255, 255, 255, 0.11);
+$border-strong:    rgba(255, 255, 255, 0.17);
 
 // Text
-$text-primary:       #e6edf3;
-$text-secondary:     #c9d1d9;
-$text-muted:         #8b949e;
-$text-faint:         #6e7681;
+$text-primary:     #e9edf3;
+$text-secondary:   #a7b1bf;
+$text-muted:       #7d8897;
+$text-faint:       #5b6573;
 
-// Accents
-$accent-blue:        #1f6feb;
-$accent-blue-hover:  #388bfd;
+// Marca: azuis do logo HONEY (os "accent-blue" antigos apontam para eles)
+$brand-700:        #075a99;
+$brand-600:        #0a6fb8;
+$brand-500:        #1287d6;
+$brand-400:        #3aa3ea;
+$brand-300:        #7cc4f4;
+
+$accent-blue:        $brand-500;
+$accent-blue-hover:  $brand-400;
 $accent-blue-light:  #58a6ff;
-$accent-blue-lighter: #79c0ff;
+$accent-blue-lighter: $brand-300;
 
 $accent-green:       #238636;
 $accent-green-hover: #2ea043;
@@ -33,13 +41,24 @@ $accent-yellow-alt:  #d29922;
 $accent-red:         #da3633;
 $accent-red-hover:   #b91c1c;
 $accent-red-light:   #f85149;
-$accent-red-soft:    #e57373;
+$accent-red-soft:    #ff8a82;
+
+$accent-purple:      #a371f7;
+$accent-orange:      #f0883e;
 
 // Radii
-$radius-sm: 6px;
-$radius-md: 8px;
-$radius-lg: 12px;
-$radius-pill: 20px;
+$radius-sm: 7px;
+$radius-md: 10px;
+$radius-lg: 14px;
+$radius-pill: 999px;
 
 // Spacing panel used by page-header / filters-panel / table-card family
 $panel-padding: 1.25rem 1.5rem;
+
+// Motion
+$ease: cubic-bezier(.22, .61, .36, 1);
+$ease-out: cubic-bezier(.16, 1, .3, 1);
+$spring: cubic-bezier(.34, 1.56, .64, 1);
+
+$font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+$font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

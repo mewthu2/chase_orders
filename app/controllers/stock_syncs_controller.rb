@@ -1,11 +1,12 @@
 class StockSyncsController < ApplicationController
+  guard_screen :dashboard_correios, actions: { update_config: :edit }
   before_action :set_config, only: [:show, :update_config, :execute_now, :toggle_status]
 
   def index
     @config = StockSyncConfig.current_config
     @recent_attempts = Attempt.where(kinds: :sync_correios_stock)
                               .order(created_at: :desc)
-                              .limit(10)
+                              .limit(40)
     @stats = calculate_stats
     @current_execution = current_execution
   end

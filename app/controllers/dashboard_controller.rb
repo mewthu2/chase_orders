@@ -19,8 +19,10 @@ class DashboardController < ApplicationController
   # Janela de pedidos/tentativas exibidos nas telas Correios B2B.
   B2B_ORDERS_LOOKBACK = 8.weeks
 
-  guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS
-  guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS
+  DASHBOARD_ACTION_OVERRIDES = { delete_order_from_queue: :destroy, update_invoice_id: :edit }.freeze
+
+  guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
+  guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
   before_action :authorize_correios_dashboard!, only: SHARED_CORREIOS_ACTIONS
 
   protect_from_forgery except: :modal_test
@@ -39,6 +41,7 @@ class DashboardController < ApplicationController
 
     @push_tracking = Attempt.where(id: latest_ids.map(&:id))
     @job_running = b2b_job_running?(:get_tracking)
+    load_queue_stats(@push_tracking, :get_tracking)
   end
 
   def run_push_tracking
@@ -71,7 +74,9 @@ class DashboardController < ApplicationController
 
     @push_tracking = Attempt.where(id: latest_ids.map(&:id))
     @order_types = B2bOrderType.for_orders(@push_tracking.map(&:tiny_order_id))
+    @push_tracking = filter_by_order_type(@push_tracking, @order_types)
     @job_running = b2b_job_running?(:get_tracking_tiny2)
+    load_queue_stats(@push_tracking, :get_tracking_tiny2)
   end
 
   def run_push_tracking_b2b
@@ -121,6 +126,7 @@ class DashboardController < ApplicationController
            end
 
     @job_running = b2b_job_running?(:send_xml)
+    load_queue_stats(@send_xml, :send_xml)
   end
 
   def run_send_xml
@@ -175,6 +181,7 @@ class DashboardController < ApplicationController
     @order_types = B2bOrderType.for_orders(pending_order_ids)
     @send_xml = filter_by_order_type(@send_xml, @order_types)
     @job_running = b2b_job_running?(:send_xml_tiny2)
+    load_queue_stats(@send_xml, :send_xml_tiny2)
   end
 
   def run_send_xml_b2b
@@ -245,6 +252,7 @@ class DashboardController < ApplicationController
 
     @job_running = b2b_job_running?(:emission_invoice)
     preload_address_corrections(@invoice_emition)
+    load_queue_stats(@invoice_emition, :emission_invoice)
   end
 
   def run_invoice_emition
@@ -281,6 +289,8 @@ class DashboardController < ApplicationController
     @job_running = b2b_job_running?(:emission_invoice_tiny2)
     preload_address_corrections(@invoice_emition)
     @order_types = B2bOrderType.for_orders(@invoice_emition.map(&:tiny_order_id))
+    @invoice_emition = filter_by_order_type(@invoice_emition, @order_types)
+    load_queue_stats(@invoice_emition, :emission_invoice_tiny2)
   end
 
   def run_invoice_emition_b2b
@@ -468,7 +478,6 @@ class DashboardController < ApplicationController
       ignored: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.ignored? }
     }
 
-    @orders = @orders.paginate(page: params[:page], per_page: 20)
     load_b2b_order_types_from_tiny(@orders)
 
     @job_running = b2b_job_running?(:create_correios_order_tiny2)
@@ -907,6 +916,15 @@ class DashboardController < ApplicationController
 
   # Filtro "Tipo do pedido" (abastecimento loja, transferência B2B -> B2C, B2B comum) das filas do Correios B2B.
   # O tipo é deduzido por pedido (B2bOrderType), então o filtro usa o resultado já calculado.
+  # Números da fila no padrão das telas novas: o que saiu hoje, o último erro de cada pedido
+  # da fila e quando a rotina rodou pela última vez.
+  def load_queue_stats(queue, kind)
+    ids = queue.map(&:tiny_order_id).compact
+    @done_today = Attempt.where(kinds: kind, status: :success, created_at: Time.zone.today.all_day).count
+    @queue_errors = Attempt.where(kinds: kind, status: :error, tiny_order_id: ids).order(:id).index_by(&:tiny_order_id)
+    @last_run_at = Attempt.where(kinds: kind).maximum(:created_at)
+  end
+
   def filter_by_order_type(scope, order_types)
     @order_type_counts = order_types.values.map(&:to_s).tally
     @filter_order_type = params[:order_type].presence_in(B2bOrderType::LABELS.keys.map(&:to_s))

@@ -1,0 +1,187 @@
+@import 'admin/variables';
+
+// Notas fiscais: chave de ambiente (homologação/produção), busca de pedido Shopify e status da SEFAZ.
+
+.env-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.env-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 1rem;
+  background: $bg-surface;
+  border: 1px solid $border-muted;
+  border-radius: $radius-md;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: $accent-yellow;
+  }
+
+  &--prod::before {
+    background: linear-gradient(180deg, $accent-green-light, $accent-green);
+    animation: env-glow 2.4s ease-in-out infinite;
+  }
+
+  &__name { color: $text-primary; font-weight: 600; font-size: 0.9rem; }
+  &__meta { color: $text-muted; font-size: 0.75rem; }
+  form { margin: 0; }
+}
+
+.env-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+
+  &__track {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    background: rgba($accent-yellow, 0.25);
+    border: 1px solid $accent-yellow-alt;
+    position: relative;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+
+  &__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: $accent-yellow;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+  }
+
+  &__label { font-size: 0.8rem; font-weight: 700; color: $accent-yellow; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  &--prod {
+    .env-switch__track { background: rgba($accent-green-light, 0.25); border-color: $accent-green; }
+    .env-switch__knob { transform: translateX(20px); background: $accent-green-light; box-shadow: 0 0 10px rgba($accent-green-light, 0.7); }
+    .env-switch__label { color: $accent-green-light; }
+  }
+
+  &:hover .env-switch__knob { filter: brightness(1.15); }
+}
+
+@keyframes env-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.order-search {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  .field-input { flex: 1 1 220px; max-width: 320px; }
+}
+
+.nfe-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: $radius-md;
+  border: 1px solid $border-muted;
+  background: linear-gradient(120deg, rgba($accent-blue, 0.18), rgba($accent-green, 0.12) 60%, $bg-surface);
+
+  &__title { color: $text-primary; font-size: 1.35rem; font-weight: 700; margin: 0; }
+  &__sub { color: $text-muted; font-size: 0.85rem; }
+  &__total { color: $accent-green-light; font-size: 1.6rem; font-weight: 800; }
+}
+
+.nfe-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.nfe-flag {
+  padding: 0.6rem 0.9rem;
+  border-radius: $radius-sm;
+  font-size: 0.85rem;
+
+  &--block { background: rgba($accent-red, 0.12); border: 1px solid rgba($accent-red-light, 0.5); color: $accent-red-light; }
+  &--warn { background: rgba($accent-yellow, 0.1); border: 1px solid rgba($accent-yellow, 0.45); color: $accent-yellow; }
+}
+
+.ncm-ok { color: $accent-green-light; }
+.ncm-missing { color: $accent-red-light; font-weight: 600; }
+
+.sefaz-result {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.25rem;
+  border-radius: $radius-md;
+  border: 1px solid $border-muted;
+  background: $bg-surface;
+
+  &__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  &__code { color: $text-muted; font-size: 0.8rem; }
+  &__text { color: $text-primary; font-weight: 600; }
+
+  &--ok {
+    border-color: rgba($accent-green-light, 0.5);
+    .sefaz-result__icon { background: rgba($accent-green-light, 0.15); color: $accent-green-light; animation: sefaz-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  }
+
+  &--bad {
+    border-color: rgba($accent-red-light, 0.5);
+    .sefaz-result__icon { background: rgba($accent-red-light, 0.15); color: $accent-red-light; }
+  }
+
+  &--wait {
+    border-color: rgba($accent-yellow, 0.5);
+    .sefaz-result__icon { background: rgba($accent-yellow, 0.15); color: $accent-yellow; }
+  }
+}
+
+@keyframes sefaz-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.btn-sefaz {
+  background: linear-gradient(135deg, $accent-green, $accent-green-hover);
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.65rem 1.4rem;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba($accent-green-light, 0.3); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+}

@@ -1,0 +1,43 @@
+<%# Nota de transferência da remessa: emitida ao enviar, da empresa da loja de origem para a da loja de destino. %>
+<% origin_company, destination_company = InternalTransferInvoicer.companies_for(shipment) %>
+<% note = shipment.fiscal_notes.max_by { |n| [n.created_at, n.id] } %>
+<% if note || shipment.sendable? %>
+<div class="px-3 pb-3">
+  <% if note&.autorizada? %>
+    <div class="callout is-ok transfer-note"><i class="fas fa-file-invoice"></i><div>
+      <strong>NF-e de transferência nº <%= note.number %> autorizada<%= ' (homologação, sem valor fiscal)' if note.homologacao? %>.</strong>
+      De <%= note.company.legal_name %> para <%= destination_company&.legal_name || 'a empresa de destino' %>, <%= number_to_currency(note.total_value) %>.
+      <% if note.xml_available? && screen_can?(:fiscal_notes, :export) %>
+        <span class="transfer-note__links">
+          <%= link_to danfe_fiscal_note_path(note), target: '_blank', rel: 'noopener' do %><i class="fas fa-file-pdf"></i>DANFE<% end %>
+          <%= link_to xml_fiscal_note_path(note) do %><i class="fas fa-file-code"></i>XML<% end %>
+        </span>
+      <% end %>
+    </div></div>
+  <% elsif note && (shipment.sendable? || note.erro? || note.rejeitada?) %>
+    <div class="callout is-err transfer-note"><i class="fas fa-triangle-exclamation"></i><div>
+      <strong>A NF-e nº <%= note.number %> não foi autorizada<%= note.erro? ? ' (sem resposta da SEFAZ)' : '' %>.</strong>
+      <%= note.error_message.presence || note.sefaz_message %>
+      <% if shipment.sendable? %>Corrija o cadastro e clique em Emitir nota e enviar de novo. A remessa continua reservada.<% end %>
+    </div></div>
+  <% elsif shipment.sendable? %>
+    <% if origin_company.nil? || destination_company.nil? %>
+      <% missing = [(shipment.origin_location.name if origin_company.nil?), (@transfer.destination_location.name if destination_company.nil?)].compact %>
+      <div class="callout is-warn transfer-note"><i class="fas fa-building-circle-exclamation"></i><div>
+        <strong><%= missing.to_sentence %> ainda <%= missing.size == 1 ? 'não está ligada' : 'não estão ligadas' %> a uma empresa.</strong>
+        Sem isso não dá para emitir a nota de transferência nem enviar a remessa.
+        <%= link_to 'Ligar em Empresas', companies_path if screen_can?(:companies, :edit) %>
+      </div></div>
+    <% elsif origin_company == destination_company %>
+      <div class="callout is-info transfer-note"><i class="fas fa-circle-info"></i><div>
+        As duas lojas são da mesma empresa (<%= origin_company.legal_name %>), então não há nota de transferência. A remessa é só marcada como enviada.
+      </div></div>
+    <% else %>
+      <div class="callout is-info transfer-note"><i class="fas fa-file-invoice"></i><div>
+        Ao enviar, o Honey emite a NF-e de transferência de <strong><%= origin_company.legal_name %></strong> para <strong><%= destination_company.legal_name %></strong>
+        direto na SEFAZ<%= ' (homologação, sem valor fiscal)' if origin_company.homologacao? %>. A remessa só é marcada como enviada com a nota autorizada.
+      </div></div>
+    <% end %>
+  <% end %>
+</div>
+<% end %>

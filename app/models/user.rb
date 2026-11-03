@@ -2,10 +2,10 @@ class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable, :trackable
 
   has_many :user_profiles, dependent: :destroy
-  has_many :profiles, through: :user_profiles
+  has_many :profiles, through: :user_profiles, after_add: :reset_permission_cache, after_remove: :reset_permission_cache
   has_one_attached :avatar
 
   AVATAR_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
@@ -71,12 +71,22 @@ class User < ApplicationRecord
   # Callbacks
   before_validation :set_default_profile, on: :create
   before_validation :set_default_allowed_locations, on: :create
+  after_save :reset_permission_cache
   before_validation :clean_allowed_locations
   after_update :log_location_changes, if: :saved_change_to_allowed_locations?
 
   SUPER_ADMIN_EMAILS = %w[danielkbr89@gmail.com].freeze
 
   # Super admin pode logar como qualquer usuário (ImpersonationsController).
+  # Conta desativada em Gerenciar Usuários não entra (e perde a sessão aberta).
+  def active_for_authentication?
+    super && active?
+  end
+
+  def inactive_message
+    active? ? super : :account_disabled
+  end
+
   def super_admin?
     SUPER_ADMIN_EMAILS.include?(email.to_s.downcase)
   end
@@ -116,8 +126,34 @@ class User < ApplicationRecord
     ProfileTicketSector.where(profile_id: profile_ids).distinct.pluck(:ticket_sector_id)
   end
 
+  # Quem pode fazer a ação na tela, numa consulta só (admin ou algum perfil que libera).
+  def self.with_screen_access(screen_key, action = 'V')
+    return all if Screen.base_actions(screen_key).include?(action)
+
+    granted = ScreenPermission.where(screen_key: screen_key.to_s).where('actions LIKE ?', "%#{action}%").select(:profile_id)
+    where(id: UserProfile.where(profile_id: Profile::ADMIN).or(UserProfile.where(profile_id: granted)).select(:user_id))
+  end
+
   def can_access_screen?(screen_key)
-    admin? || profiles.any? { |p| p.can_access?(screen_key.to_s) }
+    can?(screen_key, 'V')
+  end
+
+  # Ação numa tela (letras de Screen::ACTIONS). Vários perfis somam o que cada um libera.
+  def can?(screen_key, action = 'V')
+    admin? || "#{Screen.base_actions(screen_key)}#{permission_letters[screen_key.to_s]}".include?(action.to_s.upcase)
+  end
+
+  # Letras liberadas na tela, somando todos os perfis ("VCE").
+  def actions_for(screen_key)
+    return Screen.acts(screen_key) if admin?
+
+    letters = "#{permission_letters[screen_key.to_s]}#{Screen.base_actions(screen_key)}".chars
+    (Screen::ACTION_LETTERS & letters).join
+  end
+
+  def reload(*)
+    @permission_letters = nil
+    super
   end
 
   def profile_names
@@ -148,7 +184,7 @@ class User < ApplicationRecord
   end
 
   def profile_ids
-    profiles.pluck(:id)
+    profiles.loaded? ? profiles.map(&:id) : profiles.pluck(:id)
   end
 
   def profile?(profile_id)
@@ -164,9 +200,15 @@ class User < ApplicationRecord
     profiles.delete(Profile.find(profile_id))
   end
 
+  # Lojas do próprio usuário somadas às lojas liberadas nos seus perfis.
   def allowed_location_keys
     return AVAILABLE_LOCATIONS.keys if admin?
 
+    keys = own_location_keys | profiles.flat_map(&:location_keys)
+    AVAILABLE_LOCATIONS.keys & keys
+  end
+
+  def own_location_keys
     locations = allowed_locations
     return [] if locations.nil?
 
@@ -257,6 +299,17 @@ class User < ApplicationRecord
   end
 
   private
+
+  # { 'orders' => 'VPVC' }: letras liberadas em cada tela, somando os perfis. Uma consulta só, sem
+  # carregar os perfis com as permissões (perfil admin nem precisaria delas).
+  def permission_letters
+    @permission_letters ||= ScreenPermission.where(profile_id: profile_ids).pluck(:screen_key, :actions)
+                                            .each_with_object(Hash.new('')) { |(key, letters), map| map[key] += letters.to_s }
+  end
+
+  def reset_permission_cache(*)
+    @permission_letters = nil
+  end
 
   def avatar_is_acceptable
     return unless avatar.attached?

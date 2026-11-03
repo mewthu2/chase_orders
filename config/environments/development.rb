@@ -27,14 +27,7 @@ Rails.application.configure do
     Bullet.rails_logger = true
     Bullet.add_footer = true
 
-    # B2bOrder#index eager-loads :client and :transfer_location together to
-    # avoid N+1 across the list, but each order only ever renders one of the
-    # two depending on its `kind` (sale vs stock_transfer). Whenever the
-    # visible page happens to be all one kind, Bullet flags the other
-    # association as unused eager loading — a false positive given both are
-    # genuinely needed to cover a mixed-kind list.
-    Bullet.add_safelist type: :unused_eager_loading, class_name: 'B2bOrder', association: :client
-    Bullet.add_safelist type: :unused_eager_loading, class_name: 'B2bOrder', association: :transfer_location
+    # Exceções do Bullet (falsos positivos): config/initializers/bullet.rb.
   end
 
   # Do not eager load code on boot.

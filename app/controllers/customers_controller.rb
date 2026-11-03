@@ -14,17 +14,9 @@ class CustomersController < ApplicationController
   ].freeze
 
   def index
-    @per_page     = (params[:per_page] || 20).to_i
-    @current_page = (params[:page] || 1).to_i
-    offset        = (@current_page - 1) * @per_page
-
-    @locations       = Location.order(:name)
-    @location_colors = build_location_colors(@locations)
-
-    base_query   = build_query
-    @customers   = base_query.limit(@per_page).offset(offset)
-    @total       = base_query.count
-    @total_pages = (@total.to_f / @per_page).ceil
+    @locations = Location.order(:name)
+    @scope = Customer.select('customers.*, (SELECT MAX(o.shopify_creation_date) FROM orders o WHERE o.customer_id = customers.id) AS last_order_at')
+                     .order(created_at: :desc)
   end
 
   def show

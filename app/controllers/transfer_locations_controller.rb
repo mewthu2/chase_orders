@@ -4,6 +4,7 @@ class TransferLocationsController < ApplicationController
 
   def index
     @transfer_locations = TransferLocation.order(:name)
+    @order_counts = B2bOrder.where.not(transfer_location_id: nil).group(:transfer_location_id).count
   end
 
   def new

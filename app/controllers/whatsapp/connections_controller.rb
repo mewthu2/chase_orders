@@ -3,7 +3,7 @@ module Whatsapp
     before_action :require_management
     def index
       @connections = Connection.order(:name)
-      @users = User.active.order(:name).select { |u| u.can_access_screen?('whatsapp_attend') }
+      @users = User.active.with_screen_access(:whatsapp_attend).order(:name)
       respond_to do |format|
         format.html
         format.json { render json: { connections: @connections.map { |c| payload(c) }, configured: Providers::Evolution.configured? } }
@@ -54,8 +54,9 @@ module Whatsapp
 
     private
     def permitted_users(ids)
-      users = User.active.where(id: Array(ids)).to_a
-      raise ArgumentError, 'Selecione somente usuários com permissão para atendimento.' unless users.all? { |u| u.can_access_screen?('whatsapp_attend') }
+      wanted = Array(ids).reject(&:blank?).map(&:to_i).uniq
+      users = User.active.with_screen_access(:whatsapp_attend).where(id: wanted).to_a
+      raise ArgumentError, 'Selecione somente usuários com permissão para atendimento.' unless users.size == User.active.where(id: wanted).count
       users
     end
     def payload(connection)

@@ -3,46 +3,34 @@
 <% content_for :scripts do %><%= javascript_include_tag 'whatsapp_support', defer: true %><% end %>
 <% configured = Whatsapp::Providers::Evolution.configured? %>
 <section class="wa-app wa-connections-page" id="wa-connections">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fab fa-whatsapp me-2"></i>Números conectados</h1>
-      <p class="page-subtitle">Conecte cada WhatsApp Business da equipe lendo um QR pelo celular</p>
-    </div>
-    <div class="header-actions">
-      <span class="wa-server <%= configured ? 'is-on' : 'is-off' %>"><i></i><%= configured ? 'Servidor WhatsApp ativo' : 'Servidor WhatsApp não configurado' %></span>
-      <% if current_user.can_access_screen?('whatsapp_attend') %>
-        <%= link_to whatsapp_conversations_path, class: 'btn-export' do %><i class="fas fa-comments me-2"></i>Abrir conversas<% end %>
-      <% end %>
-    </div>
-  </div>
+  <%= hc_page_header 'Números conectados', 'Conecte cada WhatsApp Business pelo celular.', icon: 'fab fa-whatsapp' do %>
+    <span class="ticket-status" style="--c: <%= hc_tone(configured ? 'green' : 'gray') %>" data-tip="<%= configured ? 'O servidor do WhatsApp está pronto para conectar números.' : 'A integração precisa ser configurada no servidor.' %>"><%= configured ? 'Servidor WhatsApp ativo' : 'Servidor não configurado' %></span>
+    <% if current_user.can_access_screen?('whatsapp_attend') %>
+      <%= link_to whatsapp_conversations_path, class: 'btn btn-secondary' do %><i class="fas fa-comments"></i>Abrir conversas<% end %>
+    <% end %>
+    <a href="#wa-add-number" class="btn btn-export"><i class="fas fa-plus"></i>Adicionar número</a>
+  <% end %>
   <div id="wa-error" class="wa-notice" role="status" hidden></div>
-  <% unless configured %><div class="alert alert-warning">A integração precisa ser configurada no servidor antes de adicionar um número. Consulte as instruções de instalação do módulo.</div><% end %>
+  <% unless configured %><div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i><div><strong>Integração não configurada.</strong> A integração precisa ser configurada no servidor antes de adicionar um número. Consulte as instruções de instalação do módulo.</div></div><% end %>
 
-  <div class="wa-setup">
-    <div class="table-card">
-      <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-route me-2"></i>Como conectar um número</h5></div>
-      <ol class="wa-steps">
-        <li>
-          <span class="wa-step-num">1</span>
-          <div><strong>Dê um nome e escolha a equipe</strong><p>Preencha o formulário ao lado e clique em <b>Adicionar número</b>. Um cartão com o QR aparece logo abaixo.</p></div>
-        </li>
-        <li>
-          <span class="wa-step-num">2</span>
-          <div><strong>Escaneie o QR com o celular</strong><p>No celular do número, abra o <b>WhatsApp Business</b> → <b>⋮ Mais opções</b> (ou <b>Configurações</b> no iPhone) → <b>Aparelhos conectados</b> → <b>Conectar aparelho</b> e aponte a câmera para o QR.</p></div>
-        </li>
-        <li>
-          <span class="wa-step-num">3</span>
-          <div><strong>Pronto: aguarde “Conectado”</strong><p>Confira se o telefone mostrado no cartão é o certo e abra <b>Conversas</b> para atender.</p></div>
-        </li>
-        <li class="wa-step-tips">
-          <span class="wa-step-num"><i class="fas fa-lightbulb"></i></span>
-          <div><strong>Dicas</strong><p>O QR vale poucos segundos; se sumir, clique em <b>Conectar / renovar QR</b>. Use um celular diferente para cada número e deixe-o com internet. Para trocar de aparelho, use <b>Desconectar</b> só no cartão daquele número.</p></div>
-        </li>
-      </ol>
+  <div class="pg-split" style="--cols: 1fr 1fr; margin-bottom: 18px">
+    <div class="pg-split-a">
+      <div class="panel pg-card pg-howto">
+        <h3><i class="fas fa-qrcode"></i>Como conectar um número</h3>
+        <ol>
+          <% ['Preencha <b>Adicionar número</b>: dê um nome para a equipe (por exemplo, Vendas ou Atacado) e marque quem pode atender.',
+              'No celular do número, abra o <b>WhatsApp Business</b> e vá em <b>Aparelhos conectados</b>.',
+              'Toque em <b>Conectar aparelho</b> e aponte a câmera para o QR desta tela. O QR vale cerca de 30 segundos; se sumir, use <b>Conectar / renovar QR</b>.',
+              'Quando o cartão ficar verde, com a palavra <b>Conectado</b>, as conversas passam a chegar na tela Conversas.'].each_with_index do |text, i| %>
+            <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
+          <% end %>
+        </ol>
+      </div>
     </div>
-
-    <div class="table-card">
-      <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-plus-circle me-2"></i>Adicionar número</h5></div>
+    <div class="pg-split-b">
+      <div class="panel pg-card pg-inline">
+        <h3><i class="fas fa-mobile-screen-button"></i>Adicionar número</h3>
+        <p class="pg-p" style="margin-bottom: 14px">Depois de salvar, você lê um QR no celular para conectar.</p>
       <form id="wa-add-number" class="wa-add-number">
         <label for="wa-number-name">Nome para a equipe</label>
         <input id="wa-number-name" name="name" class="form-control" placeholder="Vendas, Atacado, Loja Centro…" maxlength="80" required>
@@ -53,11 +41,12 @@
         <button class="btn-export" <%= 'disabled' unless configured %>><i class="fas fa-qrcode me-2"></i>Adicionar número</button>
         <small>Administradores do Honey têm acesso a todos os números.</small>
       </form>
+      </div>
     </div>
   </div>
 
-  <h5 class="wa-section-title"><i class="fas fa-mobile-alt me-2"></i>Seus números</h5>
+  <div class="pg-sec-h"><h3><i class="fas fa-mobile-screen-button"></i>Seus números</h3><span>Cada cartão é um WhatsApp da empresa.</span></div>
   <div id="wa-number-cards" class="wa-number-cards" aria-live="polite"></div>
   <template id="wa-user-options"><% @users.each do |user| %><label><input type="checkbox" value="<%= user.id %>"> <%= user.name %></label><% end %></template>
-  <details class="wa-provider-info"><summary>Informações para a administração</summary><p>Este módulo utiliza <a href="https://github.com/evolution-foundation/evolution-api/tree/2.3.7" target="_blank" rel="noopener">Evolution API 2.3.7</a> com Baileys. O pareamento por aparelhos conectados não é a API oficial da Meta. Mudanças no WhatsApp podem interromper sessões ou exigir novo QR. O uso também está sujeito às regras do WhatsApp.</p><p>O histórico disponível depende da sincronização do celular e do que o provedor armazenou. A recuperação inicial busca até os últimos 7 dias disponíveis; não há promessa de importar todo o histórico antigo.</p><p>Ao desconectar, o histórico no Honey permanece. Para conectar de novo, pode ser necessário escanear outro QR. Sessões, banco e armazenamento do provedor devem usar volumes persistentes.</p></details>
+  <div class="panel pg-card" style="margin-top: 18px"><details class="wa-provider-info wn-details"><summary>Informações para a administração</summary><p>Este módulo utiliza <a href="https://github.com/evolution-foundation/evolution-api/tree/2.3.7" target="_blank" rel="noopener">Evolution API 2.3.7</a> com Baileys. O pareamento por aparelhos conectados não é a API oficial da Meta. Mudanças no WhatsApp podem interromper sessões ou exigir novo QR. O uso também está sujeito às regras do WhatsApp.</p><p>O histórico disponível depende da sincronização do celular e do que o provedor armazenou. A recuperação inicial busca até os últimos 7 dias disponíveis; não há promessa de importar todo o histórico antigo.</p><p>Ao desconectar, o histórico no Honey permanece. Para conectar de novo, pode ser necessário escanear outro QR. Sessões, banco e armazenamento do provedor devem usar volumes persistentes.</p></details></div>
 </section>

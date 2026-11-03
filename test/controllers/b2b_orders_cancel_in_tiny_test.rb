@@ -150,7 +150,7 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
     sent = sent_order
     get b2b_orders_path
 
-    assert_select "form[action='#{cancel_in_tiny_b2b_order_path(sent)}'][data-turbo-confirm*='Cancelado']"
+    assert_select "form[action='#{cancel_in_tiny_b2b_order_path(sent)}'][data-hc-confirm*='Cancelado']"
   end
 
   test 'it requires the b2b_orders permission' do

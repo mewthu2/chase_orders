@@ -1,78 +1,41 @@
-<footer class="main-footer">
-  <div class="footer-container">
-    <div class="footer-content">
-      <div class="footer-section">
-        <div class="footer-brand">
-          <%= image_tag "admin/chase-logo.png", alt: "ChaseOrders", class: "nav-logo" %>
-          <p class="footer-description">
-            Sistema de gestão de pedidos e estoque
-          </p>
-        </div>
-      </div>
-
-      <div class="footer-section">
-        <h4 class="footer-title">Links Úteis</h4>
-        <ul class="footer-links">
-          <li>
-            <%= link_to root_path, class: "footer-link" do %>
-              <i class="fas fa-home"></i>
-              <span>Home</span>
-            <% end %>
-          </li>
-          <li>
-            <%= link_to edit_user_path(current_user), class: "footer-link" do %>
-              <i class="fas fa-user-edit"></i>
-              <span>Meu Perfil</span>
-            <% end %>
-          </li>
-        </ul>
-      </div>
-
-      <div class="footer-section">
-        <h4 class="footer-title">Suporte & Ajuda</h4>
-        <div class="support-links">
-          <a href="https://wa.me/5516992375432" target="_blank" class="support-link whatsapp-link">
-            <i class="fab fa-whatsapp"></i>
-            <div class="support-info">
-              <span class="support-label">WhatsApp</span>
-              <span class="support-text">Ajuda e Suporte - Chame o Daniel</span>
-            </div>
-          </a>
-          <a href="https://chasebrasil.com" target="_blank" class="support-link website-link">
-            <i class="fas fa-globe"></i>
-            <div class="support-info">
-              <span class="support-label">Site Oficial</span>
-              <span class="support-text">chasebrasil.com</span>
-            </div>
-          </a>
-        </div>
-      </div>
-
-      <div class="footer-section">
-        <h4 class="footer-title">Sessão Atual</h4>
-        <div class="user-session-info">
-          <div class="session-user">
-            <i class="fas fa-user-circle"></i>
-            <div class="session-details">
-              <span class="session-name"><%= current_user.name %></span>
-              <span class="session-role">
-                <% if current_user.profiles.any? %>
-                  <%= current_user.profiles.map(&:name).join(', ') %>
-                <% else %>
-                  Usuário
-                <% end %>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+<%# Rodapé do painel no visual Honey: marca, atalhos, suporte e a sessão atual. %>
+<footer class="hc-footer" aria-label="Rodapé">
+  <span class="hc-footer-glow" aria-hidden="true"></span>
+  <div class="hc-footer-inner">
+    <div class="hc-footer-brand">
+      <%= image_tag 'admin/honey-chase-logo.webp', alt: 'HONEY.CHASE', width: 440, height: 48 %>
+      <p>Chamados, pedidos, envios e estoque da Chase, organizados por área.</p>
     </div>
 
-    <div class="footer-bottom">
-      <div class="footer-copyright">
-        <p>&copy; <%= Date.current.year %> ChaseOrders. Todos os direitos reservados.</p>
-        <p class="footer-version">Versão 1.0 </p>
-      </div>
+    <nav class="hc-footer-col" aria-label="Atalhos">
+      <h4>Atalhos</h4>
+      <%= link_to root_path do %><i class="fas fa-inbox"></i>Meus chamados<% end %>
+      <%= link_to edit_user_path(current_user) do %><i class="fas fa-user-edit"></i>Meu Perfil<% end %>
+      <button type="button" data-act="map"><i class="fas fa-map"></i>Mapa do sistema</button>
+      <button type="button" data-act="search"><i class="fas fa-search"></i>Buscar tela <kbd>Ctrl K</kbd></button>
+    </nav>
+
+    <div class="hc-footer-col">
+      <h4>Suporte e ajuda</h4>
+      <%= link_to NavigationHelper::SUPPORT_WHATSAPP, class: 'hc-footer-card is-whatsapp', target: '_blank', rel: 'noopener' do %>
+        <i class="fab fa-whatsapp"></i><span><b>WhatsApp</b><small>Ajuda e suporte · chame o Daniel</small></span><i class="fas fa-arrow-right go"></i>
+      <% end %>
+      <%= link_to 'https://chasebrasil.com', class: 'hc-footer-card', target: '_blank', rel: 'noopener' do %>
+        <i class="fas fa-globe"></i><span><b>Site oficial</b><small>chasebrasil.com</small></span><i class="fas fa-arrow-right go"></i>
+      <% end %>
     </div>
+
+    <div class="hc-footer-col">
+      <h4>Sessão atual</h4>
+      <div class="hc-footer-session">
+        <span class="avatar"><%= user_initials(current_user) %></span>
+        <span><b><%= current_user.name %></b><small><%= current_user.profiles.map(&:name).join(', ').presence || 'Usuário' %></small></span>
+      </div>
+      <button type="button" class="hc-footer-help" data-act="help"><i class="fas fa-circle-question"></i>Ajuda desta tela <kbd>?</kbd></button>
+    </div>
+  </div>
+  <div class="hc-footer-bottom">
+    <span>© <%= Date.current.year %> Chase Brasil · Honey.Chase. Todos os direitos reservados.</span>
+    <span class="hc-footer-version"><i class="fas fa-code-branch"></i>Versão 1.0</span>
   </div>
 </footer>

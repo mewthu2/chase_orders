@@ -1,6 +1,6 @@
 class MarketingCampaignsController < ApplicationController
   before_action :set_campaign, only: [:edit, :update, :destroy, :toggle_status, :add_user, :remove_user, :statistics, :delete_all_tasks] # Added delete_all_tasks to before_action
-  guard_screen :marketing_campaigns
+  guard_screen :marketing_campaigns, actions: { add_user: :edit, remove_user: :edit, delete_all_tasks: :destroy }
 
   def index
     @campaigns = MarketingCampaign.includes(:campaign_users, :marketing_tasks)

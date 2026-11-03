@@ -1,14 +1,16 @@
 <% content_for :title, 'Atendimento WhatsApp' %>
 <% content_for :styles do %><%= stylesheet_link_tag 'whatsapp_support' %><% end %>
 <% content_for :scripts do %><%= javascript_include_tag 'whatsapp_support', defer: true %><% end %>
+<%= hc_page_header 'Atendimento WhatsApp', 'Conversas da sua equipe, em um só lugar.', icon: 'fab fa-whatsapp' do %>
+  <% if current_user.can_access_screen?('whatsapp_manage') %>
+    <%= link_to whatsapp_connections_path, class: 'btn btn-secondary' do %><i class="fas fa-mobile-screen-button"></i>Números conectados<% end %>
+  <% end %>
+  <button type="button" class="btn btn-export" id="wa-new"><i class="fas fa-comment-medical"></i>Nova conversa</button>
+<% end %>
 <section class="wa-app" id="wa-inbox" aria-label="Atendimento WhatsApp">
-  <header class="wa-title"><div><h1>Atendimento WhatsApp</h1><p>Conversas da sua equipe, em um só lugar.</p></div>
-    <% if current_user.can_access_screen?('whatsapp_manage') %><%= link_to 'Números conectados', whatsapp_connections_path, class: 'btn btn-outline-secondary' %><% end %>
-  </header>
   <div class="wa-notice" id="wa-error" role="status" hidden></div>
   <div class="wa-workspace">
     <aside class="wa-inbox-list" aria-label="Lista de conversas">
-      <button class="btn btn-success w-100" id="wa-new">Nova conversa</button>
       <label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Buscar nome ou telefone" type="search">
       <label class="visually-hidden" for="wa-number">Número da empresa</label><select id="wa-number" class="form-select"><option value="">Todos os meus números</option></select>
       <div class="wa-filters"><select id="wa-state" class="form-select" aria-label="Situação"><option value="open">Abertas</option><option value="closed">Encerradas</option><option value="">Todas</option></select>

@@ -1,6 +1,8 @@
 class TicketMessagesController < ApplicationController
   include TicketPage
 
+  guard_screen :tickets, actions: { create: :edit }
+
   def create
     return unless load_ticket(params[:ticket_id])
 

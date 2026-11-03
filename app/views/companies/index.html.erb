@@ -1,75 +1,104 @@
 <% content_for :title, "Empresas" %>
+<% statuses = { true => ['Ativa', 'green', 'Pode ser escolhida para gerar nota, se o certificado estiver em dia.'], false => ['Inativa', 'gray', 'Fica guardada, mas não aparece para gerar nota.'] } %>
+<% environments = { 'Produção' => ['Produção', 'green', 'Notas de verdade, com valor fiscal.'], 'Homologação' => ['Homologação', 'yellow', 'Ambiente de teste. As notas não têm valor fiscal.'] } %>
+<% cert_map = { 'valid' => ['Válido', 'green', 'Certificado dentro do prazo. A empresa pode gerar notas.'],
+                'expiring' => ['Vence em breve', 'yellow', 'Renove logo. Quando vencer, as notas desta empresa param.'],
+                'expired' => ['Vencido', 'red', 'As notas desta empresa estão paradas até enviar um certificado novo.'],
+                'missing' => ['Sem certificado', 'gray', 'Sem o certificado A1 a empresa não consegue assinar notas.'] } %>
+<% rows = @companies.map do |c|
+     cert = c.certificate_status.to_s
+     expires = c.certificate_expires_at&.strftime('%d/%m/%Y')
+     days = c.certificate_expires_at && ((c.certificate_expires_at - Time.current) / 1.day).ceil
+     cert_map_row = cert == 'expiring' ? cert_map.merge('expiring' => ["Vence em #{days} #{days == 1 ? 'dia' : 'dias'}", 'yellow', cert_map['expiring'][2]]) : cert_map
+     { id: c.id, record: c, razao: c.legal_name, fantasia: c.trade_name.presence || c.legal_name, cnpj: c.cnpj_formatted, ie: c.state_registration.presence || '—',
+       im: c.municipal_registration.presence || '—', cnae: c.cnae.presence || '—', fone: c.phone.presence || '—', email: c.email.presence || '—', st: c.active,
+       rua: c.street, numero: c.number, comp: c.complement.presence || '—', bairro: c.neighbourhood, cidade: c.city, uf: c.state, cep: c.zip, ibge: c.city_ibge_code,
+       amb: c.producao? ? 'Produção' : 'Homologação', serie: c.nfe_series, prox: c.current_nfe_number, natV: c.operation_nature_sale, natT: c.operation_nature_transfer,
+       cfopVi: c.cfop_sale_in_state, cfopVo: c.cfop_sale_out_of_state, cfopTi: c.cfop_transfer_in_state, cfopTo: c.cfop_transfer_out_of_state,
+       icms: c.icms_situation, pis: c.pis_cst, cofins: c.cofins_cst, cert: cert,
+       certSub: { 'valid' => "até #{expires}", 'expiring' => "até #{expires}", 'expired' => "venceu em #{expires}" }[cert] || '—',
+       certTxt: cert == 'missing' ? 'Sem certificado' : "#{cert_map_row[cert][0]} (#{expires})", notas: @note_counts[c.id].to_i, cert_label: cert_map_row[cert][0],
+       loja: c.location&.name || '—' }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'empresas', unit1: 'empresa', page_size: 10,
+     tabs: { col: :st, items: [['', 'Todas'], ['true', 'Ativas'], ['false', 'Inativas']] },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :razao, label: 'Empresa', sub: :cnpj, sort: true },
+       { k: :fantasia, label: 'Nome fantasia', hide: true },
+       { k: :cnpj, label: 'CNPJ', hide: true },
+       { k: :ie, label: 'Inscrição estadual', hide: true },
+       { k: :im, label: 'Inscrição municipal', hide: true },
+       { k: :cnae, label: 'CNAE', hide: true },
+       { k: :fone, label: 'Telefone', hide: true },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :rua, label: 'Rua', hide: true },
+       { k: :numero, label: 'Número', hide: true },
+       { k: :comp, label: 'Complemento', hide: true },
+       { k: :bairro, label: 'Bairro', hide: true },
+       { k: :cidade, label: 'Cidade', sub: :uf, sort: true, cls: 'due' },
+       { k: :uf, label: 'UF', hide: true },
+       { k: :cep, label: 'CEP', hide: true },
+       { k: :ibge, label: 'Código IBGE do município', hide: true },
+       { k: :amb, label: 'Ambiente', t: :status, map: environments },
+       { k: :serie, label: 'Série da NF-e', hide: true },
+       { k: :prox, label: 'Próximo número da NF-e', hide: true },
+       { k: :natV, label: 'Natureza da operação (venda)', hide: true },
+       { k: :natT, label: 'Natureza da operação (transferência)', hide: true },
+       { k: :cfopVi, label: 'CFOP de venda dentro do estado', hide: true },
+       { k: :cfopVo, label: 'CFOP de venda para outro estado', hide: true },
+       { k: :cfopTi, label: 'CFOP de transferência dentro do estado', hide: true },
+       { k: :cfopTo, label: 'CFOP de transferência para outro estado', hide: true },
+       { k: :icms, label: 'Situação do ICMS', hide: true },
+       { k: :pis, label: 'CST do PIS', hide: true },
+       { k: :cofins, label: 'CST do COFINS', hide: true },
+       { k: :certTxt, label: 'Certificado digital', hide: true },
+       { k: :cert, label: 'Certificado', t: :status, map: cert_map, sub: :certSub },
+       { k: :certSub, label: 'Validade do certificado', hide: true, nodetail: true },
+       { k: :loja, label: 'Loja', cls: 'due' },
+       { k: :notas, label: 'Notas fiscais', t: :qty, sort: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Razão social, nome, CNPJ ou cidade…', cols: %i[razao fantasia cnpj cidade], tip: 'Procura na razão social, no nome fantasia, no CNPJ e na cidade.' },
+       { id: :amb, type: :select, label: 'Ambiente', col: :amb, options: [['Produção', 'Produção'], ['Homologação', 'Homologação (teste)']], all: 'Todos os ambientes', tip: 'Homologação é teste: a nota não vale.' },
+       { id: :cert, type: :select, label: 'Certificado', col: :cert, options: [['valid', 'Em dia'], ['expiring', 'Vence em breve'], ['expired,missing', 'Vencido ou sem certificado']], all: 'Todos', tip: 'Mostra só as empresas na situação do certificado escolhida.' }
+     ],
+     kpis: [
+       { label: 'Empresas ativas', icon: 'fas fa-building-circle-check', tone: 'blue', help: 'Aparecem na escolha ao gerar uma nota.', col: :st, val: true },
+       { label: 'Certificado em dia', icon: 'fas fa-certificate', tone: 'green', help: 'Podem assinar notas normalmente.', col: :cert, val: 'valid' },
+       { label: 'Vence em breve', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Faltam menos de 30 dias. Renove para as notas não pararem.', col: :cert, val: 'expiring' },
+       { label: 'Vencido ou sem certificado', icon: 'fas fa-ban', tone: 'red', help: 'Não conseguem assinar notas até enviar um certificado.', col: :cert, vals: %w[expired missing] }
+     ]) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-building me-2"></i>Empresas</h1>
-      <p class="page-subtitle">Empresas emissoras de nota fiscal e seus certificados digitais</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @companies.size %> empresa(s)</span>
-      <%= link_to new_company_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Nova Empresa
-      <% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Empresas', 'Empresas emissoras de nota fiscal e seus certificados digitais', icon: 'fas fa-building' do %>
+  <% if screen_can?(:companies, :create) %>
+    <%= link_to new_company_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova empresa<% end %>
+  <% end %>
+<% end %>
 
-  <div class="table-card">
-    <div class="table-card-header">
-      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Empresas</h5>
-    </div>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Quando uma empresa pode gerar nota.</strong> Ela precisa estar ativa e com o certificado digital em dia. Quando faltam menos de 30 dias, o aviso muda para Vence em breve. Vencido, as notas da empresa param. A loja de cada empresa define quem emite e quem recebe a nota de transferência na Transferência Interna.</div></div>
 
-    <% if @companies.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Razão social</th>
-              <th>CNPJ</th>
-              <th>Cidade/UF</th>
-              <th>Ambiente</th>
-              <th class="text-center">Certificado</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @companies.each do |company| %>
-              <tr>
-                <td class="text-main"><%= company.legal_name %></td>
-                <td class="text-muted-custom"><%= company.cnpj_formatted %></td>
-                <td class="text-muted-custom"><%= company.city %>/<%= company.state %></td>
-                <td class="text-muted-custom"><%= company.producao? ? 'Produção' : 'Homologação' %></td>
-                <td class="text-center"><%= certificate_badge(company) %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= company.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= company.active? ? 'Ativa' : 'Inativa' %>
-                  </span>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_company_path(company), class: "action-btn action-btn--edit" do %>
-                      <i class="fas fa-pencil-alt"></i>
-                    <% end %>
-                    <%= button_to company_path(company), method: :delete, class: "action-btn action-btn--danger",
-                                  form: { data: { turbo_confirm: "Tem certeza que deseja excluir esta empresa?" } } do %>
-                      <i class="fas fa-trash"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-building fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma empresa cadastrada</h5>
-        <%= link_to new_company_path, class: "btn-export" do %>
-          <i class="fas fa-plus me-1"></i>Nova Empresa
-        <% end %>
-      </div>
-    <% end %>
-  </div>
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Empresas emissoras', icon: 'fas fa-building', meta: 'Empresa que já tem nota fiscal não pode ser excluída: desative-a.',
+        empty: { title: 'Nenhuma empresa encontrada', text: 'Cadastre a empresa (CNPJ) que vai emitir as notas fiscais.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova empresa']), new_company_path, class: 'btn btn-export') if screen_can?(:companies, :create)) },
+        detail: { title: ->(r) { r[:fantasia] }, fields: [['Razão social', :razao]],
+                  note: 'Para trocar o certificado digital, use a ação Enviar certificado. A senha dele nunca aparece nesta tela.' },
+        actions: ->(r) {
+          company = r[:record]
+          next ''.html_safe unless screen_can?(:companies, :edit)
+
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_company_path(company)),
+            hc_row_action('fas fa-file-shield', 'Enviar certificado', edit_company_path(company, anchor: 'certificado')),
+            hc_row_action('fas fa-store', 'Loja desta empresa', edit_company_path(company, anchor: 'loja')),
+            (r[:st] ? hc_row_action('fas fa-toggle-off', 'Desativar', company_path(company), method: :patch, params: { company: { active: false } },
+                                    confirm: { title: "Desativar #{r[:fantasia]}?", text: 'Ela deixa de aparecer na escolha ao gerar uma nota. As notas que já existem continuam na lista. Dá para ativar de novo.' })
+                    : hc_row_action('fas fa-toggle-on', 'Ativar', company_path(company), method: :patch, params: { company: { active: true } })),
+            (hc_row_action('fas fa-trash', 'Excluir', company_path(company), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:fantasia]}?", text: 'A empresa não tem nenhuma nota fiscal, por isso pode ser excluída. Não dá para desfazer.', ok: 'Excluir empresa' }) if r[:notas].zero?)
+          ].compact)
+        }) %>
 </div>

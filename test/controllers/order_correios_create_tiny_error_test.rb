@@ -18,7 +18,7 @@ class OrderCorreiosCreateTinyErrorTest < ActionDispatch::IntegrationTest
     get order_correios_create_dashboard_index_path
 
     assert_response :success
-    assert_select '.alert-danger', text: /token inválido/
+    assert_select '.callout.is-err', text: /token inválido/
   end
 
   test 'lists the orders of every page and shows no error' do

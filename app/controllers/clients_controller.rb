@@ -1,14 +1,14 @@
 # app/controllers/clients_controller.rb
 class ClientsController < ApplicationController
   before_action :authenticate_user!
+  guard_screen :clients
   before_action :set_client, only: [:show, :edit, :update, :destroy]
 
   def index
     @clients = Client.order(:responsible_name)
-    @clients = @clients.where(
-      'LOWER(responsible_name) LIKE :q OR LOWER(business_name) LIKE :q OR registration LIKE :q',
-      q: "%#{params[:q]&.downcase}%"
-    ) if params[:q].present?
+    @order_counts = B2bOrder.where.not(client_id: nil).group(:client_id).count
+    @linked_ids = (@order_counts.keys + B2bCatalog.where.not(client_id: nil).distinct.pluck(:client_id) +
+                   B2bCatalogOrder.where.not(client_id: nil).distinct.pluck(:client_id) + OrderPdv.where.not(client_id: nil).distinct.pluck(:client_id)).to_set
   end
 
   def show; end
@@ -42,9 +42,14 @@ class ClientsController < ApplicationController
     end
   end
 
+  # Quem já tem pedido ou catálogo fica, para não perder o histórico.
   def destroy
-    @client.destroy
-    redirect_to clients_path, notice: 'Cliente removido.'
+    if client_linked?(@client)
+      redirect_to clients_path, alert: "Não dá para excluir #{@client.responsible_name}: já tem pedido ou catálogo ligado ao cadastro."
+    else
+      @client.destroy
+      redirect_to clients_path, notice: 'Cliente removido.'
+    end
   end
 
   def search
@@ -62,6 +67,10 @@ class ClientsController < ApplicationController
   end
 
   private
+
+  def client_linked?(client)
+    [B2bOrder, B2bCatalog, B2bCatalogOrder, OrderPdv].any? { |model| model.exists?(client_id: client.id) }
+  end
 
   def set_client
     @client = Client.find(params[:id])

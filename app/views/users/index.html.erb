@@ -1,187 +1,88 @@
-<% content_for :title, "Usuários" %>
+<% content_for :title, "Gerenciar Usuários" %>
+<% statuses = { 'true' => ['Ativo', 'green', 'Pode entrar no sistema.'], 'false' => ['Inativo', 'gray', 'Não consegue entrar. Os dados e o histórico continuam guardados.'],
+                'me' => ['Ativo', 'green', 'É a sua conta. Para mudar seus dados, use Meu Perfil.'] } %>
+<% tones = %w[#58a6ff #f0883e #e3b341 #3fb950 #db61a2 #39c5cf] %>
+<% profile_map = Profile.order(:id).each_with_index.to_h do |profile, i|
+     [profile.name, [profile.name, profile.admin? ? '#a371f7' : tones[i % tones.size], profile.admin? ? 'Vê e faz tudo, em todas as lojas e setores.' : 'O pacote de telas e ações liberado para a pessoa.']]
+   end %>
+<% location_names = User::AVAILABLE_LOCATIONS.transform_values { |data| data[:name] } %>
+<% rows = @users.map do |user|
+     admin = user.admin?
+     profile = user.profiles.min_by { |p| p.admin? ? 0 : p.id }
+     sectors = admin ? nil : user.profiles.flat_map { |p| @sector_names[p.id] || [] }.uniq
+     last = user.last_sign_in_at || user.current_sign_in_at
+     { id: user.id, record: user, nome: user.name.presence || user.email, pessoa: [user.name.presence || user.email, (url_for(user.avatar) if saved_avatar?(user))], email: user.email, fone: user.phone.presence || '—',
+       st: user == current_user ? 'me' : user.active.to_s, perfil: profile&.name || 'Sem perfil', admin: admin,
+       setSub: admin ? 'Chamados: todos' : (sectors.any? ? "Chamados: #{sectors.join(', ')}" : 'Chamados: só os seus'),
+       setores: admin ? 'Todos os setores' : (sectors.presence&.join(', ') || 'Nenhum (só os próprios chamados)'),
+       lojas: admin ? [['Todas as lojas', '*']] : user.allowed_location_keys.map { |key| [location_names[key] || key.humanize, key] },
+       acc: last ? last.in_time_zone.strftime('%d/%m/%Y') : 'Nunca entrou', accSub: last ? "#{last.in_time_zone.strftime('%H:%M')} · #{hc_ago(last)}" : '', accAt: last,
+       notif: user.ticket_notifications_enabled, criado: user.created_at }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'usuários', unit1: 'usuário', page_size: 8, sort: { k: :pessoa, dir: 1 },
+     tabs: { col: :st, items: [['', 'Todos'], ['true,me', 'Ativos'], ['false', 'Inativos']] },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :pessoa, label: 'Pessoa', t: :person, sub: :email, sort: true, main: true },
+       { k: :nome, label: 'Nome', hide: true, nodetail: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :perfil, label: 'Perfil', t: :status, map: profile_map, sub: :setSub },
+       { k: :lojas, label: 'Lojas', t: :loc },
+       { k: :acc, label: 'Último acesso', sub: :accSub },
+       { k: :setores, label: 'Setores de chamados', hide: true },
+       { k: :setSub, label: '', hide: true, nodetail: true },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :fone, label: 'Telefone', hide: true },
+       { k: :notif, label: 'Recebe e-mail de chamados', t: :bool, hide: true },
+       { k: :criado, label: 'Conta criada em', t: :dt, hide: true },
+       { k: :accSub, label: '', hide: true, nodetail: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Nome, e-mail ou telefone…', cols: %i[nome email fone], tip: 'Procura no nome, no e-mail e no telefone.' },
+       { id: :perfil, type: :select, label: 'Perfil', col: :perfil, all: 'Todos os perfis', tip: 'O pacote de telas liberado para a pessoa.' },
+       { id: :loja, type: :select, label: 'Loja', col: :lojas, options: location_names.map { |key, name| ["#{key},*", name] }, all: 'Todas as lojas',
+         tip: 'Mostra quem enxerga a loja escolhida. Administrador enxerga todas, por isso aparece em qualquer loja.' },
+       { id: :setor, type: :search, label: 'Setor de chamados', ph: 'Nome do setor…', cols: %i[setores], tip: 'Mostra quem enxerga todos os chamados do setor. O setor vem do perfil.' }
+     ],
+     kpis: [
+       { label: 'Ativos', icon: 'fas fa-user-check', tone: 'green', help: 'Podem entrar no sistema.', col: :st, vals: %w[true me] },
+       { label: 'Inativos', icon: 'fas fa-user-slash', tone: 'gray', help: 'Não conseguem entrar.', col: :st, val: 'false' },
+       { label: 'Acesso total', icon: 'fas fa-crown', tone: 'purple', help: 'Perfil Administrador: vê e faz tudo.', col: :admin, val: true },
+       { label: 'Sem e-mail de chamados', icon: 'fas fa-bell-slash', tone: 'yellow', help: 'Veem os chamados, mas não recebem e-mail.', col: :notif, val: false }
+     ]) %>
 
-<div class="users-container">
+<%= hc_page_header 'Gerenciar Usuários', 'Quem acessa o painel: perfil, lojas liberadas e situação da conta.', icon: 'fas fa-users-cog' do %>
+  <% if current_user.admin? %>
+    <%= link_to profiles_path, class: 'btn btn-secondary' do %><i class="fas fa-user-shield"></i>Perfis e Permissões<% end %>
+  <% end %>
+  <% if screen_can?(:users_management, :create) %>
+    <%= link_to new_user_path, class: 'btn btn-export' do %><i class="fas fa-user-plus"></i>Novo usuário<% end %>
+  <% end %>
+<% end %>
 
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-users me-2"></i>Gerenciar Usuários
-      </h1>
-      <small class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-      </small>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-list me-1"></i><%= @total_users %> usuário(s)
-      </span>
-      <%= link_to new_user_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Novo Usuário
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== TABELA ===== %>
-  <div class="table-card">
-
-    <div class="table-card-header">
-      <h5 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Usuários
-      </h5>
-    </div>
-
-    <% if @users.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Email</th>
-              <th>Telefone</th>
-              <th class="text-center">Perfis</th>
-              <th class="text-center">Status</th>
-              <th>Locations</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @users.each do |user| %>
-              <tr>
-                <td>
-                  <div class="user-name-cell">
-                    <%= user_avatar(user) %>
-                    <div>
-                      <span class="text-main d-block"><%= user.name %></span>
-                      <span class="text-muted-custom">ID: <%= user.id %></span>
-                    </div>
-                  </div>
-                </td>
-                <td class="text-main"><%= user.email %></td>
-                <td class="text-muted-custom"><%= user.phone.present? ? user.phone : '-' %></td>
-                <td class="text-center">
-                  <% if user.profiles.any? %>
-                    <div class="location-chip-group justify-content-center">
-                      <% user.profiles.each do |profile| %>
-                        <% profile_class = [1, 2, 5, 6].include?(profile.id) ? "profile-pill--#{profile.id}" : "profile-pill--default" %>
-                        <span class="profile-pill <%= profile_class %>">
-                          <%= profile.name %>
-                        </span>
-                      <% end %>
-                    </div>
-                  <% else %>
-                    <span class="profile-pill profile-pill--empty">Sem perfil</span>
-                  <% end %>
-                </td>
-                <td class="text-center">
-                  <span class="status-pill <%= user.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= user.active? ? 'Ativo' : 'Inativo' %>
-                  </span>
-                  <% unless user.ticket_notifications_enabled? %>
-                    <i class="fas fa-bell-slash ms-1 text-muted-custom" title="Sem e-mails de chamados"></i>
-                  <% end %>
-                </td>
-                <td>
-                  <% if user.admin? %>
-                    <span class="admin-crown-pill">
-                      <i class="fas fa-crown me-1"></i>Todas
-                    </span>
-                  <% elsif user.allowed_location_keys.any? %>
-                    <div class="location-chip-group">
-                      <% user.allowed_location_keys.first(2).each do |key| %>
-                        <span class="location-chip">
-                          <%= User.location_name(key) %>
-                        </span>
-                      <% end %>
-                      <% if user.allowed_location_keys.count > 2 %>
-                        <span class="location-chip location-chip--more">
-                          +<%= user.allowed_location_keys.count - 2 %>
-                        </span>
-                      <% end %>
-                    </div>
-                  <% else %>
-                    <span class="text-muted-custom">Nenhuma</span>
-                  <% end %>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to user, class: "action-btn action-btn--view" do %>
-                      <i class="fas fa-eye"></i>
-                    <% end %>
-                    <%= link_to edit_user_path(user), class: "action-btn action-btn--edit" do %>
-                      <i class="fas fa-pencil-alt"></i>
-                    <% end %>
-                    <% unless user == current_user %>
-                      <%= link_to user, method: :delete,
-                                  class: "action-btn action-btn--danger",
-                                  data: { confirm: "Tem certeza que deseja excluir este usuário?" } do %>
-                        <i class="fas fa-trash"></i>
-                      <% end %>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-users fa-3x mb-3 d-block"></i>
-        <h5>Nenhum usuário encontrado</h5>
-        <p>Crie o primeiro usuário do sistema</p>
-        <%= link_to new_user_path, class: "btn-export" do %>
-          <i class="fas fa-plus me-1"></i>Novo Usuário
-        <% end %>
-      </div>
-    <% end %>
-
-    <%# PAGINAÇÃO %>
-    <% if @total_pages && @total_pages > 1 %>
-      <div class="pagination-footer">
-        <div class="pagination-info">
-          Mostrando
-          <strong><%= [(@page - 1) * @per_page + 1, @total_users].min %></strong>
-          a
-          <strong><%= [@page * @per_page, @total_users].min %></strong>
-          de
-          <strong><%= @total_users %></strong>
-          usuários
-        </div>
-
-        <div class="pagination-controls">
-          <% if @page > 1 %>
-            <%= link_to users_path(request.query_parameters.merge("page" => @page - 1)),
-                        class: "page-btn" do %>
-              <i class="fas fa-chevron-left me-1"></i>Anterior
-            <% end %>
-          <% end %>
-
-          <% window  = 2
-             p_start = [@page - window, 1].max
-             p_end   = [@page + window, @total_pages].min %>
-
-          <% (p_start..p_end).each do |pnum| %>
-            <% if pnum == @page %>
-              <span class="page-btn page-btn--active"><%= pnum %></span>
-            <% else %>
-              <%= link_to pnum,
-                          users_path(request.query_parameters.merge("page" => pnum)),
-                          class: "page-btn" %>
-            <% end %>
-          <% end %>
-
-          <% if @page < @total_pages %>
-            <%= link_to users_path(request.query_parameters.merge("page" => @page + 1)),
-                        class: "page-btn" do %>
-              Próxima<i class="fas fa-chevron-right ms-1"></i>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-  </div>
-
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de usuários', icon: 'fas fa-users', meta: 'Clique no olho para ver os detalhes de cada pessoa. Quem sai da empresa deve ser desativado, não excluído.',
+        empty: { title: 'Nenhum usuário encontrado', text: 'Crie o primeiro usuário do sistema.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-user-plus'), 'Novo usuário']), new_user_path, class: 'btn btn-export') if screen_can?(:users_management, :create)) },
+        detail: { title: ->(r) { r[:nome] }, fields: [['Nome', :nome]],
+                  note: ->(r) { "Perfil #{r[:perfil]}. As telas, as lojas e os setores de chamados da pessoa vêm do perfil e das lojas marcadas." } },
+        actions: ->(r) {
+          user = r[:record]
+          me = r[:st] == 'me'
+          can_touch = current_user.admin? || !r[:admin]
+          safe_join([
+            (me ? hc_row_action('fas fa-pencil', 'Editar meu perfil', edit_user_path(user)) : (hc_row_action('fas fa-pencil', 'Editar', edit_user_path(user)) if screen_can?(:users_management, :edit) && can_touch)),
+            (hc_row_action('fas fa-key', 'Redefinir senha', send_password_reset_user_path(user), method: :post,
+                           confirm: { title: "Redefinir a senha de #{r[:nome]}?", text: "Mandamos um e-mail para #{r[:email]} com um link para criar uma senha nova. A senha atual continua valendo até a pessoa criar outra.", ok: 'Enviar link' }) if r[:st] == 'true' && can_touch && screen_can?(:users_management, :edit)),
+            (button_to(impersonation_path, method: :post, params: { email: r[:email] }, class: 'action-btn', data: { tip: 'Entrar como' }, 'aria-label': 'Entrar como', form: { style: 'display: inline' }) { content_tag(:i, '', class: 'fas fa-user-secret') } if r[:st] == 'true' && true_user&.super_admin?),
+            (if !me && can_touch && screen_can?(:users_management, :edit)
+               r[:st] == 'true' ? hc_row_action('fas fa-user-slash', 'Desativar', toggle_status_user_path(user), method: :patch,
+                                                confirm: { title: "Desativar #{r[:nome]}?", text: 'A pessoa não consegue mais entrar no sistema. Os chamados e o histórico dela continuam guardados. Dá para ativar de novo quando precisar.' })
+                                : hc_row_action('fas fa-user-check', 'Ativar', toggle_status_user_path(user), method: :patch)
+             end),
+            (hc_row_action('fas fa-trash', 'Excluir', user_path(user), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:nome]}?", text: 'Isto apaga o cadastro de vez e não dá para desfazer. Só exclua se a conta foi criada por engano. Para quem saiu da empresa, deixe desativado.', ok: 'Excluir usuário' }) if r[:st] == 'false' && can_touch && screen_can?(:users_management, :destroy))
+          ].compact)
+        }) %>
 </div>

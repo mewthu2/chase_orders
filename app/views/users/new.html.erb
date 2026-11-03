@@ -4,13 +4,16 @@
 
   <%# ===== HEADER ===== %>
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-user-plus me-2"></i>Novo Usuário
-      </h1>
-      <p class="page-subtitle">Cadastre um novo usuário do sistema</p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-user-plus' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Novo Usuário</h1>
+        <p class="page-subtitle">Cadastre um novo usuário do sistema</p>
+      </div>
     </div>
     <div class="header-actions">
+      <%= hc_help_button %>
       <%= link_to users_path, class: "btn-back" do %>
         <i class="fas fa-arrow-left me-1"></i>Voltar
       <% end %>

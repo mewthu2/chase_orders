@@ -1,9 +1,10 @@
 class CompaniesController < ApplicationController
   guard_screen :companies
-  before_action :set_company, only: [:edit, :update, :destroy]
+  before_action :set_company, only: [:edit, :update, :destroy, :toggle_environment]
 
   def index
-    @companies = Company.order(:legal_name)
+    @companies = Company.includes(:certificate_attachment, :location).order(:legal_name)
+    @note_counts = FiscalNote.group(:company_id).count
   end
 
   def new
@@ -41,6 +42,14 @@ class CompaniesController < ApplicationController
     end
   end
 
+  # Liga/desliga produção direto da lista, sem passar pelo formulário (que revalidaria o certificado).
+  def toggle_environment
+    target = @company.homologacao? ? :producao : :homologacao
+    @company.update_column(:environment, Company.environments[target])
+    redirect_back fallback_location: companies_path,
+                  notice: "#{@company.legal_name} agora emite em #{@company.reload.environment_label.downcase}."
+  end
+
   private
 
   def set_company
@@ -51,10 +60,10 @@ class CompaniesController < ApplicationController
     params.require(:company).permit(
       :legal_name, :trade_name, :cnpj, :state_registration, :municipal_registration, :cnae, :tax_regime,
       :street, :number, :complement, :neighbourhood, :city, :city_ibge_code, :state, :zip, :phone, :email,
-      :environment, :nfe_series, :next_nfe_number,
+      :environment, :nfe_series, :next_nfe_number, :next_nfe_number_homologation,
       :cfop_sale_in_state, :cfop_sale_out_of_state, :cfop_transfer_in_state, :cfop_transfer_out_of_state,
       :operation_nature_sale, :operation_nature_transfer, :icms_situation, :pis_cst, :cofins_cst,
-      :active, :certificate_file, :certificate_password
+      :active, :certificate_file, :certificate_password, :location_id
     )
   end
 end

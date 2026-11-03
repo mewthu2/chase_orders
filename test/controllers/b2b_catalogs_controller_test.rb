@@ -74,7 +74,8 @@ class B2bCatalogsControllerTest < ActionDispatch::IntegrationTest
     catalog.catalog_orders.create!(customer_name: 'Loja Centro', customer_registration: '25.405.327/0001-74')
 
     get b2b_catalogs_path
-    assert_select '.catalog-new-badge', text: /1/
+    assert_select '.pg-cardi .ci-tags .pg-tag', text: '1 nova'
+    assert_select '#pgt-enc tbody a.text-main', text: 'Loja Centro'
 
     get b2b_catalog_path(catalog)
     assert_select '.catalog-order-row', text: /Loja Centro/
@@ -120,8 +121,8 @@ class B2bCatalogsControllerTest < ActionDispatch::IntegrationTest
 
     get b2b_orders_path
 
-    assert_select "#pedidosB2bDropdown a[href='#{b2b_catalogs_path}']", text: /Catálogos/
-    assert_select "#pedidosB2bDropdown a[href='#{b2b_catalogs_path}'] .nav-count-badge", text: '1'
+    assert_select ".sb-section[data-area='atacado'] a[href='#{b2b_catalogs_path}']", text: /Catálogos/
+    assert_select ".sb-section[data-area='atacado'] a[href='#{b2b_catalogs_path}'] .sb-badge", text: '1'
   end
 
   test 'pdf downloads the catalog' do

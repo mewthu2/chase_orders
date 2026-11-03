@@ -1,4 +1,6 @@
 class StockCorrectionItemsController < ApplicationController
+  guard_screen :stock_corrections
+
   def update
     @item = StockCorrectionItem.find(params[:id])
 

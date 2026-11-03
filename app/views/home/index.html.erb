@@ -1,94 +1,170 @@
 <% title 'Chamados' %>
+<%# Igual ao pageChamados do protótipo: abas de escopo, indicadores que filtram, filtros, lista e rodapé. %>
+<% filters = params.permit(:scope, :status, :ticket_responsability_id, :role, :ticket_sector_id).to_h.compact_blank %>
+<% filtered = @status_filter != 'open' || filters.slice('ticket_responsability_id', 'role', 'ticket_sector_id').any? %>
+<% clear_url = root_path(filters.slice('scope')) %>
+<% subtitles = { 'mine' => 'Chamados que você abriu, pelos quais é responsável ou que acompanha',
+                 'sectors' => 'Todos os chamados dos setores liberados para o seu perfil',
+                 'all' => 'Todos os chamados de todos os setores' } %>
+<% status_help = { 'awaiting_responsible' => 'A área responsável ainda precisa agir.',
+                   'awaiting_requester' => 'O responsável respondeu e espera uma resposta de quem abriu.',
+                   'in_progress' => 'Alguém já está cuidando.',
+                   'resolved' => 'Problema resolvido. Ainda dá para reabrir.',
+                   'closed' => 'Encerrado de vez.' } %>
+<% status_options = [['Abertos', 'open'], ['Aguardando você', 'waiting_me'], ['Aguardando outros', 'waiting_others'], ['Vencidos', 'overdue'], ['Resolvidos (7 dias)', 'resolved_week']] +
+                    Ticket::STATUS_LABELS.map { |key, label| [label, key] } + [['Todos', 'all']] %>
+<% kpis = [
+     ['waiting_me', 'Aguardando você', 'fas fa-bell', '#e3b341', 'A próxima ação é sua.'],
+     ['waiting_others', 'Aguardando outros', 'fas fa-hourglass-half', '#58a6ff', 'Abertos, com outra pessoa.'],
+     ['overdue', 'Vencidos', 'fas fa-exclamation-triangle', '#f85149', 'O prazo de resposta passou.'],
+     ['resolved_week', 'Resolvidos (7 dias)', 'fas fa-check-circle', '#3fb950', 'Resolvidos na última semana.']
+   ] %>
+<% area = hc_area %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-ticket-alt me-2"></i><%= @scopes[@scope] %></h1>
-      <p class="page-subtitle">
-        <%= { 'mine' => 'Chamados que você abriu, pelos quais é responsável ou que acompanha',
-              'sectors' => 'Todos os chamados dos setores liberados para o seu perfil',
-              'all' => 'Todos os chamados de todos os setores' }[@scope] %>
-      </p>
-    </div>
-    <div class="header-actions">
-      <%= link_to new_ticket_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Abrir chamado<% end %>
+<div class="page-header">
+  <div class="header-left has-icon">
+    <%= hc_page_icon 'fas fa-ticket-alt' %>
+    <div>
+      <% if area %>
+        <div class="page-eyebrow is-area" style="<%= nav_area_style(area) %>"><span class="area-dot"></span><%= area[:title] %> › Chamados</div>
+      <% end %>
+      <h1 class="page-title"><%= @scopes[@scope] %></h1>
+      <p class="page-subtitle"><%= subtitles[@scope] %></p>
     </div>
   </div>
+  <div class="header-actions">
+    <button type="button" class="btn btn-secondary" data-act="help"><i class="fas fa-circle-question"></i>Como funciona?</button>
+    <% if @responsabilities.present? %>
+      <%= link_to new_ticket_path, class: 'btn btn-export', data: { pg_layer: 'newTicketHolder' } do %><i class="fas fa-plus"></i>Abrir chamado<% end %>
+    <% else %>
+      <%= link_to new_ticket_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Abrir chamado<% end %>
+    <% end %>
+  </div>
+</div>
 
-  <% cards = [
-       [:waiting_me, 'Aguardando você', 'fa-bell', '#e3b341', 'waiting_me'],
-       [:waiting_others, 'Aguardando outros', 'fa-hourglass-half', '#58a6ff', 'waiting_others'],
-       [:overdue, 'Vencidos', 'fa-exclamation-triangle', '#f85149', 'overdue'],
-       [:resolved_week, 'Resolvidos (7 dias)', 'fa-check-circle', '#3fb950', 'resolved_week']
-     ] %>
-  <div class="row g-3 mb-4">
-    <% cards.each do |key, label, icon, color, filter| %>
-      <div class="col-6 col-md-3">
-        <%= link_to root_path(request.query_parameters.merge('status' => filter).except('page')), class: "ticket-stat", data: { counter: key } do %>
-          <div class="stat-card" style="border-left: 3px solid <%= color %>;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="ticket-stat__label"><%= label %></span>
-              <i class="fas <%= icon %>" style="color: <%= color %>;"></i>
-            </div>
-            <div class="stat-value" style="color: <%= color %>;"><%= @counters[key] %></div>
-          </div>
-        <% end %>
+<div class="callout" data-hc-callout>
+  <i class="fas fa-hand-sparkles"></i>
+  <div><strong>Novo por aqui?</strong> Faça o tour de 1 minuto e aprenda a achar tudo sozinho. Você também pode clicar em <strong>Ajuda</strong> em qualquer tela.</div>
+  <div style="display: flex; gap: 8px; margin-left: auto">
+    <button type="button" class="btn btn-primary btn-sm" data-act="tour"><i class="fas fa-route"></i>Fazer o tour</button>
+    <button type="button" class="icon-btn close-x" data-act="closeCallout" aria-label="Fechar dica"><i class="fas fa-times"></i></button>
+  </div>
+</div>
+
+<% if @scopes.size > 1 %>
+  <div class="scope-tabs" role="tablist" data-tour="tabs">
+    <span class="scope-indicator"></span>
+    <% @scopes.each do |key, label| %>
+      <%= link_to root_path(filters.except('scope').merge('scope' => (key unless key == 'mine')).compact), class: "scope-tab#{' is-active' if key == @scope}", role: 'tab', 'aria-selected': key == @scope do %>
+        <i class="fas <%= { 'mine' => 'fa-inbox', 'sectors' => 'fa-building', 'all' => 'fa-list-ul' }[key] %>"></i><%= label %><span class="count"><%= @scope_counts[key] %></span>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="kpi-grid stagger" data-tour="kpis">
+  <% kpis.each_with_index do |(key, label, icon, tone, help), i| %>
+    <% active = @status_filter == key %>
+    <%= link_to root_path(filters.merge('status' => (active ? nil : key)).compact), class: "ticket-stat spot#{' is-active' if active}", style: "--i: #{i}",
+                data: { counter: key, tip: "#{label}: #{help} Clique para filtrar." } do %>
+      <div class="stat-card<%= ' is-zero' if @counters[key.to_sym].zero? %>" style="--tone: <%= tone %>">
+        <span class="tone-bar"></span>
+        <div class="stat-top"><span class="ticket-stat__label"><%= label %></span><span class="stat-ic"><i class="<%= icon %>"></i></span></div>
+        <div class="stat-value" data-count="<%= @counters[key.to_sym] %>"><%= @counters[key.to_sym] %></div>
+        <div class="stat-help"><span><%= help %></span><span class="go"><%= active ? 'Filtrando' : 'Ver' %> <i class="fas fa-arrow-right"></i></span></div>
       </div>
     <% end %>
-  </div>
+  <% end %>
+</div>
 
-  <div class="table-card">
-    <%= form_with url: root_path, method: :get, local: true, class: "ticket-filters d-flex gap-2 flex-wrap px-3 pb-3" do %>
-      <%= select_tag :status, options_for_select([['Abertos', 'open'], ['Aguardando você', 'waiting_me'], ['Aguardando outros', 'waiting_others'], ['Vencidos', 'overdue'], ['Resolvidos (7 dias)', 'resolved_week']] +
-                                                   Ticket::STATUS_LABELS.map { |key, label| [label, key] } + [['Todos', 'all']], @status_filter),
-                     class: 'field-input', onchange: 'this.form.submit()' %>
-      <%= select_tag :ticket_responsability_id, options_from_collection_for_select(@responsabilities, :id, :name, params[:ticket_responsability_id]),
-                     include_blank: 'Todas as responsabilidades', class: 'field-input', onchange: 'this.form.submit()' %>
-      <%= select_tag :role, options_for_select(TicketParticipant::ROLE_LABELS.map { |key, label| ["Sou #{label.downcase}", key] }, params[:role]),
-                     include_blank: 'Qualquer papel', class: 'field-input', onchange: 'this.form.submit()' %>
-      <% if @sectors.any? %>
-        <%= select_tag :ticket_sector_id, options_from_collection_for_select(@sectors, :id, :name, params[:ticket_sector_id]),
-                       include_blank: 'Todos os setores', class: 'field-input', onchange: 'this.form.submit()' %>
-      <% end %>
-      <% if @scopes.size > 1 %>
-        <%= select_tag :scope, options_for_select(@scopes.invert.to_a, @scope), class: 'field-input', onchange: 'this.form.submit()' %>
+<div class="table-card" id="ticketCard">
+  <div class="filters-head">
+    <h3><i class="fas fa-sliders-h"></i>Filtrar chamados</h3>
+    <% if filtered %>
+      <%= link_to clear_url, class: 'btn btn-ghost btn-sm' do %><i class="fas fa-eraser"></i>Limpar filtros<% end %>
+    <% end %>
+  </div>
+  <%= form_with url: root_path, method: :get, local: true, class: 'ticket-filters', data: { tour: 'filters' } do %>
+    <%= hidden_field_tag :scope, filters['scope'], id: nil if filters['scope'] %>
+    <%= hc_filter_field 'Situação', tip: 'Em que pé está o chamado. "Abertos" mostra tudo que ainda não foi resolvido.' do %>
+      <%= select_tag :status, options_for_select(status_options, @status_filter), class: "field-input#{' is-set' if @status_filter != 'open'}", onchange: 'this.form.requestSubmit()' %>
+    <% end %>
+    <%= hc_filter_field 'Responsabilidade', tip: 'O assunto do chamado e a equipe que cuida dele.' do %>
+      <%= select_tag :ticket_responsability_id, options_for_select([['Todas as responsabilidades', '']] + @responsabilities.map { |r| ["#{r.name} (#{r.ticket_sector&.name})", r.id] }, params[:ticket_responsability_id]),
+                     class: "field-input#{' is-set' if params[:ticket_responsability_id].present?}", onchange: 'this.form.requestSubmit()' %>
+    <% end %>
+    <%= hc_filter_field 'Meu papel', tip: 'Solicitante = você abriu. Responsável = você resolve. Acompanhante = você só acompanha.' do %>
+      <%= select_tag :role, options_for_select([['Qualquer papel', '']] + TicketParticipant::ROLE_LABELS.map { |key, label| ["Sou #{label.downcase}", key] }, params[:role]),
+                     class: "field-input#{' is-set' if params[:role].present?}", onchange: 'this.form.requestSubmit()' %>
+    <% end %>
+    <% if @sectors.any? %>
+      <%= hc_filter_field 'Setor', tip: 'A área da empresa que recebe o chamado.' do %>
+        <%= select_tag :ticket_sector_id, options_for_select([['Todos os setores', '']] + @sectors.map { |s| [s.name, s.id] }, params[:ticket_sector_id]),
+                       class: "field-input#{' is-set' if params[:ticket_sector_id].present?}", onchange: 'this.form.requestSubmit()' %>
       <% end %>
     <% end %>
+  <% end %>
+
+  <div id="ticketList" data-tour="table">
+    <% chip_x = ->(key) { link_to(content_tag(:i, '', class: 'fas fa-times'), root_path(filters.except(key)), class: 'chip-x', 'aria-label': 'Remover filtro') } %>
+    <div class="active-filters">
+      <span>Mostrando <%= @tickets.total_entries %> <%= @tickets.total_entries == 1 ? 'chamado' : 'chamados' %>:</span>
+      <span class="filter-chip"><%= status_options.to_h.invert[@status_filter] || 'Abertos' %><%= chip_x.call('status') if @status_filter != 'open' %></span>
+      <% if (resp = @responsabilities.find { |r| r.id.to_s == params[:ticket_responsability_id] }) %>
+        <span class="filter-chip"><%= resp.name %><%= chip_x.call('ticket_responsability_id') %></span>
+      <% end %>
+      <% if TicketParticipant::ROLE_LABELS.key?(params[:role]) %>
+        <span class="filter-chip">Sou <%= TicketParticipant::ROLE_LABELS[params[:role]].downcase %><%= chip_x.call('role') %></span>
+      <% end %>
+      <% if (sector = @sectors.find { |s| s.id.to_s == params[:ticket_sector_id] }) %>
+        <span class="filter-chip"><%= sector.name %><%= chip_x.call('ticket_sector_id') %></span>
+      <% end %>
+      <div class="legend">
+        <span style="color: var(--text-4)">Status:</span>
+        <% status_help.each do |key, help| %>
+          <span class="lg" data-tip="<%= Ticket.status_label(key) %>: <%= help %>"><span class="dot" style="color: <%= ticket_status_color(key) %>"></span><%= Ticket.status_label(key) %></span>
+        <% end %>
+        <a href="#" data-act="help" style="font-size: 12px">O que significa?</a>
+      </div>
+    </div>
 
     <% if @tickets.any? %>
       <div class="table-responsive">
         <table class="orders-table">
           <thead>
             <tr>
-              <th>Nº</th>
-              <th>Título</th>
-              <th>Setor</th>
-              <th>Responsabilidade</th>
-              <th>Solicitante</th>
-              <th class="text-center">Status</th>
-              <th>Prazo</th>
-              <th>Última atividade</th>
-              <% if current_user.admin? %><th class="text-end">Ações</th><% end %>
+              <th>Nº</th><th>Chamado</th><th>Solicitante</th><th>Status</th><th>Prazo</th><th>Última atividade</th>
+              <% if current_user.admin? %><th style="text-align: right">Ações</th><% end %>
             </tr>
           </thead>
-          <tbody>
-            <% @tickets.each do |ticket| %>
-              <tr class="<%= 'ticket-row--overdue' if ticket.overdue? %> <%= 'ticket-row--soon' if ticket.due_soon? %>">
-                <td class="text-main">#<%= ticket.id %></td>
-                <td>
-                  <%= link_to ticket.title, ticket_path(ticket), class: "text-main fw-semibold" %>
-                  <% if @waiting_on_me_ids.include?(ticket.id) %><span class="ticket-your-turn">sua vez</span><% end %>
+          <tbody class="stagger">
+            <% @tickets.each_with_index do |ticket, i| %>
+              <% overdue = ticket.overdue? %>
+              <% soon = ticket.due_soon? %>
+              <% last_at = ticket.last_activity_at || ticket.created_at %>
+              <tr class="<%= 'ticket-row--overdue' if overdue %> <%= 'ticket-row--soon' if soon %>" style="--i: <%= i %>">
+                <td class="num" data-label="Nº">#<%= ticket.id %></td>
+                <td class="title-cell" data-label="Chamado">
+                  <%= link_to ticket.title, ticket_path(ticket), class: 'text-main t' %>
+                  <% if @waiting_on_me_ids.include?(ticket.id) %><span class="ticket-your-turn" data-tip="A próxima ação neste chamado é sua.">sua vez</span><% end %>
+                  <span class="cell-sub"><i class="fas fa-tag"></i><span data-tip="Responsabilidade: o assunto e a equipe que cuida"><%= ticket.ticket_responsability.name %></span><% if ticket.sector %><span class="sep">·</span><span data-tip="Setor da empresa"><%= ticket.sector.name %></span><% end %></span>
                 </td>
-                <td class="text-muted-custom"><%= ticket.sector&.name || '—' %></td>
-                <td class="text-muted-custom"><%= ticket.ticket_responsability.name %></td>
-                <td class="text-muted-custom"><%= ticket.requester.name %></td>
-                <td class="text-center"><%= ticket_status_badge(ticket) %></td>
-                <td class="<%= ticket_due_class(ticket) %>"><%= ticket.open? ? ticket_due_text(ticket) : '—' %></td>
-                <td class="text-muted-custom"><%= ticket_datetime(ticket.last_activity_at || ticket.created_at) %></td>
+                <td data-label="Solicitante"><%= hc_person(ticket.requester&.name) %></td>
+                <td data-label="Status"><span class="ticket-status ticket-status--<%= ticket.status %>" data-tip="<%= status_help[ticket.status] %>"><%= ticket.status_label %></span></td>
+                <% if !ticket.open? || ticket.due_at.blank? %>
+                  <td class="due ticket-due--closed" data-label="Prazo"><b>Sem prazo</b><small><%= ticket.open? ? 'sem prazo definido' : 'chamado encerrado' %></small></td>
+                <% else %>
+                  <% remaining = ticket.due_at - Time.current %>
+                  <td class="due <%= overdue ? 'ticket-due--overdue' : ('ticket-due--soon' if soon) %>" data-label="Prazo">
+                    <b><% if overdue %><i class="fas fa-exclamation-triangle"></i><% elsif soon %><i class="fas fa-clock"></i><% end %><%= remaining.negative? ? "Vencido há #{ticket_duration_words(remaining)}" : "Vence em #{ticket_duration_words(remaining)}" %></b>
+                    <small><%= ticket_datetime(ticket.due_at) %></small>
+                  </td>
+                <% end %>
+                <td class="due" data-label="Última atividade"><b style="font-weight: 500; color: var(--text-2)">há <%= ticket_duration_words(Time.current - last_at) %></b><small><%= ticket_datetime(last_at) %></small></td>
                 <% if current_user.admin? %>
-                  <td class="text-end">
-                    <%= button_to ticket_path(ticket), method: :delete, class: "action-btn action-btn--danger", title: "Excluir chamado",
-                                  form: { onsubmit: "return confirm('Excluir o chamado ##{ticket.id}? Mensagens e anexos também serão apagados.')" } do %><i class="fas fa-trash"></i><% end %>
+                  <td class="td-actions" style="text-align: right" data-label="">
+                    <%= hc_row_action 'fas fa-trash', 'Excluir chamado', ticket_path(ticket), danger: true, method: :delete,
+                                      confirm: "Excluir o chamado ##{ticket.id}? Mensagens e anexos também serão apagados." %>
                   </td>
                 <% end %>
               </tr>
@@ -96,13 +172,35 @@
           </tbody>
         </table>
       </div>
-      <div class="px-3 py-3"><%= will_paginate @tickets, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
+      <div class="table-footer">
+        <span>Mostrando <%= @tickets.offset + 1 %>–<%= @tickets.offset + @tickets.size %> de <%= @tickets.total_entries %> · ordenados pela última atividade</span>
+        <%= will_paginate(@tickets, renderer: WillPaginate::ActionView::BootstrapLinkRenderer, inner_window: 1, outer_window: 0,
+                                    previous_label: content_tag(:i, '', class: 'fas fa-chevron-left'), next_label: content_tag(:i, '', class: 'fas fa-chevron-right')) %>
+      </div>
     <% else %>
       <div class="ticket-empty">
-        <i class="fas fa-inbox"></i>
-        <p>Nenhum chamado por aqui.</p>
-        <%= link_to 'Abrir um chamado', new_ticket_path, class: "btn-export" %>
+        <div class="empty-art" aria-hidden="true">
+          <svg viewBox="0 0 168 128" fill="none">
+            <defs><linearGradient id="eg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3aa3ea"/><stop offset="1" stop-color="#075a99"/></linearGradient>
+            <linearGradient id="eg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b212b"/><stop offset="1" stop-color="#10141a"/></linearGradient></defs>
+            <ellipse cx="84" cy="118" rx="54" ry="6" fill="#000" opacity=".35"/>
+            <rect x="30" y="20" width="108" height="84" rx="14" fill="url(#eg2)" stroke="rgba(255,255,255,.12)"/>
+            <rect x="44" y="34" width="56" height="7" rx="3.5" fill="rgba(255,255,255,.14)"/><rect x="44" y="48" width="80" height="6" rx="3" fill="rgba(255,255,255,.07)"/><rect x="44" y="60" width="66" height="6" rx="3" fill="rgba(255,255,255,.07)"/>
+            <path d="M30 76h30l6 10h36l6-10h30v14a14 14 0 0 1-14 14H44a14 14 0 0 1-14-14V76z" fill="rgba(18,135,214,.16)" stroke="url(#eg1)" stroke-width="1.5"/>
+            <circle cx="126" cy="26" r="15" fill="url(#eg1)"/><path d="M119.5 26.5l4.5 4.5 8.5-9" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none" style="stroke-dasharray: 24; --len: 24; animation: drawLine .9s .4s var(--ease-out) both"/>
+          </svg>
+          <span class="spark" style="left: 14px; top: 30px"></span><span class="spark" style="right: -4px; top: 70px; animation-delay: -.8s; width: 6px; height: 6px"></span><span class="spark" style="left: 4px; bottom: 24px; animation-delay: -1.5s; width: 5px; height: 5px"></span>
+        </div>
+        <h3><%= filtered ? 'Nenhum chamado com esses filtros' : 'Nenhum chamado por aqui.' %></h3>
+        <p><%= filtered ? 'Tente outra situação ou limpe os filtros para ver tudo de novo.' : 'Quando alguém abrir um chamado para você ou para o seu setor, ele aparece nesta lista. Se precisar de ajuda de outra área, abra um chamado.' %></p>
+        <div class="empty-actions">
+          <% if filtered %><%= link_to clear_url, class: 'btn btn-secondary' do %><i class="fas fa-eraser"></i>Limpar filtros<% end %><% end %>
+          <%= link_to new_ticket_path, class: 'btn btn-export', data: { pg_layer: (@responsabilities.present? ? 'newTicketHolder' : nil) } do %><i class="fas fa-plus"></i>Abrir um chamado<% end %>
+        </div>
+        <div class="empty-tip"><i class="fas fa-lightbulb"></i><span><b>Dica:</b> a lista começa em "Abertos". Chamados resolvidos ficam em <b>Situação → Resolvidos (7 dias)</b> ou <b>Todos</b>.</span></div>
       </div>
     <% end %>
   </div>
 </div>
+
+<%= render 'tickets/new_drawer' if @responsabilities.present? %>

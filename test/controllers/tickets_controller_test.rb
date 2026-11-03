@@ -42,7 +42,7 @@ class TicketsControllerTest < ActionDispatch::IntegrationTest
     sign_in @requester
     post tickets_path, params: { ticket: { ticket_responsability_id: @responsability.id, title: '', description: '' } }
     assert_response :unprocessable_entity
-    assert_select '.form-error-box'
+    assert_select '.pg-fnote.is-warn'
   end
 
   test 'only participants and admins see the ticket' do
@@ -134,7 +134,7 @@ class TicketsControllerTest < ActionDispatch::IntegrationTest
     get ticket_path(ticket)
     assert_select "form[action='#{ticket_path(ticket)}'] button[title='Excluir chamado']"
     get root_path(scope: 'all', status: 'all')
-    assert_select "form[action='#{ticket_path(ticket)}'] button[title='Excluir chamado']"
+    assert_select "form[action='#{ticket_path(ticket)}'] button[aria-label='Excluir chamado']"
 
     assert_no_enqueued_emails do
       delete ticket_path(ticket)

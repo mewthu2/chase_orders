@@ -1,39 +1,83 @@
 <% content_for :title, "Nota Fiscal #{@fiscal_note.number}" %>
+<% note = @fiscal_note %>
 
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>NF-e <%= @fiscal_note.number %> / <%= @fiscal_note.series %></h1>
-      <p class="page-subtitle"><%= fiscal_note_status_pill(@fiscal_note) %></p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-file-invoice' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">NF-e <%= note.number %> / <%= note.series %></h1>
+        <p class="page-subtitle"><%= fiscal_note_status_pill(note) %> <span class="ms-2"><%= note.environment_label %></span></p>
+      </div>
     </div>
     <div class="header-actions">
+      <%= hc_help_button %>
       <%= link_to fiscal_notes_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
-      <% if @fiscal_note.xml_available? %>
-        <%= link_to xml_fiscal_note_path(@fiscal_note), class: "btn-export" do %><i class="fas fa-download me-2"></i>Baixar XML<% end %>
+      <% if note.consultable? %>
+        <%= button_to consult_fiscal_note_path(note), method: :post, class: "btn-back", form: { class: 'd-inline' } do %><i class="fas fa-sync-alt me-1"></i>Consultar na SEFAZ<% end %>
+      <% end %>
+      <% if note.transmittable? %>
+        <%= button_to transmit_fiscal_note_path(note), method: :post, class: "btn-sefaz", form: { class: 'd-inline', data: { turbo_submits_with: 'Enviando…' } } do %><i class="fas fa-paper-plane me-2"></i>Transmitir à SEFAZ<% end %>
+      <% end %>
+      <% if note.rejeitada? && note.shopify_order_name.present? %>
+        <%= link_to shopify_fiscal_notes_path(order: note.shopify_order_name), class: "btn-export" do %><i class="fas fa-redo me-2"></i>Corrigir e emitir de novo<% end %>
+      <% end %>
+      <% if note.xml_available? %>
+        <%= link_to danfe_fiscal_note_path(note), class: "btn-export", data: { turbo: false } do %><i class="fas fa-file-pdf me-2"></i>Baixar DANFE<% end %>
+        <%= link_to xml_fiscal_note_path(note), class: "btn-export" do %><i class="fas fa-download me-2"></i>Baixar XML<% end %>
       <% end %>
     </div>
   </div>
+
+  <% if note.autorizada? %>
+    <div class="sefaz-result sefaz-result--ok">
+      <div class="sefaz-result__icon"><i class="fas fa-check"></i></div>
+      <div>
+        <div class="sefaz-result__text">Autorizada pela SEFAZ<%= ' — sem valor fiscal (homologação)' if note.homologacao? %></div>
+        <div class="sefaz-result__code">Protocolo <%= note.protocol %> · <%= note.authorized_at&.in_time_zone&.strftime('%d/%m/%Y %H:%M:%S') %></div>
+      </div>
+    </div>
+  <% elsif note.rejeitada? || note.erro? %>
+    <div class="sefaz-result sefaz-result--bad">
+      <div class="sefaz-result__icon"><i class="fas fa-times"></i></div>
+      <div>
+        <div class="sefaz-result__text"><%= note.error_message.presence || note.sefaz_message %></div>
+        <div class="sefaz-result__code">
+          <%= note.erro? ? 'Sem resposta definitiva da SEFAZ: consulte antes de transmitir de novo.' : "Código #{note.sefaz_status_code}" %>
+        </div>
+      </div>
+    </div>
+  <% elsif note.assinada? %>
+    <div class="sefaz-result sefaz-result--wait">
+      <div class="sefaz-result__icon"><i class="fas fa-hourglass-half"></i></div>
+      <div>
+        <div class="sefaz-result__text">Assinada, ainda não autorizada</div>
+        <div class="sefaz-result__code">Use “Transmitir à SEFAZ” para pedir a autorização.</div>
+      </div>
+    </div>
+  <% end %>
 
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-info-circle me-2"></i>Dados da nota</h5></div>
     <div class="form-section-body">
       <div class="form-grid">
-        <div class="form-col-6"><label class="field-label">Empresa emissora</label><div class="text-main"><%= @fiscal_note.company.legal_name %> (<%= @fiscal_note.company.cnpj_formatted %>)</div></div>
+        <div class="form-col-6"><label class="field-label">Empresa emissora</label><div class="text-main"><%= note.company.legal_name %> (<%= note.company.cnpj_formatted %>)</div></div>
         <div class="form-col-6">
           <label class="field-label">Pedido</label>
           <div class="text-main">
-            <% if fiscal_note_order_path(@fiscal_note) %><%= link_to "##{@fiscal_note.b2b_order_id}", fiscal_note_order_path(@fiscal_note) %><% else %>-<% end %>
+            <% if fiscal_note_order_path(note) %><%= link_to fiscal_note_order_label(note), fiscal_note_order_path(note), target: (note.order ? '_blank' : nil) %><% else %><%= fiscal_note_order_label(note) %><% end %>
           </div>
         </div>
-        <div class="form-col-12"><label class="field-label">Chave de acesso</label><div class="text-main"><%= @fiscal_note.access_key.presence || '-' %></div></div>
-        <div class="form-col-4"><label class="field-label">Natureza da operação</label><div class="text-main"><%= @fiscal_note.operation_nature.presence || '-' %></div></div>
-        <div class="form-col-4"><label class="field-label">CFOP</label><div class="text-main"><%= @fiscal_note.cfop_summary.presence || '-' %></div></div>
-        <div class="form-col-4"><label class="field-label">Valor total</label><div class="text-main"><%= number_to_currency(@fiscal_note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></div></div>
-        <div class="form-col-4"><label class="field-label">Ambiente</label><div class="text-main"><%= @fiscal_note.producao? ? 'Produção' : 'Homologação' %></div></div>
-        <div class="form-col-4"><label class="field-label">Protocolo de autorização</label><div class="text-main"><%= @fiscal_note.protocol.presence || 'Não transmitida à SEFAZ' %></div></div>
-        <div class="form-col-4"><label class="field-label">Emitida em</label><div class="text-main"><%= (@fiscal_note.issued_at || @fiscal_note.created_at).in_time_zone.strftime('%d/%m/%Y %H:%M') %></div></div>
-        <% if @fiscal_note.error_message.present? %>
-          <div class="form-col-12"><label class="field-label">Erro</label><div class="text-main"><%= @fiscal_note.error_message %></div></div>
+        <div class="form-col-12"><label class="field-label">Chave de acesso</label><div class="text-main"><%= note.access_key.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">Natureza da operação</label><div class="text-main"><%= note.operation_nature.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">CFOP</label><div class="text-main"><%= note.cfop_summary.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">Valor total</label><div class="text-main"><%= number_to_currency(note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></div></div>
+        <div class="form-col-4"><label class="field-label">Ambiente</label><div class="text-main"><%= note.environment_label %></div></div>
+        <div class="form-col-4"><label class="field-label">Protocolo de autorização</label><div class="text-main"><%= note.protocol.presence || 'Não autorizada' %></div></div>
+        <div class="form-col-4"><label class="field-label">Emitida em</label><div class="text-main"><%= (note.issued_at || note.created_at).in_time_zone.strftime('%d/%m/%Y %H:%M') %></div></div>
+        <% if note.sefaz_status_code.present? %>
+          <div class="form-col-12"><label class="field-label">Último retorno da SEFAZ</label><div class="text-main"><%= note.sefaz_status_code %> — <%= note.sefaz_message %></div></div>
         <% end %>
       </div>
     </div>

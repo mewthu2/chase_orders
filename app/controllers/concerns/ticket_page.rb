@@ -6,7 +6,7 @@ module TicketPage
   private
 
   def load_ticket(id)
-    @ticket = Ticket.includes({ ticket_responsability: :ticket_sector }, :requester, participants: :user).find(id)
+    @ticket = Ticket.find(id)
     return true if @ticket.visible_to?(current_user)
 
     redirect_to root_path, alert: 'Você não tem acesso a este chamado.'
@@ -15,6 +15,7 @@ module TicketPage
 
   def prepare_ticket_page(message = TicketMessage.new)
     @message = message
+    ActiveRecord::Associations::Preloader.new(records: [@ticket], associations: [:requester, { participants: :user }]).call
     @messages = @ticket.messages.includes(:user, attachments_attachments: :blob)
     @available_users = User.active.where.not(id: @ticket.participants.map(&:user_id)).order(:name)
   end

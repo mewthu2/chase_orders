@@ -7,8 +7,23 @@ module StockWithdrawalsHelper
     'pending' => ['Pendente', ''], 'done' => ['Retirado', 'status-pill--active'], 'failed' => ['Falhou', 'status-pill--inactive'], 'reverted' => ['Revertido', '']
   }.freeze
 
+  # Cor e explicação de cada situação (selo da lista, legenda e ajuda), como no protótipo.
+  STATUS_TONES = {
+    'draft' => ['gray', 'Salva, mas nada saiu do Shopify ainda. Dá para editar e excluir.'],
+    'processing' => ['purple', 'As quantidades estão saindo do Shopify agora.'],
+    'completed' => ['green', 'Tudo foi retirado do Shopify.'],
+    'partially_failed' => ['red', 'Algumas linhas não saíram. Corrija e conclua de novo.'],
+    'partially_completed' => ['yellow', 'Parte das linhas foi revertida.'],
+    'reverted' => ['blue', 'Tudo voltou para o estoque.']
+  }.freeze
+
   def withdrawal_status_pill(withdrawal)
-    content_tag(:span, withdrawal.status_label, class: "status-pill #{STATUS_PILLS[withdrawal.status]}".strip)
+    tone, tip = STATUS_TONES.fetch(withdrawal.status)
+    hc_status(withdrawal.status_label, tone, tip: "#{withdrawal.status_label}: #{tip}")
+  end
+
+  def withdrawal_status_legend
+    StockWithdrawal::STATUS_LABELS.map { |key, label| [label, STATUS_TONES[key][0], STATUS_TONES[key][1]] }
   end
 
   def withdrawal_item_pill(item)

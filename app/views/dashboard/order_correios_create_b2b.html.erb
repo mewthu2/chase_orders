@@ -1,393 +1,73 @@
-<div class="container-fluid py-4">
-  <% title 'Criação de Pedidos no Correios (B2B)' %>
+<% title 'Pedidos p/ Aprovar (Log02)' %>
+<% statuses = { 'pending' => ['Pendente', 'yellow', 'Ninguém decidiu ainda. O pedido fica parado até você marcar ou ignorar.'],
+                'approved' => ['Marcado', 'green', 'Aprovado: o pedido segue para a criação no Correios.'],
+                'ignored' => ['Ignorado', 'gray', 'Não será enviado. Dá para voltar atrás e marcar quando quiser.'] } %>
+<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% parse_date = ->(v) { Date.strptime(v.to_s, '%d/%m/%Y') rescue nil } %>
+<% type_labels = B2bOrderType::LABELS.transform_keys(&:to_s) %>
+<% rows = @orders.map do |data|
+     o = data['pedido']
+     id = o['id'].to_s
+     review = @reviews[id]
+     type = @order_types[id].to_s
+     { id: id, record: o, pedido: o['numero'], idtxt: id, tipo: type, tipoTxt: type_labels[type] || '—', cliente: o['nome'].presence || '—',
+       dt: parse_date.call(o['data_pedido']), total: o['valor'].to_f, st: review&.approved? ? 'approved' : (review&.ignored? ? 'ignored' : 'pending') }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dt, dir: -1 },
+     tabs: { col: :st, param: :review, counts: { 'pending' => @counts[:pending], 'approved' => @counts[:approved], 'ignored' => @counts[:ignored],
+                                                 'all' => @counts.values.sum, '' => @counts[:pending] },
+             items: [['', 'Pendentes de revisão'], ['approved', 'Marcados'], ['ignored', 'Ignorados'], ['all', 'Todos']], filter: ->(scope, _v) { scope } },
+     cols: [
+       { k: :ident, label: 'Pedido', t: :html, main: true, nodetail: true },
+       { k: :pedido, label: 'Número', hide: true },
+       { k: :idtxt, label: 'ID no Tiny', hide: true },
+       { k: :tipo, label: 'Tipo do pedido', hide: true, nodetail: true },
+       { k: :tipoTxt, label: 'Tipo do pedido', hide: true },
+       { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
+       { k: :dt, label: 'Data do pedido', t: :d, sort: true },
+       { k: :total, label: 'Valor total', t: :money, sort: true },
+       { k: :st, label: 'Revisão', t: :status, map: statuses }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Número, ID no Tiny ou cliente', cols: %i[pedido idtxt cliente], tip: 'Procura pelo número do pedido, pelo ID dele no Tiny ou pelo nome do cliente.' },
+       { id: :tipo, type: :select, label: 'Tipo do pedido', col: :tipo, options: type_labels.to_a, all: 'Todos os tipos', tip: 'Venda comum, abastecimento de loja ou transferência para a loja online.' },
+       { id: :per, type: :period, label: 'Pedido feito', col: :dt }
+     ],
+     kpis: [
+       { label: 'Para decidir', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Pedidos esperando você marcar ou ignorar.', count: @counts[:pending] },
+       { label: 'Valor da lista', icon: 'fas fa-sack-dollar', tone: 'blue', help: 'Soma dos pedidos que aparecem nesta aba.', text: number_to_currency(rows.sum { |r| r[:total] }, unit: 'R$ ', separator: ',', delimiter: '.') },
+       { label: 'Pedido mais antigo', icon: 'fas fa-clock', tone: 'orange', help: 'Há quanto tempo o primeiro da lista espera.', text: (rows.filter_map { |r| r[:dt] }.min&.then { |d| hc_ago(d.in_time_zone) } || '—') }
+     ]) %>
+<% rows.each do |r|
+     r[:ident] = content_tag(:span, "##{r[:pedido]}", class: 'num') + content_tag(:span, "ID #{r[:idtxt]}", class: 'cell-sub') + (r[:tipo].present? ? b2b_order_type_badge(r[:tipo]).to_s.html_safe : ''.html_safe)
+   end %>
 
-  <div class="page-header">
-    <div>
-      <h1 class="page-title"><i class="fas fa-clipboard-check me-2"></i>Criação de Pedidos no Correios (B2B)</h1>
-      <p class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Revisão antes da criação — Etapa 1 do fluxo B2B (Tiny2)
-      </p>
-    </div>
-    <div class="header-actions">
-      <a href="<%= root_path %>" class="btn btn-dark">
-        <i class="fas fa-tachometer-alt me-1"></i> Dashboard
-      </a>
-      <%= button_to run_create_correios_b2b_dashboard_index_path(review: @review_filter), method: :post,
-                    class: "btn btn-success #{'disabled' if @job_running}",
-                    form_class: 'd-inline-block',
-                    disabled: @job_running,
-                    data: { turbo_confirm: @job_running ? nil : 'Isso irá processar todos os pedidos B2B marcados para criação no Correios. Deseja continuar?' } do %>
-        <i class="fas <%= @job_running ? 'fa-spinner fa-spin' : 'fa-play' %> me-1"></i>
-        <%= @job_running ? 'Executando...' : 'Rodar Rotina Agora' %>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="alert alert-primary border-0 mb-4">
-    <div class="d-flex align-items-center">
-      <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
-      <div>
-        <h5 class="mb-1">Fluxo B2B (Tiny2) - Revisão antes da Criação</h5>
-        <p class="mb-0">
-          Pedidos vindos do Tiny2 só entram no fluxo de criação/emissão/XML/rastreamento depois de
-          <strong>marcados</strong> aqui. Pedidos <strong>ignorados</strong> nunca são processados automaticamente.
-        </p>
-      </div>
-    </div>
-  </div>
-
-  <div class="filters-panel">
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-filter me-1"></i>Filtrar por revisão
-      </label>
-      <div class="period-buttons">
-        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'pending'),
-                    class: "btn-period #{@review_filter == 'pending' ? 'btn-period--active-white' : ''}" do %>
-          <i class="fas fa-hourglass-half me-1"></i>Pendentes de revisão (<%= @counts[:pending] %>)
-        <% end %>
-        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'approved'),
-                    class: "btn-period #{@review_filter == 'approved' ? 'btn-period--active-white' : ''}" do %>
-          <i class="fas fa-check me-1"></i>Marcados (<%= @counts[:approved] %>)
-        <% end %>
-        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'ignored'),
-                    class: "btn-period #{@review_filter == 'ignored' ? 'btn-period--active-white' : ''}" do %>
-          <i class="fas fa-ban me-1"></i>Ignorados (<%= @counts[:ignored] %>)
-        <% end %>
-        <%= link_to order_correios_create_b2b_dashboard_index_path(review: 'all'),
-                    class: "btn-period #{@review_filter == 'all' ? 'btn-period--active-white' : ''}" do %>
-          <i class="fas fa-border-all me-1"></i>Todos
-        <% end %>
-      </div>
-    </div>
-  </div>
-
-  <div class="table-card">
-    <div class="table-card-header">
-      <h2 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Pedidos Tiny2 Aguardando Envio
-      </h2>
-      <span class="filter-tag filter-tag--gray">
-        Revisão: <%= { 'pending' => 'Pendentes de revisão', 'approved' => 'Marcados', 'ignored' => 'Ignorados', 'all' => 'Todos' }[@review_filter] %>
-      </span>
-    </div>
-
-      <% if @orders.present? %>
-        <div class="table-responsive">
-          <table class="orders-table" id="ordersTableB2b">
-            <thead>
-              <tr>
-                <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
-                <th class="text-center"><i class="fas fa-hashtag me-1"></i>ID Pedido</th>
-                <th class="text-center"><i class="fas fa-user me-1"></i>Cliente</th>
-                <th class="text-center"><i class="fas fa-calendar me-1"></i>Data Pedido</th>
-                <th class="text-center"><i class="fas fa-dollar-sign me-1"></i>Valor Total</th>
-                <th class="text-center"><i class="fas fa-flag me-1"></i>Revisão</th>
-                <th class="text-center">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% @orders.each do |order_data| %>
-                <% order = order_data['pedido'] %>
-                <% order_id = order['id'].to_s %>
-                <% review = @reviews[order_id] %>
-
-                <tr>
-                  <td class="text-center">
-                    <button class="btn btn-sm btn-outline-info"
-                            onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= order['id'] %>', '_blank');"
-                            title="Ver no Tiny">
-                      <i class="fas fa-external-link-alt"></i>
-                    </button>
-                  </td>
-                  <td class="text-center">
-                    <div class="d-flex flex-column align-items-center">
-                      <span class="fw-bold text-white">#<%= order['numero'] %></span>
-                      <small class="text-muted">ID: <%= order['id'] %></small>
-                      <%= b2b_order_type_badge(@order_types[order['id'].to_s]) %>
-                    </div>
-                  </td>
-                  <td class="text-center">
-                    <span class="text-white"><%= truncate(order['nome'], length: 25) %></span>
-                  </td>
-                  <td class="text-center">
-                    <span class="text-white"><%= order['data_pedido'] %></span>
-                  </td>
-                  <td class="text-center">
-                    <span class="badge bg-success fs-6">R$ <%= number_with_precision(order['valor'].to_f, precision: 2, delimiter: '.', separator: ',') %></span>
-                  </td>
-                  <td class="text-center">
-                    <% if review&.approved? %>
-                      <span class="badge bg-success"><i class="fas fa-check"></i> Marcado</span>
-                    <% elsif review&.ignored? %>
-                      <span class="badge bg-secondary"><i class="fas fa-ban"></i> Ignorado</span>
-                    <% else %>
-                      <span class="badge bg-warning text-dark"><i class="fas fa-hourglass-half"></i> Pendente</span>
-                    <% end %>
-                  </td>
-                  <td class="text-center">
-                    <div class="d-flex gap-2 justify-content-center">
-                      <button type="button" class="btn btn-sm btn-outline-info" title="Ver attempts"
-                              onclick="abrirAttemptsModal('<%= order_id %>')">
-                        <i class="fas fa-history"></i>
-                      </button>
-                      <%= button_to approve_order_b2b_dashboard_index_path(tiny_order_id: order_id, review: @review_filter),
-                                    method: :post, class: 'btn btn-sm btn-success', title: 'Marcar para processamento' do %>
-                        <i class="fas fa-check"></i>
-                      <% end %>
-                      <%= button_to ignore_order_b2b_dashboard_index_path(tiny_order_id: order_id, review: @review_filter),
-                                    method: :post, class: 'btn btn-sm btn-outline-danger', title: 'Ignorar' do %>
-                        <i class="fas fa-ban"></i>
-                      <% end %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-
-        <% if @orders.total_pages > 1 %>
-          <div class="pagination-footer">
-            <div class="pagination-info">
-              Mostrando
-              <strong><%= [(@orders.current_page - 1) * @orders.per_page + 1, @orders.total_entries].min %></strong>
-              a
-              <strong><%= [@orders.current_page * @orders.per_page, @orders.total_entries].min %></strong>
-              de <strong><%= @orders.total_entries %></strong> pedidos
-            </div>
-            <div class="pagination-controls">
-              <% if @orders.current_page > 1 %>
-                <%= link_to order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => @orders.current_page - 1)),
-                            class: "page-btn" do %>
-                  <i class="fas fa-chevron-left me-1"></i>Anterior
-                <% end %>
-              <% end %>
-
-              <% window  = 1
-                 p_start = [@orders.current_page - window, 1].max
-                 p_end   = [@orders.current_page + window, @orders.total_pages].min %>
-
-              <% (p_start..p_end).each do |pnum| %>
-                <% if pnum == @orders.current_page %>
-                  <span class="page-btn page-btn--active"><%= pnum %></span>
-                <% else %>
-                  <%= link_to pnum, order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => pnum)), class: "page-btn" %>
-                <% end %>
-              <% end %>
-
-              <% if @orders.current_page < @orders.total_pages %>
-                <%= link_to order_correios_create_b2b_dashboard_index_path(request.query_parameters.merge("page" => @orders.current_page + 1)),
-                            class: "page-btn" do %>
-                  Próxima<i class="fas fa-chevron-right ms-1"></i>
-                <% end %>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      <% else %>
-        <div class="empty-state">
-          <i class="fas fa-check-circle fa-3x mb-3 d-block"></i>
-          <h5>Nenhum pedido nessa categoria</h5>
-          <p>Não há pedidos B2B nessa aba no momento.</p>
-        </div>
-      <% end %>
-  </div>
-
-  <div class="modal fade" id="attemptsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content bg-dark border-secondary">
-        <div class="modal-header border-secondary">
-          <h5 class="modal-title text-white">
-            <i class="fas fa-history me-2"></i>Attempts do Pedido #<span id="attemptsModalOrderId"></span>
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <input type="text" id="attemptsSearchInput" class="form-control bg-dark text-white border-secondary mb-3"
-                 placeholder="Buscar por kind...">
-
-          <div id="attemptsModalLoading" class="text-center text-muted py-4" style="display:none;">
-            <i class="fas fa-spinner fa-spin me-1"></i> Carregando...
-          </div>
-          <div id="attemptsModalEmpty" class="text-center text-muted py-4" style="display:none;"></div>
-
-          <div class="table-responsive" id="attemptsModalTableWrapper" style="display:none;">
-            <table class="table table-dark table-sm table-hover">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Kind</th>
-                  <th>Status</th>
-                  <th>Mensagem</th>
-                  <th>Erro</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody id="attemptsModalBody"></tbody>
-            </table>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center" id="attemptsModalPagination" style="display:none;">
-            <small class="text-muted" id="attemptsModalPageInfo"></small>
-            <div class="btn-group">
-              <button type="button" class="btn btn-sm btn-outline-light" id="attemptsModalPrevBtn">
-                <i class="fas fa-chevron-left me-1"></i>Anterior
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-light" id="attemptsModalNextBtn">
-                Próxima<i class="fas fa-chevron-right ms-1"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<% content_for :scripts do %>
-  <script>
-    let attemptsModalData = [];
-    let attemptsModalOrderId = null;
-    let attemptsModalCurrentPage = 1;
-    let attemptsModalTotalPages = 1;
-
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function truncateText(text, len) {
-      if (!text) return '-';
-      return text.length > len ? text.substring(0, len) + '...' : text;
-    }
-
-    function formatAttemptDate(iso) {
-      if (!iso) return '-';
-      const d = new Date(iso);
-      return isNaN(d) ? '-' : d.toLocaleString('pt-BR');
-    }
-
-    function attemptStatusBadge(status) {
-      const map = {
-        success: 'bg-success',
-        fail: 'bg-danger',
-        error: 'bg-danger',
-        processing: 'bg-warning text-dark'
-      };
-      const cls = map[status] || 'bg-secondary';
-      return '<span class="badge ' + cls + '">' + escapeHtml(status || '-') + '</span>';
-    }
-
-    function renderAttemptsRows(attempts) {
-      const tbody = document.getElementById('attemptsModalBody');
-      const wrapper = document.getElementById('attemptsModalTableWrapper');
-      const empty = document.getElementById('attemptsModalEmpty');
-      tbody.innerHTML = '';
-
-      if (attempts.length === 0) {
-        wrapper.style.display = 'none';
-        empty.textContent = 'Nenhum attempt encontrado.';
-        empty.style.display = 'block';
-        return;
-      }
-
-      empty.style.display = 'none';
-      wrapper.style.display = '';
-
-      attempts.forEach(function(a) {
-        const tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + a.id + '</td>' +
-          '<td>' + escapeHtml(a.kinds || '-') + '</td>' +
-          '<td>' + attemptStatusBadge(a.status) + '</td>' +
-          '<td title="' + escapeHtml(a.message) + '">' + escapeHtml(truncateText(a.message, 40)) + '</td>' +
-          '<td title="' + escapeHtml(a.error) + '">' + escapeHtml(truncateText(a.error, 40)) + '</td>' +
-          '<td>' + formatAttemptDate(a.created_at) + '</td>';
-        tbody.appendChild(tr);
-      });
-    }
-
-    function updateAttemptsPaginationControls() {
-      const pagination = document.getElementById('attemptsModalPagination');
-      const pageInfo = document.getElementById('attemptsModalPageInfo');
-      const prevBtn = document.getElementById('attemptsModalPrevBtn');
-      const nextBtn = document.getElementById('attemptsModalNextBtn');
-
-      if (attemptsModalTotalPages <= 1) {
-        pagination.style.display = 'none';
-        return;
-      }
-
-      pagination.style.display = '';
-      pageInfo.textContent = 'Página ' + attemptsModalCurrentPage + ' de ' + attemptsModalTotalPages;
-      prevBtn.disabled = attemptsModalCurrentPage <= 1;
-      nextBtn.disabled = attemptsModalCurrentPage >= attemptsModalTotalPages;
-    }
-
-    function loadAttemptsPage(page) {
-      document.getElementById('attemptsSearchInput').value = '';
-      document.getElementById('attemptsModalBody').innerHTML = '';
-      document.getElementById('attemptsModalTableWrapper').style.display = 'none';
-      document.getElementById('attemptsModalEmpty').style.display = 'none';
-      document.getElementById('attemptsModalPagination').style.display = 'none';
-      document.getElementById('attemptsModalLoading').style.display = 'block';
-
-      fetch('/attempts/verify_attempts.json?tiny_order_id=' + encodeURIComponent(attemptsModalOrderId) + '&page=' + page)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          attemptsModalData = data.attempts || [];
-          attemptsModalCurrentPage = data.pagination ? data.pagination.current_page : 1;
-          attemptsModalTotalPages = data.pagination ? data.pagination.total_pages : 1;
-          document.getElementById('attemptsModalLoading').style.display = 'none';
-          renderAttemptsRows(attemptsModalData);
-          updateAttemptsPaginationControls();
-        })
-        .catch(function() {
-          document.getElementById('attemptsModalLoading').style.display = 'none';
-          document.getElementById('attemptsModalEmpty').textContent = 'Erro ao carregar attempts.';
-          document.getElementById('attemptsModalEmpty').style.display = 'block';
-        });
-    }
-
-    function abrirAttemptsModal(tinyOrderId) {
-      attemptsModalOrderId = tinyOrderId;
-      document.getElementById('attemptsModalOrderId').textContent = tinyOrderId;
-
-      const modalEl = document.getElementById('attemptsModal');
-      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      modal.show();
-
-      loadAttemptsPage(1);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const searchInput = document.getElementById('attemptsSearchInput');
-      if (searchInput) {
-        searchInput.addEventListener('input', function() {
-          const term = this.value.toLowerCase();
-          const filtered = attemptsModalData.filter(function(a) {
-            return (a.kinds || '').toLowerCase().includes(term);
-          });
-          renderAttemptsRows(filtered);
-        });
-      }
-
-      const prevBtn = document.getElementById('attemptsModalPrevBtn');
-      const nextBtn = document.getElementById('attemptsModalNextBtn');
-      if (prevBtn) {
-        prevBtn.addEventListener('click', function() {
-          if (attemptsModalCurrentPage > 1) loadAttemptsPage(attemptsModalCurrentPage - 1);
-        });
-      }
-      if (nextBtn) {
-        nextBtn.addEventListener('click', function() {
-          if (attemptsModalCurrentPage < attemptsModalTotalPages) loadAttemptsPage(attemptsModalCurrentPage + 1);
-        });
-      }
-    });
-  </script>
+<%= hc_page_header 'Pedidos p/ Aprovar (Log02)', 'Decida quais pedidos do atacado seguem para o Correios.', icon: 'fas fa-clipboard-check' do %>
+  <% if screen_can?(:dashboard_correios_b2b, :execute) %>
+    <%= button_to run_create_correios_b2b_dashboard_index_path(review: params[:review]), method: :post, class: 'btn btn-export', disabled: @job_running,
+                  form: { style: 'display: inline', data: { hc_confirm: (@job_running ? nil : { title: 'Rodar a rotina agora?', text: 'O sistema cria no Correios todos os pedidos já marcados.', ok: 'Rodar agora', icon: 'fas fa-play' }.to_json) } } do %>
+      <% if @job_running %><span class="spinner"></span>Executando…<% else %><i class="fas fa-play"></i>Rodar rotina agora<% end %>
+    <% end %>
+  <% end %>
 <% end %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Nada anda sem a sua aprovação.</strong> Os pedidos do Tiny2 só seguem para criação, nota, XML e rastreio depois de marcados aqui. Os ignorados nunca são processados.</div></div>
+
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: :log02, current: :order_correios_create_b2b, counts: { order_correios_create_b2b: @counts[:pending] } %>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Pedidos Tiny2 aguardando envio', icon: 'fas fa-list-check', meta: 'Marque os que devem ser enviados. Os pedidos novos aparecem primeiro.',
+        empty: { title: 'Nenhum pedido nesta aba', text: 'Quando chegar um pedido do atacado em "preparando envio" no Tiny2, ele aparece aqui para você decidir.' },
+        detail: { title: ->(r) { "Pedido ##{r[:pedido]}" }, tip: 'Ver detalhes', note: 'Marcar manda o pedido para a criação no Correios. Ignorar tira o pedido do fluxo, e dá para marcar de novo depois.' },
+        actions: ->(r) {
+          id = r[:idtxt]
+          can = screen_can?(:dashboard_correios_b2b, :approve)
+          safe_join([
+            link_to(content_tag(:i, '', class: 'fas fa-clock-rotate-left'), verify_attempts_attempts_path(tiny_order_id: id), class: 'action-btn', target: '_blank', data: { tip: 'Ver tentativas do pedido' }, 'aria-label': 'Ver tentativas'),
+            (hc_row_action('fas fa-check', 'Marcar para processamento', approve_order_b2b_dashboard_index_path(tiny_order_id: id, review: params[:review]), method: :post) if can && r[:st] != 'approved'),
+            (hc_row_action('fas fa-ban', 'Ignorar', ignore_order_b2b_dashboard_index_path(tiny_order_id: id, review: params[:review]), danger: true, method: :post,
+                           confirm: { title: "Ignorar o pedido ##{r[:pedido]}?", text: 'Ele não será processado. Se mudar de ideia, marque de novo.', ok: 'Ignorar' }) if can && r[:st] != 'ignored'),
+            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+          ].compact)
+        }) %>
+</div>

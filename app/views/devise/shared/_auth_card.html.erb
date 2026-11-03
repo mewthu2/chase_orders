@@ -1,8 +1,31 @@
-<%# Cartão das telas de autenticação (login e recuperação de senha): logo, título, mensagens e rodapé. %>
+<%# Telas de autenticação (login e recuperação de senha): painel da marca à esquerda e o cartão à direita. %>
+<section class="login-view" aria-label="Entrar no Honey.Chase">
+  <aside class="login-brand" aria-hidden="true">
+    <div class="aurora"><span></span><span></span><span></span></div>
+    <div class="grid-lines"></div>
+    <div class="brand-logo"><%= image_tag 'admin/honey-chase-logo.webp', alt: '', width: 440, height: 48 %></div>
+    <div>
+      <h2><span class="grad">Tudo da Chase em um só lugar.</span></h2>
+      <p class="lead">Chamados, pedidos, envios e estoque organizados por área, com um guia em cada tela para ninguém se perder.</p>
+      <ul class="brand-points">
+        <li><i class="fas fa-compass"></i><div><strong>Menu por área do negócio</strong>Loja Física, Ecommerce, Logística, Atacado e Adm, cada uma com a sua cor.</div></li>
+        <li><i class="fas fa-search"></i><div><strong>Busca rápida</strong>Digite o que precisa, como "rastreio" ou "nota fiscal".</div></li>
+        <li><i class="fas fa-life-ring"></i><div><strong>Ajuda em toda tela</strong>Para que serve, passo a passo e o significado de cada termo.</div></li>
+      </ul>
+    </div>
+    <div class="floating-cards">
+      <div class="float-card"><span class="ic" style="color:#e3b341;background:rgba(227,179,65,.15)"><i class="fas fa-bell"></i></span><div>Chamados aguardando você<small>Geral · Chamados</small></div></div>
+      <div class="float-card"><span class="ic" style="color:#3fb950;background:rgba(63,185,80,.15)"><i class="fas fa-shipping-fast"></i></span><div>Pedido enviado com rastreio<small>Ecommerce · Log03 · Rastreamento</small></div></div>
+      <div class="float-card"><span class="ic" style="color:#58a6ff;background:rgba(88,166,255,.15)"><i class="fas fa-file-invoice"></i></span><div>NF-e autorizada na SEFAZ<small>Adm · Notas Fiscais</small></div></div>
+    </div>
+    <div class="legal">© <%= Date.current.year %> Chase Brasil · Painel interno</div>
+  </aside>
+
+  <div class="login-side">
 <div class="login-container">
   <section class="login-card" aria-labelledby="login-title">
     <div class="logo-container">
-      <%= image_tag 'admin/chase-logo', class: 'logo-image', alt: 'Chase Brasil' %>
+      <%= image_tag 'admin/honey-chase-logo.webp', class: 'logo-image', alt: 'HONEY.CHASE', width: 440, height: 48 %>
     </div>
 
     <% if local_assigns[:icon] %>
@@ -17,7 +40,7 @@
       <% flash.delete(type) %>
       <% if message.present? %>
         <div class="login-message login-message-<%= type %>" role="<%= type == :alert ? 'alert' : 'status' %>">
-          <%= message %>
+          <i class="fas <%= type == :alert ? 'fa-exclamation-circle' : 'fa-check-circle' %>"></i><span><%= message %></span>
         </div>
       <% end %>
     <% end %>
@@ -25,10 +48,13 @@
     <%= yield %>
 
     <footer class="login-footer">
-      <p>© <%= Date.current.year %> Chase Brasil</p>
+      <span>© <%= Date.current.year %> Chase Brasil</span>
+      <span>Precisa de ajuda? <%= link_to 'Fale com o suporte', NavigationHelper::SUPPORT_WHATSAPP, target: '_blank', rel: 'noopener' %></span>
     </footer>
   </section>
 </div>
+  </div>
+</section>
 
 <% content_for :scripts do %>
   <script>

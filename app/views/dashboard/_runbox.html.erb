@@ -1,0 +1,24 @@
+<%# Fila automática (runboxHTML do protótipo). Locais: title, text, run_path, running, btn, confirm, every, last_run. %>
+<% active = within_schedule? %>
+<% every ||= nil %>
+<% last_run ||= nil %>
+<div class="panel pg-card pg-run<%= ' is-off' unless active %><%= ' is-running' if running %>">
+  <div class="pg-run-l"><span class="pg-pulse"><i></i></span><div><h3><%= title %></h3><p><%= text %></p></div></div>
+  <div class="pg-run-m">
+    <span><small>Última rodada</small><b><%= last_run ? hc_ago(last_run) : '—' %></b></span>
+    <span><small>Funciona</small><b>Seg a sex, 8h às 22h</b></span>
+    <% if every %><span><small>Roda sozinha a cada</small><b><%= every %></b></span><% end %>
+  </div>
+  <div class="pg-run-r">
+    <span class="ticket-status" style="--c: <%= hc_tone(active ? 'green' : 'gray') %>" data-tip="<%= active ? 'Fila ativa: o sistema roda sozinho no horário de funcionamento.' : 'Fora do horário: a fila volta a rodar sozinha de segunda a sexta, das 8h às 22h.' %>"><%= active ? 'Fila ativa' : 'Fila pausada' %></span>
+    <% if run_path.nil? %>
+    <% elsif screen_can?(perm, :execute) %>
+      <%= button_to run_path, method: :post, class: 'btn btn-primary', disabled: running,
+                    form: { style: 'display: inline', data: { hc_confirm: (running ? nil : { title: "#{btn}?", text: confirm, ok: btn, icon: 'fas fa-bolt' }.to_json) } } do %>
+        <% if running %><span class="spinner"></span>Executando…<% else %><i class="fas fa-bolt"></i><%= btn %><% end %>
+      <% end %>
+    <% else %>
+      <span class="pg-ro" data-tip="O seu perfil não tem a ação Executar. Peça ao administrador."><i class="fas fa-lock"></i>Só consulta</span>
+    <% end %>
+  </div>
+</div>

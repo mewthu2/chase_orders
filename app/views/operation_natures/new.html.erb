@@ -1,0 +1,18 @@
+<% content_for :title, "Nova Natureza de Operação" %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-sliders-h' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Nova Natureza de Operação</h1>
+        <p class="page-subtitle">Mesma lógica do Tiny: CFOP da regra geral e a tributação de cada imposto</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= hc_help_button %>
+      <%= link_to operation_natures_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

@@ -1,0 +1,158 @@
+<%= form_with model: @nature, local: true do |form| %>
+  <% if @nature.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @nature.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Natureza de operação</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Descrição <span class="required">*</span></label>
+          <%= form.text_field :description, class: "field-input", maxlength: 60, placeholder: "Venda Online" %>
+          <span class="text-muted-custom d-block mt-1">Sai na nota como natureza da operação.</span>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Empresa <span class="required">*</span></label>
+          <%= form.select :company_id, @companies.map { |c| ["#{c.legal_name} (#{Company::TAX_REGIMES[c.tax_regime]})", c.id] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Tipo</label>
+          <%= form.select :kind, OperationNature::KINDS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Finalidade</label>
+          <%= form.select :purpose, OperationNature::PURPOSES.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CFOP regra geral <span class="required">*</span></label>
+          <%= form.text_field :cfop, class: "field-input", maxlength: 5, placeholder: "?102" %>
+          <span class="text-muted-custom d-block mt-1">"?" vira 5 (mesma UF) ou 6 (outra UF).</span>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CFOP não contribuinte de outra UF</label>
+          <%= form.text_field :cfop_interstate_non_contributor, class: "field-input", maxlength: 5, placeholder: "6108" %>
+          <span class="text-muted-custom d-block mt-1">Em branco: usa a regra geral.</span>
+        </div>
+        <div class="form-col-4">
+          <div class="form-check form-switch mt-2">
+            <%= form.check_box :final_consumer, class: 'form-check-input', role: 'switch' %>
+            <label class="form-check-label text-main fw-bold">Consumidor final</label>
+          </div>
+        </div>
+        <div class="form-col-4">
+          <div class="form-check form-switch mt-2">
+            <%= form.check_box :default_for_kind, class: 'form-check-input', role: 'switch' %>
+            <label class="form-check-label text-main fw-bold">Padrão para este tipo</label>
+          </div>
+        </div>
+        <div class="form-col-4">
+          <div class="form-check form-switch mt-2">
+            <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+            <label class="form-check-label text-main fw-bold">Ativa</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-percent me-2"></i>ICMS</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Situação tributária (CST / CSOSN)</label>
+          <%= form.select :icms_situation, OperationNature::ICMS_SITUATIONS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Alíquota interna (%)</label>
+          <%= form.number_field :icms_rate, class: "field-input", step: 0.01, min: 0 %>
+          <span class="text-muted-custom d-block mt-1">Venda na mesma UF. Fora da UF usa 12%, 7% ou 4% (importado).</span>
+        </div>
+        <div class="form-col-3">
+          <div class="form-check form-switch mt-4">
+            <%= form.check_box :difal, class: 'form-check-input', role: 'switch' %>
+            <label class="form-check-label text-main fw-bold">ICMS DIFAL para não contribuinte</label>
+          </div>
+        </div>
+      </div>
+
+      <details class="mt-3">
+        <summary class="text-main fw-bold" style="cursor: pointer;"><i class="fas fa-map me-1"></i>ICMS para a UF de destino (alíquota interna e FCP de cada estado)</summary>
+        <p class="text-muted-custom mt-2">Valores de partida: confira com o contador antes de emitir em produção.</p>
+        <div class="table-responsive">
+          <table class="orders-table">
+            <thead><tr><th>UF</th><th>Alíquota interna (%)</th><th>FCP (%)</th></tr></thead>
+            <tbody>
+              <% rates = @nature.uf_rates.presence || Nfe::IcmsRates.default_table %>
+              <% Company::STATES.keys.sort.each do |uf| %>
+                <tr>
+                  <td class="text-main"><%= uf %></td>
+                  <td><%= number_field_tag "operation_nature[uf_rates][#{uf}][internal]", rates.dig(uf, 'internal'), class: "field-input", step: 0.01, min: 0 %></td>
+                  <td><%= number_field_tag "operation_nature[uf_rates][#{uf}][fcp]", rates.dig(uf, 'fcp'), class: "field-input", step: 0.01, min: 0 %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-coins me-2"></i>PIS e COFINS</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Situação tributária do PIS</label>
+          <%= form.select :pis_cst, OperationNature::PIS_COFINS_SITUATIONS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">Alíquota PIS (%)</label>
+          <%= form.number_field :pis_rate, class: "field-input", step: 0.0001, min: 0 %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Situação tributária da COFINS</label>
+          <%= form.select :cofins_cst, OperationNature::PIS_COFINS_SITUATIONS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-2">
+          <label class="field-label">Alíquota COFINS (%)</label>
+          <%= form.number_field :cofins_rate, class: "field-input", step: 0.0001, min: 0 %>
+        </div>
+        <div class="form-col-12">
+          <div class="form-check form-switch mt-2">
+            <%= form.check_box :exclude_icms_from_pis_cofins_base, class: 'form-check-input', role: 'switch' %>
+            <label class="form-check-label text-main fw-bold">Excluir o ICMS da base do PIS/COFINS</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-comment-alt me-2"></i>Observações</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Observações padrões para notas desta operação</label>
+          <%= form.text_area :notes, class: "field-input", rows: 3 %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Informações ao Fisco</label>
+          <%= form.text_area :fisco_notes, class: "field-input", rows: 3 %>
+        </div>
+      </div>
+      <span class="text-muted-custom d-block mt-2">Variáveis: <%= OperationNature::NOTE_VARIABLES.join(', ') %>.</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@nature.new_record? ? 'Criar Natureza' : 'Salvar Alterações'), class: "btn-submit" %>
+    <%= link_to "Cancelar", operation_natures_path, class: "btn-cancel" %>
+  </div>
+<% end %>

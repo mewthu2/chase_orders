@@ -1,129 +1,58 @@
 <% content_for :title, "Novo Pedido do Planejador" %>
 
-<div class="client-form-container">
+<%= hc_page_header 'Novo Pedido do Planejador', 'Suba a planilha do planejamento e o sistema monta o pedido de transferência.', icon: 'fas fa-plus' do %>
+  <%= link_to planner_orders_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar para a lista<% end %>
+<% end %>
 
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-plus-circle me-2"></i>Novo Pedido do Planejador
-      </h1>
-      <p class="page-subtitle">Importe uma planilha CSV para criar um novo pedido</p>
-    </div>
-    <div class="header-actions">
-      <%= link_to planner_orders_path, class: "btn-back" do %>
-        <i class="fas fa-arrow-left me-1"></i>Voltar
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== UPLOAD ===== %>
-  <div class="form-section">
-    <div class="form-section-header">
-      <h3 class="form-section-title">
-        <i class="fas fa-file-csv me-2"></i>Selecione a Planilha CSV
-      </h3>
-    </div>
-    <div class="form-section-body">
-      <%= form_with url: planner_orders_path, method: :post, multipart: true, local: true do |form| %>
-        <div class="upload-dropzone">
-          <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
-          <p class="text-main mb-3">Arraste o arquivo aqui ou clique para selecionar</p>
-
-          <%= file_field_tag :csv_file,
-            accept: '.csv',
-            required: true,
-            class: "field-input",
-            id: "csv-file-input" %>
-
-          <p class="page-subtitle mt-3 mb-0">
-            Formato aceito: <strong>CSV</strong> &middot; a planilha será processada automaticamente após o upload
-          </p>
-        </div>
-
-        <div class="form-actions">
-          <%= form.submit "Salvar Pedido",
-              class: "btn-submit",
-              data: { disable_with: '<i class="fas fa-spinner fa-spin me-2"></i>Processando...' } %>
-          <%= link_to "Cancelar", planner_orders_path, class: "btn-cancel" %>
-        </div>
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== REQUISITOS ===== %>
-  <div class="form-section">
-    <div class="form-section-header">
-      <h3 class="form-section-title">
-        <i class="fas fa-clipboard-check me-2"></i>Requisitos da Planilha
-      </h3>
-    </div>
-    <div class="form-section-body">
-      <p class="text-main mb-3">A planilha CSV deve conter as seguintes colunas:</p>
-
-      <div class="info-row">
-        <span class="info-key"><i class="fas fa-tag me-1"></i>Name</span>
-        <span class="info-val">Nome completo do produto</span>
+<div class="pg-blocks">
+  <%= form_with url: planner_orders_path, method: :post, multipart: true, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do |form| %>
+    <h3><i class="fas fa-file-csv"></i>Selecione a planilha CSV</h3>
+    <p class="pg-p" style="margin-bottom: 14px">Formato aceito: CSV. A planilha é processada assim que você salvar.</p>
+    <div class="pg-fields">
+      <div class="form-group pg-fg">
+        <label class="field-label" for="csv-file-input">Planilha CSV <span class="required">*</span><span class="info-dot" tabindex="0" data-tip='Só aceita .csv. Se o nome do arquivo tiver TO-1234, esse número vira o "Número do pedido".'>i</span></label>
+        <label class="upload pg-file" for="csv-file-input"><i class="fas fa-cloud-arrow-up"></i><span id="csv-file-name">Arraste a planilha aqui ou clique para escolher</span></label>
+        <%= file_field_tag :csv_file, accept: '.csv', required: true, id: 'csv-file-input', class: 'visually-hidden',
+                           onchange: "document.getElementById('csv-file-name').textContent = this.files[0] ? this.files[0].name : 'Arraste a planilha aqui ou clique para escolher'" %>
       </div>
-      <div class="info-row">
-        <span class="info-key"><i class="fas fa-barcode me-1"></i>SKU</span>
-        <span class="info-val">Código de identificação do produto</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key"><i class="fas fa-sort-numeric-up me-1"></i>Ordered</span>
-        <span class="info-val">Quantidade solicitada</span>
-      </div>
+      <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Depois de salvar, o pedido fica como Salvo. Na lista você pode incluir marcadores (ex.: pedido 455) que vão nas observações da nota.</span></div>
     </div>
-  </div>
+    <div class="pg-inline-foot">
+      <%= link_to 'Cancelar', planner_orders_path, class: 'btn btn-ghost' %>
+      <button type="submit" class="btn btn-primary" data-disable-with="Processando…"><i class="fas fa-floppy-disk"></i>Salvar pedido</button>
+    </div>
+  <% end %>
 
-  <%# ===== EXEMPLO ===== %>
-  <div class="form-section">
-    <div class="form-section-header">
-      <h3 class="form-section-title">
-        <i class="fas fa-file-code me-2"></i>Exemplo de Arquivo CSV
-      </h3>
-    </div>
-    <div class="form-section-body">
-      <p class="page-subtitle mb-2">Estrutura correta do arquivo:</p>
-      <pre class="csv-example"><code>Name,SKU,Ordered
+  <div class="pg-split" style="--cols: 1fr 1fr">
+    <div class="pg-split-a">
+      <div class="panel pg-card pg-panel spot">
+        <h3><i class="fas fa-clipboard-check"></i>Requisitos da planilha</h3>
+        <p class="pg-p">O arquivo precisa ser CSV, separado por vírgulas, em UTF-8, com estes três nomes na primeira linha.</p>
+        <ul class="pg-list">
+          <% [['fas fa-tag', 'blue', 'Name', 'Nome completo do produto.'], ['fas fa-barcode', 'purple', 'SKU', 'Código de identificação do produto.'], ['fas fa-hashtag', 'green', 'Ordered', 'Quantidade solicitada.']].each do |icon, tone, title, text| %>
+            <li><span class="li-ic" style="--tone: <%= hc_tone(tone) %>"><i class="<%= icon %>"></i></span><span><b><%= title %></b><small><%= text %></small></span></li>
+          <% end %>
+        </ul>
+      </div>
+      <div class="panel pg-card pg-panel spot">
+        <h3><i class="fas fa-file-code"></i>Exemplo de arquivo CSV</h3>
+        <p class="pg-p">Assim fica a estrutura correta:</p>
+        <pre style="margin: 12px 0 0; padding: 12px 14px; border-radius: var(--r-sm); background: rgba(255,255,255,.04); border: 1px solid var(--border-2); font: 12.5px/1.7 var(--mono); color: var(--text-2); overflow-x: auto; white-space: pre">Name,SKU,Ordered
 Top Harmony Seamless Black G,TOP-947-G,27
 Top Harmony Seamless Black M,TOP-947-M,36
-Top Harmony Seamless Black P,TOP-947-P,36
-Legging Ultra Comfort Blue GG,LEG-142-GG,15</code></pre>
-
-      <p class="page-subtitle mb-0">
-        <i class="fas fa-exclamation-triangle me-1"></i>
-        O arquivo deve estar em formato CSV (separado por vírgulas), codificação UTF-8 para caracteres especiais,
-        e a primeira linha deve conter os cabeçalhos.
-      </p>
+Legging Ultra Comfort Blue M,LEG-142-M,18</pre>
+      </div>
     </div>
-  </div>
-
-  <%# ===== COMO FUNCIONA ===== %>
-  <div class="form-section">
-    <div class="form-section-header">
-      <h3 class="form-section-title">
-        <i class="fas fa-tasks me-2"></i>Como Funciona
-      </h3>
-    </div>
-    <div class="form-section-body">
-      <div class="info-row">
-        <span class="info-key">1. Upload</span>
-        <span class="info-val">Faça upload da planilha CSV</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">2. Processamento</span>
-        <span class="info-val">Sistema valida e processa os dados</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">3. Salvar</span>
-        <span class="info-val">Pedido é salvo e fica pronto para transmissão</span>
-      </div>
-      <div class="info-row">
-        <span class="info-key">4. Transmitir</span>
-        <span class="info-val">Envie a nota fiscal para o Tiny</span>
+    <div class="pg-split-b">
+      <div class="panel pg-card pg-howto">
+        <h3><i class="fas fa-list-ol"></i>Como funciona</h3>
+        <ol>
+          <% ['<b>Upload.</b> Escolha a planilha CSV do planejamento.', '<b>Processamento.</b> O sistema confere os dados. Linha sem nome, sem SKU ou com quantidade zero é ignorada.',
+              '<b>Salvar.</b> O pedido fica pronto para transmitir, na lista de pedidos.', '<b>Transmitir.</b> Na lista, envie a nota de transferência para o Tiny.'].each_with_index do |text, i| %>
+            <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
+          <% end %>
+        </ol>
       </div>
     </div>
   </div>
-
 </div>

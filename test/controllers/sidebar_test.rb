@@ -1,113 +1,100 @@
 require 'test_helper'
 
+# Menu lateral por área do negócio (Navigation + layouts/partials/_sidebar).
 class SidebarTest < ActionDispatch::IntegrationTest
   def setup
     @admin = User.create!(name: 'Admin Menu', email: 'admin_menu@example.com', password: 'password123')
     @admin.profiles << Profile.find(Profile::ADMIN)
   end
 
-  test 'the orders group is called Pedidos B2B and links to companies and fiscal notes' do
-    sign_in @admin
-    get b2b_orders_path
-
-    assert_select '.nav-group-title .nav-text', text: 'Pedidos B2B'
-    assert_select "a[href='#{companies_path}']", text: /Empresas/
-    assert_select "a[href='#{fiscal_notes_path}']", text: /Notas Fiscais/
+  def user_with(keys)
+    profile = Profile.create!(name: "Menu #{SecureRandom.hex(3)}")
+    profile.update!(screen_keys: keys)
+    User.create!(name: 'Menu', email: "menu_#{SecureRandom.hex(3)}@example.com", password: 'password123').tap { |u| u.profiles << profile }
   end
 
-  test 'a user without the new permissions does not see the links' do
-    profile = Profile.create!(name: 'So Atacado')
-    profile.update!(screen_keys: ['b2b_orders'])
-    user = User.create!(name: 'Sem Fiscal', email: 'sem_fiscal@example.com', password: 'password123')
-    user.profiles << profile
-    sign_in user
-    get b2b_orders_path
+  test 'admins see every business area, in order' do
+    sign_in @admin
+    get root_path
 
-    assert_select "a[href='#{companies_path}']", count: 0
-    assert_select "a[href='#{fiscal_notes_path}']", count: 0
+    assert_select '.sb-section .sb-area-name', count: Screen::AREAS.size
+    assert_select '.sb-section:first-child .sb-area-name', text: 'Geral'
+    assert_select ".sb-section[data-area='adm'] a[href='#{companies_path}']", text: /Empresas/
+    assert_select ".sb-section[data-area='adm'] a[href='#{operation_natures_path}']", text: /Naturezas de Operação/
+    assert_select ".sb-section[data-area='adm'] a[href='#{fiscal_notes_path}']", text: /Notas Fiscais/
+    assert_select ".sb-section[data-area='adm'] a[href='#{profiles_path}']", text: /Perfis e Permissões/
   end
 
-  test 'the Produtos group links to stock withdrawals only for users with that permission' do
-    sign_in @admin
-    get b2b_orders_path
-    assert_select "a[href='#{stock_withdrawals_path}']", text: /Retirada de Estoque/
-
-    profile = Profile.create!(name: 'So Controle')
-    profile.update!(screen_keys: ['stock_corrections'])
-    user = User.create!(name: 'So Controle', email: 'so_controle@example.com', password: 'password123')
-    user.profiles << profile
-    sign_in user
+  test 'a user only sees the areas and screens their profile opens' do
+    sign_in user_with(['stock_corrections'])
     get stock_corrections_path
-    assert_select "a[href='#{stock_corrections_path}']"
+
+    assert_select ".sb-section[data-area='loja'] a[href='#{stock_corrections_path}']"
     assert_select "a[href='#{stock_withdrawals_path}']", count: 0
-
-    only_withdrawals = Profile.create!(name: 'So Retirada')
-    only_withdrawals.update!(screen_keys: ['stock_withdrawals'])
-    user2 = User.create!(name: 'So Retirada', email: 'so_retirada@example.com', password: 'password123')
-    user2.profiles << only_withdrawals
-    sign_in user2
-    get stock_withdrawals_path
-    assert_response :success
-    assert_select "a[href='#{stock_withdrawals_path}']"
-    assert_select "a[href='#{stock_corrections_path}']", count: 0
+    assert_select "a[href='#{companies_path}']", count: 0
+    assert_select ".sb-section[data-area='adm']", count: 0
+    assert_select ".sb-section[data-area='geral']", count: 1
   end
 
-  test 'transfer locations live under Produtos, not Pedidos B2B' do
-    sign_in @admin
-    get b2b_orders_path
-
-    assert_select "#produtosDropdown a[href='#{transfer_locations_path}']", text: /Locais de Transferência/
-    assert_select "#pedidosB2bDropdown a[href='#{transfer_locations_path}']", count: 0
-  end
-
-  test 'a user with only transfer_locations access still sees the Produtos menu' do
-    profile = Profile.create!(name: 'So Locais')
-    profile.update!(screen_keys: ['transfer_locations'])
-    user = User.create!(name: 'So Locais', email: 'so_locais@example.com', password: 'password123')
-    user.profiles << profile
-    sign_in user
+  test 'the current screen is highlighted and its area shows in the top trail' do
+    sign_in user_with(['transfer_locations'])
     get transfer_locations_path
 
     assert_response :success
-    assert_select "#produtosDropdown a[href='#{transfer_locations_path}']"
-    assert_select '#pedidosB2bDropdown', count: 0
+    assert_select ".sb-link.is-active[href='#{transfer_locations_path}']"
+    assert_select '.sb-section.has-active[data-area="logistica"]'
+    assert_select '.crumbs .area-crumb', text: /Logística/
+    assert_select '.crumbs .current', text: 'Locais de Transferência'
   end
 
-  test 'the Chamados group gives every user their tickets and a way to open one' do
+  test 'Log02 keeps its approval and creation steps numbered' do
+    sign_in @admin
+    get root_path
+
+    assert_select ".sb-group[data-group='log02'] .sb-steps .sb-step", text: '1'
+    assert_select ".sb-group[data-group='log02'] .sb-aka", text: 'Correios B2B'
+  end
+
+  test 'every user gets their tickets and a way to open one' do
     user = User.create!(name: 'Comum Menu', email: 'comum_menu@example.com', password: 'password123')
     sign_in user
     get root_path
 
-    assert_select '.nav-group-title .nav-text', text: 'Chamados'
-    assert_select '#chamadosDropdown' do
+    assert_select ".sb-group[data-group='chamados']" do
       assert_select "a[href='#{root_path}']", text: /Meus chamados/
       assert_select "a[href='#{new_ticket_path}']", text: /Abrir chamado/
       assert_select "a[href='#{root_path(scope: 'all', status: 'all')}']", count: 0
-      assert_select "a[href='#{ticket_responsabilities_path}']", count: 0
     end
+    assert_select "a[href='#{ticket_responsabilities_path}']", count: 0
   end
 
-  test 'admins also get all tickets and the responsabilities screen under Chamados' do
+  test 'admins manage sectors and responsabilities under Acessos e equipe' do
     sign_in @admin
     get root_path
 
-    assert_select '#chamadosDropdown' do
-      assert_select "a[href='#{root_path(scope: 'all', status: 'all')}']", text: /Todos os chamados/
-      assert_select "a[href='#{ticket_responsabilities_path}']", text: /Responsabilidades/
-    end
-    assert_select '#usuariosDropdown a', text: /Responsabilidades/, count: 0
+    assert_select ".sb-group[data-group='acessos'] a[href='#{ticket_sectors_path}']", text: /Setores/
+    assert_select ".sb-group[data-group='acessos'] a[href='#{ticket_responsabilities_path}']", text: /Responsabilidades/
+    assert_select ".sb-group[data-group='chamados'] a[href='#{root_path(scope: 'all', status: 'all')}']", text: /Todos os chamados/
   end
 
-  test 'Chamados menu shows sectors to admins and the sector list to supervisors' do
-    sign_in @admin
-    get root_path
-    assert_select "#chamadosDropdown a[href='#{ticket_sectors_path}']", text: /Setores/
-
+  test 'sector supervisors see the tickets of their sectors' do
     supervisor = User.create!(name: 'Supervisor Menu', email: 'supervisor_menu@example.com', password: 'password123')
     supervisor.profiles << Profile.create!(name: 'Supervisores', ticket_sectors: [TicketSector.create!(name: 'Lojas Menu')])
     sign_in supervisor
     get root_path
-    assert_select "#chamadosDropdown a[href='#{root_path(scope: 'sectors', status: 'all')}']", text: /Chamados dos meus setores/
-    assert_select "#chamadosDropdown a[href='#{ticket_sectors_path}']", count: 0
+
+    assert_select ".sb-group[data-group='chamados'] a[href='#{root_path(scope: 'sectors', status: 'all')}']", text: /Chamados dos meus setores/
+    assert_select "a[href='#{ticket_sectors_path}']", count: 0
+  end
+
+  test 'the help drawer, map and quick search data are on the page' do
+    sign_in user_with(['carriers'])
+    get carriers_path
+
+    assert_select 'template#helpTemplate'
+    assert_select 'template#mapTemplate'
+    data = JSON.parse(css_select('#honeyData').first.text)
+    assert_includes data['search']['screens'].map { |s| s['id'] }, 'adm-transportadoras'
+    refute_includes data['search']['screens'].map { |s| s['id'] }, 'adm-empresas'
   end
 end

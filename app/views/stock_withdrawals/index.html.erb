@@ -1,71 +1,84 @@
 <% content_for :title, "Retirada de Estoque" %>
+<% filters = params.permit(:status, :location_id, :reason, :period).to_h.compact_blank %>
+<% count = ->(*keys) { keys.sum { |k| @status_counts[k].to_i } } %>
+<% kpi_url = ->(status) { stock_withdrawals_path(filters.merge('status' => (filters['status'] == status ? nil : status)).compact) } %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-dolly-flatbed me-2"></i>Retirada de Estoque</h1>
-      <p class="page-subtitle">Retiradas de estoque das locations, lançadas direto no Shopify (com histórico do inventário)</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @withdrawals.total_entries %> retirada(s)</span>
-      <%= link_to new_stock_withdrawal_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Retirada<% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Retirada de Estoque', 'Retiradas de estoque das locations, lançadas direto no Shopify (com histórico do inventário)', icon: 'fas fa-dolly-flatbed' do %>
+  <% if screen_can?(:stock_withdrawals, :create) %>
+    <%= link_to new_stock_withdrawal_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova retirada<% end %>
+  <% end %>
+<% end %>
 
-  <div class="table-card">
-    <%= form_with url: stock_withdrawals_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
-      <%= select_tag :status, options_for_select([['Todos status', '']] + StockWithdrawal::STATUS_LABELS.map { |key, label| [label, key] }, params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
+<div class="pg-blocks">
+  <%= hc_kpis([
+    { label: 'Rascunhos', icon: 'fas fa-file-pen', tone: 'gray', value: count.call('draft'), help: 'Salvos, mas nada saiu do Shopify.', url: kpi_url.call('draft'), active: filters['status'] == 'draft' },
+    { label: 'Processando', icon: 'fas fa-spinner', tone: 'purple', value: count.call('processing'), help: 'Saindo do Shopify agora.', url: kpi_url.call('processing'), active: filters['status'] == 'processing' },
+    { label: 'Concluídas', icon: 'fas fa-circle-check', tone: 'green', value: count.call('completed'), help: 'Tudo retirado do Shopify.', url: kpi_url.call('completed'), active: filters['status'] == 'completed' },
+    { label: 'Com falhas', icon: 'fas fa-triangle-exclamation', tone: 'red', value: count.call('partially_failed', 'partially_completed'), help: 'Precisam de conferência.',
+      url: kpi_url.call('partially_failed,partially_completed'), active: filters['status'] == 'partially_failed,partially_completed' }
+  ]) %>
+
+  <%= hc_table_card 'Lista de retiradas', icon: 'fas fa-dolly-flatbed', meta: 'Retiradas de estoque das locations, lançadas direto no Shopify (com histórico do inventário).' do %>
+    <%= hc_filters stock_withdrawals_path, clear: (stock_withdrawals_path if filters.any?) do %>
+      <%= hc_filter_field 'Status', tip: 'Em que pé está a retirada. Só "Concluída" já tirou o estoque do Shopify.' do %>
+        <%= hc_filter_select :status, StockWithdrawal::STATUS_LABELS.map { |k, v| [v, k] }, filters['status'], all: 'Todos status' %>
+      <% end %>
+      <%= hc_filter_field 'Location', tip: 'A loja de onde saíram as peças.' do %>
+        <%= hc_filter_select :location_id, @locations.map { |l| [l.name, l.id] }, filters['location_id'], all: 'Todas as lojas' %>
+      <% end %>
+      <%= hc_filter_field 'Motivo' do %>
+        <%= hc_filter_select :reason, StockWithdrawal::REASONS.map { |k, v| [v, k] }, filters['reason'], all: 'Todos os motivos' %>
+      <% end %>
+      <%= hc_filter_field 'Período' do %>
+        <%= hc_filter_select :period, StockWithdrawalsController::PERIODS.map { |k, v| [v, k] }, filters['period'], all: 'Todo o período' %>
+      <% end %>
     <% end %>
 
-    <% if @withdrawals.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nº</th>
-              <th>Data</th>
-              <th>Motivo</th>
-              <th>Locations</th>
-              <th class="text-end">Qtde total</th>
-              <th>Criada por</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @withdrawals.each do |withdrawal| %>
+    <div class="pg-body">
+      <% chips = [] %>
+      <% chips << { label: 'Status', value: StockWithdrawal::STATUS_LABELS[filters['status']] || 'Com falhas', clear: stock_withdrawals_path(filters.except('status')) } if filters['status'] %>
+      <% chips << { label: 'Location', value: @locations.find { |l| l.id.to_s == filters['location_id'] }&.name, clear: stock_withdrawals_path(filters.except('location_id')) } if filters['location_id'] %>
+      <% chips << { label: 'Motivo', value: StockWithdrawal::REASONS[filters['reason']], clear: stock_withdrawals_path(filters.except('reason')) } if filters['reason'] %>
+      <% chips << { label: 'Período', value: StockWithdrawalsController::PERIODS[filters['period']], clear: stock_withdrawals_path(filters.except('period')) } if filters['period'] %>
+      <%= hc_active_filters @withdrawals.total_entries, 'retiradas', unit1: 'retirada', filtered: filters.any?, locs: :all, chips: chips, legend: withdrawal_status_legend %>
+
+      <% if @withdrawals.any? %>
+        <div class="table-responsive">
+          <table class="orders-table pg-tbl">
+            <thead>
               <tr>
-                <td class="text-main">#<%= withdrawal.id %></td>
-                <td class="text-muted-custom"><%= withdrawal.withdrawal_date.strftime('%d/%m/%Y') %></td>
-                <td class="text-muted-custom"><%= withdrawal.reason_label %></td>
-                <td class="text-muted-custom"><%= withdrawal.items.map { |item| item.location.name }.uniq.to_sentence %></td>
-                <td class="text-end"><%= withdrawal.items.sum(&:quantity) %></td>
-                <td class="text-muted-custom"><%= withdrawal.user&.name %></td>
-                <td class="text-center"><%= withdrawal_status_pill(withdrawal) %></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to stock_withdrawal_path(withdrawal), class: "action-btn action-btn--edit", title: "Ver" do %><i class="fas fa-eye"></i><% end %>
-                    <% if withdrawal.editable? %>
-                      <%= link_to edit_stock_withdrawal_path(withdrawal), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <% end %>
-                    <% if withdrawal.deletable? %>
-                      <%= button_to stock_withdrawal_path(withdrawal), method: :delete, class: "action-btn action-btn--danger", title: "Excluir rascunho",
-                                    form: { data: { turbo_confirm: "Excluir este rascunho de retirada?" } } do %><i class="fas fa-trash"></i><% end %>
-                    <% end %>
-                  </div>
-                </td>
+                <th>Nº</th><th>Data</th><th>Motivo</th><th>Locations</th><th class="is-r">Qtde total</th><th>Criada por</th><th>Status</th><th style="text-align: right">Ações</th>
               </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <div class="px-3 py-3"><%= will_paginate @withdrawals, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-dolly-flatbed fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma retirada cadastrada</h5>
-        <%= link_to new_stock_withdrawal_path, class: "btn-export" do %><i class="fas fa-plus me-1"></i>Nova Retirada<% end %>
-      </div>
-    <% end %>
-  </div>
+            </thead>
+            <tbody class="stagger">
+              <% @withdrawals.each_with_index do |withdrawal, i| %>
+                <tr style="--i: <%= i %>">
+                  <td><%= link_to "##{withdrawal.id}", stock_withdrawal_path(withdrawal), class: 'text-main' %></td>
+                  <td><%= hc_date(withdrawal.withdrawal_date) %></td>
+                  <td class="pg-txt"><%= withdrawal.reason_label %></td>
+                  <td><% withdrawal.items.map(&:location).uniq.each do |location| %><%= hc_location(location.name, key: location.id) %><% end %></td>
+                  <td class="is-r"><%= hc_qty(withdrawal.items.sum(&:quantity)) %></td>
+                  <td><%= hc_person(withdrawal.user&.name) %></td>
+                  <td><%= withdrawal_status_pill(withdrawal) %></td>
+                  <td class="td-actions" style="text-align: right">
+                    <%= hc_row_action 'fas fa-eye', 'Ver', stock_withdrawal_path(withdrawal) %>
+                    <% if withdrawal.editable? && screen_can?(:stock_withdrawals, :edit) %>
+                      <%= hc_row_action 'fas fa-pencil', 'Editar', edit_stock_withdrawal_path(withdrawal) %>
+                    <% end %>
+                    <% if withdrawal.deletable? && screen_can?(:stock_withdrawals, :destroy) %>
+                      <%= hc_row_action 'fas fa-trash', 'Excluir rascunho', stock_withdrawal_path(withdrawal), danger: true, method: :delete, confirm: "Excluir o rascunho ##{withdrawal.id}? Nada saiu do Shopify, então nada é devolvido." %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <%= hc_table_footer @withdrawals %>
+      <% else %>
+        <%= hc_empty 'Nenhuma retirada cadastrada', filters.any? ? 'Nenhuma retirada com estes filtros. Limpe algum filtro acima.' : 'Quando alguém lançar uma retirada de estoque, ela aparece aqui.',
+                     cta: (screen_can?(:stock_withdrawals, :create) ? link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova retirada']), new_stock_withdrawal_path, class: 'btn btn-export') : nil) %>
+      <% end %>
+    </div>
+  <% end %>
 </div>

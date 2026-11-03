@@ -1,28 +1,37 @@
 <% content_for :title, "Perfis e Permissões" %>
 
-<div class="users-container">
+<div class="users-container perm-list">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-user-shield me-2"></i>Perfis e Permissões
-      </h1>
-      <p class="page-subtitle">Controle quais telas cada perfil pode acessar</p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-user-shield' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Perfis e Permissões</h1>
+        <p class="page-subtitle">Defina o que cada perfil vê e faz: por área do negócio, por loja e por ação</p>
+      </div>
     </div>
     <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-list me-1"></i><%= @profiles.size %> perfil(is)
-      </span>
+      <%= hc_help_button %>
+      <span class="total-badge"><i class="fas fa-list"></i><%= @profiles.length %> perfil(is)</span>
       <%= link_to new_profile_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Novo Perfil
+        <i class="fas fa-plus"></i>Novo Perfil
       <% end %>
     </div>
   </div>
 
+  <div class="access-model">
+    <div class="am-step" style="--c: var(--brand-400)"><span class="am-n">1</span><div><b>Área</b><small>Quais grupos do menu o perfil enxerga.</small></div></div>
+    <i class="fas fa-chevron-right am-arrow"></i>
+    <div class="am-step" style="--c: var(--orange)"><span class="am-n">2</span><div><b>Loja</b><small>Em quais lojas trabalha, nas telas de estoque.</small></div></div>
+    <i class="fas fa-chevron-right am-arrow"></i>
+    <div class="am-step" style="--c: var(--green)"><span class="am-n">3</span><div><b>Ação</b><small>O que pode fazer em cada tela: ver, criar, editar, aprovar, executar, excluir, exportar.</small></div></div>
+    <div class="am-note"><i class="fas fa-circle-info"></i><span>Uma pessoa com vários perfis soma o que cada um libera. <b>Só o administrador altera perfis e permissões.</b></span></div>
+  </div>
+
   <div class="table-card">
-    <div class="table-card-header">
-      <h5 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Perfis
-      </h5>
+    <div class="table-toolbar">
+      <h3>Perfis</h3>
+      <span class="meta">Clique num perfil para abrir a matriz de permissões</span>
     </div>
 
     <% if @profiles.any? %>
@@ -30,48 +39,53 @@
         <table class="orders-table">
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Descrição</th>
-              <th class="text-center">Status</th>
+              <th>Perfil</th>
+              <th>Áreas liberadas</th>
+              <th class="text-center">Telas</th>
+              <th class="text-center">Lojas</th>
               <th class="text-center">Usuários</th>
-              <th>Telas Permitidas</th>
+              <th class="text-center">Status</th>
               <th class="text-end">Ações</th>
             </tr>
           </thead>
           <tbody>
             <% @profiles.each do |profile| %>
+              <% keys = profile.screen_keys %>
+              <% areas = profile.admin? ? Screen::AREAS.keys : keys.filter_map { |k| Screen.definition(k)&.dig(:area) }.uniq %>
               <tr>
-                <td class="text-main"><%= profile.name %></td>
-                <td class="text-muted-custom"><%= profile.description.presence || '-' %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= profile.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= profile.active? ? 'Ativo' : 'Inativo' %>
-                  </span>
+                <td class="title-cell">
+                  <%= link_to edit_profile_path(profile), class: 'text-main' do %>
+                    <% if profile.admin? %><i class="fas fa-crown" style="color: var(--yellow); margin-right: 6px"></i><% end %><%= profile.name %>
+                  <% end %>
+                  <span class="cell-sub"><%= profile.description.presence || (profile.admin? ? 'Vê e faz tudo no sistema' : 'Sem descrição') %></span>
                 </td>
-                <td class="text-center"><%= profile.users_count %></td>
                 <td>
-                  <% if profile.screen_keys.any? %>
-                    <div class="location-chip-group">
-                      <% profile.screen_keys.first(3).each do |key| %>
-                        <span class="location-chip"><%= Screen.label(key) %></span>
-                      <% end %>
-                      <% if profile.screen_keys.count > 3 %>
-                        <span class="location-chip location-chip--more">+<%= profile.screen_keys.count - 3 %></span>
+                  <% if areas.any? %>
+                    <div class="act-chips">
+                      <% Screen::AREAS.slice(*areas).each do |id, area| %>
+                        <span class="area-chip" style="--area: <%= area[:color] %>"><i class="<%= area[:icon] %>"></i><%= area[:title] %></span>
                       <% end %>
                     </div>
                   <% else %>
-                    <span class="text-muted-custom">Nenhuma</span>
+                    <span class="text-muted-custom">Só chamados</span>
                   <% end %>
+                </td>
+                <td class="text-center num"><%= profile.admin? ? 'Todas' : keys.size %></td>
+                <td class="text-center num"><%= profile.admin? ? 'Todas' : profile.location_keys.size %></td>
+                <td class="text-center num"><%= profile.users_count %></td>
+                <td class="text-center">
+                  <span class="ticket-status <%= profile.active? ? 'ticket-status--resolved' : 'ticket-status--closed' %>"><%= profile.active? ? 'Ativo' : 'Inativo' %></span>
                 </td>
                 <td class="text-end">
                   <div class="table-actions">
-                    <%= link_to edit_profile_path(profile), class: "action-btn action-btn--edit" do %>
+                    <%= link_to edit_profile_path(profile), class: "action-btn", data: { tip: 'Editar permissões' } do %>
                       <i class="fas fa-pencil-alt"></i>
                     <% end %>
-                    <%= link_to profile, method: :delete,
-                                class: "action-btn action-btn--danger",
-                                data: { confirm: "Tem certeza que deseja excluir este perfil?" } do %>
-                      <i class="fas fa-trash"></i>
+                    <% unless profile.admin? %>
+                      <%= button_to profile_path(profile), method: :delete, class: "action-btn action-btn--danger", data: { tip: 'Excluir perfil' },
+                                    form: { style: 'display:inline', onsubmit: "return confirm('Excluir o perfil #{j profile.name}?')" } do %>
+                        <i class="fas fa-trash"></i>
+                      <% end %>
                     <% end %>
                   </div>
                 </td>
@@ -81,12 +95,10 @@
         </table>
       </div>
     <% else %>
-      <div class="empty-state">
-        <i class="fas fa-user-shield fa-3x mb-3 d-block"></i>
-        <h5>Nenhum perfil encontrado</h5>
-        <%= link_to new_profile_path, class: "btn-export" do %>
-          <i class="fas fa-plus me-1"></i>Novo Perfil
-        <% end %>
+      <div class="ticket-empty">
+        <h3>Nenhum perfil ainda</h3>
+        <p>Crie um perfil para liberar áreas, lojas e ações para um grupo de pessoas.</p>
+        <%= link_to new_profile_path, class: "btn-export" do %><i class="fas fa-plus"></i>Novo Perfil<% end %>
       </div>
     <% end %>
   </div>

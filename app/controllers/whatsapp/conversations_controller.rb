@@ -1,6 +1,8 @@
 module Whatsapp
   class ConversationsController < BaseController
     before_action :require_attendance
+    before_action -> { head :forbidden unless current_user.can?('whatsapp_attend', 'C') }, only: :create
+    before_action -> { head :forbidden unless current_user.can?('whatsapp_attend', 'E') }, only: :update
     def index
       @connections = authorized_connections.order(:name)
       respond_to do |format|

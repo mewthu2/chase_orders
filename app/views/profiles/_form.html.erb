@@ -1,140 +1,284 @@
-<%= form_with model: @profile, local: true, class: 'needs-validation', novalidate: true do |form| %>
-  <% if @profile.errors.any? %>
-    <div class="form-error-box">
-      <i class="fas fa-exclamation-triangle me-2"></i>
-      <ul class="mb-0 mt-1">
-        <% @profile.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+<%# Perfis e Permissões: 1 · áreas do negócio, 2 · lojas, 3 · ações por tela (+ setores de chamados).
+    Só o administrador chega aqui (ProfilesController#admin_only!). %>
+<% admin = @profile.admin? %>
+<% by_area = Screen.by_area %>
+<% users_count = @profile.persisted? ? @profile.users.count : 0 %>
 
-  <div class="form-section">
-    <div class="form-section-header">
-      <h5 class="form-section-title"><i class="fas fa-id-badge me-2"></i>Informações Básicas</h5>
-    </div>
-    <div class="form-section-body">
-      <div class="form-grid">
-        <div class="form-col-6">
-          <label class="field-label">Nome <span class="required">*</span></label>
-          <%= form.text_field :name,
-              class: "field-input #{'field-input--error' if @profile.errors[:name].any?}",
-              required: true %>
-          <% if @profile.errors[:name].any? %>
-            <span class="field-error"><%= @profile.errors[:name].first %></span>
+<%= form_with model: @profile, local: true, class: 'perm-form', id: 'permForm', data: { admin: admin } do |form| %>
+  <div class="perm-layout">
+    <div class="perm-main">
+      <div class="save-bar" id="saveBar" hidden>
+        <i class="fas fa-pen-to-square"></i>
+        <span><b>Alterações não salvas.</b> Elas valem para todas as pessoas com este perfil assim que você salvar.</span>
+        <%= link_to 'Descartar', request.path, class: 'btn btn-ghost btn-sm' %>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check"></i>Salvar Alterações</button>
+      </div>
+
+      <% if @profile.errors.any? %>
+        <div class="callout" style="border-color: rgba(248,81,73,.4); background: var(--red-bg)">
+          <i class="fas fa-exclamation-triangle" style="color: var(--red)"></i>
+          <div><% @profile.errors.full_messages.each do |message| %><div><%= message %></div><% end %></div>
+        </div>
+      <% end %>
+
+      <div class="hc-panel perm-head">
+        <div style="flex: 1; min-width: 260px">
+          <div class="ph-eyebrow"><%= @profile.new_record? ? 'Novo perfil' : 'Perfil' %></div>
+          <div class="perm-grid">
+            <label class="perm-field"><span class="field-label">Nome <span class="required">*</span></span>
+              <%= form.text_field :name, class: 'field-input', required: true, placeholder: 'Ex.: Gerente de loja' %></label>
+            <label class="perm-field"><span class="field-label">Descrição</span>
+              <%= form.text_field :description, class: 'field-input', placeholder: 'Para quem é este perfil' %></label>
+            <label class="perm-field"><span class="field-label">Ativo</span>
+              <span class="form-check form-switch m-0"><%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @profile.new_record? || @profile.active? %></span></label>
+          </div>
+        </div>
+        <div class="ph-stats">
+          <div><b id="statScreens">0</b><small>Telas</small></div>
+          <div><b id="statLocs">0</b><small>Lojas</small></div>
+          <div><b><%= users_count %></b><small>Pessoas</small></div>
+        </div>
+      </div>
+
+      <% if admin %>
+        <div class="callout is-info">
+          <i class="fas fa-crown" style="color: var(--yellow)"></i>
+          <div><strong>Administrador vê e faz tudo.</strong> Todas as áreas, lojas e ações ficam liberadas e não dá para tirar. Este também é o único perfil que altera perfis e permissões.</div>
+        </div>
+      <% end %>
+
+      <%# 1 · Áreas %>
+      <section class="hc-panel perm-step" style="--c: var(--brand-400)">
+        <h3><span class="step-n">1</span>Áreas do negócio <small>Ligue uma área para liberar todas as telas e ações dela. Ajuste os detalhes no passo 3.</small></h3>
+        <div class="area-tiles">
+          <% Screen::AREAS.each do |id, area| %>
+            <button type="button" class="area-tile" data-area-tile="<%= id %>" style="--area: <%= area[:color] %>" <%= 'disabled' if admin %>>
+              <span class="at-top">
+                <span class="sb-area-ic"><i class="<%= area[:icon] %>"></i></span>
+                <span class="at-name"><%= area[:title] %></span>
+                <span class="at-switch"></span>
+              </span>
+              <span class="at-segs"><% by_area[id].size.times do %><i></i><% end %></span>
+              <span class="at-meta" data-area-meta><%= area[:desc] %></span>
+            </button>
           <% end %>
         </div>
-        <div class="form-col-6">
-          <label class="field-label">Descrição</label>
-          <%= form.text_field :description, class: "field-input" %>
+      </section>
+
+      <%# 2 · Lojas %>
+      <section class="hc-panel perm-step" style="--c: var(--orange)">
+        <h3><span class="step-n">2</span>Lojas <small>Valem nas telas marcadas com <span class="pm-tag is-loc"><i class="fas fa-store"></i></span> (estoque). Somam com as lojas do próprio usuário.</small></h3>
+        <%= hidden_field_tag 'profile[allowed_locations][]', '', id: nil %>
+        <div class="loc-grid">
+          <% User::AVAILABLE_LOCATIONS.each do |key, location| %>
+            <label class="loc-opt">
+              <%= check_box_tag 'profile[allowed_locations][]', key, admin || @profile.location_keys.include?(key), id: "loc_#{key}", disabled: admin, data: { loc: true } %>
+              <span class="lo-box"><i class="fas fa-check"></i></span><%= location[:name] %>
+            </label>
+          <% end %>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <div class="form-section-header">
-      <h5 class="form-section-title"><i class="fas fa-toggle-on me-2"></i>Status</h5>
-    </div>
-    <div class="form-section-body">
-      <div class="form-check form-switch">
-        <%= form.check_box :active, class: 'form-check-input', role: 'switch', checked: @profile.new_record? ? true : @profile.active? %>
-        <label class="form-check-label text-main fw-bold">Perfil Ativo</label>
-      </div>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <div class="form-section-header">
-      <h5 class="form-section-title"><i class="fas fa-desktop me-2"></i>Telas Permitidas</h5>
-    </div>
-    <div class="form-section-body">
-      <% Screen.grouped.each do |group_name, options| %>
-        <div class="mb-3 pb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <strong class="text-main"><i class="fas fa-layer-group me-2"></i><%= group_name %></strong>
-            <button type="button" class="btn-back btn-sm screen-group-toggle" data-group="<%= group_name.parameterize %>">
-              Marcar/desmarcar todos
-            </button>
+        <% unless admin %>
+          <div class="loc-tools">
+            <button type="button" class="btn btn-secondary btn-sm" data-locs="all"><i class="fas fa-check-double"></i>Todas</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-locs="none">Nenhuma</button>
+            <span class="loc-note"><i class="fas fa-circle-info"></i>Sem loja marcada, a pessoa só trabalha nas lojas liberadas no cadastro dela (Gerenciar Usuários).</span>
           </div>
-          <div class="form-grid" data-group-checkboxes="<%= group_name.parameterize %>">
-            <% options.each do |label, key| %>
-              <div class="form-col-4">
-                <div class="form-check">
-                  <%= check_box_tag 'profile[screen_keys][]',
-                                    key,
-                                    @profile.screen_keys.include?(key),
-                                    { class: 'form-check-input', id: "screen_#{key}" } %>
-                  <label class="form-check-label text-main" for="screen_<%= key %>"><%= label %></label>
-                </div>
-              </div>
+        <% end %>
+      </section>
+
+      <%# 3 · Ações %>
+      <section class="hc-panel perm-step" style="--c: var(--green)">
+        <h3><span class="step-n">3</span>Ações por tela <small>Clique no nome da tela para marcar ou desmarcar a linha toda. Sem "Ver", a tela some do menu.</small></h3>
+        <div class="pm-wrap">
+          <table class="perm-matrix">
+            <thead>
+              <tr>
+                <th class="pm-name">Tela</th>
+                <% Screen::ACTIONS.each do |letter, action| %>
+                  <th class="pm-act" data-tip="<%= action[:help] %>"><i class="<%= action[:icon] %>"></i><span><%= action[:label] %></span></th>
+                <% end %>
+              </tr>
+            </thead>
+            <% by_area.each do |area_id, screens| %>
+              <% area = Screen::AREAS[area_id] %>
+              <tbody class="pm-area-body" data-area="<%= area_id %>" style="--area: <%= area[:color] %>">
+                <tr class="pm-area">
+                  <td colspan="<%= Screen::ACTIONS.size + 1 %>">
+                    <button type="button" data-fold>
+                      <span class="sb-area-ic"><i class="<%= area[:icon] %>"></i></span><b><%= area[:title] %></b>
+                      <span class="pm-area-n" data-area-count></span><i class="fas fa-chevron-down pm-chev"></i>
+                    </button>
+                  </td>
+                </tr>
+                <% screens.each do |key, definition| %>
+                  <% chosen = admin ? definition[:acts] : @profile.actions_for(key) %>
+                  <% base = Screen.base_actions(key) %>
+                  <tr class="pm-row" data-area-row data-screen="<%= key %>" data-label="<%= definition[:label] %>">
+                    <td class="pm-name">
+                      <%= hidden_field_tag "profile[screen_actions][#{key}][]", '', id: nil %>
+                      <div class="pm-name-in">
+                        <button type="button" class="pm-label" data-row-toggle <%= 'disabled' if admin %>><span class="pm-dot"></span><%= definition[:label] %></button>
+                        <% if definition[:loc] %><span class="pm-tag is-loc" data-tip="Esta tela respeita as lojas do passo 2"><i class="fas fa-store"></i></span><% end %>
+                        <% if base.present? %><span class="pm-tag" data-tip="Todo usuário logado já pode ver, abrir e responder chamados">base</span><% end %>
+                      </div>
+                    </td>
+                    <% Screen::ACTIONS.each do |letter, action| %>
+                      <td class="pm-cell-wrap">
+                        <% if definition[:acts].include?(letter) %>
+                          <% fixed = admin || base.include?(letter) %>
+                          <label class="pm-cell<%= ' is-base' if fixed %>" data-tip="<%= action[:label] %> · <%= definition[:label] %>">
+                            <%= check_box_tag "profile[screen_actions][#{key}][]", letter, fixed || chosen.include?(letter),
+                                              id: "act_#{key}_#{letter}", disabled: fixed, data: { perm_act: letter } %>
+                            <i class="fas fa-check"></i>
+                          </label>
+                        <% else %>
+                          <span class="pm-na" aria-hidden="true">–</span>
+                        <% end %>
+                      </td>
+                    <% end %>
+                  </tr>
+                <% end %>
+              </tbody>
+            <% end %>
+          </table>
+        </div>
+        <div class="pm-legend">
+          <span><span class="pm-tag is-loc"><i class="fas fa-store"></i></span> usa as lojas do passo 2</span>
+          <span><span class="pm-na">–</span> a tela não tem essa ação</span>
+          <span>Marcar qualquer ação liga também o <b>Ver</b>.</span>
+        </div>
+      </section>
+
+      <%# Setores de chamados %>
+      <section class="hc-panel perm-step" style="--c: var(--yellow)">
+        <h3><i class="fas fa-ticket-alt" style="color: var(--yellow)"></i>Setores de chamados <small>Quem tem o perfil abre chamados para as responsabilidades destes setores e vê todos os chamados deles.</small></h3>
+        <% sectors = TicketSector.ordered %>
+        <% if admin %>
+          <p class="pg-p"><i class="fas fa-crown" style="color: var(--yellow)"></i> Administradores veem todos os setores.</p>
+        <% elsif sectors.any? %>
+          <%= hidden_field_tag 'profile[ticket_sector_ids][]', '', id: nil %>
+          <div class="sector-grid">
+            <% sectors.each do |sector| %>
+              <label class="loc-opt" style="--orange: var(--yellow)">
+                <%= check_box_tag 'profile[ticket_sector_ids][]', sector.id, @profile.ticket_sector_ids.include?(sector.id), id: "ticket_sector_#{sector.id}" %>
+                <span class="lo-box"><i class="fas fa-check"></i></span><%= sector.name %><% unless sector.active? %> <small class="text-muted-custom">(inativo)</small><% end %>
+              </label>
             <% end %>
           </div>
-        </div>
-      <% end %>
-      <span class="text-muted-custom d-block mt-2">
-        <i class="fas fa-info-circle me-1"></i>
-        Perfis novos começam sem nenhuma tela marcada. Os grupos espelham o menu lateral — marque só os itens que o perfil deve ver.
-      </span>
-    </div>
-  </div>
+        <% else %>
+          <p class="pg-p">Nenhum setor cadastrado ainda. Cadastre em Adm › Acessos e equipe › Setores de chamados.</p>
+        <% end %>
+      </section>
 
-  <div class="form-section">
-    <div class="form-section-header">
-      <h5 class="form-section-title"><i class="fas fa-ticket-alt me-2"></i>Setores de Chamados</h5>
+      <div class="perm-actions">
+        <%= link_to 'Cancelar', profiles_path, class: 'btn-cancel' %>
+        <%= form.button type: 'submit', class: 'btn-submit' do %><i class="fas fa-check"></i><%= @profile.new_record? ? 'Criar Perfil' : 'Salvar Alterações' %><% end %>
+      </div>
     </div>
-    <div class="form-section-body">
-      <% sectors = TicketSector.ordered %>
-      <% if @profile.id == Profile::ADMIN %>
-        <span class="text-muted-custom d-block">
-          <i class="fas fa-crown me-1"></i>
-          Administradores abrem chamados para todos os setores — não precisa marcar nenhum.
-        </span>
-      <% else %>
-      <%= hidden_field_tag 'profile[ticket_sector_ids][]', '', id: nil %>
-      <% if sectors.any? %>
-        <div class="form-grid">
-          <% sectors.each do |sector| %>
-            <div class="form-col-4">
-              <div class="form-check">
-                <%= check_box_tag 'profile[ticket_sector_ids][]', sector.id, @profile.ticket_sector_ids.include?(sector.id),
-                                  { class: 'form-check-input', id: "ticket_sector_#{sector.id}" } %>
-                <label class="form-check-label text-main" for="ticket_sector_<%= sector.id %>">
-                  <%= sector.name %><% unless sector.active? %> <span class="text-muted-custom">(inativo)</span><% end %>
-                </label>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      <% else %>
-        <span class="text-muted-custom d-block">Nenhum setor cadastrado ainda — cadastre em Chamados → Setores.</span>
-      <% end %>
-      <span class="text-muted-custom d-block mt-2">
-        <i class="fas fa-info-circle me-1"></i>
-        Usuários deste perfil só abrem chamados para as responsabilidades desses setores e enxergam todos os chamados deles. Administradores veem todos os setores.
-      </span>
-      <% end %>
-    </div>
-  </div>
 
-  <div class="form-actions">
-    <%= form.submit (@profile.new_record? ? 'Criar Perfil' : 'Salvar Alterações'), class: "btn-submit" %>
-    <%= link_to "Cancelar", profiles_path, class: "btn-cancel" %>
+    <aside class="perm-side">
+      <div class="hc-panel perm-preview">
+        <h3><i class="fas fa-eye"></i>Prévia do menu</h3>
+        <p class="pv-sum" id="pvSum"></p>
+        <div class="pv-list" id="pvList"></div>
+        <p class="pg-p" style="font-size: 12px; color: var(--text-3)">Chamados aparecem para todo mundo. Itens só de administrador (usuários, perfis, setores) não entram aqui.</p>
+      </div>
+    </aside>
   </div>
 <% end %>
 
+<script type="application/json" id="permAreas"><%= raw json_escape(Screen::AREAS.to_json) %></script>
+
 <% content_for :scripts do %>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.screen-group-toggle').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var group = btn.dataset.group;
-        var boxes = document.querySelectorAll('[data-group-checkboxes="' + group + '"] input[type="checkbox"]');
-        var allChecked = Array.prototype.every.call(boxes, function (b) { return b.checked; });
-        boxes.forEach(function (b) { b.checked = !allChecked; });
-      });
-    });
-  });
+(() => {
+  const form = document.getElementById('permForm')
+  if (!form) return
+  const areas = JSON.parse(document.getElementById('permAreas').textContent)
+  const rows = Array.from(form.querySelectorAll('.pm-row'))
+  const boxes = (row) => Array.from(row.querySelectorAll('input[data-perm-act]:not(:disabled)'))
+  const viewBox = (row) => row.querySelector('input[data-perm-act="V"]')
+  const flash = (el) => { el.classList.remove('is-flash'); void el.offsetWidth; el.classList.add('is-flash') }
+
+  // Qualquer ação marcada liga o "Ver"; desligar o "Ver" desliga a linha toda.
+  form.addEventListener('change', (e) => {
+    const input = e.target
+    if (input.dataset.permAct) {
+      const row = input.closest('.pm-row')
+      if (input.dataset.permAct === 'V' && !input.checked) boxes(row).forEach((b) => { b.checked = false })
+      else if (input.checked && viewBox(row) && !viewBox(row).disabled) viewBox(row).checked = true
+      flash(input.closest('.pm-cell'))
+    }
+    if (input.dataset.loc) flash(input.closest('.loc-opt'))
+    refresh(); dirty()
+  })
+
+  form.addEventListener('click', (e) => {
+    const rowToggle = e.target.closest('[data-row-toggle]')
+    if (rowToggle) {
+      const row = rowToggle.closest('.pm-row'); const list = boxes(row)
+      const on = !list.every((b) => b.checked)
+      list.forEach((b) => { b.checked = on })
+      refresh(); dirty(); return
+    }
+    const tile = e.target.closest('[data-area-tile]')
+    if (tile) {
+      const areaRows = rows.filter((r) => r.closest('[data-area]').dataset.area === tile.dataset.areaTile)
+      const all = areaRows.flatMap(boxes)
+      const on = !all.every((b) => b.checked)
+      all.forEach((b) => { b.checked = on })
+      flash(tile); refresh(); dirty(); return
+    }
+    const fold = e.target.closest('[data-fold]')
+    if (fold) { fold.closest('.pm-area').classList.toggle('is-folded'); return }
+    const locs = e.target.closest('[data-locs]')
+    if (locs) {
+      form.querySelectorAll('input[data-loc]').forEach((b) => { b.checked = locs.dataset.locs === 'all' })
+      refresh(); dirty()
+    }
+  })
+
+  const dirty = () => { document.getElementById('saveBar').hidden = false }
+  form.addEventListener('input', (e) => { if (e.target.matches('input[type="text"]')) dirty() })
+
+  function refresh () {
+    const visible = rows.filter((r) => viewBox(r)?.checked && !r.querySelector('.pm-tag:not(.is-loc)'))
+    document.getElementById('statScreens').textContent = visible.length
+    document.getElementById('statLocs').textContent = form.querySelectorAll('input[data-loc]:checked').length
+
+    // Estado de cada área: inteira, parte ou nada.
+    form.querySelectorAll('[data-area-tile]').forEach((tile) => {
+      const areaRows = rows.filter((r) => r.closest('[data-area]').dataset.area === tile.dataset.areaTile)
+      const all = areaRows.flatMap(boxes)
+      const checked = all.filter((b) => b.checked).length
+      const segs = tile.querySelectorAll('.at-segs i')
+      areaRows.forEach((r, i) => segs[i]?.classList.toggle('on', !!viewBox(r)?.checked))
+      tile.classList.toggle('is-full', all.length > 0 && checked === all.length || form.dataset.admin === 'true')
+      tile.classList.toggle('is-some', checked > 0 && checked < all.length)
+      tile.classList.toggle('is-none', checked === 0 && form.dataset.admin !== 'true')
+      const onScreens = areaRows.filter((r) => viewBox(r)?.checked).length
+      tile.querySelector('[data-area-meta]').textContent = `${onScreens} de ${areaRows.length} telas · ${checked} de ${all.length} ações`
+    })
+    form.querySelectorAll('tbody[data-area]').forEach((tb) => {
+      const areaRows = Array.from(tb.querySelectorAll('.pm-row'))
+      tb.querySelector('[data-area-count]').textContent = `${areaRows.filter((r) => viewBox(r)?.checked).length} de ${areaRows.length} telas`
+      areaRows.forEach((r) => r.classList.toggle('is-off', !viewBox(r)?.checked))
+    })
+
+    // Prévia do menu.
+    const groups = {}
+    visible.forEach((r) => {
+      const area = r.closest('[data-area]').dataset.area
+      ;(groups[area] ||= []).push({ label: r.dataset.label, acts: Array.from(r.querySelectorAll('input[data-perm-act]:checked')).map((b) => b.dataset.permAct).join('') })
+    })
+    const list = document.getElementById('pvList')
+    list.innerHTML = Object.entries(areas).filter(([id]) => groups[id]).map(([id, a]) => `
+      <div class="pv-area" style="--area:${a.color}"><div class="pv-title"><span class="sb-area-ic"><i class="${a.icon}"></i></span>${a.title}<span class="pv-n">${groups[id].length}</span></div>
+      ${groups[id].map((s) => `<div class="pv-item"><i class="fas fa-circle" style="font-size:6px"></i>${s.label.replace(/</g, '&lt;')}<small>${s.acts}</small></div>`).join('')}</div>`).join('')
+    const n = Object.keys(groups).length
+    document.getElementById('pvSum').innerHTML = n ? `O menu terá <b>${n} área(s)</b> e <b>${visible.length} tela(s)</b>, além de Chamados.` : 'Só <b>Chamados</b> vai aparecer no menu.'
+  }
+  refresh()
+})()
 </script>
 <% end %>

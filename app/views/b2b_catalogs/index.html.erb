@@ -1,39 +1,94 @@
-<% content_for :title, 'Catálogos B2B' %>
+<% content_for :title, "Catálogos B2B" %>
+<% statuses = { 'pending' => ['Nova', 'yellow', 'O lojista enviou e ninguém da Chase abriu ainda.'],
+                'seen' => ['Vista', 'purple', 'Alguém da Chase já abriu. Ainda falta criar o pedido.'],
+                'converted' => ['Convertida em pedido', 'blue', 'Já virou um pedido em Pedidos de Atacado.'] } %>
+<% fmt_cnpj = ->(v) { d = v.to_s.gsub(/\D/, ''); d.length == 14 ? d.sub(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '\1.\2.\3/\4-\5') : v.presence || '—' } %>
+<% catalog_titles = @catalogs.to_h { |c| [c.id, c.title] } %>
+<% rows = @catalog_orders.map do |o|
+     registered = o.client.present? || @registered_cnpjs.include?(o.customer_registration.to_s.gsub(/\D/, ''))
+     { id: o.id, record: o, cliente: o.customer_name, catalogo: catalog_titles[o.b2b_catalog_id], cnpj: fmt_cnpj.call(o.customer_registration), cria: o.submitted_at || o.created_at,
+       dt: o.updated_at, pecas: o.items.sum(&:quantity), st: o.status, por: o.last_edited_by.presence || 'Lojista',
+       pedido: o.b2b_order ? "Pedido ##{o.b2b_order.id}" : '—', cad: registered ? 'Cliente cadastrado' : 'CNPJ sem cadastro', catId: o.b2b_catalog_id }
+   end %>
+<% table = HoneyTable.new(params, id: 'enc', rows: rows, unit: 'encomendas', unit1: 'encomenda', page_size: 8, sort: { k: :dt, dir: -1 },
+     tabs: { col: :st, items: [['', 'Todas'], ['pending', 'Nova'], ['seen', 'Vista'], ['converted', 'Convertida em pedido']] },
+     cols: [
+       { k: :id, label: 'Nº', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :cliente, label: 'Cliente', main: true, sort: true, sub: :catalogo },
+       { k: :catalogo, label: 'Catálogo', hide: true },
+       { k: :cnpj, label: 'CNPJ', t: :mono, cls: 'due' },
+       { k: :cria, label: 'Enviada', t: :dt, hide: true },
+       { k: :dt, label: 'Atualizada', t: :dt, sort: true },
+       { k: :pecas, label: 'Peças', t: :qty, sort: true },
+       { k: :st, label: 'Status', t: :status, map: statuses, sub: :pedido },
+       { k: :por, label: 'Alterada por' },
+       { k: :pedido, label: 'Pedido criado', hide: true },
+       { k: :cad, label: 'Cadastro do cliente', hide: true },
+       { k: :catId, label: 'Código do catálogo', hide: true, nodetail: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar encomenda', ph: 'Pesquise por cliente, CNPJ ou catálogo...', cols: %i[cliente cnpj catalogo], tip: 'Procura pelo nome que o lojista digitou, pelo CNPJ ou pelo título do catálogo.' },
+       { id: :cat, type: :select, label: 'Catálogo', col: :catId, options: @catalogs.map { |c| [c.id.to_s, c.title] }, all: 'Todos os catálogos' }
+     ],
+     kpis: [
+       { label: 'Encomendas novas', icon: 'fas fa-inbox', tone: 'yellow', help: 'Chegaram e ninguém abriu ainda.', col: :st, vals: ['pending'] },
+       { label: 'Vistas', icon: 'fas fa-eye', tone: 'purple', help: 'Já abertas, falta criar o pedido.', col: :st, vals: ['seen'] },
+       { label: 'Viraram pedido', icon: 'fas fa-file-invoice-dollar', tone: 'blue', help: 'Já estão em Pedidos de Atacado.', col: :st, vals: ['converted'] },
+       { label: 'Peças esperando pedido', icon: 'fas fa-boxes-stacked', tone: 'orange', help: 'Soma das novas e das vistas.', col: :st, vals: %w[pending seen], sum: :pecas }
+     ]) %>
+<% active_count = @catalogs.count(&:active?) %>
+<% cards = @catalogs.map do |c|
+     orders = @order_counts[c.id].to_i
+     pending = @pending_counts[c.id].to_i
+     link = public_catalog_url(c.public_token)
+     acts = safe_join([
+       link_to(safe_join([content_tag(:i, '', class: 'fas fa-receipt'), 'Ver encomendas']), hc_pg_url('enc_cat' => c.id, 'enc_page' => nil, anchor: nil) + '#pgt-enc', class: 'btn btn-secondary btn-sm'),
+       (link_to(safe_join([content_tag(:i, '', class: 'fas fa-pen'), 'Editar']), edit_b2b_catalog_path(c), class: 'btn btn-secondary btn-sm') if screen_can?(:b2b_catalogs, :edit)),
+       content_tag(:button, safe_join([content_tag(:i, '', class: 'fas fa-copy'), 'Copiar link']), type: 'button', class: "btn #{c.active? ? 'btn-primary' : 'btn-secondary'} btn-sm", data: { pg_copy: link, tip: 'Cole no WhatsApp ou no e-mail do lojista.' }),
+       (button_to(safe_join([content_tag(:i, '', class: 'fas fa-rotate'), 'Atualizar estoque']), refresh_b2b_catalog_path(c), class: 'btn btn-secondary btn-sm', form: { style: 'display: inline' }) if screen_can?(:b2b_catalogs, :execute)),
+       (button_to(safe_join([content_tag(:i, '', class: 'fas fa-key'), 'Novo link']), regenerate_token_b2b_catalog_path(c), class: 'btn btn-secondary btn-sm',
+                  form: { style: 'display: inline', data: { hc_confirm: { title: "Gerar um novo link para #{c.title}?", text: 'O link atual deixa de funcionar quando você gera um novo.', ok: 'Gerar novo link', icon: 'fas fa-key' }.to_json } }) if screen_can?(:b2b_catalogs, :execute)),
+       (button_to(safe_join([content_tag(:i, '', class: c.active? ? 'fas fa-lock' : 'fas fa-lock-open'), c.active? ? 'Encerrar' : 'Reabrir']), toggle_status_b2b_catalog_path(c), class: 'btn btn-secondary btn-sm', form: { style: 'display: inline' }) if screen_can?(:b2b_catalogs, :execute))
+     ].compact)
+     { icon: c.kind_client? ? 'fas fa-store' : 'fas fa-globe', title: c.title, sub: c.kind_client? ? 'Por cliente' : 'Geral',
+       status: c.active? ? ['Ativo', 'green'] : ['Encerrado', 'gray'], tone: c.active? ? 'yellow' : 'gray',
+       meta: ([['fas fa-building', c.client&.display_name]] if c.kind_client? && c.client).to_a + [
+         ['fas fa-shirt', "#{c.products.size} #{c.products.size == 1 ? 'modelo' : 'modelos'}"],
+         ['fas fa-receipt', "#{orders} #{orders == 1 ? 'encomenda' : 'encomendas'}"],
+         ['fas fa-boxes-stacked', c.stock_refreshed_at ? "Estoque atualizado #{hc_ago(c.stock_refreshed_at)}" : 'Estoque ainda não atualizado'],
+         ['fas fa-link', "#{link.sub(%r{\Ahttps?://}, '')[0, 38]}…"]
+       ],
+       tags: (pending.positive? ? ["#{pending} #{pending == 1 ? 'nova' : 'novas'}"] : []), actions: acts }
+   end %>
 
-<div class="users-container catalogs-page">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-book-open me-2"></i>Catálogos B2B</h1>
-      <p class="page-subtitle">Monte catálogos, mande o link para os lojistas e transforme as encomendas em pedidos.</p>
-    </div>
-    <div class="header-actions">
-      <%= link_to new_b2b_catalog_path, class: 'btn-export' do %><i class="fas fa-plus me-2"></i>Novo catálogo<% end %>
-    </div>
-  </div>
-
-  <% if @catalogs.any? %>
-    <div class="catalog-grid">
-      <% @catalogs.each_with_index do |catalog, index| %>
-        <%= link_to b2b_catalog_path(catalog), class: "catalog-card catalog-card--#{catalog.status}", style: "animation-delay: #{[index, 12].min * 40}ms" do %>
-          <div class="catalog-card__top">
-            <span class="catalog-card__kind"><%= B2bCatalog::KIND_LABELS[catalog.kind] %></span>
-            <% if (pending = @pending_counts[catalog.id].to_i).positive? %>
-              <span class="catalog-new-badge"><%= pending %> nova<%= 's' if pending > 1 %></span>
-            <% end %>
-          </div>
-          <h3 class="catalog-card__title"><%= catalog.title %></h3>
-          <div class="catalog-card__meta">
-            <% if catalog.kind_client? %><span><i class="fas fa-store me-1"></i><%= catalog.client&.display_name %></span><% end %>
-            <span><i class="fas fa-receipt me-1"></i><%= @order_counts[catalog.id].to_i %> encomenda(s)</span>
-            <span class="catalog-status catalog-status--<%= catalog.status %>"><%= catalog.active? ? 'Ativo' : 'Encerrado' %></span>
-          </div>
-        <% end %>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="table-card text-center text-muted-custom py-5">
-      <i class="fas fa-book-open fa-2x mb-2"></i>
-      <div>Nenhum catálogo ainda. Crie o primeiro e mande o link para os lojistas.</div>
-    </div>
+<%= hc_page_header 'Catálogos B2B', 'Monte catálogos, mande o link para os lojistas e transforme as encomendas em pedidos.', icon: 'fas fa-book-open' do %>
+  <% if screen_can?(:b2b_catalogs, :create) %>
+    <%= link_to new_b2b_catalog_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo catálogo<% end %>
   <% end %>
+<% end %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>O catálogo não tem preço.</strong> O lojista abre o link, escolhe cores e tamanhos e manda a encomenda. Quando você clica em Criar pedido, o pedido sai com o preço sugerido de atacado e fica Aberto em Pedidos de Atacado.</div></div>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <% if cards.any? %>
+    <%= hc_pg_cards(title: 'Catálogos', icon: 'fas fa-book-open', cols: 2, items: cards,
+                    meta: "#{active_count} #{active_count == 1 ? 'ativo' : 'ativos'} e #{@catalogs.size - active_count} #{@catalogs.size - active_count == 1 ? 'encerrado' : 'encerrados'}. Cada catálogo tem um link público.") %>
+  <% else %>
+    <%= hc_empty 'Nenhum catálogo ainda', 'Monte o primeiro catálogo e mande o link para os lojistas.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Novo catálogo']), new_b2b_catalog_path, class: 'btn btn-export') if screen_can?(:b2b_catalogs, :create)) %>
+  <% end %>
+  <%= hc_pg_table(table, title: 'Encomendas recebidas', icon: 'fas fa-receipt',
+        meta: 'Cada linha é a encomenda de um lojista. Abrir uma encomenda nova marca como vista. Ela só entra em Pedidos de Atacado quando você clica em Criar pedido.',
+        link: ->(r) { b2b_catalog_catalog_order_path(r[:record].b2b_catalog_id, r[:record]) },
+        empty: { title: 'Nenhuma encomenda ainda', text: 'Copie o link de um catálogo e mande para os lojistas. As encomendas aparecem aqui.' },
+        actions: ->(r) {
+          order = r[:record]
+          safe_join([
+            hc_row_action('fas fa-eye', 'Abrir', b2b_catalog_catalog_order_path(order.b2b_catalog_id, order)),
+            (hc_row_action('fas fa-pen', 'Alterar', edit_b2b_catalog_catalog_order_path(order.b2b_catalog_id, order)) if r[:st] != 'converted' && order.editable? && screen_can?(:b2b_catalogs, :edit)),
+            (hc_row_action('fas fa-wand-magic-sparkles', 'Criar pedido', new_b2b_order_path(catalog_order_id: order.id)) if r[:st] != 'converted' && screen_can?(:b2b_orders, :create)),
+            (hc_row_action('fas fa-file-invoice-dollar', 'Ver pedido', b2b_order_path(order.b2b_order)) if order.b2b_order)
+          ].compact)
+        }) %>
 </div>

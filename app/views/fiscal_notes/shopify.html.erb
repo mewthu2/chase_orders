@@ -1,0 +1,224 @@
+<% content_for :title, "Nota de Pedido Shopify" %>
+<% money = ->(v) { number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') } %>
+
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fab fa-shopify' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Nota de Pedido Shopify</h1>
+        <p class="page-subtitle">Escolha o pedido, confira o destinatário e autorize na SEFAZ</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= hc_help_button %>
+      <%= link_to fiscal_notes_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-search me-2"></i>Pedido</h5></div>
+    <div class="form-section-body">
+      <%= form_with url: shopify_fiscal_notes_path, method: :get, local: true, class: "order-search" do %>
+        <%= text_field_tag :order, params[:order].presence || @shopify_order&.name, class: "field-input", placeholder: "Número do pedido, ex.: 12345", autofocus: @shopify_order.nil? %>
+        <%= submit_tag 'Buscar na Shopify', class: "btn-submit", name: nil %>
+      <% end %>
+
+      <% if @shopify_order.nil? && @recent_orders.any? %>
+        <div class="table-responsive mt-3">
+          <table class="orders-table">
+            <thead>
+              <tr><th>Data</th><th>Cliente</th><th class="text-end">Total</th><th class="text-end"></th></tr>
+            </thead>
+            <tbody>
+              <% @recent_orders.each do |order| %>
+                <tr>
+                  <td class="text-muted-custom"><%= order.shopify_creation_date&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %></td>
+                  <td class="text-main"><%= order.customer&.full_name.presence || '-' %></td>
+                  <td class="text-end"><%= money.(order.current_total_price) %></td>
+                  <td class="text-end">
+                    <%= link_to shopify_fiscal_notes_path(order: order.shopify_order_id), class: "action-btn action-btn--edit", title: "Emitir nota deste pedido" do %><i class="fas fa-file-invoice"></i><% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted-custom mt-2 mb-0"><i class="fas fa-info-circle me-1"></i>Pedidos do site dos últimos 10 dias sem nota emitida.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <% if @shopify_order %>
+    <% so = @shopify_order %>
+    <% items = so.items %>
+    <% products = Product.where(sku: items.map { |i| i[:sku] }).index_by(&:sku) %>
+    <% previous = FiscalNote.where(shopify_order_name: so.name).recent %>
+
+    <div class="nfe-hero">
+      <div>
+        <p class="nfe-hero__title"><%= so.name %></p>
+        <div class="nfe-hero__sub"><%= so.created_at&.strftime('%d/%m/%Y %H:%M') %> · <%= so.financial_status %> · <%= items.sum { |i| i[:quantity] } %> peça(s)</div>
+      </div>
+      <div class="nfe-hero__total"><%= money.(so.total) %></div>
+    </div>
+
+    <% if so.blocking_issues.any? || so.warnings.any? || previous.any? %>
+      <div class="nfe-flags">
+        <% so.blocking_issues.each do |issue| %><div class="nfe-flag nfe-flag--block"><i class="fas fa-ban me-2"></i><%= issue %></div><% end %>
+        <% so.warnings.each do |warning| %><div class="nfe-flag nfe-flag--warn"><i class="fas fa-exclamation-triangle me-2"></i><%= warning %></div><% end %>
+        <% previous.each do |note| %>
+          <div class="nfe-flag <%= note.rejeitada? || note.homologacao? ? 'nfe-flag--warn' : 'nfe-flag--block' %>">
+            <i class="fas fa-file-invoice me-2"></i>Nota <%= link_to "#{note.number}/#{note.series}", fiscal_note_path(note) %> (<%= note.environment_label.downcase %>): <%= note.status_label %>
+            <%= " — #{note.error_message}" if note.error_message.present? %>
+            <%= ' · o número será reaproveitado' if note.rejeitada? && Nfe::Transmitter::DENIED_CODES.exclude?(note.sefaz_status_code) %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="table-card mb-4">
+      <div class="table-card-header"><h5 class="table-card-title"><i class="fas fa-box me-2"></i>Itens</h5></div>
+      <div class="table-responsive">
+        <table class="orders-table">
+          <thead>
+            <tr><th>SKU</th><th>Produto</th><th>NCM</th><th class="text-end">Qtd</th><th class="text-end">Unitário</th><th class="text-end">Desconto</th><th class="text-end">Total</th></tr>
+          </thead>
+          <tbody>
+            <% items.each do |item| %>
+              <% product = products[item[:sku]] %>
+              <tr>
+                <td class="text-main"><%= item[:sku].presence || '-' %></td>
+                <td class="text-muted-custom"><%= item[:name] %></td>
+                <td>
+                  <% if product&.ncm.present? %><span class="ncm-ok"><%= product.ncm %></span>
+                  <% else %><span class="ncm-missing"><i class="fas fa-times-circle me-1"></i><%= product ? 'sem NCM' : 'produto não cadastrado' %></span><% end %>
+                </td>
+                <td class="text-end"><%= item[:quantity] %></td>
+                <td class="text-end"><%= money.(item[:unit_price]) %></td>
+                <td class="text-end"><%= item[:discount].positive? ? money.(item[:discount]) : '-' %></td>
+                <td class="text-end"><%= money.(item[:unit_price] * item[:quantity] - item[:discount]) %></td>
+              </tr>
+            <% end %>
+            <tr>
+              <td colspan="6" class="text-end text-muted-custom">Frete</td>
+              <td class="text-end"><%= money.(so.freight) %></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <%= form_with url: create_from_shopify_fiscal_notes_path, method: :post, local: true do %>
+      <%= hidden_field_tag :shopify_order_id, so.shopify_id %>
+      <% r = @recipient || {} %>
+
+      <div class="form-section">
+        <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-user me-2"></i>Destinatário <small class="text-muted-custom">(confira e corrija se precisar)</small></h5></div>
+        <div class="form-section-body">
+          <div class="form-grid">
+            <div class="form-col-6">
+              <label class="field-label">Nome <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[name]', r[:name], class: "field-input" %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">CPF/CNPJ <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[document]', r[:document], class: "field-input #{'field-input--error' unless Nfe::Cnpj.valid_document?(r[:document])}" %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">Contribuinte de ICMS</label>
+              <%= select_tag 'recipient[ie_indicator]', options_for_select([['Não contribuinte', 9], ['Contribuinte (tem IE)', 1], ['Isento de IE', 2]], r[:ie_indicator].to_i.nonzero? || 9), class: "field-input" %>
+            </div>
+            <div class="form-col-6">
+              <label class="field-label">Logradouro <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[street]', r[:street], class: "field-input" %>
+            </div>
+            <div class="form-col-2">
+              <label class="field-label">Número</label>
+              <%= text_field_tag 'recipient[number]', r[:number], class: "field-input" %>
+            </div>
+            <div class="form-col-4">
+              <label class="field-label">Complemento</label>
+              <%= text_field_tag 'recipient[complement]', r[:complement], class: "field-input" %>
+            </div>
+            <div class="form-col-4">
+              <label class="field-label">Bairro <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[neighbourhood]', r[:neighbourhood], class: "field-input" %>
+            </div>
+            <div class="form-col-4">
+              <label class="field-label">Cidade <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[city]', r[:city], class: "field-input" %>
+            </div>
+            <div class="form-col-2">
+              <label class="field-label">UF <span class="required">*</span></label>
+              <%= select_tag 'recipient[state]', options_for_select(Company::STATES.keys.sort, r[:state]), class: "field-input", include_blank: true %>
+            </div>
+            <div class="form-col-2">
+              <label class="field-label">CEP <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[zip]', r[:zip], class: "field-input" %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">Código IBGE do município <span class="required">*</span></label>
+              <%= text_field_tag 'recipient[city_ibge_code]', r[:city_ibge_code], class: "field-input #{'field-input--error' if r[:city_ibge_code].blank?}", maxlength: 7 %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">IE (se contribuinte)</label>
+              <%= text_field_tag 'recipient[state_registration]', r[:state_registration], class: "field-input" %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">Telefone</label>
+              <%= text_field_tag 'recipient[phone]', r[:phone], class: "field-input" %>
+            </div>
+            <div class="form-col-3">
+              <label class="field-label">E-mail</label>
+              <%= text_field_tag 'recipient[email]', r[:email], class: "field-input" %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <% pay = @payment || {} %>
+      <div class="form-section">
+        <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-paper-plane me-2"></i>Emissão</h5></div>
+        <div class="form-section-body">
+          <% if @natures.any? %>
+            <% default_nature = params[:operation_nature_id].presence || @natures.find { |n| n.sale? && n.default_for_kind? }&.id %>
+            <div class="form-grid">
+              <div class="form-col-4">
+                <label class="field-label">Natureza de operação <span class="required">*</span></label>
+                <%= select_tag :operation_nature_id, options_for_select(@natures.map { |n| ["#{n.description} — #{n.company.trade_name.presence || n.company.legal_name} (#{n.company.environment_label.downcase})", n.id] }, default_nature), class: "field-input" %>
+              </div>
+              <div class="form-col-3">
+                <label class="field-label">Pagamento</label>
+                <%= select_tag 'payment[method]', options_for_select(Nfe::ShopifyOrder::PAYMENT_METHODS.map { |code, label| [label, code] }, pay[:method]), class: "field-input" %>
+                <%= hidden_field_tag 'payment[description]', pay[:description] %>
+              </div>
+              <div class="form-col-2">
+                <label class="field-label">Parcelas</label>
+                <%= number_field_tag 'payment[installments]', pay[:installments] || 1, class: "field-input", min: 1 %>
+              </div>
+              <div class="form-col-3">
+                <label class="field-label">Frete por conta</label>
+                <%= select_tag :freight_mode, options_for_select([['Remetente (CIF)', '0'], ['Destinatário (FOB)', '1'], ['Sem frete', '9']], params[:freight_mode] || '0'), class: "field-input" %>
+              </div>
+            </div>
+            <% if @natures.any? { |n| n.company.producao? } %>
+              <p class="nfe-flag nfe-flag--warn mt-3 mb-0"><i class="fas fa-bolt me-2"></i>Empresas em <strong>produção</strong> emitem nota com valor fiscal.</p>
+            <% end %>
+            <div class="form-actions">
+              <%= submit_tag 'Gerar e autorizar na SEFAZ', class: "btn-sefaz", disabled: so.blocking_issues.any?,
+                             data: { turbo_submits_with: 'Enviando para a SEFAZ…' } %>
+            </div>
+          <% elsif @companies.none? %>
+            <p class="text-muted-custom mb-3">Nenhuma empresa ativa com certificado digital válido.</p>
+            <%= link_to companies_path, class: "btn-export" do %><i class="fas fa-building me-2"></i>Ir para Empresas<% end %>
+          <% else %>
+            <p class="text-muted-custom mb-3">Cadastre uma natureza de operação de venda para emitir.</p>
+            <%= link_to operation_natures_path, class: "btn-export" do %><i class="fas fa-sliders-h me-2"></i>Naturezas de operação<% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

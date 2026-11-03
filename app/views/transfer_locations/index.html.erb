@@ -1,72 +1,61 @@
 <% content_for :title, "Locais de Transferência" %>
+<% statuses = { true => ['Ativo', 'green', 'Aparece na lista de destinos do abastecimento.'], false => ['Inativo', 'gray', 'Não aparece mais para escolha. Os pedidos antigos continuam como estão.'] } %>
+<% rows = @transfer_locations.map do |l|
+     { id: l.id, record: l, nome: l.name, cnpj: l.cnpj_formatted, ie: l.state_registration.presence || '—', rua: l.street, numero: l.number, compl: l.complement.presence || '—',
+       bairro: l.neighbourhood, cidade: l.city, uf: l.state, cep: l.zip, ibge: l.city_ibge_code.presence, usos: @order_counts[l.id].to_i, ativo: l.active,
+       criado: l.created_at, sem: l.city_ibge_code.blank? ? 'sim' : 'não' }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'locais', unit1: 'local', page_size: 8,
+     cols: [
+       { k: :id, label: 'Id', t: :num, hide: true, nodetail: true },
+       { k: :nome, label: 'Nome', main: true, sort: true, sub: :bairro, nodetail: true },
+       { k: :cnpj, label: 'CNPJ', t: :mono, copy: true },
+       { k: :ie, label: 'Inscrição Estadual', hide: true },
+       { k: :rua, label: 'Rua', hide: true },
+       { k: :numero, label: 'Número', hide: true },
+       { k: :compl, label: 'Complemento', hide: true },
+       { k: :bairro, label: 'Bairro', hide: true },
+       { k: :cidade, label: 'Cidade/UF', sort: true, sub: :uf },
+       { k: :uf, label: 'UF', hide: true },
+       { k: :cep, label: 'CEP', hide: true },
+       { k: :ibge, label: 'Código IBGE', t: :mono },
+       { k: :usos, label: 'Abastecimentos', t: :qty, sort: true },
+       { k: :ativo, label: 'Status', t: :status, map: statuses },
+       { k: :criado, label: 'Cadastrado em', t: :dt, hide: true },
+       { k: :sem, label: 'Sem código IBGE', hide: true, nodetail: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Nome, CNPJ ou cidade', cols: %i[nome cnpj cidade uf], tip: 'Procura pelo nome do local, pelo CNPJ ou pela cidade.' },
+       { id: :st, type: :select, label: 'Status', col: :ativo, all: 'Todos os status', tip: 'Locais inativos não aparecem na hora de escolher o destino de um abastecimento.' }
+     ],
+     kpis: [
+       { label: 'Locais ativos', icon: 'fas fa-location-dot', tone: 'green', help: 'Aparecem como destino no abastecimento.', col: :ativo, val: true },
+       { label: 'Inativos', icon: 'fas fa-ban', tone: 'gray', help: 'Fora da lista de destinos.', col: :ativo, val: false },
+       { label: 'Sem código IBGE', icon: 'fas fa-triangle-exclamation', tone: 'orange', help: 'Sem o código, a nota de transferência não sai.', col: :sem, val: 'sim' }
+     ]) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-warehouse me-2"></i>Locais de Transferência</h1>
-      <p class="page-subtitle">Destinos usados para transferência de estoque no Tiny</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @transfer_locations.size %> local(is)</span>
-      <%= link_to new_transfer_location_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Novo Local
-      <% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Locais de Transferência', 'Destinos usados para transferência de estoque no Tiny', icon: 'fas fa-map-marker-alt' do %>
+  <% if screen_can?(:transfer_locations, :create) %>
+    <%= link_to new_transfer_location_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo local<% end %>
+  <% end %>
+<% end %>
 
-  <div class="table-card">
-    <div class="table-card-header">
-      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Locais</h5>
-    </div>
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de locais', icon: 'fas fa-warehouse', meta: 'Cada local é um destino com CNPJ e endereço. O Tiny usa esses dados para emitir a nota de transferência.',
+        empty: { title: 'Nenhum local cadastrado', text: 'Cadastre os destinos (lojas e depósitos) que recebem estoque. Sem local, não há como criar um abastecimento.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Novo local']), new_transfer_location_path, class: 'btn btn-export') if screen_can?(:transfer_locations, :create)) },
+        detail: { title: ->(r) { r[:nome] }, note: 'O Tiny usa o CNPJ e o endereço deste cadastro para montar a nota de transferência.',
+                  fields: [['Cidade', :cidade], ['Abastecimentos já enviados', :usos]] },
+        actions: ->(r) {
+          location = r[:record]
+          next ''.html_safe unless screen_can?(:transfer_locations, :edit)
 
-    <% if @transfer_locations.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>CNPJ</th>
-              <th>Cidade/UF</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @transfer_locations.each do |location| %>
-              <tr>
-                <td class="text-main"><%= location.name %></td>
-                <td class="text-muted-custom"><%= location.cnpj_formatted %></td>
-                <td class="text-muted-custom"><%= location.city %>/<%= location.state %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= location.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= location.active? ? 'Ativo' : 'Inativo' %>
-                  </span>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_transfer_location_path(location), class: "action-btn action-btn--edit" do %>
-                      <i class="fas fa-pencil-alt"></i>
-                    <% end %>
-                    <%= link_to location, method: :delete,
-                                class: "action-btn action-btn--danger",
-                                data: { confirm: "Tem certeza que deseja excluir este local?" } do %>
-                      <i class="fas fa-trash"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-warehouse fa-3x mb-3 d-block"></i>
-        <h5>Nenhum local cadastrado</h5>
-        <%= link_to new_transfer_location_path, class: "btn-export" do %>
-          <i class="fas fa-plus me-1"></i>Novo Local
-        <% end %>
-      </div>
-    <% end %>
-  </div>
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_transfer_location_path(location)),
+            (r[:ativo] ? hc_row_action('fas fa-ban', 'Inativar', transfer_location_path(location), method: :patch, params: { transfer_location: { active: false } },
+                                       confirm: { title: "Inativar o local #{r[:nome]}?", text: 'Ele deixa de aparecer na lista de destinos do abastecimento. Os pedidos antigos continuam como estão e dá para ativar de novo quando precisar.' })
+                       : hc_row_action('fas fa-circle-check', 'Ativar', transfer_location_path(location), method: :patch, params: { transfer_location: { active: true } }))
+          ])
+        }) %>
 </div>

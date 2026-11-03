@@ -1,0 +1,78 @@
+<%# Produtos sem estoque (Log03 e Log02): resumo por produto e um item por linha. Locais: kind, perm, title, csv_path, creation_path, attempts_channel, api_path. %>
+<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% codes = @missing_stock_summary.map { |s| s[:product_code] } %>
+<% products = Product.where(sku: codes).index_by(&:sku) %>
+<% qty = ->(v) { v.to_s.tr(',', '.').to_f } %>
+<% parse_date = ->(v) { Date.strptime(v.to_s, '%d/%m/%Y') rescue nil } %>
+<% summary = HoneyTable.new(params, id: 'resumo', unit: 'produtos', unit1: 'produto', page_size: 10,
+     rows: @missing_stock_summary.map { |s|
+       waiting = @missing_stock_items.select { |i| i[:product_code] == s[:product_code] }.map { |i| "##{i[:tiny_order_number] || i[:tiny_order_id]}" }.uniq
+       { id: s[:product_code], sku: s[:product_code], nome: products[s[:product_code]]&.shopify_product_name.presence || '—', qtd: s[:total_quantity], ped: s[:orders_count], tent: s[:attempts_count], lista: waiting.join(', ') }
+     },
+     cols: [
+       { k: :sku, label: 'Produto', t: :mono, main: true, copy: true, sub: :nome, cls: 'due' },
+       { k: :nome, label: 'Nome', hide: true },
+       { k: :qtd, label: 'Qtd. necessária', t: :qty, unit: 'un', sort: true },
+       { k: :ped, label: 'Pedidos', t: :qty, sort: true },
+       { k: :tent, label: 'Tentativas', t: :qty, hide: true },
+       { k: :lista, label: 'Pedidos que esperam', hide: true }
+     ], sort: { k: :qtd, dir: -1 }) %>
+<% items = HoneyTable.new(params, id: 'itens', unit: 'itens', unit1: 'item', page_size: 8, sort: { k: :desde, dir: 1 },
+     rows: @missing_stock_items.map { |i|
+       { id: "#{i[:tiny_order_id]}-#{i[:product_code]}", record: i, sku: i[:product_code], nome: products[i[:product_code]]&.shopify_product_name.presence || '—', qtd: qty.call(i[:quantity]),
+         tiny: i[:tiny_order_id].to_s, n: i[:tiny_order_number] ? "##{i[:tiny_order_number]}" : '—', cliente: i[:customer_name].presence || '—',
+         dia: parse_date.call(i[:data_pedido]), valor: qty.call(i[:valor]), desde: i[:created_at], msg: i[:message].presence || '—' }
+     },
+     cols: [
+       { k: :sku, label: 'Produto', t: :mono, copy: true, sub: :nome, cls: 'due' },
+       { k: :nome, label: 'Nome', hide: true },
+       { k: :qtd, label: 'Qtd. necessária', t: :qty, unit: 'un' },
+       { k: :tiny, label: 'Pedido (Tiny)', t: :mono, main: true, copy: true, sub: :n },
+       { k: :n, label: 'Número da loja', hide: true },
+       { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
+       { k: :valor, label: 'Valor do pedido', t: :money },
+       { k: :desde, label: 'Parado desde', t: :dt, sort: true },
+       { k: :msg, label: 'Mensagem do Correios', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Produto, pedido ou cliente', cols: %i[sku nome tiny n cliente], tip: 'Procura pelo código ou nome do produto, pelo ID do pedido no Tiny, pelo número da loja ou pelo nome da cliente.' },
+       { id: :sku, type: :select, label: 'Produto', col: :sku, all: 'Todos os produtos', tip: 'Mostra só os pedidos que esperam este produto.' }
+     ]) %>
+<% total_units = @missing_stock_items.sum { |i| qty.call(i[:quantity]) } %>
+<% oldest = @missing_stock_items.map { |i| i[:created_at] }.compact.min %>
+<% total_value = @missing_stock_items.uniq { |i| i[:tiny_order_id] }.sum { |i| qty.call(i[:valor]) } %>
+<% kpis = HoneyTable.new(params, id: 'k', rows: [], cols: [{ k: :x, label: 'x' }], kpis: [
+     { label: 'Produtos sem estoque', icon: 'fas fa-box-open', tone: 'red', help: 'Faltam no armazém do Correios.', count: @stats[:total_products] },
+     { label: 'Pedidos travados', icon: 'fas fa-lock', tone: 'orange', help: 'Esperando estes produtos.', count: @stats[:total_orders] },
+     { label: 'Peças que faltam', icon: 'fas fa-cubes', tone: 'yellow', help: 'Soma do que os pedidos pedem.', text: "#{number_with_delimiter(total_units.round, delimiter: '.')} un" },
+     { label: 'Pedido mais antigo', icon: 'fas fa-clock', tone: 'blue', help: 'Há quanto tempo o primeiro está parado.', text: oldest ? hc_ago(oldest).sub(/\Ahá /, '') : '—' }
+   ]) %>
+
+<%= hc_page_header title, 'O que falta no armazém do Correios e os pedidos presos por isso.', icon: 'fas fa-box-open' do %>
+  <% if screen_can?(perm, :export) %>
+    <%= link_to csv_path, class: 'btn btn-secondary', data: { turbo: false } do %><i class="fas fa-file-csv"></i>Baixar planilha<% end %>
+  <% end %>
+<% end %>
+
+<% if @stats[:total_items].to_i.positive? %>
+  <div class="callout pg-banner is-err"><i class="fas fa-box-open"></i><div><strong>Produtos que o Correios disse não ter.</strong> Foram encontradas <%= @stats[:total_attempts] %> tentativas, <%= @stats[:total_orders] %> pedidos e <%= @stats[:total_items] %> itens com erro de estoque na criação do pedido no Correios. Juntos, os pedidos valem <%= number_to_currency(total_value, unit: 'R$ ', separator: ',', delimiter: '.') %>.</div></div>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(kpis) %>
+  <%= hc_pg_table(summary, title: 'Resumo por produto', icon: 'fas fa-cubes', meta: 'O que falta e quanto os pedidos pedem.',
+        tools: link_to(safe_join([content_tag(:i, '', class: 'fas fa-cogs'), 'Consultar saldo no Correios']), api_path, class: 'btn btn-secondary btn-sm'),
+        empty: { title: 'Nenhum produto sem estoque', text: 'Tudo o que os pedidos pedem existe no armazém do Correios.' },
+        detail: { title: ->(r) { "Produto #{r[:sku]}" }, note: 'Reponha o produto no armazém do Correios ou transfira do outro estoque. Os pedidos voltam a andar na próxima tentativa.' }) %>
+  <%= hc_pg_table(items, title: 'Pedidos com produto sem estoque', icon: 'fas fa-list', meta: 'Um item por linha. Pedidos com dois produtos em falta aparecem duas vezes.',
+        tools: safe_join([link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus-circle'), 'Criação de Pedidos']), creation_path, class: 'btn btn-secondary btn-sm'),
+                          link_to(safe_join([content_tag(:i, '', class: 'fas fa-paperclip'), 'Verificar tentativas']), attempts_path(channel: attempts_channel), class: 'btn btn-secondary btn-sm')]),
+        empty: { title: 'Nenhum pedido travado', text: 'Nenhum pedido está esperando produto sem estoque.' },
+        detail: { title: ->(r) { "Pedido #{r[:tiny]}" }, fields: [['Mensagem do Correios', :msg]] },
+        actions: ->(r) {
+          safe_join([
+            link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
+            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+          ])
+        }) %>
+</div>

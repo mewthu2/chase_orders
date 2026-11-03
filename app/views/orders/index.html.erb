@@ -1,340 +1,78 @@
-<%
-  badge_colors = [
-    { bg: "#0D6EFD", fg: "#fff" },
-    { bg: "#198754", fg: "#fff" },
-    { bg: "#DC3545", fg: "#fff" },
-    { bg: "#FFC107", fg: "#000" },
-    { bg: "#0DCAF0", fg: "#000" },
-    { bg: "#6F42C1", fg: "#fff" },
-    { bg: "#FD7E14", fg: "#fff" },
-    { bg: "#20C997", fg: "#000" },
-  ]
+<% content_for :title, "Pedidos Shopify" %>
+<% brl = ->(v) { number_to_currency(v || 0, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% log03 = @locations.find { |l| l.slug == 'log+' } %>
+<% map = ->(o) {
+     c = o.customer
+     codes = Array(o.discount_codes).compact_blank.map { |code| code.to_s.upcase }
+     { id: o.id, record: o, num: o.shopify_order_id.presence || o.id, cliente: c&.full_name.presence || c&.email || '—', email: c&.email.presence || '—',
+       fone: c&.phone.presence || c&.default_address_phone.presence || '—', loc: [[o.location&.name, o.location_id]].reject { |n, _| n.blank? },
+       cupom: codes.first, cupons: codes.join(', ').presence || '—', pecas: o.order_items.sum { |i| i.quantity.to_i },
+       desc: o.current_total_discounts.to_f, total: o.current_total_price.to_f, dt: o.shopify_creation_date || o.created_at, criado: o.created_at,
+       cidade: [c&.default_address_city, c&.default_address_province_code].compact_blank.join('/').presence || '—',
+       tags: o.tags.to_s.split(',').map(&:strip).compact_blank, tiny: o.tiny_order_id.presence&.to_s, shop: o.shopify_order_id, staff: o.staff_name.presence || '—' }
+   } %>
+<% search = ->(scope, text) {
+     term = "%#{ActiveRecord::Base.sanitize_sql_like(text.strip.delete_prefix('#'))}%"
+     scope.left_joins(:customer).where('orders.shopify_order_id LIKE :t OR orders.tiny_order_id LIKE :t OR customers.email LIKE :t OR customers.phone LIKE :t OR customers.first_name LIKE :t OR customers.last_name LIKE :t ' \
+                                       "OR CONCAT_WS(' ', customers.first_name, customers.last_name) LIKE :t", t: term)
+   } %>
+<% with_coupon = ->(scope) { scope.where.not(discount_codes: nil).where("JSON_LENGTH(orders.discount_codes) > 0") } %>
+<% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 8, unit: 'pedidos', unit1: 'pedido',
+     attrs: { loc: :location_id }, filter_sql: { per: ->(scope, v) { scope.where('COALESCE(orders.shopify_creation_date, orders.created_at) >= ?', v.to_i.days.ago.beginning_of_day) } },
+     sort_sql: { num: 'orders.id', total: 'orders.current_total_price', dt: 'COALESCE(orders.shopify_creation_date, orders.created_at)' },
+     cols: [
+       { k: :num, label: 'Pedido', t: :num, main: true, sort: true, nodetail: true },
+       { k: :cliente, label: 'Cliente', t: :person, sub: :email },
+       { k: :fone, label: 'Telefone' },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :loc, label: 'Localização', t: :loc },
+       { k: :cupom, label: 'Cupom', t: :tag },
+       { k: :cupons, label: 'Cupons usados', hide: true },
+       { k: :pecas, label: 'Peças', t: :qty, hide: true },
+       { k: :desc, label: 'Desconto', t: :money, hide: true },
+       { k: :total, label: 'Total', t: :money, sort: true },
+       { k: :dt, label: 'Data Shopify', t: :dt, sort: true },
+       { k: :criado, label: 'Criado em', t: :dt, hide: true },
+       { k: :cidade, label: 'Cidade/UF', hide: true },
+       { k: :tags, label: 'Tags', t: :chips, hide: true },
+       { k: :tiny, label: 'ID Tiny', t: :mono, hide: true, copy: true },
+       { k: :shop, label: 'ID Shopify', t: :mono, hide: true, copy: true },
+       { k: :staff, label: 'Atendida por', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar pedido', ph: 'Nº do pedido, cliente, e-mail ou telefone', tip: 'Procura pelo número do pedido, pelo nome, e-mail ou telefone da cliente e pelo ID do Shopify ou do Tiny.' },
+       { id: :loja, type: :select, label: 'Localização', col: :loc, options: @locations.map { |l| [l.id.to_s, l.slug == 'log+' ? "#{l.name} (envio pelos Correios)" : l.name] }, all: 'Todas as localizações', tip: 'A loja do pedido. O Log03 reúne os pedidos online enviados pelos Correios.' },
+       { id: :per, type: :select, label: 'Período', options: [['7', 'Últimos 7 dias'], ['15', 'Últimos 15 dias'], ['30', 'Últimos 30 dias']], all: 'Todo o período', tip: 'Filtra pela data em que o pedido foi feito no Shopify.' }
+     ],
+     kpis: [
+       { label: 'Pedidos', icon: 'fas fa-shopping-cart', tone: 'blue', help: 'Todos os pedidos que vieram do Shopify.', value: ->(scope) { scope.except(:includes).count } },
+       { label: 'Faturamento', icon: 'fas fa-sack-dollar', tone: 'green', help: 'Soma do total de todos os pedidos.', text: brl.call(Order.sum(:current_total_price)) },
+       { label: 'Com cupom', icon: 'fas fa-ticket', tone: 'purple', help: 'Pedidos que usaram algum cupom.', col: :cp, val: 'sim', value: ->(scope) { with_coupon.call(scope.except(:includes)).count }, filter: with_coupon },
+       { label: 'Pedidos do Log03', icon: 'fas fa-truck-fast', tone: 'orange', help: 'Online, enviados pelos Correios (B2C).', col: :loc, val: log03&.id.to_s }
+     ].reject { |k| k[:col] == :loc && log03.nil? }) %>
 
-  location_index_map = {}
-  @locations.each_with_index { |loc, i| location_index_map[loc.id] = i }
+<%= hc_page_header 'Pedidos Shopify', 'Consulte os pedidos da loja online e exporte para planilha.', icon: 'fas fa-shopping-cart' do %>
+  <% if screen_can?(:orders, :export) %>
+    <%= link_to export_orders_path(request.query_parameters.slice('loja', 'q').transform_keys { |k| { 'loja' => 'location_id', 'q' => 'search' }[k] }), class: 'btn btn-export', data: { turbo: false } do %><i class="fas fa-file-excel"></i>Exportar XLSX<% end %>
+  <% end %>
+<% end %>
 
-  active_period    = params[:period].presence
-  active_date_from = params[:date_from].presence
-  active_date_to   = params[:date_to].presence
-  period_labels    = { "30" => "Últimos 30 dias", "60" => "Últimos 60 dias", "90" => "Últimos 90 dias" }
+<% if params[:customer_id].present? %>
+  <div class="callout pg-banner is-info"><i class="fas fa-user"></i><div><strong>Pedidos de <%= @customer&.full_name.presence || @customer&.email || 'cliente não encontrada' %>.</strong> A lista mostra só os pedidos desta cliente. <%= link_to 'Ver todos os pedidos', hc_pg_url('customer_id' => nil) %></div></div>
+<% end %>
 
-  has_filters = params[:search].present? ||
-                params[:location_id].present? ||
-                active_period.present? ||
-                active_date_from.present? ||
-                active_date_to.present?
-%>
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de pedidos', icon: 'fas fa-shopping-cart', meta: 'Pedidos que chegam do Shopify. Abra um pedido para ver itens, cupom e os códigos.',
+        empty: { title: 'Nenhum pedido encontrado', text: 'Tente ajustar os filtros ou limpar a busca.' },
+        detail: { title: ->(r) { "Pedido ##{r[:num]}" }, note: 'Dados do pedido como vieram do Shopify e do Tiny. As tags trazem o código de rastreio.',
+                  extra: ->(r) {
+                    items = r[:record].order_items
+                    next nil if items.empty?
 
-<div class="orders-container">
-
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-shopping-cart me-2"></i>Pedidos Shopify
-      </h1>
-      <small class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-      </small>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-list me-1"></i><%= @total_orders %> pedido(s)
-      </span>
-      <%= link_to export_orders_path(request.query_parameters.except("page")),
-                  class: "btn-export" do %>
-        <i class="fas fa-file-excel me-2"></i>Exportar XLSX
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== PAINEL DE FILTROS ===== %>
-  <div class="filters-panel">
-
-    <%# --- Busca por texto --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-search me-1"></i>Buscar pedido
-      </label>
-      <%= form_with url: orders_path, method: :get, local: true do |f| %>
-        <%= hidden_field_tag :location_id, params[:location_id] if params[:location_id].present? %>
-        <%= hidden_field_tag :period,      params[:period]      if params[:period].present? && !active_date_from.present? %>
-        <%= hidden_field_tag :date_from,   params[:date_from]   if params[:date_from].present? %>
-        <%= hidden_field_tag :date_to,     params[:date_to]     if params[:date_to].present? %>
-        <div class="search-row">
-          <%= f.text_field :search,
-                           value: params[:search],
-                           class: "search-input",
-                           placeholder: "N. pedido, nome do cliente ou email..." %>
-          <%= f.submit "Buscar", class: "btn-primary-sm" %>
-          <% if has_filters %>
-            <%= link_to orders_path, class: "btn-clear" do %>
-              <i class="fas fa-times me-1"></i>Limpar tudo
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <%# --- Período rápido --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-calendar-alt me-1"></i>Período rápido
-      </label>
-      <div class="period-buttons">
-        <% ["30", "60", "90"].each do |days| %>
-          <% is_active = active_period == days && !active_date_from.present? %>
-          <%= link_to orders_path(
-                        period:      days,
-                        location_id: params[:location_id],
-                        search:      params[:search]
-                      ),
-                      class: "btn-period #{is_active ? 'btn-period--active' : ''}" do %>
-            <i class="fas fa-history me-1"></i><%= period_labels[days] %>
-          <% end %>
-        <% end %>
-      </div>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <%# --- Intervalo personalizado --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-calendar-week me-1"></i>Intervalo personalizado
-      </label>
-      <%= form_with url: orders_path, method: :get, local: true do |f| %>
-        <%= hidden_field_tag :location_id, params[:location_id] if params[:location_id].present? %>
-        <%= hidden_field_tag :search,      params[:search]      if params[:search].present? %>
-        <div class="date-range-row">
-          <div class="date-field-wrap">
-            <span class="date-label">De</span>
-            <%= date_field_tag :date_from,
-                               params[:date_from],
-                               class: "date-input" %>
-          </div>
-          <div class="date-field-wrap">
-            <span class="date-label">Até</span>
-            <%= date_field_tag :date_to,
-                               params[:date_to],
-                               class: "date-input" %>
-          </div>
-          <button type="submit" class="btn-period <%= active_date_from.present? ? 'btn-period--active' : '' %>">
-            <i class="fas fa-filter me-1"></i>Aplicar
-          </button>
-          <% if active_date_from.present? || active_date_to.present? %>
-            <%= link_to orders_path(location_id: params[:location_id], search: params[:search]),
-                        class: "btn-remove-date" do %>
-              <i class="fas fa-times me-1"></i>Remover datas
-            <% end %>
-            <span class="date-range-badge">
-              <i class="fas fa-calendar-check me-1"></i>
-              <%= active_date_from.present? ? Date.parse(active_date_from).strftime('%d/%m/%Y') : '...' %>
-              &rarr;
-              <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
-            </span>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-
-  </div>
-
-  <%# ===== FILTRO POR LOCATION ===== %>
-  <div class="location-panel">
-    <span class="filter-label">
-      <i class="fas fa-map-marker-alt me-1"></i>Location:
-    </span>
-
-    <%= link_to orders_path(
-                  search:    params[:search],
-                  period:    params[:period],
-                  date_from: params[:date_from],
-                  date_to:   params[:date_to]
-                ),
-                class: "btn-location #{params[:location_id].blank? ? 'btn-location--all-active' : 'btn-location--all'}" do %>
-      <i class="fas fa-border-all me-1"></i>Todas
-    <% end %>
-
-    <% @locations.each_with_index do |location, i| %>
-      <% color     = badge_colors[i % badge_colors.size]
-         is_active = params[:location_id].to_s == location.id.to_s
-         btn_style = is_active ?
-           "background-color:#{color[:bg]}; color:#{color[:fg]}; border-color:#{color[:bg]}; font-weight:700;" :
-           "background-color:transparent; color:#{color[:bg]}; border-color:#{color[:bg]};"
-      %>
-      <%= link_to orders_path(
-                    location_id: location.id,
-                    search:      params[:search],
-                    period:      params[:period],
-                    date_from:   params[:date_from],
-                    date_to:     params[:date_to]
-                  ),
-                  class: "btn-location",
-                  style: btn_style do %>
-        <i class="fas fa-warehouse me-1"></i><%= location.name %>
-      <% end %>
-    <% end %>
-
-    <% if params[:location_id].present?
-         active_loc   = @locations.find { |l| l.id.to_s == params[:location_id] }
-         active_idx   = location_index_map[active_loc&.id]
-         active_color = badge_colors[active_idx % badge_colors.size] if active_idx
-    %>
-      <span class="location-active-badge"
-            style="background-color:<%= active_color ? active_color[:bg] : '#0DCAF0' %>; color:<%= active_color ? active_color[:fg] : '#000' %>;">
-        <i class="fas fa-filter me-1"></i><%= active_loc&.name %>
-      </span>
-    <% end %>
-  </div>
-
-  <%# ===== TABELA ===== %>
-  <div class="table-card">
-
-    <div class="table-card-header">
-      <h5 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Pedidos
-      </h5>
-      <div class="active-filters-row">
-        <% if params[:search].present? %>
-          <span class="filter-tag filter-tag--gray">
-            <i class="fas fa-search me-1"></i>"<%= params[:search] %>"
-          </span>
-        <% end %>
-        <% if active_period.present? && !active_date_from.present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-history me-1"></i><%= period_labels[active_period] %>
-          </span>
-        <% end %>
-        <% if active_date_from.present? || active_date_to.present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-calendar me-1"></i>
-            <%= active_date_from.present? ? Date.parse(active_date_from).strftime('%d/%m/%Y') : '...' %>
-            &rarr;
-            <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
-          </span>
-        <% end %>
-      </div>
-    </div>
-
-    <% if @orders.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Pedido</th>
-              <th>Cliente</th>
-              <th>Email</th>
-              <th>Telefone</th>
-              <th>Localização</th>
-              <th>Data Shopify</th>
-              <th>Criado em</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @orders.each do |order| %>
-              <%
-                loc       = order.location
-                loc_idx   = loc ? location_index_map[loc.id] : nil
-                loc_color = loc_idx ? badge_colors[loc_idx % badge_colors.size] : nil
-              %>
-              <tr>
-                <td class="order-id">#<%= order.shopify_order_id %></td>
-                <td class="text-main">
-                  <%= [order.customer&.first_name, order.customer&.last_name].compact.join(" ").presence || "—" %>
-                </td>
-                <td class="text-muted-custom">
-                  <%= order.customer&.email.presence || "—" %>
-                </td>
-                <td class="text-muted-custom">
-                  <%= order.customer&.phone.presence || "—" %>
-                </td>
-                <td>
-                  <% if loc && loc_color %>
-                    <span class="location-badge"
-                          style="background-color:<%= loc_color[:bg] %>; color:<%= loc_color[:fg] %>;">
-                      <i class="fas fa-warehouse me-1"></i><%= loc.name %>
-                    </span>
-                  <% else %>
-                    <span class="location-badge location-badge--empty">
-                      <i class="fas fa-question me-1"></i>Sem location
-                    </span>
-                  <% end %>
-                </td>
-                <td class="text-main">
-                  <%= order.shopify_creation_date&.strftime('%d/%m/%Y %H:%M') || "—" %>
-                </td>
-                <td class="text-muted-custom">
-                  <%= order.created_at.strftime('%d/%m/%Y %H:%M') %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-search fa-3x mb-3 d-block"></i>
-        <h5>Nenhum pedido encontrado</h5>
-        <p>Tente ajustar os filtros aplicados</p>
-        <% if has_filters %>
-          <%= link_to orders_path, class: "btn-clear" do %>
-            <i class="fas fa-times me-1"></i>Limpar filtros
-          <% end %>
-        <% end %>
-      </div>
-    <% end %>
-
-    <%# PAGINAÇÃO %>
-    <% if @total_pages > 1 %>
-      <div class="pagination-footer">
-        <div class="pagination-info">
-          Mostrando
-          <strong><%= [(@current_page - 1) * @per_page + 1, @total_orders].min %></strong>
-          a
-          <strong><%= [@current_page * @per_page, @total_orders].min %></strong>
-          de
-          <strong><%= @total_orders %></strong>
-          pedidos
-        </div>
-
-        <div class="pagination-controls">
-          <% if @current_page > 1 %>
-            <%= link_to orders_path(request.query_parameters.merge("page" => @current_page - 1)),
-                        class: "page-btn" do %>
-              <i class="fas fa-chevron-left me-1"></i>Anterior
-            <% end %>
-          <% end %>
-
-          <% window  = 2
-             p_start = [@current_page - window, 1].max
-             p_end   = [@current_page + window, @total_pages].min %>
-
-          <% (p_start..p_end).each do |pnum| %>
-            <% if pnum == @current_page %>
-              <span class="page-btn page-btn--active"><%= pnum %></span>
-            <% else %>
-              <%= link_to pnum,
-                          orders_path(request.query_parameters.merge("page" => pnum)),
-                          class: "page-btn" %>
-            <% end %>
-          <% end %>
-
-          <% if @current_page < @total_pages %>
-            <%= link_to orders_path(request.query_parameters.merge("page" => @current_page + 1)),
-                        class: "page-btn" do %>
-              Próxima<i class="fas fa-chevron-right ms-1"></i>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-  </div>
-
+                    content_tag(:section, content_tag(:h4, content_tag(:i, '', class: 'fas fa-box') + 'Itens do pedido') +
+                      content_tag(:div, content_tag(:table, content_tag(:thead, content_tag(:tr, safe_join(%w[SKU Produto Qtde].map { |h| content_tag(:th, h) }))) +
+                        content_tag(:tbody, safe_join(items.map { |i| content_tag(:tr, content_tag(:td, i.sku.presence || i.product&.sku || '—') + content_tag(:td, i.product&.shopify_product_name || '—') + content_tag(:td, i.quantity)) })),
+                        class: 'orders-table pg-tbl pg-mini'), class: 'table-responsive'), class: 'help-sec')
+                  } }) %>
 </div>
-

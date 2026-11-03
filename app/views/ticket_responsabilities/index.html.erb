@@ -1,61 +1,59 @@
 <% content_for :title, "Responsabilidades" %>
+<% statuses = { true => ['Ativa', 'green', 'Aparece ao abrir um chamado.'], false => ['Inativa', 'gray', 'Não aparece ao abrir um chamado. Os chamados antigos continuam.'] } %>
+<% prazo = ->(hours) { hours.to_i < 24 || (hours.to_i % 24).nonzero? ? "#{hours} #{hours.to_i == 1 ? 'hora' : 'horas'}" : (hours.to_i == 24 ? '1 dia' : "#{hours.to_i / 24} dias") } %>
+<% rows = @responsabilities.map do |resp|
+     people = resp.users.select(&:active?)
+     { id: resp.id, record: resp, nome: resp.name, desc: resp.description.to_s, st: resp.active, setor: resp.ticket_sector&.name, prazo: prazo.call(resp.response_time_hours),
+       horas: resp.response_time_hours.to_i, resp1: people.first&.name, resp2: people.second&.name || '—',
+       todos: people.map(&:name).join(', ').presence || '—', chamados: @ticket_counts[resp.id].to_i }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'responsabilidades', unit1: 'responsabilidade', page_size: 10, sort: { k: :setor, dir: 1 },
+     tabs: { col: :st, items: [['', 'Todas'], ['true', 'Ativas'], ['false', 'Inativas']] },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :nome, label: 'Responsabilidade', sub: :desc, sort: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :setor, label: 'Setor', t: :tag, sort: true },
+       { k: :prazo, label: 'Prazo', cls: 'due' },
+       { k: :resp1, label: 'Responsáveis', t: :person, sub: :resp2 },
+       { k: :chamados, label: 'Chamados', t: :qty, sort: true },
+       { k: :desc, label: 'Descrição', hide: true },
+       { k: :todos, label: 'Todos os responsáveis', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Nome, descrição ou pessoa…', cols: %i[nome desc todos], tip: 'Procura no nome, na descrição e nos nomes dos responsáveis.' },
+       { id: :setor, type: :select, label: 'Setor', col: :setor, all: 'Todos os setores', tip: 'Mostra só as responsabilidades do setor escolhido.' },
+       { id: :prazo, type: :select, label: 'Prazo de resposta', col: :prazo, all: 'Todos os prazos', tip: 'Tempo que cada lado tem para responder a cada interação.' }
+     ],
+     kpis: [
+       { label: 'Ativas', icon: 'fas fa-circle-check', tone: 'green', help: 'Aparecem ao abrir um chamado.', col: :st, val: true },
+       { label: 'Inativas', icon: 'fas fa-circle-pause', tone: 'gray', help: 'Fora da escolha. Os chamados antigos ficam.', col: :st, val: false },
+       { label: 'Resposta em até 4 horas', icon: 'fas fa-bolt', tone: 'blue', help: 'Os assuntos mais urgentes.', col: :prazo, vals: rows.select { |r| r[:horas] <= 4 }.map { |r| r[:prazo] }.uniq.presence || ['4 horas'] },
+       { label: 'Com uma pessoa só', icon: 'fas fa-user', tone: 'yellow', help: 'Se ela faltar, ninguém recebe o aviso.', col: :resp2, val: '—' }
+     ]) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-sitemap me-2"></i>Responsabilidades</h1>
-      <p class="page-subtitle">Áreas que recebem chamados, com seus responsáveis e prazo de resposta</p>
-    </div>
-    <div class="header-actions">
-      <%= link_to new_ticket_responsability_path, class: "btn-export" do %><i class="fas fa-plus me-2"></i>Nova Responsabilidade<% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Responsabilidades', 'Os assuntos que recebem chamados, com quem responde e o prazo de resposta.', icon: 'fas fa-sitemap' do %>
+  <%= link_to ticket_sectors_path, class: 'btn btn-secondary' do %><i class="fas fa-building"></i>Setores de chamados<% end %>
+  <%= link_to new_ticket_responsability_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova responsabilidade<% end %>
+<% end %>
 
-  <div class="table-card">
-    <% if @responsabilities.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Setor</th>
-              <th>Nome</th>
-              <th>Descrição</th>
-              <th class="text-center">Prazo de resposta</th>
-              <th>Responsáveis</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @responsabilities.each do |responsability| %>
-              <tr>
-                <td class="text-muted-custom"><%= responsability.ticket_sector&.name || '—' %></td>
-                <td class="text-main"><%= responsability.name %></td>
-                <td class="text-muted-custom"><%= truncate(responsability.description, length: 90) %></td>
-                <td class="text-center"><%= responsability.response_time_label %></td>
-                <td class="text-muted-custom"><%= responsability.users.map(&:name).sort.to_sentence %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= responsability.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= responsability.active? ? 'Ativa' : 'Inativa' %>
-                  </span>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_ticket_responsability_path(responsability), class: "action-btn action-btn--edit", title: "Editar" do %><i class="fas fa-pencil-alt"></i><% end %>
-                    <%= button_to ticket_responsability_path(responsability), method: :delete, class: "action-btn action-btn--danger", title: "Excluir",
-                                  form: { onsubmit: "return confirm('Excluir esta responsabilidade?')" } do %><i class="fas fa-trash"></i><% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="ticket-empty">
-        <i class="fas fa-sitemap"></i>
-        <p>Nenhuma responsabilidade cadastrada ainda.</p>
-      </div>
-    <% end %>
-  </div>
+<div class="pg-blocks">
+  <%= render 'shared/ticket_chain', here: 2 %>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de responsabilidades', icon: 'fas fa-sitemap', meta: 'Só dá para excluir uma responsabilidade que nunca recebeu chamado. As outras podem ser desativadas.',
+        empty: { title: 'Nenhuma responsabilidade cadastrada', text: 'Cadastre a primeira para que os chamados tenham quem responda.',
+                 cta: link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova responsabilidade']), new_ticket_responsability_path, class: 'btn btn-export') },
+        detail: { title: ->(r) { r[:nome] }, note: 'Quem é responsável recebe um e-mail quando um chamado é aberto nesta área.',
+                  fields: [['Responsável principal', :resp1], ['Chamados já abertos nesta área', :chamados]] },
+        actions: ->(r) {
+          resp = r[:record]
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_ticket_responsability_path(resp)),
+            (r[:st] ? hc_row_action('fas fa-toggle-off', 'Desativar', ticket_responsability_path(resp), method: :patch, params: { ticket_responsability: { active: false } },
+                                    confirm: { title: "Desativar #{r[:nome]}?", text: 'Ela deixa de aparecer ao abrir um chamado. Os chamados que já existem continuam com os mesmos responsáveis. Dá para ativar de novo.' })
+                    : hc_row_action('fas fa-toggle-on', 'Ativar', ticket_responsability_path(resp), method: :patch, params: { ticket_responsability: { active: true } })),
+            (hc_row_action('fas fa-trash', 'Excluir', ticket_responsability_path(resp), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:nome]}?", text: 'Nenhum chamado usou esta responsabilidade, por isso ela pode ser excluída. Não dá para desfazer.', ok: 'Excluir' }) if r[:chamados].zero?)
+          ].compact)
+        }) %>
 </div>

@@ -1,448 +1,58 @@
-<%
-  active_period    = params[:period].presence
-  active_date_from = params[:date_from].presence
-  active_date_to   = params[:date_to].presence
-  coupon_search    = params[:coupon_search].presence
-  active_sort      = params[:sort].presence || "most_used"
+<% content_for :title, "Uso de Cupons" %>
+<% brl = ->(v) { number_to_currency(v || 0, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% counts = @all_coupon_counts %>
+<% total_uses = counts.values.sum %>
+<% ranked = counts.sort_by { |code, n| [-n, code] } %>
+<% rows = ranked.each_with_index.map do |(code, uses), i|
+     { id: code, pos: i + 1, code: code, usos: uses, rec: @coupon_revenue[code].to_f, desc: @coupon_discount[code].to_f,
+       share: total_uses.positive? ? (uses * 100.0 / total_uses).round(1) : 0, parte: total_uses.positive? ? "#{(uses * 100.0 / total_uses).round(1).to_s.tr('.', ',')}% dos usos" : '—',
+       dt: @coupon_last_use[code] }
+   end %>
+<% by_revenue = rows.sort_by { |r| -r[:rec] } %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'cupons', unit1: 'cupom', page_size: 8, sort: { k: :pos, dir: 1 },
+     cols: [
+       { k: :pos, label: '#', t: :num, plain: true, sort: true },
+       { k: :code, label: 'Código do cupom', t: :mono, main: true, copy: true, sort: true, nodetail: true },
+       { k: :usos, label: 'Usos', t: :qty, sort: true },
+       { k: :rec, label: 'Receita líquida', t: :money, sort: true },
+       { k: :desc, label: 'Desconto dado', t: :money, sort: true },
+       { k: :share, label: 'Share', t: :progress, sort: true, nodetail: true },
+       { k: :parte, label: 'Participação', hide: true },
+       { k: :dt, label: 'Último uso', t: :dt, sort: true }
+     ],
+     filters: [{ id: :q, type: :search, label: 'Buscar cupom', ph: 'Ex.: BEMVINDA', cols: %i[code], tip: 'Procura pelo código do cupom.' }],
+     kpis: [
+       { label: 'Cupons no ranking', icon: 'fas fa-ticket', tone: 'purple', help: 'Códigos diferentes usados no período.', count: rows.size },
+       { label: 'Pedidos com cupom', icon: 'fas fa-receipt', tone: 'blue', help: "De #{number_with_delimiter(@total_orders_global, delimiter: '.')} pedidos, contando todos os códigos.", count: @total_with_coupon },
+       { label: 'Taxa de uso', icon: 'fas fa-percent', tone: 'green', help: 'Parte dos pedidos que usou algum cupom.', text: "#{@total_orders_global.to_i.positive? ? (@total_with_coupon * 100.0 / @total_orders_global).round : 0}%" },
+       { label: 'Maior receita', icon: 'fas fa-sack-dollar', tone: 'orange', help: (by_revenue.first ? "#{by_revenue.first[:code]}, em #{by_revenue.first[:usos]} #{by_revenue.first[:usos] == 1 ? 'uso' : 'usos'}." : 'Nenhum cupom no período.'), text: brl.call(by_revenue.first&.dig(:rec)) }
+     ]) %>
 
-  has_filters = active_period.present? || active_date_from.present? ||
-                active_date_to.present? || coupon_search.present?
+<%= hc_page_header 'Uso de Cupons', 'Veja quais cupons mais venderam no período.', icon: 'fas fa-ticket-alt' do %>
+  <% if screen_can?(:orders, :export) %>
+    <%= link_to coupon_usage_orders_path(request.query_parameters.merge(format: :xlsx)), class: 'btn btn-export', data: { turbo: false } do %><i class="fas fa-file-excel"></i>Exportar XLSX<% end %>
+  <% end %>
+<% end %>
 
-  period_labels = {
-    "1"  => "Hoje",
-    "7"  => "Últimos 7 dias",
-    "30" => "Últimos 30 dias",
-    "60" => "Últimos 60 dias",
-    "90" => "Últimos 90 dias"
-  }
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Como este ranking é montado.</strong> Entram só os cupons cujo código termina em 10, como BEMVINDA10. Frete grátis e os outros códigos ficam de fora do ranking, mas contam em "Pedidos com cupom".</div></div>
 
-  sort_labels = {
-    "most_used"       => "Mais usados",
-    "highest_revenue" => "Maior receita",
-    "alphabetical"    => "Alfabética"
-  }
-%>
-
-
-<div class="orders-container">
-
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <nav aria-label="Navegação estrutural">
-        <ol class="breadcrumb-list">
-          <li><%= link_to "CRM", orders_path %></li>
-          <li aria-current="page">Cupons</li>
-        </ol>
-      </nav>
-      <small class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-      </small>
-    </div>
-
-    <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-ticket-alt me-1"></i><%= @total_unique_coupons %> cupom(ns) únicos
-      </span>
-      <span class="total-badge" style="background:#21262d; color:#3fb950; border:1px solid #238636;">
-        <i class="fas fa-shopping-bag me-1"></i><%= @total_with_coupon %> pedido(s) c/ cupom
-      </span>
-      <%= link_to coupon_usage_orders_path(
-                    format:        :xlsx,
-                    period:        params[:period],
-                    date_from:     params[:date_from],
-                    date_to:       params[:date_to],
-                    coupon_search: params[:coupon_search],
-                    sort:          params[:sort]
-                  ), class: "btn-export" do %>
-        <i class="fas fa-file-excel me-1"></i>Exportar XLSX
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== CARDS DE RESUMO ===== %>
-  <div class="summary-grid">
-
-    <div class="summary-card">
-      <div class="summary-icon summary-icon--blue">
-        <i class="fas fa-ticket-alt"></i>
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <% if rows.any? %>
+    <div class="pg-split" style="--cols: 1fr 1fr">
+      <div class="pg-split-a">
+        <%= hc_pg_bars(title: 'Cupons mais usados', icon: 'fas fa-ranking-star', sub: 'Número de pedidos que usaram cada código.',
+                       items: rows.first(6).map { |r| { label: r[:code], sub: "#{brl.call(r[:rec])} em vendas", value: r[:usos], tone: 'purple' } }) %>
       </div>
-      <div class="summary-body">
-        <span class="summary-value"><%= @total_unique_coupons %></span>
-        <span class="summary-label">Cupons únicos utilizados</span>
+      <div class="pg-split-b">
+        <%= hc_pg_bars(title: 'Cupons com maior receita', icon: 'fas fa-sack-dollar', sub: 'Soma do total dos pedidos que usaram o cupom.', fmt: :money,
+                       items: by_revenue.first(6).map { |r| { label: r[:code], sub: "#{r[:usos]} #{r[:usos] == 1 ? 'uso' : 'usos'}", value: r[:rec], tone: 'green' } }) %>
       </div>
     </div>
-
-    <div class="summary-card">
-      <div class="summary-icon summary-icon--green">
-        <i class="fas fa-shopping-bag"></i>
-      </div>
-      <div class="summary-body">
-        <span class="summary-value"><%= @total_with_coupon %></span>
-        <span class="summary-label">Pedidos com cupom</span>
-      </div>
-    </div>
-
-    <div class="summary-card">
-      <div class="summary-icon summary-icon--yellow">
-        <i class="fas fa-percent"></i>
-      </div>
-      <div class="summary-body">
-        <% pct = @total_orders_global > 0 ? ((@total_with_coupon.to_f / @total_orders_global) * 100).round(1) : 0 %>
-        <span class="summary-value"><%= pct %>%</span>
-        <span class="summary-label">Dos pedidos usaram cupom</span>
-      </div>
-    </div>
-
-    <% if @top_coupon %>
-      <div class="summary-card">
-        <div class="summary-icon summary-icon--orange">
-          <i class="fas fa-trophy"></i>
-        </div>
-        <div class="summary-body">
-          <span class="summary-value summary-value--sm"><%= @top_coupon[0] %></span>
-          <% if active_sort == "highest_revenue" %>
-            <span class="summary-label">
-              Maior receita &mdash;
-              R$ <%= number_with_precision(@coupon_revenue[@top_coupon[0]].to_f, precision: 2, delimiter: '.', separator: ',') %>
-            </span>
-          <% else %>
-            <span class="summary-label">Mais usado &mdash; <%= @top_coupon[1] %> uso<%= @top_coupon[1] == 1 ? "" : "s" %></span>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-  </div>
-
-  <%# ===== PAINEL DE FILTROS ===== %>
-  <div class="filters-panel">
-
-    <%# Período rápido %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-bolt me-1"></i>Período rápido
-      </label>
-      <div class="period-buttons">
-        <% [["1","Hoje"], ["7","7 dias"], ["30","30 dias"], ["60","60 dias"], ["90","90 dias"]].each do |val, label| %>
-          <% is_active = active_period == val && active_date_from.blank? %>
-          <%= link_to coupon_usage_orders_path(
-                        period:        val,
-                        coupon_search: coupon_search,
-                        sort:          params[:sort]
-                      ),
-                      class: "btn-period #{is_active ? 'btn-period--active' : ''}" do %>
-            <i class="fas fa-history me-1"></i><%= label %>
-          <% end %>
-        <% end %>
-        <% if has_filters %>
-          <%= link_to coupon_usage_orders_path(sort: params[:sort]), class: "btn-clear" do %>
-            <i class="fas fa-times me-1"></i>Limpar tudo
-          <% end %>
-        <% end %>
-      </div>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <%# Ordenação %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-sort me-1"></i>Ordenar por
-      </label>
-      <div class="sort-buttons">
-        <%= link_to coupon_usage_orders_path(
-                      sort:          "most_used",
-                      period:        params[:period],
-                      date_from:     params[:date_from],
-                      date_to:       params[:date_to],
-                      coupon_search: coupon_search
-                    ),
-                    class: "btn-sort #{active_sort == 'most_used' ? 'btn-sort--active' : ''}" do %>
-          <i class="fas fa-sort-amount-down me-1"></i>Mais usados
-        <% end %>
-
-        <%= link_to coupon_usage_orders_path(
-                      sort:          "highest_revenue",
-                      period:        params[:period],
-                      date_from:     params[:date_from],
-                      date_to:       params[:date_to],
-                      coupon_search: coupon_search
-                    ),
-                    class: "btn-sort #{active_sort == 'highest_revenue' ? 'btn-sort--active' : ''}" do %>
-          <i class="fas fa-dollar-sign me-1"></i>Maior receita
-        <% end %>
-
-        <%= link_to coupon_usage_orders_path(
-                      sort:          "alphabetical",
-                      period:        params[:period],
-                      date_from:     params[:date_from],
-                      date_to:       params[:date_to],
-                      coupon_search: coupon_search
-                    ),
-                    class: "btn-sort #{active_sort == 'alphabetical' ? 'btn-sort--active' : ''}" do %>
-          <i class="fas fa-sort-alpha-down me-1"></i>Alfabética
-        <% end %>
-      </div>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <%# Intervalo customizado + busca %>
-    <%= form_with url: coupon_usage_orders_path, method: :get, local: true do |f| %>
-      <%= hidden_field_tag :sort, params[:sort] %>
-      <div class="filter-section">
-        <label class="filter-label">
-          <i class="fas fa-calendar-week me-1"></i>Intervalo personalizado &amp; busca por cupom
-        </label>
-        <div class="date-range-row">
-
-          <div class="date-field-wrap">
-            <span class="date-label">De</span>
-            <%= date_field_tag :date_from, active_date_from, class: "date-input" %>
-          </div>
-
-          <div class="date-field-wrap">
-            <span class="date-label">Até</span>
-            <%= date_field_tag :date_to, active_date_to, class: "date-input" %>
-          </div>
-
-          <div class="date-field-wrap">
-            <span class="date-label"><i class="fas fa-search me-1"></i>Cupom</span>
-            <%= text_field_tag :coupon_search,
-                               coupon_search,
-                               class: "date-input",
-                               placeholder: "Ex: PROMO10, VIP10…",
-                               style: "min-width:200px;" %>
-          </div>
-
-          <div style="display:flex; gap:.4rem; align-items:flex-end; padding-bottom:0;">
-            <button type="submit" class="btn-primary-sm">
-              <i class="fas fa-filter me-1"></i>Aplicar
-            </button>
-            <% if active_date_from.present? || active_date_to.present? %>
-              <%= link_to coupon_usage_orders_path(coupon_search: coupon_search, sort: params[:sort]),
-                          class: "btn-remove-date" do %>
-                <i class="fas fa-times me-1"></i>Remover datas
-              <% end %>
-            <% end %>
-          </div>
-
-          <% if active_date_from.present? || active_date_to.present? %>
-            <span class="date-range-badge">
-              <i class="fas fa-calendar-check me-1"></i>
-              <%= active_date_from.present? ? Date.parse(active_date_from).strftime('%d/%m/%Y') : '...' %>
-              &rarr;
-              <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
-            </span>
-          <% end %>
-
-        </div>
-      </div>
-    <% end %>
-
-  </div>
-
-  <%# ===== TABELA ===== %>
-  <div class="table-card">
-
-    <div class="table-card-header">
-      <h5 class="table-card-title">
-        <i class="fas fa-ticket-alt me-2"></i>Ranking de Cupons
-      </h5>
-      <div class="active-filters-row">
-        <% if coupon_search.present? %>
-          <span class="filter-tag filter-tag--gray">
-            <i class="fas fa-search me-1"></i>"<%= coupon_search %>"
-          </span>
-        <% end %>
-        <% if active_period.present? && active_date_from.blank? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-history me-1"></i><%= period_labels[active_period] %>
-          </span>
-        <% end %>
-        <% if active_date_from.present? || active_date_to.present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-calendar me-1"></i>
-            <%= active_date_from.present? ? Date.parse(active_date_from).strftime('%d/%m/%Y') : '...' %>
-            &rarr;
-            <%= active_date_to.present? ? Date.parse(active_date_to).strftime('%d/%m/%Y') : 'hoje' %>
-          </span>
-        <% end %>
-        <span class="filter-tag filter-tag--blue">
-          <% case active_sort %>
-          <% when "highest_revenue" %>
-            <i class="fas fa-dollar-sign me-1"></i>Maior receita
-          <% when "alphabetical" %>
-            <i class="fas fa-sort-alpha-down me-1"></i>Alfabética
-          <% else %>
-            <i class="fas fa-sort-amount-down me-1"></i>Mais usados
-          <% end %>
-        </span>
-      </div>
-    </div>
-
-    <% if @coupon_stats.any? %>
-
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th style="width:52px; text-align:center;">#</th>
-              <th>Código do Cupom</th>
-              <th style="width:160px;">Receita Líquida</th>
-              <th style="width:110px;">Usos</th>
-              <th style="width:150px;">Share</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% global_offset = (@current_page - 1) * @per_page %>
-            <%
-              # Para barra de progresso: referência é o maior valor da ordenação atual
-              ref_value = if active_sort == "highest_revenue"
-                            @coupon_stats.first ? @coupon_revenue[@coupon_stats.first[0]].to_f : 1
-                          else
-                            @coupon_stats.first ? @coupon_stats.first[1].to_f : 1
-                          end
-              ref_value = 1 if ref_value.zero?
-            %>
-            <% @coupon_stats.each_with_index do |(code, count), idx| %>
-              <%
-                absolute_idx = global_offset + idx
-                revenue      = @coupon_revenue[code].to_f
-                share_pct    = @total_with_coupon > 0 ? ((count.to_f / @total_with_coupon) * 100).round(1) : 0
-
-                bar_pct = if active_sort == "highest_revenue"
-                            ((revenue / ref_value) * 100).round(1)
-                          else
-                            ((count.to_f / ref_value) * 100).round(1)
-                          end
-
-                bar_color = case absolute_idx
-                            when 0 then "#e3b341"
-                            when 1 then "#58a6ff"
-                            when 2 then "#3fb950"
-                            else        "#4d94ff"
-                            end
-                medal = case absolute_idx
-                        when 0 then "<span class='rank-medal rank-medal--gold'>1°</span>"
-                        when 1 then "<span class='rank-medal rank-medal--silver'>2°</span>"
-                        when 2 then "<span class='rank-medal rank-medal--bronze'>3°</span>"
-                        else        "<span class='rank-num'>#{absolute_idx + 1}°</span>"
-                        end
-              %>
-              <tr>
-                <td style="text-align:center;"><%=raw medal %></td>
-                <td>
-                  <span class="coupon-code-badge">
-                    <i class="fas fa-tag" style="color:#484f58; font-size:.76rem;"></i>
-                    <%= code %>
-                  </span>
-                </td>
-                <td>
-                  <span style="color:#3fb950; font-weight:600; font-size:.88rem;">
-                    R$ <%= number_with_precision(revenue, precision: 2, delimiter: '.', separator: ',') %>
-                  </span>
-                </td>
-                <td>
-                  <span class="count-pill"
-                        style="background:<%=bar_color%>1a; color:<%=bar_color%>; border:1px solid <%=bar_color%>33;">
-                    <%= count %> uso<%= count == 1 ? "" : "s" %>
-                  </span>
-                </td>
-                <td>
-                  <span class="share-main"><%= share_pct %>%</span>
-                  <span class="share-sub">dos c/ cupom</span>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-      <%# PAGINAÇÃO %>
-      <% if @total_pages > 1 %>
-        <div class="pagination-footer">
-          <div class="pagination-info">
-            Mostrando
-            <strong><%= [(@current_page - 1) * @per_page + 1, @total_unique_coupons].min %></strong>
-            a
-            <strong><%= [@current_page * @per_page, @total_unique_coupons].min %></strong>
-            de
-            <strong><%= @total_unique_coupons %></strong>
-            cupom(ns)
-          </div>
-
-          <div class="pagination-controls">
-            <% if @current_page > 1 %>
-              <%= link_to coupon_usage_orders_path(
-                            page:          @current_page - 1,
-                            period:        params[:period],
-                            date_from:     params[:date_from],
-                            date_to:       params[:date_to],
-                            coupon_search: params[:coupon_search],
-                            sort:          params[:sort]
-                          ), class: "page-btn" do %>
-                <i class="fas fa-chevron-left me-1"></i>Anterior
-              <% end %>
-            <% end %>
-
-            <% p_start = [@current_page - 2, 1].max
-               p_end   = [@current_page + 2, @total_pages].min %>
-
-            <% (p_start..p_end).each do |pnum| %>
-              <% if pnum == @current_page %>
-                <span class="page-btn page-btn--active"><%= pnum %></span>
-              <% else %>
-                <%= link_to pnum,
-                            coupon_usage_orders_path(
-                              page:          pnum,
-                              period:        params[:period],
-                              date_from:     params[:date_from],
-                              date_to:       params[:date_to],
-                              coupon_search: params[:coupon_search],
-                              sort:          params[:sort]
-                            ),
-                            class: "page-btn" %>
-              <% end %>
-            <% end %>
-
-            <% if @current_page < @total_pages %>
-              <%= link_to coupon_usage_orders_path(
-                            page:          @current_page + 1,
-                            period:        params[:period],
-                            date_from:     params[:date_from],
-                            date_to:       params[:date_to],
-                            coupon_search: params[:coupon_search],
-                            sort:          params[:sort]
-                          ), class: "page-btn" do %>
-                Próxima<i class="fas fa-chevron-right ms-1"></i>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-ticket-alt fa-3x d-block mb-3"></i>
-        <h5>Nenhum cupom encontrado</h5>
-        <p>
-          <% if has_filters %>
-            Nenhum resultado para os filtros aplicados.
-          <% else %>
-            Nenhum pedido possui cupons terminados em 10 registrados.
-          <% end %>
-        </p>
-        <% if has_filters %>
-          <%= link_to coupon_usage_orders_path, class: "btn-clear" do %>
-            <i class="fas fa-times me-1"></i>Limpar filtros
-          <% end %>
-        <% end %>
-      </div>
-    <% end %>
-
-  </div>
-
+  <% end %>
+  <%= hc_pg_table(table, title: 'Ranking de cupons', icon: 'fas fa-ticket',
+        meta: 'Do mais usado para o menos usado. Clique no cabeçalho para ordenar por receita ou por ordem alfabética. Abra um cupom para ver os números.',
+        empty: { title: 'Nenhum cupom encontrado', text: 'Nenhum código que termine em 10 foi usado no período, ou a busca não achou nada.' },
+        detail: { title: ->(r) { "Cupom #{r[:code]}" }, tip: 'Ver cupom', note: 'Entra neste ranking porque o código termina em 10 e não começa com FRETE.',
+                  fields: [['Posição no ranking', :pos], ['Pedidos com este cupom', :usos]] }) %>
 </div>

@@ -1,72 +1,59 @@
 <% content_for :title, "Transportadoras" %>
+<% statuses = { true => ['Ativo', 'green', 'Aparece para escolher no pedido de atacado.'], false => ['Inativo', 'gray', 'Some da lista do pedido. Os pedidos antigos continuam com ela.'] } %>
+<% rows = @carriers.map do |c|
+     { id: c.id, record: c, nome: c.name, cnpj: c.cnpj_formatted, ie: c.state_registration.presence || '—', st: c.active, rua: c.street, numero: c.number, comp: c.complement.presence || '—',
+       bairro: c.neighbourhood, cidade: c.city, uf: c.state, cep: c.zip, fone: c.phone.presence || '—', email: c.email.presence || '—', usos: @order_counts[c.id].to_i }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'transportadoras', unit1: 'transportadora', page_size: 10, sort: { k: :usos, dir: -1 },
+     tabs: { col: :st, items: [['', 'Todas'], ['true', 'Ativas'], ['false', 'Inativas']] },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :nome, label: 'Transportadora', sub: :cnpj, sort: true },
+       { k: :cnpj, label: 'CNPJ', hide: true },
+       { k: :ie, label: 'Inscrição estadual', hide: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :rua, label: 'Rua', hide: true },
+       { k: :numero, label: 'Número', hide: true },
+       { k: :comp, label: 'Complemento', hide: true },
+       { k: :bairro, label: 'Bairro', hide: true },
+       { k: :cidade, label: 'Cidade', sub: :uf, sort: true, cls: 'due' },
+       { k: :uf, label: 'UF', hide: true },
+       { k: :cep, label: 'CEP', hide: true },
+       { k: :fone, label: 'Contato', sub: :email },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :usos, label: 'Pedidos B2B', t: :qty, sort: true }
+     ],
+     filters: [{ id: :q, type: :search, label: 'Buscar', ph: 'Nome, CNPJ ou cidade…', cols: %i[nome cnpj cidade uf], tip: 'Procura no nome, no CNPJ e na cidade.' }],
+     kpis: [
+       { label: 'Ativas', icon: 'fas fa-truck-fast', tone: 'green', help: 'Aparecem para escolher no pedido de atacado.', col: :st, val: true },
+       { label: 'Inativas', icon: 'fas fa-circle-pause', tone: 'gray', help: 'Fora da lista do pedido. Os pedidos antigos ficam.', col: :st, val: false },
+       { label: 'Sem uso ainda', icon: 'fas fa-box-open', tone: 'yellow', help: 'Nunca entraram em um pedido B2B. Estas dá para excluir.', col: :usos, val: 0 },
+       { label: 'Pedidos B2B', icon: 'fas fa-boxes-stacked', tone: 'blue', help: 'Pedidos de atacado que já usaram estas transportadoras.', col: :st, vals: [true, false], sum: :usos, static: true }
+     ]) %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-truck me-2"></i>Transportadoras</h1>
-      <p class="page-subtitle">Transportadoras usadas nos Pedidos B2B</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @carriers.size %> transportadora(s)</span>
-      <%= link_to new_carrier_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Nova Transportadora
-      <% end %>
-    </div>
-  </div>
+<%= hc_page_header 'Transportadoras', 'Transportadoras usadas nos Pedidos B2B', icon: 'fas fa-truck-moving' do %>
+  <% if screen_can?(:carriers, :create) %>
+    <%= link_to new_carrier_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova transportadora<% end %>
+  <% end %>
+<% end %>
 
-  <div class="table-card">
-    <div class="table-card-header">
-      <h5 class="table-card-title"><i class="fas fa-list me-2"></i>Lista de Transportadoras</h5>
-    </div>
-
-    <% if @carriers.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>CNPJ</th>
-              <th>Cidade/UF</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @carriers.each do |carrier| %>
-              <tr>
-                <td class="text-main"><%= carrier.name %></td>
-                <td class="text-muted-custom"><%= carrier.cnpj_formatted %></td>
-                <td class="text-muted-custom"><%= carrier.city %>/<%= carrier.state %></td>
-                <td class="text-center">
-                  <span class="status-pill <%= carrier.active? ? 'status-pill--active' : 'status-pill--inactive' %>">
-                    <%= carrier.active? ? 'Ativo' : 'Inativo' %>
-                  </span>
-                </td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to edit_carrier_path(carrier), class: "action-btn action-btn--edit" do %>
-                      <i class="fas fa-pencil-alt"></i>
-                    <% end %>
-                    <%= link_to carrier, method: :delete,
-                                class: "action-btn action-btn--danger",
-                                data: { confirm: "Tem certeza que deseja excluir esta transportadora?" } do %>
-                      <i class="fas fa-trash"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-truck fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma transportadora cadastrada</h5>
-        <%= link_to new_carrier_path, class: "btn-export" do %>
-          <i class="fas fa-plus me-1"></i>Nova Transportadora
-        <% end %>
-      </div>
-    <% end %>
-  </div>
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Transportadoras', icon: 'fas fa-truck-moving', meta: 'Transportadora usada em pedidos não pode ser excluída: desative-a.',
+        empty: { title: 'Nenhuma transportadora encontrada', text: 'Cadastre a transportadora que leva os pedidos de atacado.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova transportadora']), new_carrier_path, class: 'btn btn-export') if screen_can?(:carriers, :create)) },
+        detail: { title: ->(r) { r[:nome] }, note: 'Só dá para excluir uma transportadora que nunca entrou em um pedido B2B. As outras podem ser desativadas.' },
+        actions: ->(r) {
+          carrier = r[:record]
+          safe_join([
+            (hc_row_action('fas fa-pencil', 'Editar', edit_carrier_path(carrier)) if screen_can?(:carriers, :edit)),
+            (if screen_can?(:carriers, :edit)
+               r[:st] ? hc_row_action('fas fa-toggle-off', 'Desativar', carrier_path(carrier), method: :patch, params: { carrier: { active: false } },
+                                      confirm: { title: "Desativar #{r[:nome]}?", text: 'Ela some da lista ao montar um pedido de atacado. Os pedidos que já usam essa transportadora continuam como estão. Dá para ativar de novo.' })
+                      : hc_row_action('fas fa-toggle-on', 'Ativar', carrier_path(carrier), method: :patch, params: { carrier: { active: true } })
+             end),
+            (hc_row_action('fas fa-trash', 'Excluir', carrier_path(carrier), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:nome]}?", text: 'Nenhum pedido B2B usou esta transportadora, por isso ela pode ser excluída. Não dá para desfazer.', ok: 'Excluir transportadora' }) if r[:usos].zero? && screen_can?(:carriers, :destroy))
+          ].compact)
+        }) %>
 </div>

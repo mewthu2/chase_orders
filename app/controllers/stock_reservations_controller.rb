@@ -18,7 +18,7 @@ class StockReservationsController < ApplicationController
     @account = params[:account].to_s
     return head :not_found unless StockReservationRefresher::ACCOUNTS.key?(@account)
 
-    authorize_screen!("stock_reservations_#{@account}")
+    authorize_screen!("stock_reservations_#{@account}", 'X')
   end
 
   def account_path(account)

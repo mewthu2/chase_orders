@@ -22,9 +22,14 @@ class InternalTransfersController < ApplicationController
     scope = scope_for_user(scope) unless current_user.admin?
     scope = apply_filters(scope)
 
-    @status_counts = InternalTransfer::STATUS_LABELS.keys.index_with { |status| scope.with_overall_status(status).count }
-    @total_count = scope.count
+    @kpis = {
+      waiting: scope.with_overall_status('aguardando_aprovacao').count,
+      origin: scope.at_stage(:origin).count,
+      on_the_way: scope.at_stage(:on_the_way).count,
+      done: scope.with_overall_status('concluida').count
+    }
     scope = scope.with_overall_status(params[:status]) if InternalTransfer::STATUS_LABELS.key?(params[:status])
+    scope = scope.at_stage(params[:kpi]) if InternalTransfer::STAGE_FILTERS.include?(params[:kpi].to_s)
     scope = only_my_action(scope) if params[:mine] == '1'
 
     @per_page = PER_PAGE_OPTIONS.include?(params[:per_page].to_i) ? params[:per_page].to_i : PER_PAGE_OPTIONS.first
@@ -173,9 +178,9 @@ class InternalTransfersController < ApplicationController
   def set_transfer
     scope = case action_name
             when 'show'
-              InternalTransfer.includes(:destination_location, :requested_by, events: :user,
-                                        shipments: [:origin_location, { items: :product }])
-            when 'edit', 'update'
+              InternalTransfer.includes({ destination_location: :company }, :requested_by, events: :user,
+                                        shipments: [{ origin_location: :company }, { items: :product }, :fiscal_notes])
+            when 'update'
               InternalTransfer.includes(shipments: :items)
             else
               InternalTransfer
@@ -249,8 +254,11 @@ class InternalTransfersController < ApplicationController
     open_scope = scope.where.not(id: InternalTransfer.with_overall_status('concluida').select(:id))
                       .where.not(id: InternalTransfer.with_overall_status('cancelada').select(:id))
                       .where.not(approval_status: :reprovada)
-    ids = open_scope.includes(:destination_location, shipments: [:origin_location, :items])
-                    .select { |transfer| transfer.my_action_needed?(current_user, approver_ids:) }.map(&:id)
+    transfers = open_scope.to_a
+    # Aguardando aprovação só depende de quem é o usuário: lojas e itens só para as já aprovadas.
+    approved = transfers.reject(&:approval_pendente?)
+    ActiveRecord::Associations::Preloader.new(records: approved, associations: [:destination_location, { shipments: [:origin_location, :items] }]).call
+    ids = transfers.select { |transfer| transfer.my_action_needed?(current_user, approver_ids:) }.map(&:id)
     scope.where(id: ids)
   end
 
@@ -282,6 +290,8 @@ class InternalTransfersController < ApplicationController
   def prepare_form
     @my_locations = (current_user.admin? ? transferable_locations : transferable_locations.where(slug: current_user.allowed_location_keys)).order(:name)
     @origin_locations = transferable_locations.where.not(id: @transfer.destination_location_id).order(:name)
+    # Produtos só para desenhar a grade (no redirect de uma edição bloqueada nem carrega).
+    ActiveRecord::Associations::Preloader.new(records: @transfer.shipments.to_a, associations: { items: :product }).call
     live_shipments = @transfer.shipments.reject(&:marked_for_destruction?)
     live_items = live_shipments.flat_map { |shipment| shipment.items.reject(&:marked_for_destruction?) }
     @rows = live_items.group_by(&:product).map do |product, items|

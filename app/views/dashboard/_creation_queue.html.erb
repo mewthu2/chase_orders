@@ -1,0 +1,85 @@
+<%# Criação de pedidos no Correios (Log03 e Log02): "Precisam de atenção" + "Fila de criação".
+    Locais: kind, action, perm, title, subtitle, account, run_now_path, stock_path, attempts_channel, order_types (opcional). %>
+<% order_types ||= nil %>
+<% statuses = { 'wait' => ['Aguardando', 'gray', 'Ainda não foi tentado. Entra na próxima rodada.'], 'processing' => ['Processando', 'purple', 'Sendo criado no Correios agora.'],
+                'fail' => ['Falha', 'orange', 'O Correios recusou, por exemplo por falta de estoque. O sistema tenta de novo sozinho.'],
+                'error' => ['Erro de dado', 'red', 'Falta ou está errado um dado do pedido, como o bairro. Corrija e tente de novo.'] } %>
+<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% parse_date = ->(v) { Date.strptime(v.to_s, '%d/%m/%Y') rescue nil } %>
+<% all_rows = @pending_orders.map do |data|
+     o = data['pedido']
+     id = o['id'].to_s
+     err = @last_errors[id]
+     queue = @queue_positions[id]
+     st = err ? (err[:status] == 'fail' ? 'fail' : 'error') : (queue&.dig(:status) == 'processing' ? 'processing' : 'wait')
+     { id: id, tiny: id, n: "##{o['numero']}", tipo: order_types && order_types[id].present? ? b2b_order_type_badge(order_types[id]).to_s.html_safe : nil, cliente: o['nome'].presence || '—', dia: parse_date.call(o['data_pedido']), valor: o['valor'].to_f, st: st,
+       erro: err&.dig(:message).presence || '—', quando: err&.dig(:updated_at) }
+   end %>
+<% common_cols = [
+     { k: :tiny, label: 'Pedido (Tiny)', t: :mono, main: true, copy: true, sub: :n },
+     { k: :n, label: 'Número da loja', hide: true },
+     { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
+     (order_types ? { k: :tipo, label: 'Tipo', t: :html, nodetail: true } : nil),
+     { k: :dia, label: 'Data do pedido', t: :d, sort: true },
+     { k: :valor, label: 'Valor', t: :money },
+     { k: :st, label: 'Status', t: :status, map: statuses, sub: :erro },
+     { k: :erro, label: 'Último erro', hide: true }
+   ].compact %>
+<% attention = HoneyTable.new(params, id: 'atencao', rows: all_rows.select { |r| %w[fail error].include?(r[:st]) }, unit: 'pedidos', unit1: 'pedido', page_size: 7,
+     cols: common_cols,
+     filters: [
+       { id: :q, type: :search, label: 'ID do pedido', ph: 'Ex.: 911321098 ou 58213', cols: %i[tiny n cliente erro], tip: 'Procura pelo ID do Tiny, pelo número do pedido da loja, pelo nome da cliente ou pelo erro.' },
+       { id: :st, type: :select, label: 'Status', col: :st, options: [['fail', 'Falha'], ['error', 'Erro de dado']], all: 'Todos', tip: 'Falha: o Correios recusou, por exemplo por falta de estoque. Erro de dado: falta ou está errado um dado do pedido, como o bairro.' }
+     ],
+     kpis: [
+       { label: 'Com falha', icon: 'fas fa-box-open', tone: 'orange', help: 'O Correios recusou.', col: :st, val: 'fail' },
+       { label: 'Com erro de dado', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Falta dado no pedido.', col: :st, val: 'error' }
+     ]) %>
+<% queue = HoneyTable.new(params, id: 'fila', rows: all_rows.reject { |r| %w[fail error].include?(r[:st]) }, unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dia, dir: 1 },
+     cols: common_cols,
+     filters: [
+       { id: :q, type: :search, label: 'ID do pedido', ph: 'Ex.: 911321392', cols: %i[tiny n cliente], tip: 'Procura pelo ID do Tiny, pelo número da loja ou pelo nome da cliente.' },
+       { id: :per, type: :period, label: 'Período', col: :dia }
+     ],
+     kpis: [
+       { label: 'Na fila', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Esperando ser criados.', col: :st, vals: %w[wait processing] },
+       { label: 'Criados no mês', icon: 'fas fa-circle-check', tone: 'green', help: 'Já viraram pedido no Correios.', count: @stats[:successful].to_i }
+     ]) %>
+<% row_actions = ->(r) {
+     safe_join([
+       (content_tag(:button, content_tag(:i, '', class: 'fas fa-plus-circle'), type: 'button', class: 'action-btn', data: { tip: 'Criar este pedido no Correios agora' }, 'aria-label': 'Criar agora',
+                    onclick: "runQueueItemNow(#{run_now_path.to_json}, '#{r[:tiny]}', 'Criando pedido no Correios...')") if screen_can?(perm, :execute)),
+       link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
+       link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+     ].compact)
+   } %>
+<% detail = { title: ->(r) { "Pedido #{r[:tiny]}" }, fields: [['Último erro', :erro]] } %>
+
+<%= hc_page_header title, subtitle, icon: 'fas fa-plus-circle' do %>
+  <%= link_to stock_path, class: 'btn btn-secondary' do %><i class="fas fa-box-open"></i>Produtos sem estoque<% end %>
+<% end %>
+
+<% if @tiny_error %>
+  <div class="callout pg-banner is-err"><i class="fas fa-plug"></i><div><strong>Não foi possível buscar os pedidos no <%= account %>.</strong> O Tiny respondeu: <%= @tiny_error %>. A lista fica vazia até isso ser resolvido.</div></div>
+<% end %>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Como esta lista funciona.</strong> Ela lê no <%= account %> os pedidos em "preparando envio"<%= ' já aprovados' if kind == :log02 %> e cria cada um no Correios. Falha quer dizer que o Correios recusou (por exemplo, sem estoque) e o sistema tenta de novo sozinho. Erro de dado quer dizer que falta ou está errado um dado do pedido.</div></div>
+
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: kind, current: action, counts: { action => all_rows.size } %>
+  <%= render 'dashboard/runbox', title: 'Fila de criação no Correios', perm: perm, run_path: nil, running: false, btn: nil, confirm: nil,
+             text: 'Cria no Correios os pedidos que estão aguardando. O sistema roda sozinho; marque os pedidos abaixo para criar na hora.' %>
+  <div class="pg-split" style="--cols: 1fr 1fr">
+    <div class="pg-split-a"><%= hc_pg_kpis(attention) %></div>
+    <div class="pg-split-b"><%= hc_pg_kpis(queue) %></div>
+  </div>
+  <%= hc_pg_table(attention, title: 'Precisam de atenção', icon: 'fas fa-triangle-exclamation', meta: 'Pedidos que o Correios recusou ou que têm um dado faltando.',
+        tools: link_to(safe_join([content_tag(:i, '', class: 'fas fa-paperclip'), 'Verificar tentativas']), attempts_path(channel: attempts_channel), class: 'btn btn-secondary btn-sm'),
+        empty: { title: 'Nada precisando de atenção', text: 'Nenhum pedido com falha ou erro de criação no momento.' }, detail: detail, actions: row_actions) %>
+  <%= hc_pg_table(queue, title: 'Fila de criação', icon: 'fas fa-plus-circle', meta: 'Pedidos aguardando a criação no Correios. Depois de criados, seguem para a Emissão de Notas.',
+        select: (->(r) { { id: r[:tiny], tiny_order_id: r[:tiny] } } if screen_can?(perm, :execute)),
+        bulk: (render('dashboard/bulk_bar', icon: 'fas fa-plus-circle', label: 'Criar selecionados', hint: 'Marque os pedidos para criar vários de uma vez.') if screen_can?(perm, :execute)),
+        empty: { title: 'Todos os pedidos foram processados', text: 'Não há pedidos aguardando criação no Correios no momento.' }, detail: detail, actions: row_actions) %>
+</div>
+
+<%= render 'dashboard/run_now_modal' %>
+<%= render 'dashboard/queue_scripts', run_now_path: run_now_path, bulk_message: 'Criando pedidos no Correios...' %>

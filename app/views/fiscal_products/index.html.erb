@@ -1,91 +1,124 @@
 <% content_for :title, "Dados fiscais dos produtos" %>
+<% origins = ['0 - Nacional', '1 - Estrangeira (importação direta)', '2 - Estrangeira (mercado interno)', '3 - Nacional (importado de 40% a 70%)', '4 - Nacional (processos básicos)',
+              '5 - Nacional (importado até 40%)', '6 - Estrangeira (importação direta sem similar)', '7 - Estrangeira (mercado interno sem similar)', '8 - Nacional (importado acima de 70%)'] %>
+<% ncm_map = { 'sem' => ['Sem NCM', 'red', 'Sem o NCM a nota não pode ser gerada. Complete os dados ou busque no Tiny.'] } %>
+<% fmt_ncm = ->(code) { code.to_s =~ /\A\d{8}\z/ ? "#{code[0, 4]}.#{code[4, 2]}.#{code[6, 2]}" : code.to_s } %>
+<% keep = params.permit(:q, :missing, :origem, :kpi, :page).to_h %>
+<% map = ->(p) {
+     { id: p.id, record: p, sku: p.sku, nome: p.shopify_product_name.presence || '—', ncm: p.ncm.blank? ? 'sem' : fmt_ncm.call(p.ncm), cest: p.cest.presence || '—',
+       origem: origins[p.origin.to_i] || p.origin.to_s, un: p.commercial_unit.presence || 'UN', linha: p.sku.to_s.split('-').first(2).join('-'), tiny: p.tiny_2_id.presence || '—' }
+   } %>
+<% search = ->(scope, text) { term = "%#{ActiveRecord::Base.sanitize_sql_like(text.strip.downcase)}%"; scope.where('LOWER(products.sku) LIKE :q OR LOWER(products.shopify_product_name) LIKE :q', q: term) } %>
+<% missing = ->(scope) { scope.where(ncm: [nil, '']) } %>
+<% foreign = ->(scope) { scope.where(origin: [1, 2, 6, 7]) } %>
+<% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 10, unit: 'produtos', unit1: 'produto', sort: { k: :sku, dir: 1 },
+     sort_sql: { sku: 'products.sku', nome: 'products.shopify_product_name' },
+     tabs: { col: :ncm, param: :missing, items: [['', 'Todos'], ['1', 'Só sem NCM']], filter: ->(scope, _value) { missing.call(scope) } },
+     filter_sql: { origem: ->(scope, v) { v == 'estrangeira' ? foreign.call(scope) : scope.where(origin: 0) } },
+     cols: [
+       { k: :sku, label: 'SKU', t: :mono, main: true, sort: true },
+       { k: :nome, label: 'Produto', sort: true },
+       { k: :ncm, label: 'NCM', t: :status, map: ncm_map },
+       { k: :cest, label: 'CEST', cls: 'due' },
+       { k: :origem, label: 'Origem', t: :tag },
+       { k: :un, label: 'Unidade', cls: 'due' },
+       { k: :linha, label: 'Linha', hide: true },
+       { k: :tiny, label: 'Código no Tiny', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar por SKU ou nome', ph: 'Ex.: LEG-141 ou Legging…', tip: 'Procura no SKU e no nome do produto.' },
+       { id: :origem, type: :select, label: 'Origem', options: [['nacional', 'Nacional'], ['estrangeira', 'Estrangeira']], all: 'Todas as origens', tip: 'De onde vem a mercadoria.' }
+     ],
+     kpis: [
+       { label: 'Produtos', icon: 'fas fa-shirt', tone: 'gray', help: 'Todos os produtos da lista.' },
+       { label: 'Sem NCM', icon: 'fas fa-circle-exclamation', tone: 'red', help: 'Sem NCM a nota não pode ser gerada. Complete ou busque no Tiny.', col: :ncm, val: 'sem',
+         value: ->(scope) { missing.call(scope).count }, filter: missing },
+       { label: 'Buscando no Tiny', icon: 'fas fa-cloud-arrow-down', tone: 'purple', help: 'A importação do Tiny roda em segundo plano.', text: @import_running ? 'Em andamento' : 'Parada' },
+       { label: 'Origem estrangeira', icon: 'fas fa-earth-americas', tone: 'blue', help: 'Produtos que não são nacionais. O imposto deles é diferente.', col: :origem, val: 'estrangeira',
+         value: ->(scope) { foreign.call(scope).count }, filter: foreign }
+     ]) %>
+<% imports = HoneyTable.new(params, id: 'imp', unit: 'importações', unit1: 'importação', page_size: 4, sort: { k: :quando, dir: -1 },
+     rows: @imports.map { |m|
+       status = m.step == 'error' ? 'erro' : (m.end_time ? 'ok' : 'rodando')
+       { id: m.id, detalhe: 'Dados fiscais do Tiny', origem: 'Tiny', quando: m.start_time || m.created_at, st: status, resultado: m.link.presence || '—' }
+     },
+     cols: [
+       { k: :id, label: 'ID', t: :num, plain: true, hide: true, nodetail: true },
+       { k: :detalhe, label: 'Importação', sub: :resultado },
+       { k: :origem, label: 'Origem', t: :tag },
+       { k: :quando, label: 'Quando', t: :dt, sort: true },
+       { k: :st, label: 'Situação', t: :status, map: { 'ok' => ['Concluída', 'green', 'Terminou e os produtos foram atualizados.'], 'rodando' => ['Em andamento', 'purple', 'Ainda buscando no Tiny.'], 'erro' => ['Parou com erro', 'red', 'Veja o motivo no resultado.'] } },
+       { k: :resultado, label: 'Resultado', hide: true }
+     ]) %>
+<% product_form = ->(r) {
+     p = r[:record]
+     id = "pgf-prod-#{p.id}"
+     form = form_with(model: p, url: fiscal_product_path(p, keep), method: :patch, local: true, class: 'drawer is-wide', html: { role: 'dialog', 'aria-label': "Dados fiscais de #{p.sku}" }) do |f|
+       content_tag(:div, content_tag(:div, content_tag(:i, '', class: 'fas fa-receipt'), class: 'page-icon is-area', style: nav_area_style(hc_area || {})) +
+                         content_tag(:div, content_tag(:h2, "Dados fiscais de #{p.sku}") + content_tag(:p, r[:nome])) +
+                         content_tag(:button, content_tag(:i, '', class: 'fas fa-times'), type: 'button', class: 'icon-btn', data: { close: 'drawer' }, 'aria-label': 'Fechar'), class: 'drawer-head') +
+         content_tag(:div, class: 'drawer-body') do
+           content_tag(:div, class: 'pg-fields') do
+             safe_join([
+               content_tag(:div, 'Dados da nota', class: 'pg-fsec'),
+               content_tag(:div, content_tag(:label, safe_join(['NCM ', content_tag(:span, '*', class: 'required')]), class: 'field-label') + f.text_field(:ncm, class: 'field-input', maxlength: 8, placeholder: '8 dígitos'), class: 'form-group pg-fg pg-w2'),
+               content_tag(:div, content_tag(:label, 'CEST', class: 'field-label') + f.text_field(:cest, class: 'field-input', maxlength: 7, placeholder: 'Opcional'), class: 'form-group pg-fg pg-w2'),
+               content_tag(:div, content_tag(:label, 'Origem', class: 'field-label') + content_tag(:div, f.select(:origin, origins.each_with_index.map { |o, i| [o, i] }, {}, class: 'field-input'), class: 'select-wrap'), class: 'form-group pg-fg'),
+               content_tag(:div, content_tag(:label, 'Unidade', class: 'field-label') + f.text_field(:commercial_unit, class: 'field-input', maxlength: 6), class: 'form-group pg-fg pg-w2'),
+               content_tag(:div, content_tag(:i, '', class: 'fas fa-circle-info') + content_tag(:span, 'Estes dados entram em cada item da nota fiscal. Confira o NCM com o contador.'), class: 'pg-fnote')
+             ])
+           end
+         end +
+         content_tag(:div, content_tag(:button, 'Cancelar', type: 'button', class: 'btn btn-ghost', data: { close: 'drawer' }) +
+                           content_tag(:button, safe_join([content_tag(:i, '', class: 'fas fa-floppy-disk'), 'Salvar']), type: 'submit', class: 'btn btn-primary'), class: 'drawer-foot')
+     end
+     content_tag(:script, content_tag(:div, '', class: 'backdrop', data: { close: 'drawer' }) + form, type: 'text/html', id: id)
+   } %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-barcode me-2"></i>Dados fiscais dos produtos</h1>
-      <p class="page-subtitle">NCM, CEST, origem e unidade usados na emissão de nota fiscal</p>
-    </div>
-    <div class="header-actions">
-      <%= link_to fiscal_notes_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Notas Fiscais<% end %>
-      <%= button_to import_all_from_tiny_fiscal_products_path(q: params[:q], missing: params[:missing]), method: :post,
-                    class: "btn-export", disabled: @import_running || @importable_count.zero?,
-                    form: { data: { turbo_confirm: "Buscar no Tiny os dados fiscais de #{@importable_count} produto(s) sem NCM? Só lê do Tiny e roda em segundo plano." } } do %>
-        <i class="fas fa-cloud-download-alt me-2"></i>Buscar do Tiny (<%= @importable_count %> sem NCM)
-      <% end %>
-    </div>
-  </div>
-
-  <% if @import_motor %>
-    <div class="import-status form-section">
-      <div class="form-section-body">
-        <% if @import_running %>
-          <i class="fas fa-spinner fa-spin me-2"></i>Importação do Tiny em andamento (<%= @import_motor.step %>). Atualize a página para ver o progresso.
-        <% elsif @import_motor.step == 'error' %>
-          <i class="fas fa-exclamation-triangle me-2"></i>Última importação do Tiny parou: <%= @import_motor.link %>
-        <% else %>
-          <i class="fas fa-check-circle me-2"></i>Última importação do Tiny (<%= @import_motor.end_time&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %>): <%= @import_motor.link %>
-        <% end %>
-      </div>
-    </div>
+<%= hc_page_header 'Dados fiscais dos produtos', 'NCM, CEST, origem e unidade usados na emissão de nota fiscal', icon: 'fas fa-receipt' do %>
+  <%= link_to fiscal_notes_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Notas Fiscais<% end %>
+  <% if screen_can?(:fiscal_notes, :execute) %>
+    <%= button_to import_all_from_tiny_fiscal_products_path(keep), method: :post, class: 'btn btn-export', disabled: @import_running || @importable_count.zero?,
+                  form: { style: 'display: inline', data: { hc_confirm: { title: "Buscar no Tiny os dados fiscais de #{@importable_count} produto(s) sem NCM?", text: 'O sistema só lê o cadastro do Tiny. Nada é alterado lá. Roda em segundo plano.', ok: 'Buscar', icon: 'fas fa-cloud-arrow-down' }.to_json } } do %>
+      <i class="fas fa-cloud-arrow-down"></i>Buscar do Tiny
+    <% end %>
   <% end %>
+<% end %>
 
-  <div class="table-card">
-    <%= form_with url: fiscal_products_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap align-items-center px-3 pb-3" do %>
-      <input type="text" name="q" value="<%= params[:q] %>" class="field-input" placeholder="Buscar por SKU ou nome..." style="max-width: 320px;">
-      <label class="text-main d-flex align-items-center gap-2 mb-0">
-        <input type="checkbox" name="missing" value="1" <%= 'checked' if params[:missing].present? %>> Só sem NCM
-      </label>
-      <button type="submit" class="btn-back"><i class="fas fa-search me-1"></i>Buscar</button>
-    <% end %>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Por que completar estes dados.</strong> A nota fiscal exige o NCM de cada item. Produto sem NCM atrapalha a geração da nota, por isso vale completar antes de gerar.</div></div>
 
-    <% if @products.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Produto</th>
-              <th>NCM</th>
-              <th>CEST</th>
-              <th>Origem</th>
-              <th>Unidade</th>
-              <th class="text-end"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @products.each do |product| %>
-              <tr>
-                <td class="text-main"><%= product.sku %></td>
-                <td class="text-muted-custom"><%= product.shopify_product_name %></td>
-                <td><input type="text" name="product[ncm]" form="product-<%= product.id %>" value="<%= product.ncm %>" class="field-input" maxlength="8" placeholder="8 dígitos" style="min-width: 110px;"></td>
-                <td><input type="text" name="product[cest]" form="product-<%= product.id %>" value="<%= product.cest %>" class="field-input" maxlength="7" placeholder="opcional" style="min-width: 100px;"></td>
-                <td><input type="number" name="product[origin]" form="product-<%= product.id %>" value="<%= product.origin %>" class="field-input" min="0" max="8" style="max-width: 80px;"></td>
-                <td><input type="text" name="product[commercial_unit]" form="product-<%= product.id %>" value="<%= product.commercial_unit %>" class="field-input" maxlength="6" style="max-width: 80px;"></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <button type="submit" form="product-<%= product.id %>" class="action-btn action-btn--edit" title="Salvar"><i class="fas fa-save"></i></button>
-                    <% if product.ncm.blank? && product.tiny_id? %>
-                      <%= button_to import_from_tiny_fiscal_product_path(product, q: params[:q], missing: params[:missing], page: params[:page]), method: :post,
-                                    class: "action-btn action-btn--edit", title: "Buscar do Tiny" do %><i class="fas fa-cloud-download-alt"></i><% end %>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <%# Formulários fora da tabela (HTML válido); os inputs se ligam a eles pelo atributo form= %>
-      <% @products.each do |product| %>
-        <%= form_with model: product, url: fiscal_product_path(product, q: params[:q], missing: params[:missing], page: params[:page]), method: :patch, local: true, id: "product-#{product.id}" do |f| %><% end %>
+<% if (last_import = @imports.first) %>
+  <div class="callout pg-banner import-status <%= @import_running ? 'is-info' : (last_import.step == 'error' ? 'is-warn' : 'is-ok') %>">
+    <i class="fas <%= @import_running ? 'fa-spinner fa-spin' : (last_import.step == 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check') %>"></i>
+    <div>
+      <% if @import_running %>
+        <strong>Importação do Tiny em andamento.</strong> Etapa: <%= last_import.step %>. Atualize a página para ver o progresso.
+      <% elsif last_import.step == 'error' %>
+        <strong>A última importação do Tiny parou.</strong> <%= last_import.link %>
+      <% else %>
+        <strong>Última importação do Tiny (<%= last_import.end_time&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %>).</strong> <%= last_import.link %>
       <% end %>
-      <div class="px-3 py-3"><%= will_paginate @products, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-barcode fa-3x mb-3 d-block"></i>
-        <h5>Nenhum produto encontrado</h5>
-      </div>
-    <% end %>
+    </div>
   </div>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Produtos e dados fiscais', icon: 'fas fa-receipt', meta: 'Clique no SKU para ver o produto. Os dados aqui entram em cada item da nota fiscal.',
+        empty: { title: 'Nenhum produto encontrado', text: 'Mude a busca ou tire os filtros. Se o produto é novo, ele aparece aqui depois da próxima importação.' },
+        detail: { title: ->(r) { r[:sku] }, note: 'Estes dados entram em cada item da nota fiscal.' },
+        actions: ->(r) {
+          next ''.html_safe unless screen_can?(:fiscal_notes, :execute)
+
+          p = r[:record]
+          safe_join([
+            content_tag(:button, content_tag(:i, '', class: r[:ncm] == 'sem' ? 'fas fa-pen-to-square' : 'fas fa-pencil'), type: 'button', class: 'action-btn',
+                        data: { pg_detail: "pgf-prod-#{p.id}", tip: r[:ncm] == 'sem' ? 'Completar dados' : 'Editar' }, 'aria-label': 'Editar'),
+            product_form.call(r),
+            (hc_row_action('fas fa-cloud-arrow-down', 'Buscar do Tiny', import_from_tiny_fiscal_product_path(p, keep), method: :post,
+                           confirm: { title: "Buscar o NCM de #{p.sku} no Tiny?", text: 'O sistema só lê o cadastro do Tiny. Nada é alterado lá.', ok: 'Buscar' }) if r[:ncm] == 'sem' && p.tiny_id?)
+          ].compact)
+        }) %>
+  <%= hc_pg_table(imports, title: 'Últimas importações', icon: 'fas fa-clock-rotate-left', meta: 'A busca no Tiny roda em segundo plano. O resultado aparece aqui.',
+        empty: { title: 'Nenhuma importação ainda', text: 'Use Buscar do Tiny para preencher o NCM dos produtos que estão sem.' }) %>
 </div>

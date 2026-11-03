@@ -3,7 +3,8 @@ class ProfilesController < ApplicationController
   before_action :set_profile, only: [:edit, :update, :destroy]
 
   def index
-    @profiles = Profile.left_joins(:users).select('profiles.*, COUNT(DISTINCT users.id) AS users_count').group('profiles.id').order(:name)
+    @profiles = Profile.left_joins(:users).select('profiles.*, COUNT(DISTINCT users.id) AS users_count')
+                       .group('profiles.id').order(:name).includes(:screen_permissions)
   end
 
   def new
@@ -45,9 +46,13 @@ class ProfilesController < ApplicationController
     @profile = Profile.find(params[:id])
   end
 
+  # screen_actions: { 'b2b_orders' => ['V', 'C'] } vindo da matriz de ações; screen_keys ainda
+  # libera telas inteiras (usado por integrações e testes antigos).
   def profile_params
-    permitted = params.require(:profile).permit(:name, :description, :active, screen_keys: [], ticket_sector_ids: [])
-    # Admin sempre abre chamado para todos os setores (User#visible_ticket_sector_ids).
-    @profile&.id == Profile::ADMIN ? permitted.except(:ticket_sector_ids) : permitted
+    permitted = params.require(:profile).permit(:name, :description, :active, screen_keys: [], ticket_sector_ids: [],
+                                                allowed_locations: [], screen_actions: Screen.keys.index_with { [] })
+    permitted[:allowed_locations] = permitted[:allowed_locations].reject(&:blank?) if permitted.key?(:allowed_locations)
+    # Admin vê tudo e abre chamado para todos os setores (User#admin?, User#visible_ticket_sector_ids).
+    @profile&.admin? ? permitted.except(:ticket_sector_ids, :screen_actions, :screen_keys, :allowed_locations) : permitted
   end
 end

@@ -1,6 +1,8 @@
 class TicketParticipantsController < ApplicationController
   include TicketPage
 
+  guard_screen :tickets, actions: { create: :edit, destroy: :edit }
+
   def create
     return unless load_ticket(params[:ticket_id])
 

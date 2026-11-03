@@ -1,4 +1,7 @@
 class Location < ApplicationRecord
+  # Empresa (CNPJ) da loja: emite as notas das remessas que saem dela e recebe as que chegam.
+  belongs_to :company, optional: true
+  validates :company_id, uniqueness: { message: 'já tem outra loja' }, allow_nil: true
   has_many :stock_corrections, dependent: :restrict_with_error
 
   LOCATION_ENV_MAP = {

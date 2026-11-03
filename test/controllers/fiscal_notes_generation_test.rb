@@ -96,7 +96,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     assert note.assinada?
     assert note.xml_available?
     follow_redirect!
-    assert_select '.flash-messages-container .alert', text: /não transmitida à SEFAZ/
+    assert_select '.flash-messages-container .alert', text: /transmita à SEFAZ/
   end
 
   test 'create works for a stock transfer too' do

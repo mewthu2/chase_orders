@@ -5,7 +5,7 @@ class CashbackUnificationsController < ApplicationController
   before_action :set_unification, only: [:show, :confirm]
 
   def index
-    @unifications = visible_unifications.includes(:user, :customer).order(created_at: :desc).limit(30)
+    @unifications = visible_unifications.includes(:user, :customer).order(created_at: :desc)
   end
 
   def new

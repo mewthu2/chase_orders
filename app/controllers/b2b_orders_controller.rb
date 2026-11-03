@@ -1,7 +1,13 @@
 require 'csv'
 
 class B2bOrdersController < ApplicationController
-  guard_screen :b2b_orders
+  # Cada tipo de pedido tem a sua permissão; as consultas de apoio dos formulários (produtos,
+  # clientes, frete) valem para quem usa qualquer um dos três.
+  KIND_SCREENS = { 'sale' => :b2b_orders, 'stock_transfer' => :store_supply, 'b2c_transfer' => :b2b_transfers }.freeze
+  FORM_HELPER_ACTIONS = %i[shipping_methods parse_items_spreadsheet product_stock search_product product_picker search_client import_client].freeze
+
+  guard_screen(except: FORM_HELPER_ACTIONS, actions: { cancel_in_tiny: :destroy }) { KIND_SCREENS.fetch(params[:order_kind].to_s, :b2b_orders) }
+  guard_screen(only: FORM_HELPER_ACTIONS, actions: { parse_items_spreadsheet: :view, import_client: :view }) { KIND_SCREENS.values }
   before_action :set_kind
   before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio]
   helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
@@ -12,19 +18,9 @@ class B2bOrdersController < ApplicationController
   KIND_LABELS = { 'sale' => 'Pedido', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' }.freeze
 
   def index
-    scope = B2bOrder.includes(:client, :transfer_location, :b2b_order_items).recent.where(kind: order_kind)
-
-    if params[:q].present?
-      q = "%#{params[:q]}%"
-      scope = scope.where(
-        'clients.responsible_name LIKE :q OR clients.business_name LIKE :q OR b2b_orders.tiny_reference_number LIKE :q OR b2b_orders.id = :id',
-        q: q, id: params[:q].to_i
-      ).references(:client)
-    end
-
-    @status_counts = scope.reorder(nil).group(:status).count
-    @b2b_orders = params[:status].present? ? scope.where(status: params[:status]) : scope
-    @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: @b2b_orders.map(&:id)).pluck(:b2b_order_id).to_set
+    @scope = B2bOrder.where(kind: order_kind).includes(:client, :transfer_location, :b2b_order_items, :user).recent
+    @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).pluck(:b2b_order_id).to_set
+    @filter_locations = TransferLocation.order(:name) if order_kind == 'stock_transfer'
   end
 
   def new
@@ -339,8 +335,10 @@ class B2bOrdersController < ApplicationController
   # Pedido de venda a partir de uma encomenda de catálogo: itens, quantidades, cliente (pelo CNPJ) e
   # preço sugerido de sempre. O usuário completa o resto e salva.
   def prefill_from_catalog_order(order)
-    catalog_order = B2bCatalogOrder.includes(:catalog, items: { variant: :catalog_product }).find_by(id: params[:catalog_order_id])
+    catalog_order = B2bCatalogOrder.find_by(id: params[:catalog_order_id])
     return unless catalog_order && !catalog_order.converted?
+
+    ActiveRecord::Associations::Preloader.new(records: [catalog_order], associations: { items: { variant: :catalog_product } }).call
 
     order.client = catalog_order.matching_client
     order.notes = "Encomenda do catálogo \"#{catalog_order.catalog.title}\" — #{catalog_order.customer_name}"

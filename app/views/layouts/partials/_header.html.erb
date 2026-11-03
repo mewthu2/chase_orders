@@ -1,19 +1,56 @@
-<header class="navbar-header">
-  <div class="navbar-brand">
-    <div class="brand-logo" style="background: black;">
-      <%= image_tag 'admin/chase-logo' %>
+<% current = nav_current %>
+<header class="topbar" id="topbar">
+  <button class="icon-btn mobile-sidebar-toggle" id="mobileToggle" type="button" aria-label="Abrir menu"><i class="fas fa-bars"></i></button>
+
+  <nav class="crumbs" aria-label="Você está em">
+    <%= link_to root_path, title: 'Início' do %><i class="fas fa-house"></i><% end %>
+    <% if current && current[:area] %>
+      <i class="fas fa-chevron-right sep"></i>
+      <%= link_to nav_area_path(current[:area]), class: 'area-crumb', style: nav_area_style(current[:area]), data: { tip: "Ir para #{current[:area][:title]}" } do %><span class="area-dot"></span><%= current[:area][:title] %><% end %>
+      <% if current[:group] %>
+        <i class="fas fa-chevron-right sep"></i><%= link_to current[:group][:label], nav_group_path(current[:group]), data: { tip: "Ir para #{current[:group][:label]}" } %>
+      <% end %>
+      <i class="fas fa-chevron-right sep"></i><span class="current"><%= current[:item][:label] %></span>
+    <% elsif current %>
+      <i class="fas fa-chevron-right sep"></i><span class="current"><%= current[:item][:label] %></span>
+    <% elsif content_for?(:title) %>
+      <i class="fas fa-chevron-right sep"></i><span class="current"><%= yield :title %></span>
+    <% end %>
+  </nav>
+
+  <div class="top-actions">
+    <button class="top-search" id="topSearch" type="button" data-tip="Buscar tela ou ação (Ctrl + K)"><i class="fas fa-search"></i><span>Buscar…</span><kbd>Ctrl K</kbd></button>
+    <button class="help-btn" id="helpBtn" type="button" data-tour="help" data-tip="Para que serve esta tela e como usar (tecla ?)"><i class="fas fa-circle-question"></i><span>Ajuda</span></button>
+    <span class="vsep hide-sm"></span>
+    <div class="font-scale" id="fontScale" data-tour="zoom" data-url="<%= font_scale_path %>" data-scale="<%= current_user.font_scale %>"
+         data-min="<%= User::FONT_SCALE_RANGE.min %>" data-max="<%= User::FONT_SCALE_RANGE.max %>" data-step="10" data-tip="Tamanho da letra do sistema">
+      <button type="button" class="font-scale-btn" data-delta="-10" aria-label="Diminuir fonte">A<sup>−</sup></button>
+      <button type="button" class="font-scale-value" data-reset aria-label="Voltar ao tamanho padrão"><%= current_user.font_scale %>%</button>
+      <button type="button" class="font-scale-btn font-scale-btn--up" data-delta="10" aria-label="Aumentar fonte">A<sup>+</sup></button>
     </div>
-  </div>
-  <div class="navbar-content">
-    <%= yield :title %>
-  </div>
-  <div class="navbar-dropdowns">
-    <nav class="navbar navbar-expand-sm">
-      <div class="dropdown" style="margin-top: 7px; margin-right: -12em;">
-        <%= image_tag 'admin/usuario-200x200', style: 'width:10%; border-radius: 50%;' %>
-        <strong><%= current_user.name %></strong>
-        <%= link_to destroy_user_session_path(current_user), data: { turbo: :false } do %>Sair<% end %>
+    <%= render 'layouts/partials/impersonation_switcher' if true_user.super_admin? %>
+    <span class="vsep hide-sm"></span>
+
+    <div class="user-menu">
+      <button class="user-btn" id="userBtn" type="button" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar<%= ' has-photo' if saved_avatar?(current_user) %>">
+          <% if saved_avatar?(current_user) %><%= image_tag current_user.avatar, alt: '' %><% else %><%= user_initials(current_user) %><% end %>
+        </span>
+        <span class="user-info"><span class="user-name"><%= current_user.name %></span><span class="user-role"><%= current_user.profile_name %></span></span>
+        <i class="fas fa-chevron-down user-chev"></i>
+      </button>
+      <div class="menu-pop" id="userMenu" role="menu" hidden>
+        <div class="head">
+          <span class="avatar"><%= user_initials(current_user) %></span>
+          <div><b><%= current_user.name %></b><small><%= current_user.email %></small></div>
+        </div>
+        <%= link_to edit_user_path(current_user), class: 'menu-item', role: 'menuitem' do %><i class="fas fa-user-edit"></i>Meu Perfil<% end %>
+        <button type="button" class="menu-item" role="menuitem" data-act="tour"><i class="fas fa-route"></i>Fazer o tour</button>
+        <button type="button" class="menu-item" role="menuitem" data-act="map"><i class="fas fa-map"></i>Mapa do sistema</button>
+        <button type="button" class="menu-item" role="menuitem" data-act="help"><i class="fas fa-circle-question"></i>Ajuda desta tela</button>
+        <div class="menu-sep"></div>
+        <%= link_to destroy_user_session_path, class: 'menu-item danger', role: 'menuitem' do %><i class="fas fa-sign-out-alt"></i>Sair<% end %>
       </div>
-    </nav>
+    </div>
   </div>
 </header>

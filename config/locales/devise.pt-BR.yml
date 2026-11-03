@@ -7,6 +7,7 @@ pt-BR:
     failure:
       already_authenticated: Você já está logado.
       inactive: Sua conta ainda não foi ativada.
+      account_disabled: Sua conta está desativada. Fale com um administrador para voltar a ter acesso.
       invalid: "%{authentication_keys} ou senha inválidos."
       locked: Sua conta está bloqueada.
       last_attempt: Você tem mais uma tentativa antes de sua conta ser bloqueada.

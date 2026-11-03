@@ -106,13 +106,17 @@
           <label class="field-label">Ambiente <span class="required">*</span></label>
           <%= form.select :environment, [['Homologação (sem valor fiscal)', 'homologacao'], ['Produção', 'producao']], {}, { class: "field-input" } %>
         </div>
-        <div class="form-col-4">
+        <div class="form-col-2">
           <label class="field-label">Série <span class="required">*</span></label>
           <%= form.number_field :nfe_series, class: "field-input", min: 1 %>
         </div>
-        <div class="form-col-4">
-          <label class="field-label">Próximo número <span class="required">*</span></label>
+        <div class="form-col-3">
+          <label class="field-label">Próximo número (produção) <span class="required">*</span></label>
           <%= form.number_field :next_nfe_number, class: "field-input", min: 1 %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Próximo número (homologação) <span class="required">*</span></label>
+          <%= form.number_field :next_nfe_number_homologation, class: "field-input", min: 1 %>
         </div>
         <div class="form-col-6">
           <label class="field-label">Natureza da operação - venda</label>
@@ -123,6 +127,21 @@
           <%= form.text_field :operation_nature_transfer, class: "field-input" %>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="form-section" id="loja">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-store me-2"></i>Loja desta empresa</h5>
+    </div>
+    <div class="form-section-body">
+      <% company_names = Company.where.not(id: @company.id).to_h { |c| [c.id, c.trade_name.presence || c.legal_name] } %>
+      <% options = Location.order(:name).map { |l| [company_names[l.company_id] ? "#{l.name} (hoje: #{company_names[l.company_id]})" : l.name, l.id] } %>
+      <div class="field-group" style="max-width: 420px">
+        <%= form.label :location_id, 'Loja', class: 'field-label' %>
+        <%= form.select :location_id, options, { include_blank: 'Nenhuma loja' }, class: 'field-input' %>
+      </div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Na Transferência Interna, a empresa da loja de origem emite a NF-e de transferência para a empresa da loja de destino. Cada empresa tem uma loja e cada loja, uma empresa: escolher uma loja que está em outra empresa tira ela de lá.</span>
     </div>
   </div>
 
@@ -164,7 +183,7 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <div class="form-section" id="certificado">
     <div class="form-section-header">
       <h5 class="form-section-title"><i class="fas fa-key me-2"></i>Certificado digital A1</h5>
     </div>

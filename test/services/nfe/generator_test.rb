@@ -54,7 +54,8 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal 'Venda de mercadoria', note.operation_nature
     assert_equal '5102', note.cfop_summary
     assert note.homologacao?
-    assert_equal 2, @company.reload.next_nfe_number
+    assert_equal 2, @company.reload.next_nfe_number_homologation
+    assert_equal 1, @company.next_nfe_number, "homologação não consome a numeração de produção"
 
     xml = Nokogiri::XML(note.xml.download)
     assert xml.at_xpath('//n:infNFe', NS)

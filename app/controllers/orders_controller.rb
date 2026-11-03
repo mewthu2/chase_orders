@@ -16,17 +16,11 @@ class OrdersController < ApplicationController
   COUPON_PER_PAGE = 20
 
   def index
-    @per_page     = (params[:per_page] || 15).to_i
-    @current_page = (params[:page] || 1).to_i
-    offset        = (@current_page - 1) * @per_page
-
-    @locations       = Location.order(:name)
-    @location_colors = build_location_colors(@locations)
-
-    base_query    = build_query
-    @orders       = base_query.limit(@per_page).offset(offset)
-    @total_orders = base_query.count
-    @total_pages  = (@total_orders.to_f / @per_page).ceil
+    @locations = Location.order(:name)
+    @scope = Order.includes(:customer, :location, order_items: :product).order(Arel.sql('COALESCE(orders.shopify_creation_date, orders.created_at) DESC'), id: :desc)
+    # Vindo do atendimento do WhatsApp: só os pedidos da cliente escolhida.
+    @customer = Customer.find_by(id: params[:customer_id]) if params[:customer_id].present?
+    @scope = @scope.where(customer_id: @customer&.id || 0) if params[:customer_id].present?
   end
 
   def export
@@ -123,7 +117,9 @@ class OrdersController < ApplicationController
     coupon_counts  = Hash.new(0)
     coupon_revenue = Hash.new(0.0)
 
-    base_scope.pluck(:discount_codes, :current_total_price).each do |codes, price|
+    @coupon_discount = Hash.new(0.0)
+    @coupon_last_use = {}
+    base_scope.pluck(:discount_codes, :current_total_price, :current_total_discounts, :shopify_creation_date, :created_at).each do |codes, price, discount, shopify_at, created_at|
       Array(codes).each do |code|
         next if code.blank?
 
@@ -133,8 +129,12 @@ class OrdersController < ApplicationController
 
         coupon_counts[normalized]  += 1
         coupon_revenue[normalized] += price.to_f
+        @coupon_discount[normalized] += discount.to_f
+        used_at = shopify_at || created_at
+        @coupon_last_use[normalized] = used_at if @coupon_last_use[normalized].nil? || used_at > @coupon_last_use[normalized]
       end
     end
+    @all_coupon_counts = coupon_counts.dup
 
     @coupon_revenue = coupon_revenue
 

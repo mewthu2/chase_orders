@@ -1,72 +1,103 @@
 <% content_for :title, "Notas Fiscais" %>
+<% statuses = { 'rascunho' => ['Rascunho', 'gray', 'Nota começada, ainda não assinada.'],
+                'assinada' => ['Assinada', 'blue', 'Arquivo pronto e assinado com o certificado. Falta enviar à SEFAZ.'],
+                'autorizada' => ['Autorizada', 'green', 'A SEFAZ aceitou a nota e ela vale.'],
+                'rejeitada' => ['Rejeitada', 'red', 'A SEFAZ recusou a nota. O motivo aparece nos detalhes.'],
+                'cancelada' => ['Cancelada', 'purple', 'Era uma nota autorizada e foi cancelada.'],
+                'erro' => ['Erro', 'orange', 'Não deu para assinar ou enviar a nota. O motivo aparece nos detalhes.'] } %>
+<% environments = { 'producao' => ['Produção', 'green', 'Notas de verdade, com valor fiscal.'], 'homologacao' => ['Homologação', 'yellow', 'Nota de teste, sem valor fiscal.'] } %>
+<% map = ->(note) {
+     { id: note.id, record: note, num: note.number, serieTxt: "Série #{note.series}", serie: note.series, st: note.status,
+       empresa: note.company.trade_name.presence || note.company.legal_name, amb: note.environment, pedido: fiscal_note_order_label(note),
+       dest: fiscal_note_destination(note).presence || '—', valor: note.total_value.to_f,
+       emissao: note.issued_at || note.created_at, natureza: note.operation_nature.presence || '—', cfop: note.cfop_summary.presence || '—',
+       chave: note.access_key.to_s.scan(/\d{1,4}/).join(' ').presence || '—', protocolo: note.protocol.presence || '—',
+       sefaz: [note.sefaz_status_code, note.sefaz_message].compact_blank.join(' - ').presence || '—', erro: note.error_message }
+   } %>
+<% search = ->(scope, text) {
+     term = "%#{ActiveRecord::Base.sanitize_sql_like(text.strip.delete_prefix('#'))}%"
+     digits = text.gsub(/\D/, '')
+     scope.left_joins(:company).where('fiscal_notes.number LIKE :t OR fiscal_notes.b2b_order_id LIKE :t OR fiscal_notes.shopify_order_name LIKE :t OR companies.legal_name LIKE :t OR companies.trade_name LIKE :t' +
+                                      (digits.length >= 4 ? ' OR fiscal_notes.access_key LIKE :k' : ''), t: term, k: "%#{digits}%")
+   } %>
+<% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 10, unit: 'notas', unit1: 'nota', sort: { k: :emissao, dir: -1 },
+     attrs: { st: :status, empresa: :company_id, emissao: :created_at },
+     sort_sql: { valor: 'fiscal_notes.total_value', emissao: 'COALESCE(fiscal_notes.issued_at, fiscal_notes.created_at)' },
+     cols: [
+       { k: :num, label: 'Nº', t: :num, plain: true, main: true, sub: :serieTxt },
+       { k: :serieTxt, label: 'Série', hide: true, nodetail: true },
+       { k: :serie, label: 'Série', hide: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :empresa, label: 'Empresa' },
+       { k: :amb, label: 'Ambiente', t: :status, map: environments },
+       { k: :pedido, label: 'Pedido de origem', sub: :dest },
+       { k: :dest, label: 'Cliente ou destino', hide: true },
+       { k: :valor, label: 'Valor', t: :money, sort: true },
+       { k: :emissao, label: 'Emitida em', t: :dt, sort: true },
+       { k: :natureza, label: 'Natureza da operação', hide: true },
+       { k: :cfop, label: 'CFOP', hide: true },
+       { k: :chave, label: 'Chave de acesso', hide: true },
+       { k: :protocolo, label: 'Protocolo de autorização', hide: true },
+       { k: :sefaz, label: 'Resposta da SEFAZ', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Número, pedido, empresa ou chave…', tip: 'Procura no número da nota, no pedido de origem, na empresa e na chave de acesso.' },
+       { id: :status, type: :select, label: 'Situação', col: :st, all: 'Todas as situações', tip: 'Em que ponto a nota está.' },
+       { id: :company_id, type: :select, label: 'Empresa', col: :empresa, options: @companies.map { |c| [c.id.to_s, c.trade_name.presence || c.legal_name] }, all: 'Todas as empresas', tip: 'A empresa (CNPJ) que emitiu a nota.' },
+       { id: :per, type: :period, label: 'Período', col: :emissao }
+     ],
+     kpis: [
+       { label: 'Notas geradas', icon: 'fas fa-file-invoice', tone: 'gray', help: 'Todas as notas da lista, de todas as empresas.' },
+       { label: 'Assinadas', icon: 'fas fa-file-signature', tone: 'blue', help: 'Prontas, mas ainda não enviadas à SEFAZ.', col: :st, val: 'assinada' },
+       { label: 'Com erro ou rejeitadas', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Precisam de correção antes de seguir.', col: :st, vals: %w[erro rejeitada] },
+       { label: 'Valor das notas ativas', icon: 'fas fa-sack-dollar', tone: 'green', help: 'Rascunho, assinada e autorizada. Cancelada, rejeitada e com erro não entram.',
+         text: number_to_currency(FiscalNote.active_statuses.sum(:total_value), unit: 'R$ ', separator: ',', delimiter: '.') }
+     ]) %>
+<% step = ->(n, color, title, text) { content_tag(:div, content_tag(:span, n, class: 'am-n') + content_tag(:div, content_tag(:b, title) + content_tag(:small, text)), class: 'am-step', style: "--c: #{color}; --i: #{n - 1}") } %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-file-invoice me-2"></i>Notas Fiscais</h1>
-      <p class="page-subtitle">NF-e geradas pelo Honey (a transmissão à SEFAZ ainda não está ligada)</p>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge"><i class="fas fa-list me-1"></i><%= @fiscal_notes.total_entries %> nota(s)</span>
-      <%= link_to fiscal_products_path, class: "btn-back" do %><i class="fas fa-barcode me-1"></i>Dados fiscais dos produtos<% end %>
-    </div>
+<%= hc_page_header 'Notas Fiscais', 'NF-e geradas pelo Honey, assinadas e transmitidas à SEFAZ.', icon: 'fas fa-file-invoice' do %>
+  <%= link_to fiscal_products_path, class: 'btn btn-secondary' do %><i class="fas fa-receipt"></i>Dados fiscais dos produtos<% end %>
+  <% if screen_can?(:fiscal_notes, :create) %>
+    <%= link_to shopify_fiscal_notes_path, class: 'btn btn-export' do %><i class="fas fa-file-signature"></i>Nota de pedido Shopify<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <div class="access-model stagger">
+    <%= step.call(1, '#58a6ff', 'Gerar a nota', 'Escolhe a empresa e cria a nota de um pedido.') %><i class="fas fa-chevron-right am-arrow"></i>
+    <%= step.call(2, '#3fb950', 'Assinar', 'Assina o XML com o certificado da empresa.') %><i class="fas fa-chevron-right am-arrow"></i>
+    <%= step.call(3, '#e3b341', 'Enviar à SEFAZ', 'A SEFAZ confere e autoriza a nota.') %><i class="fas fa-chevron-right am-arrow"></i>
+    <%= step.call(4, '#a371f7', 'DANFE', 'O PDF para imprimir e mandar junto com a mercadoria.') %>
   </div>
-
-  <div class="table-card">
-    <%= form_with url: fiscal_notes_path, method: :get, local: true, class: "d-flex gap-2 flex-wrap px-3 pb-3" do %>
-      <%= select_tag :status, options_for_select([['Todos status', '']] + FiscalNote::STATUS_LABELS.map { |key, label| [label, key] }, params[:status]), class: 'field-input', onchange: 'this.form.submit()' %>
-      <%= select_tag :company_id, options_for_select([['Todas empresas', '']] + @companies.map { |c| [c.legal_name, c.id] }, params[:company_id]), class: 'field-input', onchange: 'this.form.submit()' %>
-    <% end %>
-
-    <% if @fiscal_notes.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Nº / Série</th>
-              <th>Emitida em</th>
-              <th>Empresa</th>
-              <th>Pedido</th>
-              <th class="text-end">Valor</th>
-              <th>Ambiente</th>
-              <th class="text-center">Status</th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @fiscal_notes.each do |note| %>
-              <tr>
-                <td class="text-main"><%= note.number %> / <%= note.series %></td>
-                <td class="text-muted-custom"><%= (note.issued_at || note.created_at).in_time_zone.strftime('%d/%m/%Y %H:%M') %></td>
-                <td class="text-muted-custom"><%= note.company.legal_name %></td>
-                <td class="text-muted-custom">
-                  <% if fiscal_note_order_path(note) %>
-                    <%= link_to "##{note.b2b_order_id}", fiscal_note_order_path(note) %>
-                  <% else %>-<% end %>
-                </td>
-                <td class="text-end"><%= number_to_currency(note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></td>
-                <td class="text-muted-custom"><%= note.producao? ? 'Produção' : 'Homologação' %></td>
-                <td class="text-center"><%= fiscal_note_status_pill(note) %></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to fiscal_note_path(note), class: "action-btn action-btn--edit", title: "Detalhes" do %><i class="fas fa-eye"></i><% end %>
-                    <% if note.xml_available? %>
-                      <%= link_to xml_fiscal_note_path(note), class: "action-btn action-btn--edit", title: "Baixar XML" do %><i class="fas fa-download"></i><% end %>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-      <div class="px-3 py-3"><%= will_paginate @fiscal_notes, renderer: WillPaginate::ActionView::BootstrapLinkRenderer %></div>
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-file-invoice fa-3x mb-3 d-block"></i>
-        <h5>Nenhuma nota fiscal gerada</h5>
-        <p class="text-muted-custom">Use o ícone de nota fiscal na lista de pedidos para gerar.</p>
+  <div class="env-bar">
+    <% @companies.select(&:active?).each do |company| %>
+      <div class="env-card <%= 'env-card--prod' if company.producao? %>">
+        <div>
+          <div class="env-card__name"><%= company.trade_name.presence || company.legal_name %></div>
+          <div class="env-card__meta"><%= company.cnpj_formatted %> · próxima nota <%= company.current_nfe_number %> / série <%= company.nfe_series %></div>
+        </div>
+        <% if screen_can?(:companies, :edit) %>
+          <%= environment_switch(company) %>
+        <% else %>
+          <span class="env-switch <%= company.producao? ? 'env-switch--prod' : 'env-switch--hom' %>"><span class="env-switch__label"><%= company.environment_label %></span></span>
+        <% end %>
       </div>
     <% end %>
   </div>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Notas fiscais', icon: 'fas fa-file-invoice', meta: 'Cada pedido tem uma nota ativa por vez. Clique no número para ver a chave de acesso e o histórico.',
+        link: ->(r) { fiscal_note_path(r[:record]) },
+        empty: { title: 'Nenhuma nota encontrada', text: 'Gere a primeira nota a partir de um pedido de atacado ou de um pedido Shopify.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-file-signature'), 'Nota de pedido Shopify']), shopify_fiscal_notes_path, class: 'btn btn-export') if screen_can?(:fiscal_notes, :create)) },
+        detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]],
+                  note: ->(r) { r[:erro].presence || (r[:amb] == 'homologacao' ? 'Nota de homologação (teste): não tem valor fiscal.' : nil) } },
+        actions: ->(r) {
+          note = r[:record]
+          safe_join([
+            (hc_row_action('fas fa-file-code', 'Baixar XML', xml_fiscal_note_path(note)) if note.xml_available? && screen_can?(:fiscal_notes, :export)),
+            (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', danfe_fiscal_note_path(note)) if note.xml_available? && screen_can?(:fiscal_notes, :export)),
+            (hc_row_action('fas fa-paper-plane', 'Enviar à SEFAZ', transmit_fiscal_note_path(note), method: :post,
+                           confirm: { title: "Enviar a nota #{r[:num]} à SEFAZ?", text: 'A SEFAZ confere a nota e responde se ela foi autorizada. Depois de autorizada, só dá para desfazer com um cancelamento.', ok: 'Enviar' }) if note.transmittable? && screen_can?(:fiscal_notes, :execute))
+          ].compact)
+        }) %>
 </div>

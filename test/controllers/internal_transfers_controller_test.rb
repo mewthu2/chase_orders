@@ -151,7 +151,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'tbody tr', count: 1
-    assert_select '.action-needed-badge', minimum: 1
+    assert_select '.pg-dots[data-tip="Etapa 4 de 5"]'
   end
 
   test 'the index and show pages do not query products or locations line by line' do
@@ -435,7 +435,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     { 'SKU-A' => camiseta, 'Calça' => calca, 'QB1234' => calca, "##{camiseta.id}" => camiseta }.each do |q, expected|
       get internal_transfers_path(q:)
       assert_select 'tbody tr', count: 1, message: "busca #{q}"
-      assert_select 'tbody td.text-main', text: "##{expected.id}"
+      assert_select 'tbody a.text-main', text: "##{expected.id}"
     end
 
     get internal_transfers_path(q: 'Admin')
@@ -448,15 +448,15 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     to_bh.update_columns(created_at: 10.days.ago)
 
     get internal_transfers_path(destination_id: @bh.id)
-    assert_select 'tbody td.text-main', text: "##{to_bh.id}"
+    assert_select 'tbody a.text-main', text: "##{to_bh.id}"
     assert_select 'tbody tr', count: 1
 
     get internal_transfers_path(origin_id: @bh.id)
-    assert_select 'tbody td.text-main', text: "##{to_lagoa.id}"
+    assert_select 'tbody a.text-main', text: "##{to_lagoa.id}"
     assert_select 'tbody tr', count: 1
 
     get internal_transfers_path(from: 2.days.ago.to_date.iso8601, to: Date.current.iso8601)
-    assert_select 'tbody td.text-main', text: "##{to_lagoa.id}"
+    assert_select 'tbody a.text-main', text: "##{to_lagoa.id}"
     assert_select 'tbody tr', count: 1
 
     get internal_transfers_path(from: 'lixo')
@@ -482,9 +482,9 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
 
     get internal_transfers_path(status: 'em_andamento')
     assert_select 'tbody tr', count: 1
-    assert_select 'tbody td.text-main', text: "##{sent.id}"
-    assert_select '.status-tab--active', text: /Em andamento\s*1/
-    assert_select '.status-tab', text: /Todas\s*5/
+    assert_select 'tbody a.text-main', text: "##{sent.id}"
+    assert_select '.filter-chip', text: /Status: Em andamento/
+    assert_select '.pg-kpi', text: /Concluídas\s*1/
   end
 
   test 'filters are kept in the status tabs and pagination respects the page size' do
@@ -492,7 +492,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
 
     get internal_transfers_path(destination_id: @lagoa.id)
     assert_select 'tbody tr', count: 20
-    assert_select "a.status-tab[href*='destination_id=#{@lagoa.id}'][href*='status=aberto']"
+    assert_select "a.pg-kpi[href*='destination_id=#{@lagoa.id}'][href*='status=concluida']"
     assert_select '.pagination'
 
     get internal_transfers_path(per_page: 50)
@@ -509,6 +509,6 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     get internal_transfers_path(mine: '1')
 
     assert_select 'tbody tr', count: 1
-    assert_select 'tbody td.text-main', text: "##{receivable.id}"
+    assert_select 'tbody a.text-main', text: "##{receivable.id}"
   end
 end

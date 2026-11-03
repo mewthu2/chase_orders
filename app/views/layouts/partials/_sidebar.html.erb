@@ -1,650 +1,102 @@
-<nav class="top-navigation">
-  <div class="nav-carousel-container">
-    <div class="nav-brand">
-      <%= image_tag "admin/chase-logo.png", alt: "ChaseOrders", class: "nav-logo" %>
-    </div>
-
-    <div class="nav-carousel" id="navCarousel">
-      <div class="nav-items">
-
-        <div class="nav-item">
-          <%= link_to root_path, class: "nav-link #{'active' if current_page?(root_path)}", title: "Home" do %>
-            <i class="fas fa-home"></i>
-            <span class="nav-text">Home</span>
-          <% end %>
-        </div>
-
-        <div class="nav-item nav-group-collapsible">
-          <div class="nav-group-header-collapsible" onclick="toggleChamados()">
-            <div class="nav-group-title">
-              <i class="fas fa-ticket-alt"></i>
-              <span class="nav-text">Chamados</span>
-            </div>
-            <i class="fas fa-chevron-right collapse-icon" id="chamadosIcon"></i>
-          </div>
-          <div class="nav-group-dropdown" id="chamadosDropdown">
-            <div class="dropdown-content">
-              <%= link_to root_path, class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope].blank?}" do %>
-                <i class="fas fa-inbox"></i>
-                <span>Meus chamados</span>
-              <% end %>
-              <%= link_to new_ticket_path, class: "dropdown-link #{'active' if controller_name == 'tickets' && action_name.in?(%w[new create])}" do %>
-                <i class="fas fa-plus-circle"></i>
-                <span>Abrir chamado</span>
-              <% end %>
-              <% if !current_user&.admin? && current_user&.visible_ticket_sector_ids&.any? %>
-                <%= link_to root_path(scope: 'sectors', status: 'all'), class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope] == 'sectors'}" do %>
-                  <i class="fas fa-building"></i>
-                  <span>Chamados dos meus setores</span>
-                <% end %>
-              <% end %>
-              <% if current_user&.admin? %>
-                <%= link_to root_path(scope: 'all', status: 'all'), class: "dropdown-link #{'active' if controller_name == 'home' && params[:scope] == 'all'}" do %>
-                  <i class="fas fa-list-ul"></i>
-                  <span>Todos os chamados</span>
-                <% end %>
-                <%= link_to ticket_sectors_path, class: "dropdown-link #{'active' if controller_name == 'ticket_sectors'}" do %>
-                  <i class="fas fa-building"></i>
-                  <span>Setores</span>
-                <% end %>
-                <%= link_to ticket_responsabilities_path, class: "dropdown-link #{'active' if controller_name == 'ticket_responsabilities'}" do %>
-                  <i class="fas fa-sitemap"></i>
-                  <span>Responsabilidades</span>
-                <% end %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <div class="nav-item nav-group-collapsible">
-          <div class="nav-group-header-collapsible" onclick="toggleUsuarios()">
-            <div class="nav-group-title">
-              <i class="fas fa-users"></i>
-              <span class="nav-text">Usuários</span>
-            </div>
-            <i class="fas fa-chevron-right collapse-icon" id="usuariosIcon"></i>
-          </div>
-          <div class="nav-group-dropdown" id="usuariosDropdown">
-            <div class="dropdown-content">
-              <%= link_to edit_user_path(current_user), class: "dropdown-link #{'active' if current_page?(edit_user_path(current_user))}" do %>
-                <i class="fas fa-user-edit"></i>
-                <span>Meu Perfil</span>
-              <% end %>
-              <% if current_user&.admin? %>
-                <%= link_to users_path, class: "dropdown-link #{'active' if controller_name == 'users'}" do %>
-                  <i class="fas fa-users-cog"></i>
-                  <span>Gerenciar Usuários</span>
-                <% end %>
-                <%= link_to profiles_path, class: "dropdown-link #{'active' if controller_name == 'profiles'}" do %>
-                  <i class="fas fa-user-shield"></i>
-                  <span>Perfis e Permissões</span>
-                <% end %>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <% if current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('carriers') || current_user&.can_access_screen?('companies') || current_user&.can_access_screen?('fiscal_notes') || current_user&.can_access_screen?('b2b_catalogs') %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="togglePedidosB2b()">
-              <div class="nav-group-title">
-                <i class="fas fa-handshake"></i>
-                <span class="nav-text">Pedidos B2B</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="pedidosB2bIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="pedidosB2bDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('b2b_orders') %>
-                  <%= link_to b2b_orders_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'sale'}" do %>
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    <span>Pedidos de Atacado</span>
-                  <% end %>
-                  <%= link_to b2c_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'b2c_transfer'}" do %>
-                    <i class="fas fa-random"></i>
-                    <span>Transferência B2B → B2C</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('carriers') %>
-                  <%= link_to carriers_path, class: "dropdown-link #{'active' if controller_name == 'carriers'}" do %>
-                    <i class="fas fa-truck"></i>
-                    <span>Transportadoras</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('companies') %>
-                  <%= link_to companies_path, class: "dropdown-link #{'active' if controller_name == 'companies'}" do %>
-                    <i class="fas fa-building"></i>
-                    <span>Empresas</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('fiscal_notes') %>
-                  <%= link_to fiscal_notes_path, class: "dropdown-link #{'active' if controller_name == 'fiscal_notes'}" do %>
-                    <i class="fas fa-file-invoice"></i>
-                    <span>Notas Fiscais</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('b2b_catalogs') %>
-                  <% pending_catalog_orders = B2bCatalogOrder.pending.count %>
-                  <%= link_to b2b_catalogs_path, class: "dropdown-link #{'active' if controller_name.in?(%w[b2b_catalogs b2b_catalog_orders])}" do %>
-                    <i class="fas fa-book-open"></i>
-                    <span>Catálogos</span>
-                    <% if pending_catalog_orders.positive? %><span class="nav-count-badge"><%= pending_catalog_orders %></span><% end %>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if %w[whatsapp_attend whatsapp_manage].any? { |key| current_user&.can_access_screen?(key) } %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleWhatsapp()">
-              <div class="nav-group-title"><i class="fab fa-whatsapp"></i><span class="nav-text">Atendimento WhatsApp</span></div>
-              <i class="fas fa-chevron-right collapse-icon" id="whatsappIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="whatsappDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('whatsapp_attend') %>
-                  <%= link_to whatsapp_conversations_path, class: "dropdown-link #{'active' if controller_path == 'whatsapp/conversations'}" do %>
-                    <i class="fas fa-comments"></i><span>Conversas</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('whatsapp_manage') %>
-                  <%= link_to whatsapp_connections_path, class: "dropdown-link #{'active' if controller_path == 'whatsapp/connections'}" do %>
-                    <i class="fas fa-mobile-alt"></i><span>Números conectados</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if %w[orders customers cashback_unifications].any? { |key| current_user&.can_access_screen?(key) } %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleCRM()">
-              <div class="nav-group-title">
-                <i class="fas fa-user-tie"></i>
-                <span class="nav-text">CRM</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="crmIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="crmDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('orders') %>
-                  <%= link_to orders_path, class: "dropdown-link #{'active' if controller_name == 'orders' && action_name == 'index'}" do %>
-                    <i class="fas fa-shopping-cart"></i>
-                    <span>Pedidos</span>
-                  <% end %>
-                  <%= link_to coupon_usage_orders_path, class: "dropdown-link #{'active' if current_page?(coupon_usage_orders_path)}" do %>
-                    <i class="fas fa-ticket-alt"></i>
-                    <span>Uso de Cupons</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('customers') %>
-                  <%= link_to customers_path, class: "dropdown-link #{'active' if controller_name == 'customers'}" do %>
-                    <i class="fas fa-users"></i>
-                    <span>Clientes</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('cashback_unifications') %>
-                  <%= link_to cashback_unifications_path, class: "dropdown-link #{'active' if controller_name == 'cashback_unifications'}" do %>
-                    <i class="fas fa-coins"></i>
-                    <span>Cupons de cashback</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if current_user&.can_access_screen?('dashboard_correios') || current_user&.can_access_screen?('stock_reservations_b2c') %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleCorreios()">
-              <div class="nav-group-title">
-                <i class="fas fa-mail-bulk"></i>
-                <span class="nav-text">Correios B2C</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="correiosIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="correiosDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('dashboard_correios') %>
-                <%= link_to correios_pipeline_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(correios_pipeline_dashboard_index_path)}" do %>
-                  <i class="fas fa-stream"></i>
-                  <span>Funil de Pedidos</span>
-                <% end %>
-
-                <%= link_to order_correios_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_dashboard_index_path)}" do %>
-                  <i class="fas fa-route"></i>
-                  <span>Acompanhamento</span>
-                <% end %>
-
-                <%= link_to order_correios_create_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">1</span>
-                  <i class="fas fa-plus-circle"></i>
-                  <span>Criação de Pedidos</span>
-                <% end %>
-
-                <%= link_to order_correios_stock_errors_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_stock_errors_dashboard_index_path)}" do %>
-                  <i class="fas fa-box-open"></i>
-                  <span>Produtos Sem Estoque</span>
-                <% end %>
-
-                <%= link_to invoice_emition_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">2</span>
-                  <i class="fas fa-file-invoice"></i>
-                  <span>Emissão de Notas</span>
-                <% end %>
-
-                <%= link_to send_xml_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">3</span>
-                  <i class="fas fa-file-code"></i>
-                  <span>Enviar XML</span>
-                <% end %>
-
-                <%= link_to push_tracking_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">4</span>
-                  <i class="fas fa-shipping-fast"></i>
-                  <span>Rastreamento</span>
-                <% end %>
-
-                <%= link_to api_correios_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_dashboard_index_path)}" do %>
-                  <i class="fas fa-cogs"></i>
-                  <span>API Correios</span>
-                <% end %>
-
-                <%= link_to stock_syncs_path, class: "dropdown-link #{'active' if controller_name == 'stock_syncs'}" do %>
-                  <i class="fas fa-sync-alt"></i>
-                  <span>Sincronização Estoque</span>
-                <% end %>
-
-                <%= link_to attempts_path(channel: 'b2c'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2c'}" do %>
-                  <i class="fas fa-list-check"></i>
-                  <span>Tentativas B2C</span>
-                <% end %>
-                <% end %>
-
-                <% if current_user&.can_access_screen?('stock_reservations_b2c') %>
-                  <%= link_to b2c_stock_reservations_path, class: "dropdown-link #{'active' if current_page?(b2c_stock_reservations_path)}" do %>
-                    <i class="fas fa-lock"></i>
-                    <span>Reservas de Estoque</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if current_user&.can_access_screen?('dashboard_correios_b2b') || current_user&.can_access_screen?('stock_reservations_b2b') %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleCorreiosB2b()">
-              <div class="nav-group-title">
-                <i class="fas fa-truck"></i>
-                <span class="nav-text">Correios B2B</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="correiosB2bIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="correiosB2bDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('dashboard_correios_b2b') %>
-                <%= link_to order_correios_create_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_b2b_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">1</span>
-                  <i class="fas fa-clipboard-check"></i>
-                  <span>Pedidos p/ Aprovar</span>
-                <% end %>
-
-                <%= link_to order_correios_create_queue_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_create_queue_b2b_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">2</span>
-                  <i class="fas fa-plus-circle"></i>
-                  <span>Criação de Pedidos</span>
-                <% end %>
-
-                <%= link_to order_correios_stock_errors_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_stock_errors_b2b_dashboard_index_path)}" do %>
-                  <i class="fas fa-box-open"></i>
-                  <span>Produtos Sem Estoque</span>
-                <% end %>
-
-                <%= link_to order_correios_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(order_correios_tracking_b2b_dashboard_index_path)}" do %>
-                  <i class="fas fa-route"></i>
-                  <span>Acompanhamento</span>
-                <% end %>
-
-                <%= link_to invoice_emition_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(invoice_emition_b2b_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">3</span>
-                  <i class="fas fa-file-invoice"></i>
-                  <span>Emissão de Notas</span>
-                <% end %>
-
-                <%= link_to send_xml_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(send_xml_b2b_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">4</span>
-                  <i class="fas fa-file-code"></i>
-                  <span>Enviar XML</span>
-                <% end %>
-
-                <%= link_to push_tracking_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(push_tracking_b2b_dashboard_index_path)}" do %>
-                  <span class="nav-step-badge">5</span>
-                  <i class="fas fa-shipping-fast"></i>
-                  <span>Rastreamento</span>
-                <% end %>
-
-                <%= link_to api_correios_b2b_dashboard_index_path, class: "dropdown-link #{'active' if current_page?(api_correios_b2b_dashboard_index_path)}" do %>
-                  <i class="fas fa-cogs"></i>
-                  <span>API Correios</span>
-                <% end %>
-
-                <%= link_to attempts_path(channel: 'b2b'), class: "dropdown-link #{'active' if controller_name == 'attempts' && params[:channel] == 'b2b'}" do %>
-                  <i class="fas fa-list-check"></i>
-                  <span>Tentativas B2B</span>
-                <% end %>
-                <% end %>
-
-                <% if current_user&.can_access_screen?('stock_reservations_b2b') %>
-                  <%= link_to b2b_stock_reservations_path, class: "dropdown-link #{'active' if current_page?(b2b_stock_reservations_path)}" do %>
-                    <i class="fas fa-lock"></i>
-                    <span>Reservas de Estoque</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if current_user&.can_access_screen?('planner_orders') %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="togglePlannerOrders()">
-              <div class="nav-group-title">
-                <i class="fas fa-clipboard-list"></i>
-                <span class="nav-text">Planejador</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="plannerOrdersIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="plannerOrdersDropdown">
-              <div class="dropdown-content">
-                <%= link_to planner_orders_path, class: "dropdown-link #{'active' if controller_name == 'planner_orders' && action_name == 'index'}" do %>
-                  <i class="fas fa-list"></i>
-                  <span>Pedidos do Planejador</span>
-                <% end %>
-                <%= link_to new_planner_order_path, class: "dropdown-link #{'active' if controller_name == 'planner_orders' && action_name == 'new'}" do %>
-                  <i class="fas fa-plus-circle"></i>
-                  <span>Novo Pedido</span>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-
-        <% if current_user&.can_access_screen?('stock_corrections') || current_user&.can_access_screen?('stock_withdrawals') || current_user&.can_access_screen?('internal_transfers') || current_user&.can_access_screen?('b2b_orders') || current_user&.can_access_screen?('transfer_locations') %>
-          <div class="nav-item nav-group-collapsible">
-            <div class="nav-group-header-collapsible" onclick="toggleProdutos()">
-              <div class="nav-group-title">
-                <i class="fas fa-box"></i>
-                <span class="nav-text">Produtos</span>
-              </div>
-              <i class="fas fa-chevron-right collapse-icon" id="produtosIcon"></i>
-            </div>
-            <div class="nav-group-dropdown" id="produtosDropdown">
-              <div class="dropdown-content">
-                <% if current_user&.can_access_screen?('stock_corrections') %>
-                  <%= link_to stock_corrections_path, class: "dropdown-link #{'active' if controller_name == 'stock_corrections'}" do %>
-                    <i class="fas fa-warehouse"></i>
-                    <span>Controle de Estoque</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('stock_withdrawals') %>
-                  <%= link_to stock_withdrawals_path, class: "dropdown-link #{'active' if controller_name == 'stock_withdrawals'}" do %>
-                    <i class="fas fa-dolly-flatbed"></i>
-                    <span>Retirada de Estoque</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('internal_transfers') %>
-                  <%= link_to internal_transfers_path, class: "dropdown-link #{'active' if controller_name == 'internal_transfers'}" do %>
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Transferência Interna</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('b2b_orders') %>
-                  <%= link_to stock_transfers_path, class: "dropdown-link #{'active' if controller_name == 'b2b_orders' && params[:order_kind] == 'stock_transfer'}" do %>
-                    <i class="fas fa-dolly"></i>
-                    <span>Abastecimento Lojas</span>
-                  <% end %>
-                <% end %>
-                <% if current_user&.can_access_screen?('transfer_locations') %>
-                  <%= link_to transfer_locations_path, class: "dropdown-link #{'active' if controller_name == 'transfer_locations'}" do %>
-                    <i class="fas fa-warehouse"></i>
-                    <span>Locais de Transferência</span>
-                  <% end %>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-
-    <div class="nav-user">
-      <%= link_to edit_user_path(current_user), title: 'Editar minha foto e perfil', class: 'profile-avatar-link' do %>
-        <%= user_avatar(current_user) %>
-      <% end %>
-      <div class="user-info">
-        <span class="user-name"><%= current_user.name %></span>
-        <span class="user-role"><%= current_user.profile_name %></span>
-      </div>
-      <div class="font-scale" id="fontScale" data-url="<%= font_scale_path %>" data-scale="<%= current_user.font_scale %>"
-           data-min="<%= User::FONT_SCALE_RANGE.min %>" data-max="<%= User::FONT_SCALE_RANGE.max %>" data-step="10">
-        <button type="button" class="font-scale-btn" data-delta="-10" title="Diminuir fonte">A<sup>−</sup></button>
-        <button type="button" class="font-scale-value" data-reset title="Voltar ao tamanho padrão"><%= current_user.font_scale %>%</button>
-        <button type="button" class="font-scale-btn font-scale-btn--up" data-delta="10" title="Aumentar fonte">A<sup>+</sup></button>
-      </div>
-      <%= render 'layouts/partials/impersonation_switcher' if true_user.super_admin? %>
-      <%= link_to destroy_user_session_path, method: :delete, class: 'logout-btn', data: { confirm: 'Tem certeza que deseja sair?' }, title: 'Sair' do %>
-        <i class="fas fa-sign-out-alt"></i>
-      <% end %>
-    </div>
+<%# Menu por área do negócio (Navigation). Cada área tem a sua cor em --area; só aparece o que o perfil libera. %>
+<aside class="sidebar" id="sidebar" aria-label="Menu principal" data-tour="sidebar">
+  <div class="sb-header">
+    <%= link_to root_path, class: 'sb-brand', title: 'Ir para o Início' do %>
+      <%= image_tag 'admin/honey-chase-logo.webp', alt: 'HONEY.CHASE', width: 440, height: 48 %>
+      <span class="sb-mark" aria-hidden="true">H<span>.</span></span>
+    <% end %>
+    <button class="icon-btn sb-collapse" id="sbCollapse" type="button" data-tip="Recolher menu" aria-label="Recolher menu"><i class="fas fa-angles-left"></i></button>
   </div>
-</nav>
 
+  <button class="sb-search" id="sbSearch" type="button" data-tour="search" data-tip="Buscar tela ou ação (Ctrl + K)">
+    <i class="fas fa-search"></i><span>Buscar tela ou ação…</span><kbd>Ctrl K</kbd>
+  </button>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  // Zoom do sistema por usuário: aplica na hora e salva no servidor (com debounce).
-  const fontScale = document.getElementById("fontScale")
-  if (fontScale) {
-    const min = Number(fontScale.dataset.min), max = Number(fontScale.dataset.max)
-    const valueEl = fontScale.querySelector(".font-scale-value")
-    let scale = Number(fontScale.dataset.scale) || 100
-    let saveTimer
+  <nav class="sb-nav" id="sbNav">
+    <% nav_menu.each do |area| %>
+      <section class="sb-section<%= ' has-active' if nav_area_active?(area) %>" data-area="<%= area[:id] %>" style="<%= nav_area_style(area) %>">
+        <button class="sb-section-title" type="button" aria-expanded="true" data-tip="<%= area[:desc] %>">
+          <span class="sb-area-ic"><i class="<%= area[:icon] %>"></i></span>
+          <span class="sb-area-txt">
+            <span class="sb-area-name"><%= area[:title] %></span>
+            <span class="sb-area-desc"><%= area[:desc] %></span>
+          </span>
+          <i class="fas fa-chevron-down sb-area-chev"></i>
+        </button>
+        <div class="sb-section-body">
+          <div class="sb-section-inner">
+            <% area[:items].each do |item| %>
+              <% if item[:type] == :group %>
+                <% open = nav_group_active?(item) %>
+                <div class="sb-group<%= ' is-open has-active' if open %>" data-group="<%= item[:id] %>">
+                  <button class="sb-group-btn" type="button" aria-expanded="<%= open %>">
+                    <i class="sb-ic <%= item[:icon] %>"></i>
+                    <span class="sb-txt">
+                      <span class="sb-label"><%= item[:label] %><% if item[:aka] %><i class="sb-aka" data-tip="Nome antigo: <%= item[:aka] %>"><%= item[:aka] %></i><% end %></span>
+                      <span class="sb-desc"><%= item[:desc] %></span>
+                    </span>
+                    <%= nav_badge(item[:badge]) %>
+                    <i class="fas fa-chevron-right sb-chev"></i>
+                  </button>
+                  <div class="sb-children">
+                    <div class="sb-children-inner">
+                      <div class="sb-children-list">
+                        <% steps_open = false %>
+                        <% item[:children].each_with_index do |child, index| %>
+                          <% if child[:type] == :sub %>
+                            <% if steps_open %></div><% steps_open = false %><% end %>
+                            <div class="sb-sub"><%= child[:label] %></div>
+                            <% if child[:steps] %><div class="sb-steps"><% steps_open = true %><% end %>
+                          <% else %>
+                            <%= link_to nav_path(child), class: "sb-link#{' is-active' if nav_active?(child)}", style: "--i: #{index}", aria: { current: (nav_active?(child) ? 'page' : nil) } do %>
+                              <% if child[:step] %>
+                                <span class="sb-step"><%= child[:step] %></span>
+                              <% else %>
+                                <i class="sb-ic <%= child[:icon] %>"></i>
+                              <% end %>
+                              <span class="sb-txt">
+                                <span class="sb-label"><%= child[:label] %></span>
+                                <span class="sb-desc"><%= child[:desc] %></span>
+                              </span>
+                              <%= nav_badge(child[:badge]) %>
+                            <% end %>
+                          <% end %>
+                        <% end %>
+                        <% if steps_open %></div><% end %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              <% else %>
+                <%= link_to nav_path(item), class: "sb-link#{' is-active' if nav_active?(item)}", aria: { current: (nav_active?(item) ? 'page' : nil) }, data: { tip: item[:label] } do %>
+                  <i class="sb-ic <%= item[:icon] %>"></i>
+                  <span class="sb-txt">
+                    <span class="sb-label"><%= item[:label] %></span>
+                    <span class="sb-desc"><%= item[:desc] %></span>
+                  </span>
+                  <%= nav_badge(item[:badge]) %>
+                <% end %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </section>
+    <% end %>
+  </nav>
 
-    const apply = (next) => {
-      scale = Math.min(max, Math.max(min, next))
-      document.documentElement.style.zoom = scale === 100 ? "" : `${scale}%`
-      valueEl.textContent = `${scale}%`
-      valueEl.classList.remove("font-scale-value--pop")
-      void valueEl.offsetWidth
-      valueEl.classList.add("font-scale-value--pop")
-      fontScale.querySelector("[data-delta='-10']").disabled = scale <= min
-      fontScale.querySelector("[data-delta='10']").disabled = scale >= max
-
-      clearTimeout(saveTimer)
-      saveTimer = setTimeout(() => {
-        fetch(fontScale.dataset.url, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", "Accept": "application/json",
-                     "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content },
-          body: JSON.stringify({ font_scale: scale })
-        })
-      }, 400)
-    }
-
-    fontScale.querySelectorAll("[data-delta]").forEach((btn) => {
-      btn.addEventListener("click", () => apply(scale + Number(btn.dataset.delta)))
-    })
-    valueEl.addEventListener("click", () => apply(100))
-    fontScale.querySelector("[data-delta='-10']").disabled = scale <= min
-    fontScale.querySelector("[data-delta='10']").disabled = scale >= max
-  }
-
-  const carousel = document.getElementById("navCarousel")
-  if (!carousel) return
-
-  const activeItem = carousel.querySelector(".nav-link.active, .dropdown-link.active")
-  if (activeItem) {
-    setTimeout(() => {
-      activeItem.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
-    }, 100)
-  }
-
-  carousel.addEventListener("wheel", (e) => {
-    if (e.deltaY !== 0) {
-      e.preventDefault()
-      carousel.scrollLeft += e.deltaY
-    }
-  })
-
-  let isDown = false
-  let startX
-  let scrollLeft
-
-  carousel.addEventListener("mousedown", (e) => {
-    isDown = true
-    startX = e.pageX - carousel.offsetLeft
-    scrollLeft = carousel.scrollLeft
-    carousel.style.cursor = "grabbing"
-  })
-
-  carousel.addEventListener("mouseleave", () => {
-    isDown = false
-    carousel.style.cursor = "grab"
-  })
-
-  carousel.addEventListener("mouseup", () => {
-    isDown = false
-    carousel.style.cursor = "grab"
-  })
-
-  carousel.addEventListener("mousemove", (e) => {
-    if (!isDown) return
-
-    e.preventDefault()
-
-    const x = e.pageX - carousel.offsetLeft
-
-    carousel.scrollLeft = scrollLeft - (x - startX) * 2
-  })
-
-  document.addEventListener("click", (e) => {
-    const dropdowns = [
-      { id: "whatsappDropdown", header: '[onclick="toggleWhatsapp()"]' },
-      { id: "crmDropdown",           header: '[onclick="toggleCRM()"]'           },
-      { id: "correiosDropdown",      header: '[onclick="toggleCorreios()"]'       },
-      { id: "correiosB2bDropdown",   header: '[onclick="toggleCorreiosB2b()"]'    },
-      { id: "usuariosDropdown",      header: '[onclick="toggleUsuarios()"]'       },
-      { id: "chamadosDropdown",      header: '[onclick="toggleChamados()"]'       },
-      { id: "pedidosB2bDropdown",    header: '[onclick="togglePedidosB2b()"]'     },
-      { id: "plannerOrdersDropdown", header: '[onclick="togglePlannerOrders()"]'  },
-      { id: "produtosDropdown",      header: '[onclick="toggleProdutos()"]'       },
-      { id: "marketingDropdown",     header: '[onclick="toggleMarketing()"]'      },
-      { id: "pdvDropdown",           header: '[onclick="togglePDV()"]'            },
-    ]
-
-    dropdowns.forEach(({ id, header }) => {
-      const dropdown = document.getElementById(id)
-      const headerEl = document.querySelector(header)
-
-      if (dropdown && headerEl && !headerEl.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove("show")
-
-        const icon = dropdown.previousElementSibling?.querySelector(".collapse-icon")
-
-        if (icon) icon.classList.remove("rotated")
-      }
-    })
-  })
-})
-
-function toggleDropdown(dropdownId, iconId, buttonSelector) {
-  const dropdown = document.getElementById(dropdownId)
-  const icon = document.getElementById(iconId)
-  const button = document.querySelector(buttonSelector)
-
-  document.querySelectorAll(".nav-group-dropdown.show").forEach((d) => {
-    if (d !== dropdown) d.classList.remove("show")
-  })
-
-  document.querySelectorAll(".collapse-icon.rotated").forEach((i) => {
-    if (i !== icon) i.classList.remove("rotated")
-  })
-
-  if (button && dropdown) positionDropdown(dropdown, button)
-
-  dropdown.classList.toggle("show")
-  icon.classList.toggle("rotated")
-}
-
-// Alinha o dropdown ao botão, mas sempre dentro da tela: se passar da borda direita, encosta
-// nela; se não couber na largura, encolhe (o conteúdo vira uma coluna).
-var DROPDOWN_GUTTER = 8
-
-function positionDropdown(dropdown, button) {
-  const viewport = document.documentElement.clientWidth
-  dropdown.style.maxWidth = viewport - DROPDOWN_GUTTER * 2 + "px"
-  dropdown.style.minWidth = Math.min(280, viewport - DROPDOWN_GUTTER * 2) + "px"
-
-  const width = dropdown.offsetWidth
-  const left = button.getBoundingClientRect().left
-  const maxLeft = viewport - width - DROPDOWN_GUTTER
-  dropdown.style.left = Math.max(DROPDOWN_GUTTER, Math.min(left, maxLeft)) + "px"
-}
-
-function repositionOpenDropdown() {
-  const dropdown = document.querySelector(".nav-group-dropdown.show")
-  const button = dropdown?.previousElementSibling
-  if (dropdown && button) positionDropdown(dropdown, button)
-}
-
-window.addEventListener("resize", repositionOpenDropdown)
-document.getElementById("navCarousel")?.addEventListener("scroll", repositionOpenDropdown)
-
-function toggleWhatsapp() {
-  toggleDropdown("whatsappDropdown", "whatsappIcon", '[onclick="toggleWhatsapp()"]')
-}
-
-function toggleCRM() {
-  toggleDropdown("crmDropdown", "crmIcon", '[onclick="toggleCRM()"]')
-}
-
-function toggleCorreios() {
-  toggleDropdown("correiosDropdown", "correiosIcon", '[onclick="toggleCorreios()"]')
-}
-
-function toggleCorreiosB2b() {
-  toggleDropdown("correiosB2bDropdown", "correiosB2bIcon", '[onclick="toggleCorreiosB2b()"]')
-}
-
-function toggleChamados() {
-  toggleDropdown("chamadosDropdown", "chamadosIcon", '[onclick="toggleChamados()"]')
-}
-
-function toggleUsuarios() {
-  toggleDropdown("usuariosDropdown", "usuariosIcon", '[onclick="toggleUsuarios()"]')
-}
-
-function togglePedidosB2b() {
-  toggleDropdown("pedidosB2bDropdown", "pedidosB2bIcon", '[onclick="togglePedidosB2b()"]')
-}
-
-function togglePlannerOrders() {
-  toggleDropdown("plannerOrdersDropdown", "plannerOrdersIcon", '[onclick="togglePlannerOrders()"]')
-}
-
-function toggleProdutos() {
-  toggleDropdown("produtosDropdown", "produtosIcon", '[onclick="toggleProdutos()"]')
-}
-
-function toggleMarketing() {
-  toggleDropdown("marketingDropdown", "marketingIcon", '[onclick="toggleMarketing()"]')
-}
-
-function togglePDV() {
-  toggleDropdown("pdvDropdown", "pdvIcon", '[onclick="togglePDV()"]')
-}
-</script>
+  <div class="sb-footer">
+    <button class="sb-link sb-expand" id="sbExpand" type="button" data-tip="Abrir menu"><i class="sb-ic fas fa-angles-right"></i></button>
+    <div class="sb-toggle-row" role="switch" tabindex="0" id="guidedToggle" aria-checked="<%= cookies[:honey_guided] != 'off' %>" data-tour="guided" data-tip="Mostra uma explicação curta embaixo de cada item do menu">
+      <i class="sb-ic fas fa-graduation-cap"></i>
+      <span class="sb-txt"><span class="sb-label">Modo guiado</span><small>Explica cada item do menu</small></span>
+      <span class="switch"></span>
+    </div>
+    <button class="sb-link" type="button" id="openMap" data-tour="map" data-tip="Veja todas as telas do sistema, por área">
+      <i class="sb-ic fas fa-map"></i><span class="sb-txt"><span class="sb-label">Mapa do sistema</span></span>
+    </button>
+    <%= link_to NavigationHelper::SUPPORT_WHATSAPP, class: 'sb-link', target: '_blank', rel: 'noopener', data: { tip: 'Fale com o suporte (Daniel) pelo WhatsApp' } do %>
+      <i class="sb-ic fab fa-whatsapp"></i><span class="sb-txt"><span class="sb-label">Ajuda e suporte</span></span>
+    <% end %>
+    <div class="sb-version"><span>Honey.Chase · Versão 1.0</span><span>© <%= Date.current.year %></span></div>
+  </div>
+</aside>

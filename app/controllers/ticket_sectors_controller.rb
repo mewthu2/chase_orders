@@ -3,7 +3,7 @@ class TicketSectorsController < ApplicationController
   before_action :set_sector, only: [:edit, :update, :destroy]
 
   def index
-    @sectors = TicketSector.includes(:ticket_responsabilities, :profiles).ordered
+    @sectors = TicketSector.includes(:profiles, ticket_responsabilities: :users).ordered
   end
 
   def new

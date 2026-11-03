@@ -1,5 +1,5 @@
 <details class="impersonation-switcher">
-  <summary title="Logar como outro usuário"><i class="fas fa-user-secret"></i></summary>
+  <summary class="icon-btn impersonation-btn" data-tip="Logar como outro usuário (só super admin)" aria-label="Logar como outro usuário"><i class="fas fa-user-secret"></i></summary>
   <div class="impersonation-popover">
     <%= form_with url: impersonation_path, method: :post, local: true, data: { turbo: false } do |form| %>
       <label for="impersonation-email" class="impersonation-label">Logar como</label>

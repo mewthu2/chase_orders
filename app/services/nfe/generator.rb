@@ -112,7 +112,7 @@ module Nfe
     end
 
     def create_note(recipient, items)
-      number = @company.next_nfe_number
+      number = @company.current_nfe_number
       issued_at = Time.current
       result = XmlBuilder.new(
         company: @company, recipient: recipient, items: items, number: number, series: @company.nfe_series,
@@ -127,7 +127,7 @@ module Nfe
         total_value: result.total, issued_at: issued_at
       )
       note.xml.attach(io: StringIO.new(signed_xml), filename: "NFe#{result.access_key}.xml", content_type: 'application/xml')
-      @company.update_column(:next_nfe_number, number + 1)
+      @company.advance_nfe_number!(number)
       note
     end
   end

@@ -1,0 +1,54 @@
+<%# Painel "Seu acesso" do Meu Perfil: telas e ações liberadas, lojas e setores de chamados. %>
+<% user = current_user %>
+<% profiles = user.profiles.to_a %>
+<% role = profiles.map(&:name).join(' · ').presence || 'Usuário' %>
+<% location_names = User::AVAILABLE_LOCATIONS.transform_values { |d| d[:name] } %>
+<div class="panel pg-card mp-acc">
+  <h3><i class="fas fa-shield-halved"></i>Seu acesso</h3>
+  <div class="mp-who">
+    <span class="avatar" style="--c: <%= HoneyUiHelper::PERSON_COLORS[user.name.to_s.sum % HoneyUiHelper::PERSON_COLORS.size] %>"><%= user_initials(user) %></span>
+    <div><b><%= user.name %></b><small><%= role %></small></div>
+  </div>
+  <% if user.admin? %>
+    <div class="mp-admin"><i class="fas fa-crown"></i><div><b>Administrador.</b> Você vê todas as telas e pode fazer tudo. Quem muda o acesso das outras pessoas é você, em Perfis e Permissões.<br><%= link_to 'Abrir Perfis e Permissões', profiles_path %></div></div>
+    <div class="mp-sec"><h4><i class="fas fa-table-cells"></i>Telas liberadas</h4>
+      <% Screen.by_area.each do |area, screens| %>
+        <div class="mp-area"><div class="mp-area-h" style="--c: <%= Screen::AREAS[area][:color] %>"><i></i><%= Screen::AREAS[area][:title] %><small><%= screens.size %> <%= screens.size == 1 ? 'tela' : 'telas' %> · todas as ações</small></div></div>
+      <% end %>
+    </div>
+  <% else %>
+    <% groups = Screen.by_area.filter_map do |area, screens|
+         rows = screens.filter_map { |key, d| acts = user.actions_for(key); [d[:label], acts] if acts.include?('V') }
+         [area, rows] if rows.any?
+       end %>
+    <div class="mp-sec"><h4><i class="fas fa-table-cells"></i>Telas e ações</h4>
+      <% if groups.any? %>
+        <% groups.each do |area, rows| %>
+          <div class="mp-area">
+            <div class="mp-area-h" style="--c: <%= Screen::AREAS[area][:color] %>"><i></i><%= Screen::AREAS[area][:title] %><small><%= rows.size %> <%= rows.size == 1 ? 'tela' : 'telas' %></small></div>
+            <% rows.each do |label, acts| %>
+              <div class="mp-row"><span><%= label %></span><span class="mp-acts"><% Screen::ACTIONS.each_key do |letter| %><% next unless acts.include?(letter) %><i class="<%= { 'X' => 'is-x', 'D' => 'is-d' }[letter] %>" data-tip="<%= Screen::ACTIONS[letter][:help] %>"><%= Screen::ACTIONS[letter][:label] %></i><% end %></span></div>
+            <% end %>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="wa-note">Você ainda não tem telas liberadas além dos chamados.</p>
+      <% end %>
+    </div>
+    <p class="wa-note">Quer ver ou fazer mais coisas no sistema? Peça a quem administra para mudar o seu perfil.</p>
+  <% end %>
+  <% keys = user.admin? ? location_names.keys : user.allowed_location_keys %>
+  <div class="mp-sec"><h4><i class="fas fa-store"></i>Lojas que você vê</h4><div class="mp-chips">
+    <% if user.admin? || keys.size == location_names.size %>
+      <span class="pg-tag"><i class="fas fa-store"></i>Todas as lojas</span>
+    <% elsif keys.any? %>
+      <% keys.each do |key| %><span class="pg-tag"><i class="fas fa-store"></i><%= location_names[key] || key.humanize %></span><% end %>
+    <% else %>
+      <span class="wa-note">Nenhuma loja específica. As suas telas não usam filtro por loja.</span>
+    <% end %>
+  </div></div>
+  <% sectors = user.admin? ? TicketSector.ordered.to_a : TicketSector.where(id: ProfileTicketSector.where(profile_id: profiles.map(&:id)).select(:ticket_sector_id)).ordered.to_a %>
+  <div class="mp-sec"><h4><i class="fas fa-people-group"></i>Setores de chamados</h4><div class="mp-chips">
+    <% if sectors.any? %><% sectors.each do |s| %><span class="pg-tag"><%= s.name %></span><% end %><% else %><span class="wa-note">Você não faz parte de nenhum setor. Pode abrir chamados normalmente.</span><% end %>
+  </div></div>
+</div>

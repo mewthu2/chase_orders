@@ -2,11 +2,16 @@
 <% content_for :title, copy[:edit_title] %>
 <div class="users-container">
   <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-<%= copy[:icon] %> me-2"></i><%= copy[:edit_title] %></h1>
-      <p class="page-subtitle">#<%= @b2b_order.id %></p>
+    <div class="header-left has-icon">
+      <%= hc_page_icon "fas fa-#{copy[:icon]}" %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title"><%= copy[:edit_title] %></h1>
+        <p class="page-subtitle">#<%= @b2b_order.id %></p>
+      </div>
     </div>
     <div class="header-actions">
+      <%= hc_help_button %>
       <% if @b2b_order.resendable? %>
         <%= form_with url: transmit_order_path_for(@b2b_order), method: :post, class: 'send-to-tiny-form',
                       data: { turbo_confirm: 'Enviar este pedido para o Tiny? Ele entra como Preparando Envio. Salve antes as alterações feitas nesta tela.' } do %>

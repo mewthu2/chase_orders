@@ -406,7 +406,8 @@ class StockWithdrawalsControllerTest < ActionDispatch::IntegrationTest
   test 'the index does not query the location of each withdrawal line one by one' do
     3.times { many_failed_withdrawal }
 
-    assert_operator sql_count('locations') { get stock_withdrawals_path }, :<=, 1
+    # Uma consulta para as lojas das linhas e outra para a lista do filtro "Location": fixo, não cresce por linha.
+    assert_operator sql_count('locations') { get stock_withdrawals_path }, :<=, 2
   end
 
   # ---- reverter uma linha já retirada (devolve o estoque no Shopify) ----

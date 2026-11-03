@@ -30,8 +30,8 @@ class TicketResponsabilitiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [@user, @other].sort_by(&:id), responsability.users.sort_by(&:id)
 
     get ticket_responsabilities_path
-    assert_select 'td', text: 'Financeiro'
-    assert_select 'td', text: '1 dia'
+    assert_select 'td .pg-txt', text: 'Financeiro'
+    assert_select 'td .pg-txt', text: '1 dia'
   end
 
   test 'an invalid update keeps the previous responsibles' do

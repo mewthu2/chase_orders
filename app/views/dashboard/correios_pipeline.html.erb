@@ -1,208 +1,116 @@
-<div class="container-fluid py-4">
-  <% title 'Funil de Pedidos no Correios' %>
+<% title 'Funil de Pedidos no Correios' %>
+<% periods = { 'today' => 'Hoje', '7' => '7 dias', '30' => '30 dias', '90' => '90 dias' } %>
 
-  <div class="page-header">
-    <div>
-      <h1 class="page-title"><i class="fas fa-stream me-2"></i>Funil de Pedidos no Correios</h1>
-      <p class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Criação do Pedido &rarr; Emissão de Nota &rarr; Envio XML &rarr; Rastreamento &rarr; Concluído
-      </p>
-    </div>
-    <div class="header-actions">
-      <a href="<%= order_correios_create_dashboard_index_path %>" class="btn btn-dark" title="Pedidos que ainda não entraram no funil (falha na criação no Correios)">
-        <i class="fas fa-plus-circle me-1"></i> Criação de Pedidos
-      </a>
-      <% %w[today 7 30 90].each do |p| %>
-        <a href="<%= correios_pipeline_dashboard_index_path(period: p) %>"
-           class="btn btn-sm <%= @period == p ? 'btn-primary' : 'btn-outline-light' %>">
-          <%= { 'today' => 'Hoje', '7' => '7 dias', '30' => '30 dias', '90' => '90 dias' }[p] %>
-        </a>
-      <% end %>
-    </div>
+<%= hc_page_header 'Funil de Pedidos (Log03)', 'Quantos pedidos passaram por cada etapa e quais estão parados.', icon: 'fas fa-stream' do %>
+  <%= link_to order_correios_create_dashboard_index_path, class: 'btn btn-secondary' do %><i class="fas fa-plus-circle"></i>Criação de Pedidos<% end %>
+<% end %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Como ler este painel.</strong> O funil mostra quantos pedidos já passaram por cada etapa no período. A lista abaixo traz só os que precisam de atenção: com erro na última tentativa ou parados há mais de 6 horas. Pedidos que nem chegaram ao Correios ficam em Criação de Pedidos.</div></div>
+
+<div class="pg-blocks">
+  <div class="scope-tabs pg-tabs" role="tablist">
+    <% periods.each do |key, label| %>
+      <%= link_to correios_pipeline_dashboard_index_path(period: key), class: "scope-tab#{' is-active' if @period == key}", role: 'tab', 'aria-selected': @period == key do %><i class="fas fa-calendar"></i><%= label %><% end %>
+    <% end %>
   </div>
 
-  <div class="alert alert-info border-0 mb-4">
-    <div class="d-flex align-items-center">
-      <i class="fas fa-info-circle fa-2x me-3 text-info"></i>
-      <div>
-        <h5 class="mb-1">Como ler esse painel</h5>
-        <p class="mb-0">
-          Os cards mostram quantos pedidos estão em cada etapa agora. A tabela abaixo lista só os que
-          precisam de atenção: sem nenhuma tentativa na próxima etapa há mais de 6h, ou com erro na
-          última tentativa. Pedidos que ainda nem entraram no funil (falha ao criar no Correios) ficam
-          na tela <strong>Criação de Pedidos</strong>.
-        </p>
-      </div>
-    </div>
+  <div id="pipelineLoading" class="panel pg-card" style="text-align: center; padding: 40px 20px">
+    <span class="spinner" style="width: 28px; height: 28px"></span>
+    <p class="pg-p" style="margin-top: 14px">Calculando o funil… isso pode levar até 30 segundos.</p>
   </div>
-
-  <div id="pipelineLoading" class="table-card text-center py-5">
-    <div class="spinner-border text-info" role="status"></div>
-    <p class="mt-3 mb-0 text-muted">Calculando o funil... isso pode levar até 30 segundos.</p>
-  </div>
-
-  <div id="pipelineError" class="alert alert-danger border-0" style="display:none;"></div>
-
-  <div id="pipelineContent" style="display:none;">
-    <div class="row g-3 mb-4" id="pipelineFunnel"></div>
-
-    <div class="table-card">
-      <div class="table-card-header">
-        <h2 class="table-card-title">
-          <i class="fas fa-exclamation-triangle me-2"></i>Pedidos que precisam de atenção
-        </h2>
-        <span class="filter-tag filter-tag--blue" id="pipelineAttentionCount">0 pedidos</span>
-      </div>
-
-      <div id="pipelineAttentionTableWrap" class="table-responsive"></div>
-
-      <div id="pipelineAttentionEmpty" class="empty-state" style="display:none;">
-        <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
-        <h5>Nenhum pedido travado no período</h5>
-        <p>Todos os pedidos criados nesse período estão fluindo normalmente ou já concluídos.</p>
-      </div>
-    </div>
-  </div>
+  <div id="pipelineError" class="callout pg-banner is-err" style="display: none"><i class="fas fa-triangle-exclamation"></i><div id="pipelineErrorText"></div></div>
+  <div id="pipelineContent" style="display: none" class="pg-blocks"></div>
 </div>
 
 <% content_for :scripts do %>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const STATUS_URL = <%= raw correios_pipeline_dashboard_index_path(period: @period, format: :json).to_json %>;
-  const POLL_INTERVAL_MS = 3000;
+  var STATUS_URL = <%= raw correios_pipeline_dashboard_index_path(period: @period, format: :json).to_json %>;
+  var PERIOD = <%= raw periods[@period].to_s.to_json %>;
+  var URLS = { invoice: <%= raw invoice_emition_dashboard_index_path.to_json %>, xml: <%= raw send_xml_dashboard_index_path.to_json %>, tracking: <%= raw push_tracking_dashboard_index_path.to_json %> };
+  var CAN_RUN = <%= screen_can?(:dashboard_correios, :execute) ? 'true' : 'false' %>;
+  var STAGE = { invoice: 'Aguardando nota', xml: 'Aguardando XML', tracking: 'Aguardando rastreio' };
+  var REASON = { error: ['Com erro', '#f85149', 'A última tentativa falhou.'], idle: ['Parado há mais de 6 h', '#e3b341', 'Sem nova tentativa na etapa.'] };
+  function esc (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt (n) { return Number(n || 0).toLocaleString('pt-BR'); }
 
-  const FUNNEL_STAGES = [
-    { key: 'invoice', label: 'Aguardando Nota', icon: 'fa-file-invoice', color: 'warning' },
-    { key: 'xml', label: 'Aguardando XML', icon: 'fa-file-code', color: 'info' },
-    { key: 'tracking', label: 'Aguardando Rastreio', icon: 'fa-shipping-fast', color: 'primary' },
-    { key: 'completed', label: 'Concluído', icon: 'fa-check-circle', color: 'success' }
-  ];
-
-  const STAGE_LABEL = { invoice: 'Aguardando Nota', xml: 'Aguardando XML', tracking: 'Aguardando Rastreio' };
-  const REASON_LABEL = { error: 'Erro', idle: 'Parado' };
-  const NEXT_KIND_LABEL = { invoice: 'emission_invoice', xml: 'send_xml', tracking: 'get_tracking' };
-
-  function renderFunnel(counts, attentionCounts) {
-    const wrap = document.getElementById('pipelineFunnel');
-    wrap.innerHTML = FUNNEL_STAGES.map(function (stage) {
-      const count = counts[stage.key] || 0;
-      const stuck = attentionCounts[stage.key] || 0;
-      const stuckBadge = stuck > 0
-        ? `<span class="badge bg-danger ms-2"><i class="fas fa-exclamation-triangle me-1"></i>${stuck} travado(s)</span>`
-        : '';
-
-      return `
-        <div class="col-6 col-lg-3">
-          <div class="table-card text-center py-4">
-            <i class="fas ${stage.icon} fa-2x mb-2 text-${stage.color}"></i>
-            <h2 class="mb-0">${count}</h2>
-            <div class="text-muted-custom">${stage.label}</div>
-            ${stuckBadge}
-          </div>
-        </div>`;
-    }).join('');
+  function funnel (c) {
+    var completed = c.completed || 0, tracking = c.tracking || 0, xml = c.xml || 0, invoice = c.invoice || 0;
+    var steps = [
+      { label: 'Criados no Correios', value: invoice + xml + tracking + completed, sub: 'Entraram no funil no período', tone: '#8b949e' },
+      { label: 'Emissão de Notas', value: xml + tracking + completed, sub: 'esperam: ' + fmt(invoice), tone: '#e3b341', go: URLS.invoice },
+      { label: 'Enviar XML', value: tracking + completed, sub: 'esperam: ' + fmt(xml), tone: '#58a6ff', go: URLS.xml },
+      { label: 'Rastreamento (concluídos)', value: completed, sub: 'esperam: ' + fmt(tracking), tone: '#3fb950', go: URLS.tracking }
+    ];
+    var max = Math.max.apply(null, [1].concat(steps.map(function (s) { return s.value; })));
+    return '<div class="panel pg-card pg-funnel"><h3><i class="fas fa-stream"></i>Do pedido ao rastreio</h3><p class="pg-p" style="margin-bottom:14px">' + esc(PERIOD) + '. Cada barra é quanto já passou da etapa. O número entre as barras é quanto ainda espera. Clique numa etapa para abrir a fila.</p><div class="pg-fn">' +
+      steps.map(function (x, i) {
+        var drop = i ? steps[i - 1].value - x.value : 0;
+        var gap = i ? '<div class="pg-fn-gap"><i class="fas fa-arrow-down"></i>' + (drop > 0 ? ' ' + fmt(drop) + ' ainda não passaram' : '') + '</div>' : '';
+        var tag = x.go ? 'a href="' + x.go + '"' : 'div';
+        var close = x.go ? 'a' : 'div';
+        return gap + '<' + tag + ' class="pg-fn-step" style="--w:' + Math.max(26, (x.value / max) * 100).toFixed(1) + '%;--i:' + i + ';--tone:' + x.tone + '"><span class="pg-fn-bar"><b>' + fmt(x.value) + '</b><span>' + esc(x.label) + '</span></span><small>' + esc(x.sub) + '</small>' + (x.go ? '<i class="fas fa-arrow-right go"></i>' : '') + '</' + close + '>';
+      }).join('') + '</div></div>';
   }
 
-  function renderAttentionTable(attention) {
-    const wrap = document.getElementById('pipelineAttentionTableWrap');
-    const empty = document.getElementById('pipelineAttentionEmpty');
-    document.getElementById('pipelineAttentionCount').textContent = attention.length + ' pedido(s)';
+  function kpis (attention) {
+    var errors = attention.filter(function (r) { return r.reason === 'error'; }).length;
+    var idle = attention.length - errors;
+    var items = [
+      ['Precisam de atenção', 'fas fa-triangle-exclamation', '#f0883e', 'Com erro ou parados. Veja a lista abaixo.', attention.length],
+      ['Com erro', 'fas fa-circle-xmark', '#f85149', 'A última tentativa falhou.', errors],
+      ['Parados há mais de 6 h', 'fas fa-hourglass-half', '#e3b341', 'Sem nova tentativa na etapa.', idle],
+      ['Período', 'fas fa-calendar', '#58a6ff', 'Pedidos criados no Correios neste período.', PERIOD]
+    ];
+    return '<div class="kpi-grid stagger pg-kpis" style="--cols:4">' + items.map(function (k, i) {
+      var num = typeof k[4] === 'number';
+      return '<div class="pg-kpi is-static spot" style="--i:' + i + '"><div class="stat-card' + (num && !k[4] ? ' is-zero' : '') + '" style="--tone:' + k[2] + '"><span class="tone-bar"></span><div class="stat-top"><span class="ticket-stat__label">' + k[0] + '</span><span class="stat-ic"><i class="' + k[1] + '"></i></span></div><div class="stat-value' + (num ? '' : ' is-text') + '">' + (num ? fmt(k[4]) : esc(k[4])) + '</div><div class="stat-help"><span>' + k[3] + '</span></div></div></div>';
+    }).join('') + '</div>';
+  }
 
+  function table (attention) {
+    var head = '<div class="table-toolbar"><div><h3><i class="fas fa-exclamation-triangle" style="color:var(--text-3);margin-right:8px"></i>Pedidos que precisam de atenção</h3><div class="meta">Só os pedidos que já existem no Correios e não andaram. O mais antigo aparece primeiro.</div></div><div class="pg-tools"><a class="btn btn-secondary btn-sm" href="<%= attempts_path(channel: 'b2c') %>"><i class="fas fa-paperclip"></i>Verificar tentativas</a></div></div>';
+    var legend = '<div class="legend"><span style="color:var(--text-4)">Situação:</span>' + Object.keys(REASON).map(function (k) { return '<span class="lg" data-tip="' + esc(REASON[k][0] + ': ' + REASON[k][2]) + '"><span class="dot" style="color:' + REASON[k][1] + '"></span>' + REASON[k][0] + '</span>'; }).join('') + '</div>';
+    var shown = '<div class="active-filters"><span>Mostrando ' + fmt(attention.length) + ' ' + (attention.length === 1 ? 'pedido' : 'pedidos') + ':</span>' + legend + '</div>';
     if (!attention.length) {
-      wrap.innerHTML = '';
-      empty.style.display = 'block';
-      return;
+      return '<section class="table-card pg-card">' + head + '<div class="pg-body">' + shown + '<div class="ticket-empty pg-empty"><h3>Nenhum pedido travado</h3><p>Todos os pedidos deste período estão andando ou já foram concluídos.</p></div></div></section>';
     }
-    empty.style.display = 'none';
-
-    const rows = attention.map(function (row) {
-      const reasonBadge = row.reason === 'error'
-        ? '<span class="badge bg-danger">Erro</span>'
-        : '<span class="badge bg-warning text-dark">Parado</span>';
-
-      const correctionBadge = row.address_correction === 'awaiting'
-        ? '<span class="badge bg-warning text-dark address-correction-badge" title="O Tiny recusou o endereço da nota. Corrija a nota no Tiny e use Já corrigi no Tiny.">Aguardando correção da nota no Tiny</span>'
-        : (row.address_correction === 'corrected'
-          ? '<span class="badge bg-info text-dark address-correction-badge" title="Há uma correção de endereço no Honey para este pedido.">Endereço corrigido</span>'
-          : '');
-
-      const actionCell = row.attempt_id
-        ? `<a href="/attempts/reprocess?attempt_id=${row.attempt_id}"
-              class="btn btn-sm btn-outline-warning"
-              onclick="return confirm('Reprocessar a etapa ${NEXT_KIND_LABEL[row.current_stage]} do pedido ${row.tiny_order_id}?')">
-             <i class="fas fa-redo me-1"></i>Reprocessar
-           </a>`
-        : '<span class="text-muted-custom small">Aguardando próxima varredura automática</span>';
-
-      return `
-        <tr>
-          <td class="text-center">
-            <a href="/attempts/verify_attempts?tiny_order_id=${row.tiny_order_id}" target="_blank" class="btn btn-sm btn-outline-info" title="Ver histórico">
-              <i class="fas fa-paperclip"></i>
-            </a>
-          </td>
-          <td class="text-center fw-bold text-white">${row.tiny_order_id} ${correctionBadge}</td>
-          <td class="text-center">${STAGE_LABEL[row.current_stage]}</td>
-          <td class="text-center">${reasonBadge}</td>
-          <td class="text-start" style="max-width:360px; white-space:normal;">${row.message || '—'}</td>
-          <td class="text-center text-muted-custom">${row.last_activity_at}</td>
-          <td class="text-center">${actionCell}</td>
-        </tr>`;
+    var rows = attention.map(function (r, i) {
+      var reason = REASON[r.reason] || REASON.idle;
+      var badge = r.address_correction === 'awaiting' ? '<span class="badge bg-warning text-dark address-correction-badge">Aguardando correção da nota no Tiny</span>'
+        : (r.address_correction === 'corrected' ? '<span class="badge bg-info text-dark address-correction-badge">Endereço corrigido</span>' : '');
+      var retry = (r.attempt_id && CAN_RUN)
+        ? '<form method="get" action="/attempts/reprocess" style="display:inline" data-hc-confirm="' + esc(JSON.stringify({ title: 'Reprocessar o pedido ' + r.tiny_order_id + '?', text: 'O sistema repete agora a próxima etapa do pedido e fala de novo com o Tiny ou com o Correios. Se der certo, ele sai desta lista.', ok: 'Reprocessar', icon: 'fas fa-rotate-right' })) + '"><input type="hidden" name="attempt_id" value="' + r.attempt_id + '"><button type="submit" class="action-btn" data-tip="Reprocessar" aria-label="Reprocessar"><i class="fas fa-rotate-right"></i></button></form>'
+        : '';
+      return '<tr style="--i:' + i + '"><td class="title-cell" data-label="Pedido (Tiny)"><span class="mono pg-mono">' + esc(r.tiny_order_id) + '</span><button type="button" class="pg-copy" data-pg-copy="' + esc(r.tiny_order_id) + '" data-tip="Copiar"><i class="far fa-copy"></i></button>' + badge + '</td>' +
+        '<td data-label="Etapa atual"><span class="pg-tag">' + esc(STAGE[r.current_stage] || r.current_stage) + '</span></td>' +
+        '<td data-label="Motivo"><span class="ticket-status" style="--c:' + reason[1] + '">' + reason[0] + '</span></td>' +
+        '<td data-label="Última mensagem"><span class="pg-txt">' + esc(r.message || '—') + '</span></td>' +
+        '<td class="due" data-label="Última atividade"><b class="pg-d1">' + esc(r.last_activity_at || '—') + '</b></td>' +
+        '<td class="td-actions" style="text-align:right" data-label=""><a class="action-btn" href="/attempts/verify_attempts?tiny_order_id=' + encodeURIComponent(r.tiny_order_id) + '" target="_blank" data-tip="Ver histórico" aria-label="Ver histórico"><i class="fas fa-paperclip"></i></a>' + retry + '</td></tr>';
     }).join('');
-
-    wrap.innerHTML = `
-      <table class="orders-table">
-        <thead>
-          <tr>
-            <th width="50" class="text-center"><i class="fas fa-cog"></i></th>
-            <th class="text-center">Pedido</th>
-            <th class="text-center">Etapa Atual</th>
-            <th class="text-center">Motivo</th>
-            <th class="text-start">Última Mensagem</th>
-            <th class="text-center">Última Atividade</th>
-            <th class="text-center">Ação</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    return '<section class="table-card pg-card">' + head + '<div class="pg-body">' + shown + '<div class="table-responsive"><table class="orders-table pg-tbl"><thead><tr><th>Pedido (Tiny)</th><th>Etapa atual</th><th>Motivo</th><th>Última mensagem</th><th>Última atividade</th><th style="text-align:right">Ações</th></tr></thead><tbody class="stagger">' + rows + '</tbody></table></div>' +
+      '<div class="table-footer"><span>Mostrando 1–' + attention.length + ' de ' + fmt(attention.length) + '</span></div></div></section>';
   }
 
-  function poll() {
-    fetch(STATUS_URL, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+  function show (err) {
+    document.getElementById('pipelineLoading').style.display = 'none';
+    document.getElementById('pipelineError').style.display = 'flex';
+    document.getElementById('pipelineErrorText').innerHTML = '<strong>Não deu para calcular o funil.</strong> ' + esc(err);
+  }
+  function poll () {
+    fetch(STATUS_URL, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data.status === 'processing') {
-          setTimeout(poll, POLL_INTERVAL_MS);
-          return;
-        }
-
+        if (data.status === 'processing') { setTimeout(poll, 3000); return; }
+        if (data.status === 'error') { show(data.error); return; }
         document.getElementById('pipelineLoading').style.display = 'none';
-
-        if (data.status === 'error') {
-          document.getElementById('pipelineError').style.display = 'block';
-          document.getElementById('pipelineError').textContent = 'Erro ao calcular o funil: ' + data.error;
-          return;
-        }
-
-        document.getElementById('pipelineContent').style.display = 'block';
-        renderFunnel(data.counts, countAttentionByStage(data.attention));
-        renderAttentionTable(data.attention);
+        var content = document.getElementById('pipelineContent');
+        content.innerHTML = funnel(data.counts || {}) + kpis(data.attention || []) + table(data.attention || []);
+        content.style.display = '';
       })
-      .catch(function () {
-        document.getElementById('pipelineLoading').style.display = 'none';
-        document.getElementById('pipelineError').style.display = 'block';
-        document.getElementById('pipelineError').textContent = 'Erro de conexão ao calcular o funil.';
-      });
+      .catch(function () { show('Erro de conexão.'); });
   }
-
-  function countAttentionByStage(attention) {
-    return attention.reduce(function (acc, row) {
-      acc[row.current_stage] = (acc[row.current_stage] || 0) + 1;
-      return acc;
-    }, {});
-  }
-
   poll();
 });
 </script>

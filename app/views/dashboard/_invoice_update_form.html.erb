@@ -1,0 +1,13 @@
+<script type="text/html" id="invoiceUpdateForm">
+  <div class="backdrop" data-close="drawer"></div>
+  <form class="drawer" role="dialog" aria-label="Atualizar ID da nota fiscal" action="<%= update_invoice_id_dashboard_index_path %>" method="post">
+    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+    <div class="drawer-head"><div class="page-icon is-area"<% if hc_area %> style="<%= nav_area_style(hc_area) %>"<% end %>><i class="fas fa-pen-to-square"></i></div><div><h2>Atualizar ID da nota fiscal</h2><p>Use quando a nota foi emitida direto no Tiny e o Honey ficou com o ID errado.</p></div><button type="button" class="icon-btn" data-close="drawer" aria-label="Fechar"><i class="fas fa-times"></i></button></div>
+    <div class="drawer-body"><div class="pg-fields">
+      <div class="form-group pg-fg"><label class="field-label" for="tiny_order_id">ID do pedido (Tiny Order ID) <span class="required">*</span><span class="info-dot" tabindex="0" data-tip="O número do pedido no Tiny.">i</span></label><input type="number" class="field-input" id="tiny_order_id" name="tiny_order_id" required placeholder="Ex.: 911317520"></div>
+      <div class="form-group pg-fg"><label class="field-label" for="id_nota_fiscal">ID da nota fiscal <span class="required">*</span><span class="info-dot" tabindex="0" data-tip="O novo ID, como aparece no Tiny.">i</span></label><input type="number" class="field-input" id="id_nota_fiscal" name="id_nota_fiscal" required placeholder="Ex.: 123456"></div>
+      <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span>Esta ação atualiza o ID da nota em todas as tentativas com status "Sucesso" do pedido informado.</span></div>
+    </div></div>
+    <div class="drawer-foot"><button type="button" class="btn btn-ghost" data-close="drawer">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i>Atualizar nota</button></div>
+  </form>
+</script>

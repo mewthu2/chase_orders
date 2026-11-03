@@ -1,31 +1,74 @@
-<% title 'Cupons de cashback' %>
-<div class="orders-container">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title"><i class="fas fa-ticket-alt me-2"></i>Cupons de cashback</h1>
-      <p class="page-subtitle">Unifique dois cupons MTZ da mesma cliente em um novo cupom UNF.</p>
+<% content_for :title, "Cupons de cashback" %>
+<% statuses = { 'draft' => ['Aguardando confirmação', 'yellow', 'Prévia criada. Vale por 10 minutos. Nada foi alterado ainda.'],
+                'processing' => ['Em processamento', 'purple', 'Aguarde a conferência. Não use os cupons nem comece outra unificação com eles.'],
+                'completed' => ['Concluída', 'green', 'Os 2 MTZ foram desativados e o UNF foi criado.'],
+                'rejected' => ['Não realizada', 'gray', 'Nenhum cupom foi alterado por esta operação.'],
+                'needs_review' => ['Precisa de conferência', 'red', 'Não use os cupons. Avise o administrador com o número da operação.'] } %>
+<% brl = ->(v) { number_to_currency(v || 0, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% rows = @unifications.map do |u|
+     codes = u.source_codes
+     { id: u.id, record: u, data: u.created_at, cliente: u.customer&.full_name.presence || u.customer&.email || '—', mtz1: codes[0], mtz2: codes[1] || '—',
+       valor: u.amount.to_f, minimo: u.minimum_purchase.to_f, st: u.status, valid: u.expires_at&.to_date, por: u.user&.name, unf: (u.code if u.status == 'completed') || '—' }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'unificações', unit1: 'unificação', page_size: 8,
+     cols: [
+       { k: :id, label: 'Operação', t: :num, hide: true },
+       { k: :data, label: 'Data', t: :dt, sort: true },
+       { k: :cliente, label: 'Cliente', main: true, sort: true },
+       { k: :mtz1, label: 'Cupons originais', t: :mono, copy: true, sub: :mtz2 },
+       { k: :mtz2, label: 'Segundo cupom MTZ', t: :mono, hide: true },
+       { k: :valor, label: 'Cashback', t: :money, sort: true },
+       { k: :minimo, label: 'Compra mínima total', t: :money, hide: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :unf, label: 'Novo cupom UNF', t: :mono, hide: true },
+       { k: :valid, label: 'Validade do novo cupom (Brasília)', t: :d, hide: true },
+       { k: :por, label: 'Titularidade conferida por', t: :person, hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'Cliente ou código do cupom…', cols: %i[cliente mtz1 mtz2], tip: 'Procure pelo nome da cliente ou por um código MTZ.' },
+       { id: :st, type: :select, label: 'Situação', col: :st, all: 'Todas as situações', tip: 'Só Concluída mudou os cupons. As outras não alteraram nada, ou precisam de conferência.' },
+       { id: :per, type: :period, label: 'Data', col: :data }
+     ],
+     kpis: [
+       { label: 'Aguardando confirmação', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Prévia pronta. Vale por 10 minutos.', col: :st, val: 'draft' },
+       { label: 'Concluídas', icon: 'fas fa-circle-check', tone: 'green', help: 'MTZ desativados e UNF criado.', col: :st, val: 'completed' },
+       { label: 'Precisa de conferência', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Não use os cupons. Avise o administrador.', col: :st, val: 'needs_review' },
+       { label: 'Cashback unificado', icon: 'fas fa-coins', tone: 'blue', help: 'Soma das unificações concluídas.', text: brl.call(rows.select { |r| r[:st] == 'completed' }.sum { |r| r[:valor] }) }
+     ]) %>
+<% ticket = ->(code, value, min, done = false) {
+     content_tag(:div, style: "flex: 1 1 150px; min-width: 140px; padding: 11px 16px; border-radius: 12px; border: 1.5px dashed #{done ? 'var(--green)' : 'var(--border-2)'}; background: #{done ? 'rgba(63,185,80,.09)' : 'rgba(255,255,255,.035)'}") do
+       content_tag(:div, code, class: 'mono', style: "font-size: 12.5px; font-weight: 700; color: #{done ? 'var(--green)' : 'var(--text-2)'}; letter-spacing: .03em") +
+         content_tag(:div, value, style: 'font-size: 20px; font-weight: 700; margin: 3px 0 1px') + content_tag(:div, "compra mínima #{min}", style: 'font-size: 11.5px; color: var(--text-3)')
+     end
+   } %>
+<% step = ->(sign, inner) { content_tag(:div, content_tag(:span, sign, style: 'font-size: 22px; font-weight: 700; color: var(--text-3); flex: 0 0 auto; width: 14px; text-align: center') + inner, style: 'display: flex; align-items: center; gap: 12px; flex: 1 1 200px; min-width: 0') } %>
+
+<%= hc_page_header 'Cupons de cashback', 'Unifique dois cupons MTZ da mesma cliente em um novo cupom UNF.', icon: 'fas fa-coins' do %>
+  <% if screen_can?(:cashback_unifications, :create) %>
+    <%= link_to new_cashback_unification_path, class: 'btn btn-export' do %><i class="fas fa-code-merge"></i>Unificar cupons<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <section class="panel pg-card" style="padding: 18px 22px">
+    <div style="font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 12px">Como a unificação funciona. Exemplo</div>
+    <div style="display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap">
+      <%= ticket.call('MTZ-8F3K2Q', 'R$ 42,00', 'R$ 150,00') %>
+      <%= step.call('+', ticket.call('MTZ-71XD90', 'R$ 28,50', 'R$ 120,00')) %>
+      <%= step.call('=', ticket.call('UNF-2H7W5T', 'R$ 70,50', 'R$ 270,00', true)) %>
+      <p style="flex: 1 1 240px; margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text-2)">Soma o <b>cashback</b> e a <b>compra mínima</b> dos dois cupons. A validade é a que <b>vencer primeiro</b>. O UNF vale para uma única compra e só a cliente escolhida pode usar.</p>
     </div>
-    <%= link_to 'Unificar cupons', new_cashback_unification_path, class: 'btn btn-primary' %>
-  </div>
-  <div class="table-card">
-    <div class="table-card-header"><h2 class="table-card-title">Últimas unificações</h2></div>
-    <div class="table-responsive">
-      <table class="orders-table">
-        <thead><tr><th>Data</th><th>Cliente</th><th>Cupons originais</th><th>Cashback</th><th>Situação</th><th></th></tr></thead>
-        <tbody>
-          <% @unifications.each do |unification| %>
-            <tr>
-              <td><%= unification.created_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m/%Y %H:%M') %></td>
-              <td><%= unification.customer.full_name %></td>
-              <td><%= unification.source_codes.join(' + ') %></td>
-              <td><%= number_to_currency(unification.amount, unit: 'R$ ', separator: ',', delimiter: '.') %></td>
-              <td><%= unification.status_label %></td>
-              <td><%= link_to 'Ver detalhes', cashback_unification_path(unification) %></td>
-            </tr>
-          <% end %>
-          <% if @unifications.empty? %><tr><td colspan="6" class="text-center py-4">Nenhuma unificação registrada.</td></tr><% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  </section>
+  <%= hc_pg_table(table, title: 'Últimas unificações', icon: 'fas fa-ticket', meta: 'Cada linha é uma tentativa de juntar dois cupons MTZ de uma cliente em um UNF.',
+        link: ->(r) { cashback_unification_path(r[:record]) },
+        empty: { title: 'Nenhuma unificação registrada', text: 'Quando alguém unificar dois cupons MTZ de uma cliente, o registro aparece aqui.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-code-merge'), 'Unificar cupons']), new_cashback_unification_path, class: 'btn btn-export') if screen_can?(:cashback_unifications, :create)) },
+        detail: { title: ->(r) { "Unificação ##{r[:id]}" }, fields: [['Primeiro cupom MTZ', :mtz1], ['Cashback total', :valor]],
+                  note: 'Como funciona: ao confirmar, os dois MTZ são desativados e trocados por um UNF. Cashback e compra mínima são somados, e a validade é a que vencer primeiro. A prévia vale por 10 minutos.' },
+        actions: ->(r) {
+          u = r[:record]
+          (hc_row_action('fas fa-circle-check', 'Confirmar unificação', confirm_cashback_unification_path(u), method: :post,
+                         confirm: { title: "Confirmar a unificação ##{u.id}?", text: "Os dois cupons MTZ de #{r[:cliente]} serão desativados no Shopify e um cupom UNF novo será criado, de uso único e exclusivo dela. Não dá para desfazer.", ok: 'Confirmar unificação' }) if r[:st] == 'draft' && u.user_id == current_user.id) || ''.html_safe
+        }) %>
 </div>

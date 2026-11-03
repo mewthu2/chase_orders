@@ -1,242 +1,71 @@
-<%
-  status_labels = { "draft" => "Rascunho", "saved" => "Salvo", "transmitted" => "Transmitido", "error" => "Erro" }
-  has_filters   = params[:search].present? || params[:status].present?
-%>
-
 <% content_for :title, "Pedidos do Planejador" %>
+<% statuses = { 'draft' => ['Rascunho', 'gray', 'Começou a ser criado e não foi salvo. Se aparecer, abra e confira a planilha.'],
+                'saved' => ['Salvo', 'blue', 'Planilha lida e pedido pronto. Ainda não foi para o Tiny.'],
+                'transmitted' => ['Transmitido', 'green', 'Enviado ao Tiny. Confira a coluna Nota Tiny: se estiver "aguardando", o número da nota ainda não voltou.'],
+                'error' => ['Erro', 'red', 'O Tiny recusou ou deu falha. Abra o pedido, leia a mensagem e use Retransmitir.'] } %>
+<% map = ->(o) {
+     items = o.planner_order_items
+     waiting = o.status == 'transmitted' && o.tiny_note_number.blank?
+     { id: o.id, record: o, ref: o.reference, st: o.status, nota: o.tiny_note_number.presence || (waiting ? 'aguardando' : '—'), waiting: waiting,
+       itens: items.sum { |i| i.quantity.to_i }, dt: o.created_at, arquivo: o.csv_filename.presence || '—', pedido: o.order_number.presence || '—',
+       por: o.user&.name || '—', prods: items.size, tags: o.tags.presence || '—', tx: o.transmitted_at ? l(o.transmitted_at.in_time_zone, format: '%d/%m/%Y %H:%M') : '—',
+       erro: o.error_message }
+   } %>
+<% search = ->(scope, text) { term = "%#{ActiveRecord::Base.sanitize_sql_like(text.strip)}%"; scope.where('planner_orders.reference LIKE :t OR planner_orders.csv_filename LIKE :t OR planner_orders.order_number LIKE :t OR planner_orders.id = :id', t: term, id: text.to_i) } %>
+<% waiting = ->(scope) { scope.where(status: :transmitted, tiny_note_number: [nil, '']) } %>
+<% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 8, unit: 'pedidos', unit1: 'pedido',
+     attrs: { st: :status }, sort_sql: { ref: 'planner_orders.reference', dt: 'planner_orders.created_at' },
+     cols: [
+       { k: :id, label: 'Id', t: :num, hide: true, nodetail: true },
+       { k: :ref, label: 'Referência', t: :mono, main: true, copy: true, sort: true, sub: :arquivo },
+       { k: :st, label: 'Status', t: :status, map: statuses },
+       { k: :nota, label: 'Nota Tiny', t: :tag },
+       { k: :itens, label: 'Total de itens', t: :qty, unit: 'un' },
+       { k: :dt, label: 'Data', t: :dt, sort: true },
+       { k: :arquivo, label: 'Arquivo CSV', hide: true },
+       { k: :pedido, label: 'Número do pedido', hide: true },
+       { k: :por, label: 'Criado por', hide: true },
+       { k: :prods, label: 'Produtos diferentes', t: :qty, hide: true },
+       { k: :tags, label: 'Marcadores', hide: true },
+       { k: :tx, label: 'Transmitido em', hide: true }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar por referência', ph: 'Ex.: PO-2026 ou TO-5134', tip: 'Procura pela referência (PO-...), pelo nome do arquivo ou pelo número do pedido que está no nome (TO-...).' },
+       { id: :status, type: :select, label: 'Status', col: :st, all: 'Todos os status', tip: 'Em que ponto está o pedido: salvo, já no Tiny ou com erro.' }
+     ],
+     kpis: [
+       { label: 'Para transmitir', icon: 'fas fa-paper-plane', tone: 'blue', help: 'Salvos e prontos. Ainda não foram ao Tiny.', col: :st, val: 'saved' },
+       { label: 'Transmitidos', icon: 'fas fa-file-invoice', tone: 'green', help: 'Já enviados ao Tiny. Veja a coluna Nota Tiny.', col: :st, val: 'transmitted' },
+       { label: 'Sem nota ainda', icon: 'fas fa-hourglass-half', tone: 'orange', help: 'Foram ao Tiny, mas o número da nota não voltou.', col: :nota, val: 'aguardando',
+         value: ->(scope) { waiting.call(scope).count }, filter: waiting },
+       { label: 'Com erro', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'O Tiny recusou. Leia o motivo e retransmita.', col: :st, val: 'error' }
+     ]) %>
 
-<div class="orders-container">
+<%= hc_page_header 'Pedidos do Planejador', 'Transforma uma planilha de produtos em nota de transferência no Tiny.', icon: 'fas fa-clipboard-list' do %>
+  <% if screen_can?(:planner_orders, :create) %>
+    <%= link_to new_planner_order_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo pedido<% end %>
+  <% end %>
+<% end %>
 
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-box me-2"></i>Pedidos do Planejador
-      </h1>
-      <small class="page-subtitle">
-        <i class="fas fa-clock me-1"></i>
-        Atualizado em <%= Time.current.strftime('%d/%m/%Y às %H:%M') %>
-      </small>
-    </div>
-    <div class="header-actions">
-      <span class="total-badge">
-        <i class="fas fa-list me-1"></i><%= @total_planner_orders %> pedido(s)
-      </span>
-      <%= link_to new_planner_order_path, class: "btn-export" do %>
-        <i class="fas fa-plus me-2"></i>Novo Pedido
-      <% end %>
-    </div>
-  </div>
-
-  <%# ===== PAINEL DE FILTROS ===== %>
-  <div class="filters-panel">
-
-    <%# --- Busca por referência --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-search me-1"></i>Buscar por referência
-      </label>
-      <%= form_with url: planner_orders_path, method: :get, local: true do %>
-        <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
-        <div class="search-row">
-          <%= text_field_tag :search, params[:search], class: "search-input", placeholder: "Buscar por referência..." %>
-          <button type="submit" class="btn-primary-sm">Buscar</button>
-          <% if has_filters %>
-            <%= link_to planner_orders_path, class: "btn-clear" do %>
-              <i class="fas fa-times me-1"></i>Limpar tudo
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <%# --- Status --- %>
-    <div class="filter-section">
-      <label class="filter-label">
-        <i class="fas fa-filter me-1"></i>Status
-      </label>
-      <%= form_with url: planner_orders_path, method: :get, local: true do %>
-        <%= hidden_field_tag :search, params[:search] if params[:search].present? %>
-        <div class="search-row">
-          <select name="status" class="search-input" onchange="this.form.submit()">
-            <option value="">Todos os Status</option>
-            <option value="draft" <%= 'selected' if params[:status] == 'draft' %>>Rascunho</option>
-            <option value="saved" <%= 'selected' if params[:status] == 'saved' %>>Salvo</option>
-            <option value="transmitted" <%= 'selected' if params[:status] == 'transmitted' %>>Transmitido</option>
-            <option value="error" <%= 'selected' if params[:status] == 'error' %>>Erro</option>
-          </select>
-        </div>
-      <% end %>
-    </div>
-
-  </div>
-
-  <%# ===== TABELA ===== %>
-  <div class="table-card">
-
-    <div class="table-card-header">
-      <h2 class="table-card-title">
-        <i class="fas fa-list me-2"></i>Lista de Pedidos
-      </h2>
-      <div class="active-filters-row">
-        <% if params[:search].present? %>
-          <span class="filter-tag filter-tag--gray">
-            <i class="fas fa-search me-1"></i>"<%= params[:search] %>"
-          </span>
-        <% end %>
-        <% if params[:status].present? %>
-          <span class="filter-tag filter-tag--yellow">
-            <i class="fas fa-filter me-1"></i><%= status_labels[params[:status]] %>
-          </span>
-        <% end %>
-      </div>
-    </div>
-
-    <% if @planner_orders.any? %>
-      <div class="table-responsive">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>
-                <%= link_to planner_orders_path(sort: 'reference', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-decoration-none' do %>
-                  Referência <i class="fas fa-sort"></i>
-                <% end %>
-              </th>
-              <th>Status</th>
-              <th>Nota Tiny</th>
-              <th>Total de Itens</th>
-              <th>
-                <%= link_to planner_orders_path(sort: 'created_at', direction: params[:direction] == 'asc' ? 'desc' : 'asc'), class: 'text-decoration-none' do %>
-                  Data <i class="fas fa-sort"></i>
-                <% end %>
-              </th>
-              <th class="text-end">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @planner_orders.each do |order| %>
-              <tr>
-                <td class="order-id">
-                  <%= link_to order.reference, planner_order_path(order), class: 'text-decoration-none' %>
-                </td>
-                <td>
-                  <% case order.status %>
-                  <% when 'draft' %>
-                    <span class="badge bg-secondary">Rascunho</span>
-                  <% when 'saved' %>
-                    <span class="badge bg-primary">Salvo</span>
-                  <% when 'transmitted' %>
-                    <span class="badge bg-success">Transmitido</span>
-                  <% when 'error' %>
-                    <span class="badge bg-danger">Erro</span>
-                  <% end %>
-                </td>
-                <td>
-                  <% if order.tiny_note_number.present? %>
-                    <span class="badge bg-info text-dark">
-                      <i class="fas fa-file-invoice me-1"></i>#<%= order.tiny_note_number %>
-                    </span>
-                  <% else %>
-                    <span class="text-muted-custom">-</span>
-                  <% end %>
-                </td>
-                <td class="text-main"><%= order.total_items %> itens</td>
-                <td class="text-muted-custom"><%= order.created_at.strftime('%d/%m/%Y %H:%M') %></td>
-                <td class="text-end">
-                  <div class="table-actions">
-                    <%= link_to planner_order_path(order), class: 'action-btn action-btn--edit', title: 'Ver detalhes' do %>
-                      <i class="fas fa-eye"></i>
-                    <% end %>
-
-                    <% if order.saved? %>
-                      <%= button_to transmit_planner_order_path(order),
-                        method: :post,
-                        data: { confirm: 'Tem certeza que deseja transmitir este pedido para o Tiny?' },
-                        class: 'action-btn action-btn--success',
-                        title: 'Transmitir para Tiny' do %>
-                        <i class="fas fa-paper-plane"></i>
-                      <% end %>
-                    <% end %>
-
-                    <% if order.error? || (order.transmitted? && order.tiny_note_number.blank?) %>
-                      <%= button_to transmit_planner_order_path(order),
-                        method: :post,
-                        data: { confirm: 'Deseja tentar retransmitir este pedido?' },
-                        class: 'action-btn action-btn--warning',
-                        title: 'Retransmitir' do %>
-                        <i class="fas fa-redo"></i>
-                      <% end %>
-                    <% end %>
-
-                    <%= link_to export_xlsx_planner_order_path(order),
-                      class: 'action-btn',
-                      title: 'Exportar CSV Correios' do %>
-                      <i class="fas fa-file-csv"></i>
-                    <% end %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-
-    <% else %>
-      <div class="empty-state">
-        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-        <h5>Nenhum pedido encontrado</h5>
-        <p>Comece criando o primeiro pedido do planejador</p>
-        <%= link_to 'Criar Primeiro Pedido', new_planner_order_path, class: 'btn-export' %>
-      </div>
-    <% end %>
-
-    <%# PAGINAÇÃO %>
-    <% if @total_pages > 1 %>
-      <div class="pagination-footer">
-        <div class="pagination-info">
-          Mostrando
-          <strong><%= [(@current_page - 1) * @per_page + 1, @total_planner_orders].min %></strong>
-          a
-          <strong><%= [@current_page * @per_page, @total_planner_orders].min %></strong>
-          de
-          <strong><%= @total_planner_orders %></strong>
-          pedidos
-        </div>
-
-        <div class="pagination-controls">
-          <% if @current_page > 1 %>
-            <%= link_to planner_orders_path(request.query_parameters.merge("page" => @current_page - 1)),
-                        class: "page-btn" do %>
-              <i class="fas fa-chevron-left me-1"></i>Anterior
-            <% end %>
-          <% end %>
-
-          <% window  = 2
-             p_start = [@current_page - window, 1].max
-             p_end   = [@current_page + window, @total_pages].min %>
-
-          <% (p_start..p_end).each do |pnum| %>
-            <% if pnum == @current_page %>
-              <span class="page-btn page-btn--active"><%= pnum %></span>
-            <% else %>
-              <%= link_to pnum,
-                          planner_orders_path(request.query_parameters.merge("page" => pnum)),
-                          class: "page-btn" %>
-            <% end %>
-          <% end %>
-
-          <% if @current_page < @total_pages %>
-            <%= link_to planner_orders_path(request.query_parameters.merge("page" => @current_page + 1)),
-                        class: "page-btn" do %>
-              Próxima<i class="fas fa-chevron-right ms-1"></i>
-            <% end %>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-  </div>
-
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Lista de pedidos', icon: 'fas fa-list', meta: 'Cada pedido nasce de uma planilha CSV e vira uma nota de transferência no Tiny.',
+        link: ->(r) { planner_order_path(r[:record]) },
+        empty: { title: 'Nenhum pedido ainda', text: 'Suba a primeira planilha para criar um pedido de transferência.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Novo pedido']), new_planner_order_path, class: 'btn btn-export') if screen_can?(:planner_orders, :create)) },
+        detail: { title: ->(r) { "Pedido #{r[:ref]}" }, fields: [['Data de criação', :dt]],
+                  note: ->(r) { r[:erro].present? ? "Mensagem do Tiny: #{r[:erro]}" : nil } },
+        actions: ->(r) {
+          order = r[:record]
+          can_x = screen_can?(:planner_orders, :execute)
+          safe_join([
+            (hc_row_action('fas fa-paper-plane', 'Transmitir para o Tiny', transmit_planner_order_path(order), method: :post,
+                           confirm: { title: "Transmitir o pedido #{r[:ref]} para o Tiny?", text: "O sistema monta a nota de transferência (CFOP 5152) com os #{r[:itens]} itens da planilha e envia ao Tiny. Os marcadores entram nas observações da nota.", ok: 'Transmitir' }) if r[:st] == 'saved' && can_x),
+            (hc_row_action('fas fa-rotate-right', 'Retransmitir', transmit_planner_order_path(order), method: :post,
+                           confirm: (r[:waiting] ? { title: "Retransmitir o pedido #{r[:ref]}?", text: 'Ele já foi ao Tiny, mas o número da nota não voltou. Antes, confira no Tiny se ela não foi emitida.', ok: 'Retransmitir' }
+                                                 : { title: "Tentar de novo o pedido #{r[:ref]}?", text: 'O sistema pede a nota ao Tiny outra vez. Se o problema foi o cadastro de um produto, corrija antes no Tiny.', ok: 'Retransmitir' })) if (r[:st] == 'error' || r[:waiting]) && can_x),
+            (hc_row_action('fas fa-tags', 'Editar marcadores', edit_planner_order_path(order)) if screen_can?(:planner_orders, :edit)),
+            (hc_row_action('fas fa-file-csv', 'Exportar CSV Correios', export_xlsx_planner_order_path(order)) if screen_can?(:planner_orders, :export))
+          ].compact)
+        }) %>
 </div>

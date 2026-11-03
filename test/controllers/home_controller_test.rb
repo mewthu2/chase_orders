@@ -83,7 +83,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select 'h1', text: /Chamados dos meus setores/
     assert_select 'td a', text: 'Chamado A'
     assert_select 'td a', text: 'Chamado C'
-    assert_select 'td', text: @mine.ticket_responsability.ticket_sector.name
+    assert_select '.cell-sub span', text: @mine.ticket_responsability.ticket_sector.name
 
     get root_path, params: { scope: 'sectors', status: 'all', ticket_sector_id: create_sector('Outro').id }
     assert_select 'td a', count: 0

@@ -1,27 +1,14 @@
-<% content_for :title, current_user.admin? ? "Editar Usuário" : "Editar Meu Perfil" %>
+<% me = @user == current_user %>
+<% content_for :title, me ? 'Meu Perfil' : 'Editar Usuário' %>
 
-<div class="users-container">
-
-  <%# ===== HEADER ===== %>
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title">
-        <i class="fas fa-user-edit me-2"></i>
-        <%= current_user.admin? ? "Editar Usuário" : "Editar Meu Perfil" %>
-      </h1>
-      <p class="page-subtitle"><%= @user.name %></p>
-    </div>
-    <div class="header-actions">
-      <%= link_to (current_user.admin? ? users_path : root_path), class: "btn-back" do %>
-        <i class="fas fa-arrow-left me-1"></i>Voltar
-      <% end %>
-    </div>
-  </div>
-
-  <% if current_user.admin? %>
+<% if me %>
+  <%= hc_page_header 'Meu Perfil', 'Sua foto, seus dados de contato e sua senha.', icon: 'fas fa-user-circle' %>
+  <%= render 'self_edit_form' %>
+<% else %>
+  <div class="users-container">
+    <%= hc_page_header 'Editar Usuário', @user.name, icon: 'fas fa-user-edit' do %>
+      <%= link_to users_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+    <% end %>
     <%= render 'form' %>
-  <% else %>
-    <%= render 'self_edit_form' %>
-  <% end %>
-
-</div>
+  </div>
+<% end %>

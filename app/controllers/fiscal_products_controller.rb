@@ -3,14 +3,8 @@ class FiscalProductsController < ApplicationController
   guard_screen :fiscal_notes
 
   def index
-    scope = Product.order(:sku)
-    scope = scope.where(ncm: [nil, '']) if params[:missing].present?
-    if params[:q].present?
-      term = "%#{params[:q].to_s.downcase}%"
-      scope = scope.where('LOWER(products.sku) LIKE :q OR LOWER(products.shopify_product_name) LIKE :q', q: term)
-    end
-    @products = scope.paginate(page: params[:page], per_page: 50)
-    @import_motor = Motor.where(job_name: ImportProductsFiscalDataJob::JOB_NAME).order(:id).last
+    @scope = Product.order(:sku)
+    @imports = Motor.where(job_name: ImportProductsFiscalDataJob::JOB_NAME).order(id: :desc).limit(12)
     @import_running = ImportProductsFiscalDataJob.running?
     @importable_count = ImportProductsFiscalDataJob.eligible_scope.count
   end
@@ -60,6 +54,6 @@ class FiscalProductsController < ApplicationController
   end
 
   def index_filters
-    params.permit(:q, :missing, :page).to_h.symbolize_keys
+    params.permit(:q, :missing, :page, :origem, :kpi).to_h.symbolize_keys
   end
 end

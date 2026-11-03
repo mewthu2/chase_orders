@@ -1,4 +1,6 @@
 require 'test_helper'
+require_relative '../../support/nfe_test_certificate'
+require_relative '../../support/nfe_schema'
 
 class Nfe::XmlBuilderTest < ActiveSupport::TestCase
   NS = { 'n' => 'http://www.portalfiscal.inf.br/nfe' }.freeze
@@ -147,10 +149,15 @@ class Nfe::XmlBuilderTest < ActiveSupport::TestCase
     assert_equal '07', det.at_xpath('n:imposto/n:COFINS/n:COFINSNT/n:CST', NS).text
   end
 
+  test 'wholesale note is valid against the official schema' do
+    signed = Nfe::Signer.new(Nfe::Certificate.new(NfeTestCertificate.pfx, 'senha123')).sign(build.xml)
+    assert_equal [], NfeSchema.errors(signed)
+  end
+
   test 'unsupported tax situations are rejected with a clear message' do
     assert_raises(Nfe::XmlBuilder::Error) { build(company: company(icms_situation: '500')) }
     assert_raises(Nfe::XmlBuilder::Error) { build(company: company(tax_regime: 3, icms_situation: '102')) }
-    assert_raises(Nfe::XmlBuilder::Error) { build(company: company(pis_cst: '01')) }
+    assert_raises(Nfe::XmlBuilder::Error) { build(company: company(pis_cst: '03')) }
   end
 
   test 'missing fiscal data raises readable errors' do

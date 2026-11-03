@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_02_120100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -335,6 +335,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.string "certificate_cnpj"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "next_nfe_number_homologation", default: 1, null: false
     t.index ["cnpj"], name: "index_companies_on_cnpj", unique: true
   end
 
@@ -427,9 +428,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.datetime "issued_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "order_id"
+    t.string "shopify_order_name"
+    t.string "sefaz_status_code"
+    t.text "sefaz_message"
+    t.string "sefaz_receipt"
+    t.datetime "authorized_at"
+    t.bigint "operation_nature_id"
+    t.bigint "internal_transfer_shipment_id"
     t.index ["b2b_order_id"], name: "index_fiscal_notes_on_b2b_order_id"
-    t.index ["company_id", "series", "number"], name: "index_fiscal_notes_on_company_id_and_series_and_number", unique: true
+    t.index ["company_id", "environment", "series", "number"], name: "index_fiscal_notes_on_company_env_series_number", unique: true
     t.index ["company_id"], name: "index_fiscal_notes_on_company_id"
+    t.index ["internal_transfer_shipment_id"], name: "index_fiscal_notes_on_internal_transfer_shipment_id"
+    t.index ["operation_nature_id"], name: "index_fiscal_notes_on_operation_nature_id"
+    t.index ["order_id"], name: "index_fiscal_notes_on_order_id"
     t.index ["status"], name: "index_fiscal_notes_on_status"
   end
 
@@ -519,6 +531,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "shopify_location_id"
+    t.bigint "company_id"
+    t.index ["company_id"], name: "index_locations_on_company_id"
     t.index ["kpi_ratio"], name: "index_locations_on_kpi_ratio"
     t.index ["shopify_location_id"], name: "index_locations_on_shopify_location_id", unique: true
     t.index ["slug"], name: "index_locations_on_slug", unique: true
@@ -611,6 +625,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.string "step"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "operation_natures", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.string "description", null: false
+    t.integer "kind", default: 0, null: false
+    t.boolean "default_for_kind", default: false, null: false
+    t.integer "purpose", default: 1, null: false
+    t.boolean "final_consumer", default: true, null: false
+    t.string "cfop", null: false
+    t.string "cfop_interstate_non_contributor"
+    t.string "icms_situation", default: "00", null: false
+    t.decimal "icms_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.boolean "difal", default: true, null: false
+    t.json "uf_rates"
+    t.string "pis_cst", default: "01", null: false
+    t.decimal "pis_rate", precision: 6, scale: 4, default: "0.0", null: false
+    t.string "cofins_cst", default: "01", null: false
+    t.decimal "cofins_rate", precision: 6, scale: 4, default: "0.0", null: false
+    t.boolean "exclude_icms_from_pis_cofins_base", default: true, null: false
+    t.text "notes"
+    t.text "fisco_notes"
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_operation_natures_on_company_id"
   end
 
   create_table "order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -836,6 +876,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.boolean "active", default: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "allowed_locations"
     t.index ["name"], name: "index_profiles_on_name", unique: true
   end
 
@@ -844,6 +885,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.string "screen_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "actions", default: "", null: false
     t.index ["profile_id", "screen_key"], name: "index_screen_permissions_on_profile_id_and_screen_key", unique: true
     t.index ["profile_id"], name: "index_screen_permissions_on_profile_id"
   end
@@ -1106,7 +1148,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
-  create_table "whatsapp_activities", charset: "utf8mb3", force: :cascade do |t|
+  create_table "whatsapp_activities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "conversation_id", null: false
     t.bigint "user_id", null: false
     t.string "action", null: false
@@ -1208,7 +1250,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.index ["storage_key"], name: "index_whatsapp_media_on_storage_key", unique: true
   end
 
-  create_table "whatsapp_memberships", charset: "utf8mb3", force: :cascade do |t|
+  create_table "whatsapp_memberships", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "connection_id", null: false
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
@@ -1234,11 +1276,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.datetime "attempted_at"
     t.string "error_code"
     t.string "media_state"
+    t.integer "media_attempts", default: 0, null: false
+    t.datetime "media_retry_at"
     t.json "provider_key"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "media_attempts", default: 0, null: false
-    t.datetime "media_retry_at"
     t.index ["connection_id", "client_nonce"], name: "idx_wa_client_message", unique: true
     t.index ["connection_id", "provider_id"], name: "idx_wa_provider_message", unique: true
     t.index ["connection_id"], name: "index_whatsapp_messages_on_connection_id"
@@ -1249,7 +1291,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
     t.index ["user_id"], name: "index_whatsapp_messages_on_user_id"
   end
 
-  create_table "whatsapp_reads", charset: "utf8mb3", force: :cascade do |t|
+  create_table "whatsapp_reads", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "conversation_id", null: false
     t.bigint "user_id", null: false
     t.bigint "last_message_id", default: 0, null: false
@@ -1291,6 +1333,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
   add_foreign_key "cashback_unifications", "users"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
+  add_foreign_key "fiscal_notes", "internal_transfer_shipments"
+  add_foreign_key "fiscal_notes", "operation_natures"
+  add_foreign_key "fiscal_notes", "orders"
   add_foreign_key "internal_transfer_approvers", "users"
   add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
   add_foreign_key "internal_transfer_events", "internal_transfers"
@@ -1306,9 +1351,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_22_120000) do
   add_foreign_key "internal_transfers", "locations", column: "destination_location_id"
   add_foreign_key "internal_transfers", "users", column: "requested_by_id"
   add_foreign_key "internal_transfers", "users", column: "reviewed_by_id"
+  add_foreign_key "locations", "companies"
   add_foreign_key "logs", "users"
   add_foreign_key "marketing_tasks", "marketing_campaigns"
   add_foreign_key "marketing_tasks", "users"
+  add_foreign_key "operation_natures", "companies"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "order_parcels", "order_pdvs"

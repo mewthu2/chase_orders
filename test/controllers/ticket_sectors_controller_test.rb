@@ -27,7 +27,7 @@ class TicketSectorsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'Lojas físicas', sector.reload.name
 
     get ticket_sectors_path
-    assert_select 'td', text: 'Lojas físicas'
+    assert_select 'td .pg-txt', text: 'Lojas físicas'
   end
 
   test 'a sector with responsabilities cannot be deleted' do

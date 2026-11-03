@@ -35,7 +35,7 @@ class B2bCatalog < ApplicationRecord
 
   # Mensagem de erro se alguma quantidade não puder ser aceita; nil se está tudo certo.
   def quantity_error(quantities)
-    by_id = variants.includes(:catalog_product).index_by(&:id)
+    by_id = variants.index_by(&:id) # a cor (catalog_product) só é lida na mensagem de erro, de um item
 
     quantities.each do |variant_id, quantity|
       variant = by_id[variant_id.to_i]

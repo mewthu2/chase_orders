@@ -30,6 +30,13 @@ class Ticket < ApplicationRecord
   scope :pending_overdue_notification, -> { overdue.where(overdue_notified_at: nil) }
   scope :recent_activity, -> { order(Arel.sql('COALESCE(tickets.last_activity_at, tickets.created_at) DESC'), id: :desc) }
   scope :involving, ->(user) { where(id: TicketParticipant.where(user_id: user.id).select(:ticket_id)) }
+  # Abertos em que a vez é do usuário: ele abriu e o chamado aguarda o solicitante, ou ele é
+  # responsável e o chamado aguarda os responsáveis.
+  scope :waiting_on_user, lambda { |user|
+    responsible_of = TicketParticipant.where(user_id: user.id, role: :responsible).select(:ticket_id)
+    where(status: :awaiting_requester, requester_id: user.id)
+      .or(where(status: [:awaiting_responsible, :in_progress], id: responsible_of))
+  }
   scope :in_sectors, ->(sector_ids) { where(ticket_responsability_id: TicketResponsability.where(ticket_sector_id: sector_ids).select(:id)) }
   # Participa do chamado ou enxerga o setor dele (admin vê tudo).
   scope :visible_to, lambda { |user|

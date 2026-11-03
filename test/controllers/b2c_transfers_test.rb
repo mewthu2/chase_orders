@@ -31,11 +31,11 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '902371809', numero: '1859' } } } }.to_json)
   end
 
-  test 'the Pedidos B2B menu links to the B2C transfer screen' do
+  test 'the Logística area links to the B2C transfer screen' do
     get b2b_orders_path
 
-    assert_select "#pedidosB2bDropdown a[href='#{b2c_transfers_path}']", text: /Transferência B2B → B2C/
-    assert_select "#produtosDropdown a[href='#{b2c_transfers_path}']", count: 0
+    assert_select ".sb-section[data-area='logistica'] a[href='#{b2c_transfers_path}']", text: /Transferência B2B → B2C/
+    assert_select ".sb-section[data-area='atacado'] a[href='#{b2c_transfers_path}']", count: 0
   end
 
   test 'creating forces the b2c_transfer kind and transfer list, and lands in preparando_envio' do

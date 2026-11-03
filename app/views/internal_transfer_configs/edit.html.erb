@@ -1,54 +1,59 @@
 <% content_for :title, "Configurar Transferências" %>
 
-<div class="users-container">
-  <div class="page-header">
-    <div class="header-left">
-      <h1 class="page-title"><i class="fas fa-cog me-2"></i>Configurar Transferências</h1>
-      <p class="page-subtitle">Toda transferência interna precisa ser aprovada antes de as lojas de origem reservarem os itens</p>
+<%= hc_page_header 'Configurar Transferências', 'Toda transferência interna precisa ser aprovada antes de as lojas de origem reservarem os itens', icon: 'fas fa-sliders-h' do %>
+  <%= link_to internal_transfers_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <div class="pg-split" style="--cols: 1.3fr 1fr">
+    <div class="pg-split-a">
+      <%= form_with url: internal_transfer_config_path, method: :patch, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do %>
+        <h3><i class="fas fa-user-check"></i>Aprovadores</h3>
+        <p class="pg-p" style="margin-bottom: 14px">Marque quem pode aprovar ou reprovar as transferências entre lojas.</p>
+        <div class="pg-fields">
+          <div class="pg-fsec">Quem pode aprovar</div>
+          <div class="form-group pg-fg">
+            <div class="select-wrap pg-search"><input type="text" id="approverSearch" class="field-input" placeholder="Filtrar por nome…" autocomplete="off"></div>
+          </div>
+          <%= hidden_field_tag 'approver_ids[]', '', id: nil %>
+          <% @users.each do |user| %>
+            <div class="form-group pg-fg pg-w2" data-approver-name="<%= user.name.to_s.downcase %>">
+              <label class="form-check">
+                <%= check_box_tag 'approver_ids[]', user.id, @approver_ids.include?(user.id), id: "approver_#{user.id}", class: 'form-check-input' %>
+                <span><%= user.name %></span>
+                <% if user.admin? %><span class="info-dot" tabindex="0" data-tip="Administrador. Aprova sempre, mesmo sem estar marcado.">i</span><% end %>
+              </label>
+            </div>
+          <% end %>
+          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Qualquer um dos marcados pode aprovar ou reprovar. Se ninguém for marcado, só os administradores aprovam.</span></div>
+        </div>
+        <div class="pg-inline-foot">
+          <%= link_to 'Cancelar', internal_transfers_path, class: 'btn btn-ghost' %>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>
+        </div>
+      <% end %>
     </div>
-    <div class="header-actions">
-      <%= link_to internal_transfers_path, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    <div class="pg-split-b">
+      <div class="panel pg-card pg-howto">
+        <h3><i class="fas fa-list-ol"></i>Como a aprovação funciona</h3>
+        <ol>
+          <% ['A loja de destino <b>pede</b> as peças.', 'Um dos aprovadores marcados <b>aprova ou reprova</b>.',
+              'Só depois de aprovada, cada loja de origem <b>reserva</b> a sua parte. Isso tira as peças do estoque dela no Shopify.',
+              'A loja de origem <b>envia</b> e informa o rastreio.', 'A loja de destino <b>recebe</b> e as peças entram no estoque dela.'].each_with_index do |text, i| %>
+            <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
+          <% end %>
+        </ol>
+      </div>
+      <div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Administradores sempre aprovam.</strong> Mesmo sem estar marcado na lista, quem é administrador pode aprovar ou reprovar qualquer transferência.</div></div>
     </div>
   </div>
-
-  <%= form_with url: internal_transfer_config_path, method: :patch, local: true do %>
-    <div class="form-section">
-      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-user-check me-2"></i>Aprovadores</h5></div>
-      <div class="form-section-body">
-        <p class="text-muted-custom mb-3">
-          Qualquer um dos marcados pode aprovar ou reprovar. <strong>Admins sempre podem aprovar</strong>, mesmo sem estar marcados.
-        </p>
-        <input type="text" id="approverSearch" class="field-input approver-search mb-3" placeholder="Filtrar por nome..." autocomplete="off">
-        <%= hidden_field_tag 'approver_ids[]', '' %>
-        <div class="approver-picker" id="approverPicker">
-          <% @users.each do |user| %>
-            <label class="approver-option" data-name="<%= user.name.to_s.downcase %>">
-              <%= check_box_tag 'approver_ids[]', user.id, @approver_ids.include?(user.id), id: "approver_#{user.id}" %>
-              <span class="approver-option-check"><i class="fas fa-check"></i></span>
-              <span class="text-main"><%= user.name %></span>
-            </label>
-          <% end %>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-actions">
-      <%= submit_tag 'Salvar', class: 'btn-submit' %>
-      <%= link_to 'Cancelar', internal_transfers_path, class: 'btn-cancel' %>
-    </div>
-  <% end %>
 </div>
 
-<% content_for :scripts do %>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  var search = document.getElementById('approverSearch');
-  search.addEventListener('input', function () {
-    var q = search.value.trim().toLowerCase();
-    document.querySelectorAll('#approverPicker .approver-option').forEach(function (option) {
-      option.style.display = option.dataset.name.indexOf(q) === -1 ? 'none' : '';
+  document.getElementById('approverSearch').addEventListener('input', function (e) {
+    var q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('[data-approver-name]').forEach(function (row) {
+      row.style.display = row.dataset.approverName.indexOf(q) === -1 ? 'none' : '';
     });
   });
-});
 </script>
-<% end %>

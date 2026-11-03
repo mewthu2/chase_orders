@@ -1,8 +1,7 @@
-<section>
-  <div class="content-wrapper text-light" style="margin-top: 6em;">
+<% area = nav_current&.dig(:area) %>
+<main class="content" id="content" tabindex="-1">
+  <div class="content-inner pg page-enter"<% if area %> style="<%= nav_area_style(area) %>"<% end %>>
     <div id="modal-holder"></div>
-    <div class="container-xl">
-      <%= yield %>
-    </div>
+    <%= yield %>
   </div>
-</section>
+</main>

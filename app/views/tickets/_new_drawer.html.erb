@@ -1,0 +1,9 @@
+<%# "Abrir chamado" em painel lateral (openNewTicket do protótipo). Fica guardado na página e o honey_shell.js o leva para a camada de painéis. %>
+<div id="newTicketHolder" hidden>
+  <div class="backdrop" data-close="drawer"></div>
+  <%= form_with model: Ticket.new, url: tickets_path, local: true, multipart: true, class: 'drawer', id: 'ticketDrawer', html: { role: 'dialog', 'aria-label': 'Abrir Chamado' } do |form| %>
+    <div class="drawer-head"><div class="page-icon"><i class="fas fa-plus"></i></div><div><h2>Abrir Chamado</h2><p>Os responsáveis da área escolhida recebem um e-mail na hora</p></div><button type="button" class="icon-btn" data-close="drawer" aria-label="Fechar"><i class="fas fa-times"></i></button></div>
+    <div class="drawer-body"><%= render 'tickets/form_fields', form: form, prefix: 'drawerTicket' %></div>
+    <div class="drawer-foot"><button type="button" class="btn btn-ghost" data-close="drawer">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i>Abrir Chamado</button></div>
+  <% end %>
+</div>

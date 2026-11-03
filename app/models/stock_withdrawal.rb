@@ -58,6 +58,8 @@ class StockWithdrawal < ApplicationRecord
   # revertida = parcialmente concluída; tudo revertido = revertida.
   def refresh_status!
     lines = items.reload.to_a
+    # Salvar revalida cada linha, que olha produto e location.
+    ActiveRecord::Associations::Preloader.new(records: lines, associations: %i[product location]).call
     new_status =
       if lines.any? { |line| line.pending? || line.failed? } then :partially_failed
       elsif lines.all?(&:done?) then :completed

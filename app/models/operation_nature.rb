@@ -1,0 +1,104 @@
+# Natureza de operação no molde do Tiny: descrição (vai no natOp), CFOP da regra geral e a tributação usada nos
+# itens da nota. O CFOP aceita "?102": o primeiro dígito vira 5 (mesma UF) ou 6 (outra UF) na hora de emitir.
+class OperationNature < ApplicationRecord
+  KINDS = { 'sale' => 'Venda', 'transfer' => 'Transferência', 'other' => 'Outra' }.freeze
+  PURPOSES = { 1 => 'Normal', 2 => 'Complementar', 3 => 'Ajuste', 4 => 'Devolução' }.freeze
+  ICMS_SITUATIONS = {
+    '00' => '00 - Tributada integralmente', '40' => '40 - Isenta', '41' => '41 - Não tributada', '50' => '50 - Suspensão',
+    '102' => '102 - Simples sem permissão de crédito', '103' => '103 - Simples com isenção por faixa',
+    '300' => '300 - Imune', '400' => '400 - Não tributada pelo Simples'
+  }.freeze
+  PIS_COFINS_SITUATIONS = {
+    '01' => '01 - Tributável (alíquota básica)', '02' => '02 - Tributável (alíquota diferenciada)',
+    '04' => '04 - Monofásica (revenda a alíquota zero)', '06' => '06 - Alíquota zero', '07' => '07 - Isenta',
+    '08' => '08 - Sem incidência', '09' => '09 - Suspensão', '49' => '49 - Outras operações de saída',
+    '99' => '99 - Outras operações'
+  }.freeze
+  TAXED_PIS_COFINS = %w[01 02].freeze
+  # Variáveis aceitas nas observações.
+  NOTE_VARIABLES = %w[{pedido} {cliente}].freeze
+
+  belongs_to :company
+  has_many :fiscal_notes, dependent: :restrict_with_error
+
+  enum :kind, { sale: 0, transfer: 1, other: 2 }
+
+  before_validation :normalize
+  after_save :unset_other_defaults, if: -> { default_for_kind? && saved_change_to_default_for_kind? }
+
+  validates :description, presence: true, length: { maximum: 60 }
+  validates :cfop, format: { with: /\A[?1-7]\d{3}\z/, message: 'deve ter 4 dígitos (use ? no primeiro para 5/6)' }
+  validates :cfop_interstate_non_contributor, format: { with: /\A6\d{3}\z/, message: 'deve começar com 6' }, allow_blank: true
+  validates :purpose, inclusion: { in: PURPOSES.keys }
+  validates :icms_situation, inclusion: { in: ICMS_SITUATIONS.keys }
+  validates :pis_cst, :cofins_cst, inclusion: { in: PIS_COFINS_SITUATIONS.keys }
+  validates :icms_rate, :pis_rate, :cofins_rate, numericality: { greater_than_or_equal_to: 0, less_than: 100 }
+  validates :icms_rate, numericality: { greater_than: 0, message: 'é obrigatória para ICMS tributado' }, if: -> { icms_situation == '00' }
+  validate :situations_match_company_regime
+
+  scope :active, -> { where(active: true) }
+  scope :ordered, -> { order(:description) }
+
+  def self.default_for(company, kind)
+    company.operation_natures.active.where(kind: kind).order(default_for_kind: :desc, id: :asc).first
+  end
+
+  # CFOP do item conforme o destino. Para consumidor não contribuinte de outra UF usa o CFOP próprio, se houver.
+  def cfop_for(company_state:, recipient_state:, non_contributor: false)
+    same_state = company_state == recipient_state
+    return cfop_interstate_non_contributor if !same_state && non_contributor && cfop_interstate_non_contributor.present?
+    return cfop unless %w[? 5 6].include?(cfop[0])
+
+    "#{same_state ? '5' : '6'}#{cfop[1..]}"
+  end
+
+  def rates_for(state)
+    row = (uf_rates.presence || Nfe::IcmsRates.default_table)[state] || {}
+    { internal: BigDecimal(row['internal'].presence || '0'), fcp: BigDecimal(row['fcp'].presence || '0') }
+  end
+
+  def icms_taxed?
+    icms_situation == '00'
+  end
+
+  # Tributação no formato do Nfe::XmlBuilder.
+  def tax_rules
+    {
+      icms_situation: icms_situation, icms_rate: icms_rate, difal: difal?, uf_rates: ->(state) { rates_for(state) },
+      pis_cst: pis_cst, pis_rate: pis_rate, cofins_cst: cofins_cst, cofins_rate: cofins_rate,
+      exclude_icms_from_pis_cofins_base: exclude_icms_from_pis_cofins_base?
+    }
+  end
+
+  def render_notes(text, order_name: nil, customer: nil)
+    text.to_s.gsub('{pedido}', order_name.to_s).gsub('{cliente}', customer.to_s).strip.presence
+  end
+
+  def kind_label
+    KINDS[kind]
+  end
+
+  private
+
+  def normalize
+    self.cfop = cfop.to_s.delete('.').strip
+    self.cfop_interstate_non_contributor = cfop_interstate_non_contributor.to_s.delete('.').strip.presence
+    self.uf_rates = Nfe::IcmsRates.default_table if uf_rates.blank?
+  end
+
+  def situations_match_company_regime
+    return unless company
+
+    simples = company.tax_regime != 3
+    simples_codes = %w[102 103 300 400]
+    if simples && !simples_codes.include?(icms_situation)
+      errors.add(:icms_situation, 'deve ser um CSOSN (empresa do Simples Nacional)')
+    elsif !simples && simples_codes.include?(icms_situation)
+      errors.add(:icms_situation, 'deve ser um CST (empresa do Regime Normal)')
+    end
+  end
+
+  def unset_other_defaults
+    company.operation_natures.where(kind: kind).where.not(id: id).update_all(default_for_kind: false)
+  end
+end

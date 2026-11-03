@@ -1,6 +1,6 @@
 class StockCorrectionsController < ApplicationController
   before_action :authenticate_user!
-  guard_screen :stock_corrections
+  guard_screen :stock_corrections, actions: { reopen: :edit, save_item_correction: :edit }
   before_action :set_stock_correction, only: %i[
     show edit update destroy finalize_correction execute_all
     save_item_correction reopen retry_shopify_sync
@@ -8,22 +8,33 @@ class StockCorrectionsController < ApplicationController
   before_action :check_edit_permission, only: %i[edit update save_item_correction]
   before_action :check_admin_permission, only: %i[destroy]
 
+  SORTS = { 'id' => 'stock_corrections.id', 'correction_date' => 'stock_corrections.correction_date',
+            'items' => 'items_total', 'corrections' => 'corrections_total' }.freeze
+  ITEM_COUNTS = <<~SQL.squish.freeze
+    stock_corrections.*,
+    (SELECT COUNT(*) FROM stock_correction_items i WHERE i.stock_correction_id = stock_corrections.id) AS items_total,
+    (SELECT COUNT(*) FROM stock_correction_items i WHERE i.stock_correction_id = stock_corrections.id AND i.needs_correction = TRUE) AS corrections_total,
+    (SELECT COUNT(*) FROM stock_correction_items i WHERE i.stock_correction_id = stock_corrections.id AND i.shopify_sync_status = 'error') AS errors_total
+  SQL
+
   def index
-    @per_page = (params[:per_page] || 10).to_i
-    @current_page = (params[:page] || 1).to_i
-    @locations_kpi = Location.order(:name)
+    scope = base_query
+    @kpis = {
+      pending: scope.where(status: [nil, 'pending']).count,
+      executed: scope.where(status: 'executed').count,
+      error: scope.where(id: with_items(shopify_sync_status: 'error')).count,
+      corrections: StockCorrectionItem.where(stock_correction_id: scope.select(:id), needs_correction: true).count
+    }
 
-    query = apply_filters(base_query)
+    query = apply_filters(scope)
+    total = query.count
+    sort = SORTS.fetch(params[:sort].to_s, 'stock_corrections.created_at')
+    dir = params[:dir] == 'asc' ? 'ASC' : 'DESC'
+    @stock_corrections = query.select(ITEM_COUNTS).includes(:user)
+                              .order(Arel.sql("#{sort} #{dir}"), id: :desc)
+                              .paginate(page: params[:page], per_page: 8, total_entries: total)
 
-    @total_corrections = query.count
-    @total_pages = (@total_corrections.to_f / @per_page).ceil
-
-    offset = (@current_page - 1) * @per_page
-
-    @stock_corrections = query.order(created_at: :desc)
-                              .includes(:stock_correction_items)
-                              .limit(@per_page)
-                              .offset(offset)
+    @accuracy = location_accuracy(scope).paginate(page: params[:acc_page], per_page: 8)
   end
 
   def show
@@ -187,24 +198,34 @@ class StockCorrectionsController < ApplicationController
 
   def apply_filters(query)
     query = query.where(location: params[:location]) if params[:location].present?
-
-    if params[:status].present?
-      query = case params[:status]
-              when 'pending'
-                query.where(status: [nil, 'pending'])
-              when 'executed'
-                query.where(status: 'executed')
-              else
-                query
-              end
+    query = query.where(status: params[:status] == 'pending' ? [nil, 'pending'] : 'executed') if %w[pending executed].include?(params[:status])
+    if params[:q].present?
+      term = params[:q].to_s.strip.delete_prefix('#')
+      query = query.where('stock_corrections.reason LIKE :q OR stock_corrections.id = :id', q: "%#{ActiveRecord::Base.sanitize_sql_like(term)}%", id: term.to_i)
     end
-
-    if params[:date_filter].present?
-      date = Date.parse(params[:date_filter])
-      query = query.where(correction_date: date.beginning_of_day..date.end_of_day)
+    if (start = HoneyUiHelper.period_start(params[:period]))
+      query = query.where(correction_date: start.to_date..)
+    end
+    case params[:kpi]
+    when 'error' then query = query.where(id: with_items(shopify_sync_status: 'error'))
+    when 'corrections' then query = query.where(id: with_items(needs_correction: true))
     end
 
     query
+  end
+
+  def with_items(conditions)
+    StockCorrectionItem.where(conditions).select(:stock_correction_id)
+  end
+
+  # Acurácia por location: o percentual vem do job (Location#kpi_ratio), que soma os itens de
+  # todas as conferências da loja e vê quantos não precisaram de correção.
+  def location_accuracy(scope)
+    keys = current_user.admin? ? nil : current_user.allowed_location_keys
+    locations = Location.order(:name)
+    locations = locations.where(slug: keys) if keys
+    conferences = scope.group(:location).count
+    locations.map { |location| { location: location, conferences: conferences[location.slug].to_i } }
   end
 
   def setup_pagination

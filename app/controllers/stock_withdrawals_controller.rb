@@ -3,10 +3,19 @@ class StockWithdrawalsController < ApplicationController
   before_action :set_withdrawal, only: [:show, :edit, :update, :destroy, :complete]
   before_action :require_editable, only: [:edit, :update]
 
+  PERIODS = { '1' => 'Hoje', '7' => 'Últimos 7 dias', '30' => 'Últimos 30 dias', '90' => 'Últimos 90 dias' }.freeze
+
   def index
-    scope = StockWithdrawal.includes(:user, items: :location).recent
-    scope = scope.where(status: params[:status]) if StockWithdrawal.statuses.key?(params[:status])
+    base = StockWithdrawal.all
+    base = base.where(id: StockWithdrawalItem.joins(:location).where(locations: { id: params[:location_id] }).select(:stock_withdrawal_id)) if params[:location_id].present?
+    base = base.where(reason: params[:reason]) if StockWithdrawal::REASONS.key?(params[:reason])
+    base = base.where('stock_withdrawals.withdrawal_date >= ?', (params[:period].to_i - 1).days.ago.to_date) if PERIODS.key?(params[:period])
+    @status_counts = base.group(:status).count.transform_keys(&:to_s)
+
+    scope = base.includes(:user, items: :location).recent
+    scope = scope.where(status: params[:status].split(',')) if params[:status].present? && params[:status].split(',').all? { |s| StockWithdrawal.statuses.key?(s) }
     @withdrawals = scope.paginate(page: params[:page], per_page: 20)
+    @locations = Location.where(id: StockWithdrawalItem.select(:location_id).distinct).order(:name)
   end
 
   def new
@@ -33,6 +42,7 @@ class StockWithdrawalsController < ApplicationController
   end
 
   def update
+    ActiveRecord::Associations::Preloader.new(records: [@withdrawal], associations: { items: %i[product location] }).call
     @withdrawal.assign_attributes(header_params)
     @withdrawal.editable_items.each(&:mark_for_destruction) # as já retiradas nunca são tocadas
     build_items(@withdrawal)
@@ -135,12 +145,12 @@ class StockWithdrawalsController < ApplicationController
   end
 
   # Cada ação carrega só o que usa (o Bullet reclama de eager loading que sobra):
-  # a página de detalhe mostra produto e location de cada linha; a edição usa só o produto
-  # (as locations vêm da lista já carregada); as demais ações não precisam de nenhum.
+  # a página de detalhe mostra produto e location de cada linha, e concluir valida cada linha (que
+  # olha os dois). Editar e salvar carregam depois do require_editable, porque uma retirada que não
+  # pode mais ser editada só redireciona.
   def set_withdrawal
     scope = case action_name
-            when 'show' then StockWithdrawal.includes(items: [:product, :location])
-            when 'edit', 'update' then StockWithdrawal.includes(items: :product)
+            when 'show', 'complete' then StockWithdrawal.includes(items: [:product, :location])
             else StockWithdrawal
             end
     @withdrawal = scope.find(params[:id])
@@ -183,6 +193,7 @@ class StockWithdrawalsController < ApplicationController
   def prepare_form
     @locations = Location.order(:name)
     @locations_by_id = @locations.index_by(&:id)
+    ActiveRecord::Associations::Preloader.new(records: [@withdrawal], associations: { items: :product }).call
     live_items = @withdrawal.items.reject { |item| item.marked_for_destruction? || item.locked? }
     @locked_items = @withdrawal.locked_items
     @rows = live_items.group_by(&:product).map do |product, items|

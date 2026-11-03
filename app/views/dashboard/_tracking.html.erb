@@ -1,0 +1,74 @@
+<%# Acompanhamento dos pedidos no fluxo (Log03 e Log02). Locais: kind, perm, title, attempts_channel, order_types (opcional), transport. %>
+<% order_types ||= nil %>
+<% transport ||= false %>
+<% stages = { 'invoice_emition' => 2, 'send_xml' => 3, 'push_tracking' => 4 } %>
+<% statuses = { 'invoice_emition' => ['Aguardando nota', 'yellow', 'Criado no Correios, ainda sem nota fiscal.'],
+                'send_xml' => ['Aguardando XML', 'blue', 'Nota pronta, falta enviar o XML ao Correios.'],
+                'push_tracking' => ['Aguardando rastreio', 'purple', 'XML enviado, falta o código de rastreio.'] } %>
+<% step_map = { 'ok' => ['Feito', 'green', 'Esta etapa já foi concluída.'], 'wait' => ['Esperando', 'yellow', 'É a etapa em que o pedido está agora.'], 'next' => ['Depois', 'gray', 'Vem depois da etapa atual.'] } %>
+<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% rows = @tracking_summary.map do |order_id, data|
+     etapa = data.find { |k, v| v == true && stages.key?(k.to_s) }&.first.to_s
+     at = stages[etapa] || 1
+     step = ->(n) { at > n ? 'ok' : (at == n ? 'wait' : 'next') }
+     { id: order_id, tiny: order_id, cliente: data[:client_name].presence || '—', passos: [at, 4], etapa: etapa, nota: step.call(2), xml: step.call(3), rastreio: step.call(4),
+       tipo: (order_types && order_types[order_id].present? ? b2b_order_type_badge(order_types[order_id]).to_s.html_safe : nil) }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'pedidos', unit1: 'pedido', page_size: 10,
+     cols: [
+       { k: :tiny, label: 'Pedido (Tiny)', t: :mono, main: true, copy: true },
+       { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
+       (order_types ? { k: :tipo, label: 'Tipo', t: :html, nodetail: true } : nil),
+       { k: :passos, label: 'Andamento', t: :steps, nodetail: true },
+       { k: :etapa, label: 'Status atual', t: :status, map: statuses },
+       { k: :nota, label: 'Nota fiscal', t: :status, map: step_map },
+       { k: :xml, label: 'Envio XML', t: :status, map: step_map },
+       { k: :rastreio, label: 'Rastreamento', t: :status, map: step_map }
+     ].compact,
+     filters: [
+       { id: :order_id, type: :search, label: 'ID do pedido', ph: 'Ex.: 911321120', server: true, tip: 'O ID do pedido no Tiny.' },
+       { id: :status, type: :select, label: 'Status', options: statuses.map { |k, v| [k, v[0]] }, all: 'Todos', server: true, tip: 'Em que etapa o pedido está esperando agora.' },
+       (transport ? { id: :transportadora, type: :select, label: 'Envio', options: [['correios', 'Correios'], ['outra', 'Outra transportadora']], all: 'Todos os envios', server: true } : nil),
+       { id: :period, type: :select, label: 'Período', options: [['today', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias']], all: 'Todo o período', server: true }
+     ].compact,
+     kpis: [
+       { label: 'Aguardando nota', icon: 'fas fa-file-invoice', tone: 'yellow', help: 'Criados no Correios, sem nota.', col: :etapa, val: 'invoice_emition' },
+       { label: 'Aguardando XML', icon: 'fas fa-file-code', tone: 'blue', help: 'Nota pronta, XML por enviar.', col: :etapa, val: 'send_xml' },
+       { label: 'Aguardando rastreio', icon: 'fas fa-shipping-fast', tone: 'purple', help: 'XML enviado, sem código.', col: :etapa, val: 'push_tracking' },
+       { label: 'No fluxo', icon: 'fas fa-route', tone: 'gray', help: 'Pedidos que ainda não terminaram.', count: rows.size }
+     ]) %>
+
+<%= hc_page_header title, 'Em que etapa está cada pedido: nota, XML ou rastreio.', icon: 'fas fa-route' do %>
+  <% if screen_can?(perm, :destroy) %>
+    <button type="button" class="btn btn-secondary" data-pg-detail="deleteFromQueueForm"><i class="fas fa-trash"></i>Excluir pedido da fila</button>
+  <% end %>
+<% end %>
+
+<script type="text/html" id="deleteFromQueueForm">
+  <div class="backdrop" data-close="drawer"></div>
+  <form class="drawer" role="dialog" aria-label="Excluir pedido da fila" action="<%= delete_order_from_queue_dashboard_index_path %>" method="post">
+    <input type="hidden" name="authenticity_token" value="<%= form_authenticity_token %>">
+    <div class="drawer-head"><div class="page-icon is-area"<% if hc_area %> style="<%= nav_area_style(hc_area) %>"<% end %>><i class="fas fa-trash"></i></div><div><h2>Excluir pedido da fila</h2><p>Apaga as tentativas do pedido no Honey. O pedido no Tiny e no Correios não é mexido.</p></div><button type="button" class="icon-btn" data-close="drawer" aria-label="Fechar"><i class="fas fa-times"></i></button></div>
+    <div class="drawer-body"><div class="pg-fields">
+      <div class="form-group pg-fg"><label class="field-label" for="del_tiny_order_id">ID do pedido (Tiny Order ID) <span class="required">*</span></label><input type="number" class="field-input" id="del_tiny_order_id" name="tiny_order_id" required></div>
+      <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span>Esta ação exclui todas as tentativas deste pedido e não dá para desfazer.</span></div>
+    </div></div>
+    <div class="drawer-foot"><button type="button" class="btn btn-ghost" data-close="drawer">Cancelar</button><button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i>Excluir pedido</button></div>
+  </form>
+</script>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Acompanhamento de pedidos no fluxo', icon: 'fas fa-route', meta: 'As bolinhas mostram as 4 etapas: criação, nota, XML e rastreio.',
+        tools: link_to(safe_join([content_tag(:i, '', class: 'fas fa-paperclip'), 'Verificar tentativas']), attempts_path(channel: attempts_channel), class: 'btn btn-secondary btn-sm'),
+        empty: { title: 'Nenhum pedido no fluxo', text: 'Todos os pedidos deste período já chegaram ao rastreio, ou os filtros não acharam nada.' },
+        detail: { title: ->(r) { "Pedido #{r[:tiny]}" } },
+        actions: ->(r) {
+          safe_join([
+            link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
+            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny'),
+            (hc_row_action('fas fa-trash', 'Excluir da fila', delete_order_from_queue_dashboard_index_path, danger: true, method: :post, params: { tiny_order_id: r[:tiny] },
+                           confirm: { title: "Excluir o pedido #{r[:tiny]} da fila?", text: 'Apaga todas as tentativas deste pedido no Honey. O pedido sai do acompanhamento e não dá para desfazer. O pedido no Tiny e no Correios não é mexido.', ok: 'Excluir pedido' }) if screen_can?(perm, :destroy))
+          ].compact)
+        }) %>
+</div>

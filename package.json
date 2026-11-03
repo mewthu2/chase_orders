@@ -9,11 +9,10 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.2",
     "datatables": "^1.10.18",
-    "esbuild": "^0.19.3",
+    "esbuild": "^0.28.2",
     "jquery": "^3.7.1",
     "sass": "^1.68.0",
-    "stimulus": "^3.2.2",
-    "turbo": "^1.10.14"
+    "stimulus": "^3.2.2"
   },
   "scripts": {
     "build": "esbuild app/javascript/*.* --bundle --sourcemap --outdir=app/assets/builds",

@@ -1,7 +1,8 @@
 class TicketsController < ApplicationController
+  include TicketFormOptions
   include TicketPage
 
-  before_action :admin_only!, only: :destroy
+  guard_screen :tickets, only: %i[new create destroy]
 
   def new
     @ticket = Ticket.new(ticket_responsability_id: params[:ticket_responsability_id])
@@ -44,17 +45,9 @@ class TicketsController < ApplicationController
 
   # Só responsabilidades ativas, de setores ativos que o usuário enxerga e com alguém para atender
   # (admin pode abrir mesmo quando o único responsável é ele).
-  def load_form_options
-    @sector_responsabilities = TicketResponsability.active.includes(:users).ordered
-                                                   .where(ticket_sector_id: TicketSector.active.where(id: current_user.visible_ticket_sector_ids).select(:id))
-                                                   .to_a
-    @responsabilities = @sector_responsabilities.select { |r| r.users.any? { |user| user.active? && (user != current_user || current_user.admin?) } }
-    @users = User.active.where.not(id: current_user.id).order(:name)
-  end
-
   # O setor só aparece no select do formulário: carrega só quando ele vai ser renderizado.
   def render_form(status: :ok)
-    ActiveRecord::Associations::Preloader.new(records: @responsabilities, associations: :ticket_sector).call
+    preload_form_sectors
     render :new, status: status
   end
 end
