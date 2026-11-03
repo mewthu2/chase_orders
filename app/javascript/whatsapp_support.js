@@ -447,6 +447,16 @@
       document.createTextNode(c.state === "closed" ? " Reabrir" : " Finalizar"),
     );
     $("wa-close").classList.toggle("is-finish", c.state !== "closed");
+    // Modo conversa: a equipe conversa com a cliente e o agente não lê nem responde.
+    const mode = $("wa-mode");
+    mode.hidden = !c.automation || c.state === "closed";
+    mode.classList.toggle("is-on", !!c.agent_paused);
+    mode.setAttribute("aria-pressed", c.agent_paused ? "true" : "false");
+    mode.title = c.agent_paused ? "Voltar a deixar o agente responder" : "Conversar você mesmo, sem o agente";
+    mode.replaceChildren(
+      el("i", undefined, c.agent_paused ? "fas fa-comments" : "fas fa-robot"),
+      document.createTextNode(c.agent_paused ? " Modo conversa ligado" : " Modo conversa"),
+    );
     renderAgent(c);
     const oldAssignee = $("wa-assignee").value;
     $("wa-assignee").replaceChildren(new Option("Transferir para…", ""));
@@ -705,6 +715,7 @@
     await refreshList();
   }
   $("wa-take").onclick = safe(() => action("take"));
+  $("wa-mode").onclick = safe(() => action(selected?.agent_paused ? "resume_agent" : "pause_agent"));
   $("wa-transfer").onclick = safe(() => {
     if (!$("wa-assignee").value)
       throw new Error("Escolha uma pessoa para transferir.");
@@ -915,8 +926,8 @@
       btn(" Tentar de novo", "fas fa-rotate", "wa-pill", () => act("ask_agent"));
     } else if (c.agent_paused) {
       box.classList.add("is-paused");
-      box.append(el("p", "Agente pausado nesta conversa: alguém da equipe está atendendo.", "wa-agent-text"));
-      btn(" Retomar agente", "fas fa-play", "wa-pill", () => act("resume_agent"));
+      box.append(el("p", "Modo conversa ligado: o agente não lê nem responde esta conversa enquanto você atende.", "wa-agent-text"));
+      btn(" Voltar para o agente", "fas fa-robot", "wa-pill", () => act("resume_agent"));
       btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
     } else {
       box.classList.add("is-idle");
@@ -925,7 +936,7 @@
       );
       if (c.agent_note === "Pensando numa resposta…") box.classList.add("is-thinking");
       btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
-      btn(" Pausar", "fas fa-pause", "wa-pill", () => act("pause_agent"));
+      btn(" Modo conversa", "fas fa-comments", "wa-pill", () => act("pause_agent"));
     }
     box.append(actions);
   }

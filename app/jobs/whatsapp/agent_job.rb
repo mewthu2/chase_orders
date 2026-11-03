@@ -7,6 +7,7 @@ module Whatsapp
     DELAY = 12.seconds
 
     def self.schedule(conversation, message)
+      return if conversation.agent_paused? # modo conversa: o agente nem lê
       return unless Automation.where(connection_id: conversation.connection_id, enabled: true).exists?
       set(wait: DELAY).perform_later(conversation.id, message.id)
     end

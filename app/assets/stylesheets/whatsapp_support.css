@@ -2047,3 +2047,12 @@
   font-weight: 600;
 }
 #wa-inbox #wa-close.is-finish:hover { background: var(--wa-accent-2); border-color: var(--wa-accent-2); color: #fff; }
+
+/* ---------- Modo conversa ---------- */
+#wa-inbox .wa-mode.is-on {
+  background: rgba(227, 179, 65, 0.16);
+  border-color: #e3b341;
+  color: #e3b341;
+  font-weight: 600;
+}
+#wa-inbox .wa-mode.is-on i { animation: wa-bob 1.8s ease-in-out infinite; }

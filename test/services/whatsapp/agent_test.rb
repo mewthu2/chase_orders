@@ -51,6 +51,14 @@ class WhatsappAgentTest < ActiveSupport::TestCase
     assert_no_enqueued_jobs(only: Whatsapp::AgentJob) { @a.with_lock { Whatsapp::Ingest.new(@a).message!(wa_message('m3')) } }
   end
 
+  test 'conversation mode: a paused conversation never schedules the agent' do
+    @conversation.update!(agent_paused: true)
+    assert_no_enqueued_jobs(only: Whatsapp::AgentJob) { @a.with_lock { Whatsapp::Ingest.new(@a).message!(wa_message('pausada')) } }
+    @conversation.update!(state: 'closed')
+    assert_enqueued_with(job: Whatsapp::AgentJob) { @a.with_lock { Whatsapp::Ingest.new(@a).message!(wa_message('voltou')) } }
+    refute @conversation.reload.agent_paused?
+  end
+
   test 'approve mode stores a draft and sends nothing' do
     assert_no_enqueued_jobs(only: Whatsapp::SendJob) { run_agent(decision('reply', reply: 'Oi! Segue o link.')) }
     @conversation.reload
