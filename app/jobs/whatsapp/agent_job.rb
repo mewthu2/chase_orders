@@ -15,7 +15,10 @@ module Whatsapp
     # force: pedido manual ("Pedir sugestão"), roda mesmo com o agente pausado e sempre como rascunho.
     def perform(conversation_id, message_id, force = false)
       conversation = Conversation.find_by(id: conversation_id) || return
-      return unless current_turn?(conversation, message_id)
+      unless current_turn?(conversation, message_id, force)
+        conversation.update_columns(agent_note: nil, updated_at: Time.current) if force
+        return
+      end
       return if conversation.agent_paused? && !force
       automation = Automation.active_for(conversation.connection_id) || return
 
@@ -32,9 +35,9 @@ module Whatsapp
       conversation.connection.with_lock do
         conversation.reload
         # Alguém respondeu ou o cliente escreveu de novo enquanto o agente pensava.
-        return unless current_turn?(conversation, message_id)
+        return unless current_turn?(conversation, message_id, force)
         return if conversation.agent_paused? && !force
-        apply(conversation, automation, decision, message_id, auto: automation.auto? && !force) { |m| send_now = m }
+        apply(conversation, automation, decision, message_id, auto: automation.auto? && !force, force: force) { |m| send_now = m }
       end
       SendJob.perform_later(send_now.id) if send_now
     end
@@ -42,12 +45,14 @@ module Whatsapp
     private
 
     # A mensagem ainda é a última do cliente e ninguém respondeu depois dela.
-    def current_turn?(conversation, message_id)
-      last = conversation.messages.where(historical: false).order(sent_at: :desc, id: :desc).first
+    # A resposta automática ignora o histórico importado; o pedido manual (force) não.
+    def current_turn?(conversation, message_id, force = false)
+      scope = force ? conversation.messages : conversation.messages.where(historical: false)
+      last = scope.order(sent_at: :desc, id: :desc).first
       last && last.id == message_id.to_i && last.direction == 'incoming'
     end
 
-    def apply(conversation, automation, decision, message_id, auto:)
+    def apply(conversation, automation, decision, message_id, auto:, force: false)
       case decision.action
       when 'unsure'
         conversation.clear_agent_draft
@@ -55,7 +60,8 @@ module Whatsapp
         gap = automation.gaps.open.find_or_initialize_by(conversation: conversation, message_id: message_id)
         gap.update!(question: decision.question)
       when 'wait'
-        conversation.update!(agent_note: nil) if conversation.agent_note.present? && !conversation.needs_human?
+        note = ("O agente achou que não há nada para responder agora#{": #{decision.reason}" if decision.reason.present?}".truncate(500) if force)
+        conversation.update!(agent_note: note) unless conversation.needs_human?
       else
         if !decision.reply? && decision.finish?
           conversation.update!(state: 'closed', agent_note: nil, needs_human: false) if auto

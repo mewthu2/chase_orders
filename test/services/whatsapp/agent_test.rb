@@ -59,6 +59,20 @@ class WhatsappAgentTest < ActiveSupport::TestCase
     refute @conversation.reload.agent_paused?
   end
 
+  test 'imported history: no automatic answer, but a manual request suggests one' do
+    old = nil
+    @a.with_lock { old = Whatsapp::Ingest.new(@a).message!(wa_message('antiga', text: 'Como sei se o crédito está disponível?', at: 1.second.from_now), historical: true) }
+    run_agent(decision('reply', reply: 'Automática'), message_id: old.id)
+    assert_nil @conversation.reload.agent_draft
+    run_agent(decision('reply', reply: 'Sugestão pedida'), message_id: old.id, force: true)
+    assert_equal 'Sugestão pedida', @conversation.reload.agent_draft
+  end
+
+  test 'manual request that gets "wait" explains why instead of staying silent' do
+    run_agent(decision('wait'), force: true)
+    assert_match 'não há nada para responder agora', @conversation.reload.agent_note
+  end
+
   test 'approve mode stores a draft and sends nothing' do
     assert_no_enqueued_jobs(only: Whatsapp::SendJob) { run_agent(decision('reply', reply: 'Oi! Segue o link.')) }
     @conversation.reload
