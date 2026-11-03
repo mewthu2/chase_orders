@@ -343,6 +343,11 @@ body[data-guided="on"] .sb-area-desc { display: block; }
 .sb-section.is-closed > .sb-section-body { grid-template-rows: 0fr; }
 .sb-section-inner { min-height: 0; overflow: hidden; margin: 0 -10px; padding: 0 10px; }
 .sb-section.is-closed .sb-section-inner { visibility: hidden; transition: visibility 0s linear var(--t-slow); }
+/* Barra lateral recolhida (só ícones): as áreas fechadas continuam mostrando os ícones. */
+@media (min-width: 1081px) {
+  body[data-sidebar="collapsed"] .sb-section.is-closed > .sb-section-body { grid-template-rows: 1fr; }
+  body[data-sidebar="collapsed"] .sb-section.is-closed .sb-section-inner { visibility: visible; transition: none; }
+}
 .sb-section .sb-ic { color: color-mix(in srgb, var(--area) 42%, var(--text-3)); }
 .sb-link:focus-visible, .sb-group-btn:focus-visible { outline-offset: -2px; }
 

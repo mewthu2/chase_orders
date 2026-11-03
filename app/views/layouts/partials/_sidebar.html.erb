@@ -14,8 +14,10 @@
 
   <nav class="sb-nav" id="sbNav">
     <% nav_menu.each do |area| %>
-      <section class="sb-section<%= ' has-active' if nav_area_active?(area) %>" data-area="<%= area[:id] %>" style="<%= nav_area_style(area) %>">
-        <button class="sb-section-title" type="button" aria-expanded="true" data-tip="<%= area[:desc] %>">
+      <%# Ao entrar, todas as áreas vêm recolhidas; só a da tela atual abre. %>
+      <% area_open = nav_area_active?(area) %>
+      <section class="sb-section<%= area_open ? ' has-active' : ' is-closed' %>" data-area="<%= area[:id] %>" style="<%= nav_area_style(area) %>">
+        <button class="sb-section-title" type="button" aria-expanded="<%= area_open %>" data-tip="<%= area[:desc] %>">
           <span class="sb-area-ic"><i class="<%= area[:icon] %>"></i></span>
           <span class="sb-area-txt">
             <span class="sb-area-name"><%= area[:title] %></span>

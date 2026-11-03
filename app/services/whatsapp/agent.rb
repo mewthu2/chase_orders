@@ -58,13 +58,15 @@ module Whatsapp
         - Se a última mensagem do cliente pede algo que os comandos não cobrem, ou se você não tem certeza de como a equipe responderia, use a ação "unsure". É melhor deixar para a equipe do que errar.
         - Cliente irritado, reclamação séria, ameaça de expor a marca, pedido de estorno ou cobrança indevida sem comando específico: "unsure".
         - Use "finish" só quando um comando mandar finalizar ou quando o cliente deixar claro que está tudo resolvido (ex.: agradeceu e se despediu). Em "finish", a resposta pode ser uma despedida curta ou vazia.
-        - Use "wait" quando não há nada a responder agora (ex.: o cliente ainda está digitando várias mensagens, mandou só "ok" no meio do atendimento, ou a última mensagem já foi respondida pela loja).
+        - A última mensagem é da cliente: SEMPRE escreva uma sugestão de resposta em "reply", analisando o contexto da conversa inteira (inclusive em "unsure").
+        - Em "unsure", a sugestão deve ser segura e não inventar nada: por exemplo, pedir o dado que falta (número do pedido, e-mail da compra) ou dizer que vai verificar com a equipe e já retorna. A equipe decide se envia.
+        - Use "wait" só se a mensagem da cliente claramente não pede resposta (ex.: um "ok" ou emoji solto no meio do atendimento).
         - Escreva em português do Brasil, no tom de WhatsApp: cordial, curto, sem formalidade excessiva, chamando pelo nome quando souber. Pode usar *negrito* do WhatsApp com moderação.
         - Não diga que é uma IA a menos que perguntem diretamente.
 
         Responda APENAS com um JSON neste formato:
         {"action": "reply" | "finish" | "unsure" | "wait",
-         "reply": "texto para enviar ao cliente (vazio em unsure e wait)",
+         "reply": "texto sugerido para enviar à cliente (sempre preenchido, exceto em wait)",
          "question": "em unsure: resuma em uma frase o que o cliente quer e que a equipe precisa ensinar",
          "reason": "uma frase curta explicando qual comando você usou ou por que não soube"}
       PROMPT
@@ -101,6 +103,7 @@ module Whatsapp
       decision = Decision.new(action: action, reply: data['reply'].to_s.strip.truncate(4_000),
                               question: data['question'].to_s.strip.truncate(1_000), reason: data['reason'].to_s.strip.truncate(300))
       decision.action = 'unsure' if decision.action == 'reply' && decision.reply.blank?
+      decision.action = 'reply' if decision.action == 'wait' && decision.reply.present?
       decision.question = 'O cliente fez uma pergunta que os comandos ainda não cobrem.' if decision.unsure? && decision.question.blank?
       decision
     rescue JSON::ParserError

@@ -73,6 +73,21 @@ class WhatsappAgentTest < ActiveSupport::TestCase
     assert_match 'não há nada para responder agora', @conversation.reload.agent_note
   end
 
+  test 'unsure still leaves a safe suggestion for the team, never sent even in auto mode' do
+    @automation.update!(mode: 'auto')
+    assert_no_enqueued_jobs(only: Whatsapp::SendJob) do
+      run_agent(decision('unsure', reply: 'Vou verificar com a equipe e já te retorno!', question: 'Cliente quer saber do crédito'))
+    end
+    @conversation.reload
+    assert @conversation.needs_human?
+    assert_equal 'Vou verificar com a equipe e já te retorno!', @conversation.agent_draft
+    assert_equal 1, @conversation.messages.count
+  end
+
+  test 'a wait that still brings a reply becomes a suggestion' do
+    assert Whatsapp::Agent.new(@automation).send(:parse, '{"action":"wait","reply":"Oi!"}').reply?
+  end
+
   test 'approve mode stores a draft and sends nothing' do
     assert_no_enqueued_jobs(only: Whatsapp::SendJob) { run_agent(decision('reply', reply: 'Oi! Segue o link.')) }
     @conversation.reload

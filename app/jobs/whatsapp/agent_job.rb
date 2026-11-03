@@ -55,7 +55,9 @@ module Whatsapp
     def apply(conversation, automation, decision, message_id, auto:, force: false)
       case decision.action
       when 'unsure'
+        # Mesmo sem saber, deixa uma sugestão segura para a equipe (nunca é enviada sozinha).
         conversation.clear_agent_draft
+        conversation.assign_attributes(agent_draft: decision.reply, agent_draft_for_id: message_id) if decision.reply.present?
         conversation.update!(needs_human: true, agent_note: "Não sei o que fazer neste caso: #{decision.question}".truncate(500))
         gap = automation.gaps.open.find_or_initialize_by(conversation: conversation, message_id: message_id)
         gap.update!(question: decision.question)

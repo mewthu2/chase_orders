@@ -2101,3 +2101,47 @@
 #wa-inbox .wa-number-agent { bottom: 6px; padding: 0 7px; line-height: 17px; }
 #wa-inbox .wa-number-tab-wrap .wa-number-tab { min-width: 250px; padding-bottom: 10px; }
 #wa-inbox .wa-number-tab-wrap .wa-number-count { margin-top: 1px; }
+
+/* ---------- Agente escrevendo ("digitando…") e aviso junto da sugestão ---------- */
+#wa-inbox .wa-agent.is-thinking { --wa-agent: var(--wa-read); }
+#wa-inbox .wa-agent-typing {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 4px;
+  padding: 9px 14px;
+  width: fit-content;
+  border-radius: 8px;
+  border-top-left-radius: 0;
+  background: var(--wa-in);
+  box-shadow: var(--wa-shadow);
+}
+#wa-inbox .wa-agent-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wa-text-2);
+  animation: wa-typing 1.2s ease-in-out infinite;
+}
+#wa-inbox .wa-agent-typing span:nth-child(2) { animation-delay: 0.15s; }
+#wa-inbox .wa-agent-typing span:nth-child(3) { animation-delay: 0.3s; }
+#wa-inbox .wa-agent-typing em {
+  margin-left: 8px;
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--wa-text-2);
+}
+#wa-inbox .wa-agent.is-thinking .wa-agent-bot { animation: wa-bob 1s ease-in-out infinite; }
+#wa-inbox .wa-agent-warn {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(241, 92, 109, 0.12);
+  color: var(--wa-danger);
+  font-size: 0.8rem;
+}
+#wa-inbox .wa-agent.is-draft.is-unsure { background: linear-gradient(90deg, rgba(241, 92, 109, 0.08), var(--wa-panel) 60%); }
+@keyframes wa-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}

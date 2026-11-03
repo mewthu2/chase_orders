@@ -648,6 +648,22 @@
     $("wa-older").hidden = !before;
     scrollBottom();
     await markRead();
+    await autoSuggest(c, result.messages);
+  }
+  // Ao abrir uma conversa em que a cliente está esperando e ainda não há sugestão,
+  // o agente é chamado sozinho (inclusive para mensagens do histórico importado).
+  async function autoSuggest(c, rows) {
+    const last = rows[rows.length - 1];
+    if (!c.automation || c.state === "closed" || c.agent_paused) return;
+    if (c.agent_draft !== null && c.agent_draft !== undefined) return;
+    // Não insiste depois de "Descartar" nem enquanto já está pensando.
+    if (c.agent_note === THINKING || c.agent_note?.startsWith("Sugestão descartada") || c.agent_note?.startsWith("O agente achou")) return;
+    if (!last || last.direction !== "incoming") return;
+    try {
+      await askAgent(c.id);
+    } catch (_) {
+      /* sem sugestão automática: o botão "Pedir sugestão" continua disponível */
+    }
   }
   async function markRead() {
     if (selected && !document.hidden && nearBottom())
@@ -862,6 +878,18 @@
     setTimeout(stopRecording, 60000);
   });
   // Barra do agente: sugestão para aprovar, "não sei o que fazer", pausa e pedido de sugestão.
+  const THINKING = "Pensando numa resposta…";
+  // Pede a sugestão e acompanha de perto (a cada 1,5 s, até 45 s) até ela chegar.
+  async function askAgent(id) {
+    if (selected?.id === id) renderAgent({ ...selected, agent_note: THINKING });
+    await api(`/whatsapp/conversations/${id}`, json("PATCH", { operation: "ask_agent" }));
+    for (let i = 0; i < 30 && selected?.id === id; i += 1) {
+      await new Promise((r) => setTimeout(r, 1500));
+      if (selected?.id !== id) return;
+      await refreshSelected();
+      if (selected?.agent_note !== THINKING) return;
+    }
+  }
   let fromDraft = false,
     agentSignature = "";
   function renderAgent(c) {
@@ -892,8 +920,21 @@
       return b;
     };
     const act = (operation) => action(operation).then(() => refreshSelected());
+    const thinking = c.agent_note === THINKING;
+    if (thinking) {
+      // "digitando…" enquanto o agente prepara a sugestão.
+      box.classList.add("is-thinking");
+      const dots = el("div", undefined, "wa-agent-typing");
+      dots.append(el("span"), el("span"), el("span"), el("em", "O agente está escrevendo uma sugestão…"));
+      box.append(dots);
+      return;
+    }
     if (c.agent_draft !== null && c.agent_draft !== undefined) {
       box.classList.add("is-draft");
+      if (c.needs_human) {
+        box.classList.add("is-unsure");
+        box.append(el("p", `${c.agent_note || "Não sei o que fazer neste caso."} Confira a sugestão antes de enviar.`, "wa-agent-warn"));
+      }
       if (c.agent_draft) {
         box.append(el("p", c.agent_draft, "wa-agent-text"));
         btn(c.agent_draft_finish ? " Enviar e finalizar" : " Enviar", "fas fa-paper-plane", "wa-agent-send", () => {
@@ -913,6 +954,12 @@
         btn(" Finalizar", "fas fa-check", "wa-agent-send", () => act("close"));
       }
       btn(" Descartar", "fas fa-xmark", "wa-pill", () => act("discard_draft"));
+      if (c.needs_human && c.automation.url) {
+        const a = el("a", undefined, "wa-pill");
+        a.href = `${c.automation.url}#falta-ensinar`;
+        a.append(el("i", undefined, "fas fa-graduation-cap"), document.createTextNode(" Ensinar o agente"));
+        actions.append(a);
+      }
     } else if (c.needs_human) {
       box.classList.add("is-unsure");
       box.append(el("p", c.agent_note || "Não sei o que fazer neste caso.", "wa-agent-text"));
@@ -923,19 +970,18 @@
         actions.append(a);
       }
       btn(" Já resolvi", "fas fa-check", "wa-pill", () => act("resolve_human"));
-      btn(" Tentar de novo", "fas fa-rotate", "wa-pill", () => act("ask_agent"));
+      btn(" Tentar de novo", "fas fa-rotate", "wa-pill", () => askAgent(c.id));
     } else if (c.agent_paused) {
       box.classList.add("is-paused");
       box.append(el("p", "Modo conversa ligado: o agente não lê nem responde esta conversa enquanto você atende.", "wa-agent-text"));
       btn(" Voltar para o agente", "fas fa-robot", "wa-pill", () => act("resume_agent"));
-      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
+      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => askAgent(c.id));
     } else {
       box.classList.add("is-idle");
       box.append(
         el("p", c.agent_note || (c.automation.mode === "auto" ? "O agente responde sozinho nesta conversa." : "O agente sugere uma resposta quando a cliente escrever."), "wa-agent-text"),
       );
-      if (c.agent_note === "Pensando numa resposta…") box.classList.add("is-thinking");
-      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => act("ask_agent"));
+      btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => askAgent(c.id));
       btn(" Modo conversa", "fas fa-comments", "wa-pill", () => act("pause_agent"));
     }
     box.append(actions);

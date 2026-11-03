@@ -71,6 +71,7 @@ module Whatsapp
         when 'resume_agent' then conversation.assign_attributes(agent_paused: false)
         when 'discard_draft'
           conversation.clear_agent_draft
+          conversation.agent_note = 'Sugestão descartada. Use "Pedir sugestão" para outra.'
         when 'resolve_human' then conversation.assign_attributes(needs_human: false, agent_note: nil)
         when 'ask_agent'
           # Pedido manual vale também para conversas que vieram do histórico importado.

@@ -55,12 +55,17 @@ function initSidebar () {
   const nav = $('#sbNav')
   if (!nav) return
 
-  // Áreas recolhidas ficam guardadas; a área da tela atual sempre abre.
-  const closedAreas = new Set(store.get('closedAreas', []))
+  // Ao entrar no Honey todas as áreas vêm recolhidas (a da tela atual abre).
+  // As que a pessoa abrir ficam abertas só durante esta sessão do navegador.
+  const session = {
+    get () { try { return JSON.parse(sessionStorage.getItem('honey:openAreas') || '[]') } catch { return [] } },
+    set (v) { try { sessionStorage.setItem('honey:openAreas', JSON.stringify(v)) } catch { /* modo privado */ } }
+  }
+  const openAreas = new Set(session.get())
   $$('.sb-section', nav).forEach((section) => {
-    if (closedAreas.has(section.dataset.area) && !section.classList.contains('has-active')) {
-      section.classList.add('is-closed')
-      $('.sb-section-title', section).setAttribute('aria-expanded', 'false')
+    if (openAreas.has(section.dataset.area)) {
+      section.classList.remove('is-closed')
+      $('.sb-section-title', section).setAttribute('aria-expanded', 'true')
     }
   })
   nav.addEventListener('click', (e) => {
@@ -70,8 +75,8 @@ function initSidebar () {
       const section = title.closest('.sb-section')
       const closed = section.classList.toggle('is-closed')
       title.setAttribute('aria-expanded', String(!closed))
-      closed ? closedAreas.add(section.dataset.area) : closedAreas.delete(section.dataset.area)
-      store.set('closedAreas', Array.from(closedAreas))
+      closed ? openAreas.delete(section.dataset.area) : openAreas.add(section.dataset.area)
+      session.set(Array.from(openAreas))
       return
     }
     const groupBtn = e.target.closest('.sb-group-btn')
