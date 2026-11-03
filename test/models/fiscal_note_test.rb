@@ -59,12 +59,54 @@ class FiscalNoteTest < ActiveSupport::TestCase
     assert note.xml_available?
   end
 
-  def build_order
+  test 'purpose: e-commerce, wholesale, transfer and loose notes' do
+    assert_equal 'ecommerce', build_note(shopify_order_name: '#1234').purpose
+    assert_equal 'atacado', build_note(b2b_order: build_order).purpose
+    assert_equal 'transferencia', build_note(b2b_order: build_order(kind: :stock_transfer)).purpose
+    assert_equal 'transferencia', build_note(b2b_order: build_order(kind: :b2c_transfer)).purpose
+    assert_equal 'avulsa', build_note.purpose
+    assert_equal 'transferencia', build_note(nature: build_nature(kind: :transfer)).purpose
+  end
+
+  test 'purpose: return, complementary and adjustment natures win over the source order' do
+    assert_equal 'devolucao', build_note(shopify_order_name: '#1', nature: build_nature(purpose: 4)).purpose
+    assert_equal 'complementar', build_note(nature: build_nature(purpose: 2)).purpose
+    assert_equal 'ajuste', build_note(nature: build_nature(purpose: 3)).purpose
+  end
+
+  test 'every purpose has a label' do
+    assert_equal FiscalNote::PURPOSES.keys.sort, %w[ajuste atacado avulsa complementar devolucao ecommerce transferencia]
+    assert_equal 'Pedido do e-commerce', build_note(shopify_order_name: '#1').purpose_label
+  end
+
+  test 'with_purpose filters the same way purpose classifies' do
+    notes = {
+      'ecommerce' => build_note(number: 1, shopify_order_name: '#1'),
+      'atacado' => build_note(number: 2, b2b_order: build_order),
+      'transferencia' => build_note(number: 3, b2b_order: build_order(kind: :stock_transfer)),
+      'devolucao' => build_note(number: 4, shopify_order_name: '#2', nature: build_nature(purpose: 4)),
+      'avulsa' => build_note(number: 5, nature: build_nature)
+    }
+    notes.each_value(&:save!)
+    notes.each do |key, note|
+      assert_equal note.purpose, key
+      assert_equal [note.id], FiscalNote.with_purpose(key).pluck(:id), "with_purpose(#{key})"
+    end
+    assert_empty FiscalNote.with_purpose('nao-existe')
+  end
+
+  def build_nature(kind: :sale, purpose: 1)
+    nature = OperationNature.new(company: @company, description: 'Natureza', kind: kind, purpose: purpose, cfop: '?102')
+    nature.save!(validate: false)
+    nature
+  end
+
+  def build_order(kind: :sale)
     user = User.create!(name: 'U', email: "u#{SecureRandom.hex(3)}@example.com", password: 'password123')
     client = Client.create!(responsible_name: 'Cliente')
-    order = B2bOrder.new(kind: :sale, user: user, client: client)
+    order = B2bOrder.new(kind: kind, user: user, client: client)
     order.b2b_order_items.build(sku: 'S', quantity: 1, price: 1)
-    order.save!
+    order.save!(validate: kind == :sale)
     order
   end
 end

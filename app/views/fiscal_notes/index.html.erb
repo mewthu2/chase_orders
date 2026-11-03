@@ -7,7 +7,7 @@
                 'erro' => ['Erro', 'orange', 'Não deu para assinar ou enviar a nota. O motivo aparece nos detalhes.'] } %>
 <% environments = { 'producao' => ['Produção', 'green', 'Notas de verdade, com valor fiscal.'], 'homologacao' => ['Homologação', 'yellow', 'Nota de teste, sem valor fiscal.'] } %>
 <% map = ->(note) {
-     { id: note.id, record: note, num: note.number, serieTxt: "Série #{note.series}", serie: note.series, st: note.status,
+     { id: note.id, record: note, num: note.number, fin: note.purpose, serieTxt: "Série #{note.series}", serie: note.series, st: note.status,
        empresa: note.company.trade_name.presence || note.company.legal_name, amb: note.environment, pedido: fiscal_note_order_label(note),
        dest: fiscal_note_destination(note).presence || '—', valor: note.total_value.to_f,
        emissao: note.issued_at || note.created_at, natureza: note.operation_nature.presence || '—', cfop: note.cfop_summary.presence || '—',
@@ -22,11 +22,13 @@
    } %>
 <% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 10, unit: 'notas', unit1: 'nota', sort: { k: :emissao, dir: -1 },
      attrs: { st: :status, empresa: :company_id, emissao: :created_at },
+     filter_sql: { fin: ->(scope, v) { scope.merge(FiscalNote.with_purpose(v)) } },
      sort_sql: { valor: 'fiscal_notes.total_value', emissao: 'COALESCE(fiscal_notes.issued_at, fiscal_notes.created_at)' },
      cols: [
        { k: :num, label: 'Nº', t: :num, plain: true, main: true, sub: :serieTxt },
        { k: :serieTxt, label: 'Série', hide: true, nodetail: true },
        { k: :serie, label: 'Série', hide: true },
+       { k: :fin, label: 'Finalidade', t: :status, map: FiscalNote::PURPOSES },
        { k: :st, label: 'Situação', t: :status, map: statuses },
        { k: :empresa, label: 'Empresa' },
        { k: :amb, label: 'Ambiente', t: :status, map: environments },
@@ -42,6 +44,7 @@
      ],
      filters: [
        { id: :q, type: :search, label: 'Buscar', ph: 'Número, pedido, empresa ou chave…', tip: 'Procura no número da nota, no pedido de origem, na empresa e na chave de acesso.' },
+       { id: :fin, type: :select, label: 'Finalidade', col: :fin, all: 'Todas as finalidades', tip: 'Para que a nota foi emitida: pedido do site, atacado, transferência, devolução…' },
        { id: :status, type: :select, label: 'Situação', col: :st, all: 'Todas as situações', tip: 'Em que ponto a nota está.' },
        { id: :company_id, type: :select, label: 'Empresa', col: :empresa, options: @companies.map { |c| [c.id.to_s, c.trade_name.presence || c.legal_name] }, all: 'Todas as empresas', tip: 'A empresa (CNPJ) que emitiu a nota.' },
        { id: :per, type: :period, label: 'Período', col: :emissao }

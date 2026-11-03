@@ -70,6 +70,7 @@
           </div>
         </div>
         <div class="form-col-12"><label class="field-label">Chave de acesso</label><div class="text-main"><%= note.access_key.presence || '-' %></div></div>
+        <div class="form-col-4"><label class="field-label">Finalidade</label><div class="text-main"><% fin = FiscalNote::PURPOSES[note.purpose] %><span class="ticket-status" style="--c: <%= hc_tone(fin[1]) %>" data-tip="<%= fin[0] %>: <%= fin[2] %>"><%= fin[0] %></span></div></div>
         <div class="form-col-4"><label class="field-label">Natureza da operação</label><div class="text-main"><%= note.operation_nature.presence || '-' %></div></div>
         <div class="form-col-4"><label class="field-label">CFOP</label><div class="text-main"><%= note.cfop_summary.presence || '-' %></div></div>
         <div class="form-col-4"><label class="field-label">Valor total</label><div class="text-main"><%= number_to_currency(note.total_value, unit: 'R$', separator: ',', delimiter: '.', format: '%u %n') %></div></div>

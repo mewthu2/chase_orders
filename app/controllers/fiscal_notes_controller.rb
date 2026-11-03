@@ -4,7 +4,7 @@ class FiscalNotesController < ApplicationController
   before_action :set_order, only: [:new, :create]
 
   def index
-    @scope = FiscalNote.includes(:company, :b2b_order, :order, :xml_attachment,
+    @scope = FiscalNote.includes(:company, :b2b_order, :order, :nature, :xml_attachment,
                                  internal_transfer_shipment: [:origin_location, { internal_transfer: :destination_location }]).recent
     @companies = Company.order(:legal_name)
   end
