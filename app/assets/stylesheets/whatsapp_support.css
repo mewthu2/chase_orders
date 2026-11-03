@@ -2056,3 +2056,48 @@
   font-weight: 600;
 }
 #wa-inbox .wa-mode.is-on i { animation: wa-bob 1.8s ease-in-out infinite; }
+
+/* ---------- Selo do agente na aba de cada número ---------- */
+#wa-inbox .wa-number-tab-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+}
+#wa-inbox .wa-number-tab-wrap .wa-number-tab {
+  min-width: 235px;
+  padding-right: 12px;
+  grid-template-columns: auto 1fr auto;
+}
+#wa-inbox .wa-number-tab-wrap .wa-number-count { align-self: start; grid-row: 1; }
+#wa-inbox .wa-number-agent {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.6;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.15s, filter 0.15s, border-color 0.15s;
+}
+#wa-inbox a.wa-number-agent:hover { transform: translateY(-1px); filter: brightness(1.15); border-color: currentColor; }
+#wa-inbox .wa-number-agent.is-auto { background: rgba(0, 168, 132, 0.16); color: var(--wa-accent); }
+#wa-inbox .wa-number-agent.is-auto i { animation: wa-bob 1.8s ease-in-out infinite; }
+#wa-inbox .wa-number-agent.is-approve { background: rgba(83, 189, 235, 0.14); color: var(--wa-read); }
+#wa-inbox .wa-number-agent.is-off { background: transparent; color: var(--wa-text-2); opacity: 0.7; }
+#wa-inbox .wa-number-agent.is-off:hover { opacity: 1; }
+@media (max-width: 700px) {
+  #wa-inbox .wa-number-tab-wrap .wa-number-tab { min-width: 170px; }
+  #wa-inbox .wa-number-agent span { display: none; }
+}
+#wa-inbox .wa-number-agent, #wa-inbox .wa-number-agent * { font-size: 11px; }
+#wa-inbox .wa-number-agent { bottom: 6px; padding: 0 7px; line-height: 17px; }
+#wa-inbox .wa-number-tab-wrap .wa-number-tab { min-width: 250px; padding-bottom: 10px; }
+#wa-inbox .wa-number-tab-wrap .wa-number-count { margin-top: 1px; }

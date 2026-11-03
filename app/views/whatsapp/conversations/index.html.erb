@@ -10,13 +10,25 @@
 <section class="wa-app wa-chat-app" id="wa-inbox" data-wa-theme="dark" aria-label="Atendimento WhatsApp">
   <div class="wa-notice" id="wa-error" role="status" hidden></div>
   <nav class="wa-number-tabs" id="wa-number-tabs" role="tablist" aria-label="Números conectados">
+    <% manage = Whatsapp::Connection.administrable_by?(current_user) %>
+    <% agents = Whatsapp::Automation.where(enabled: true, connection_id: @connections.map(&:id)).index_by(&:connection_id) %>
     <% @connections.each do |c| %>
-      <button type="button" role="tab" class="wa-number-tab" data-id="<%= c.id %>" aria-selected="false">
-        <span class="wa-number-dot<%= ' is-on' if c.connected? %>" title="<%= c.connected? ? 'Conectado' : 'Desconectado' %>"></span>
-        <span class="wa-number-name"><i class="fab fa-whatsapp"></i><%= c.name %></span>
-        <small><%= c.phone.presence || 'sem telefone' %></small>
-        <span class="wa-number-count" hidden></span>
-      </button>
+      <% agent = agents[c.id] %>
+      <div class="wa-number-tab-wrap">
+        <button type="button" role="tab" class="wa-number-tab" data-id="<%= c.id %>" aria-selected="false">
+          <span class="wa-number-dot<%= ' is-on' if c.connected? %>" title="<%= c.connected? ? 'Conectado' : 'Desconectado' %>"></span>
+          <span class="wa-number-name"><i class="fab fa-whatsapp"></i><%= c.name %></span>
+          <small><%= c.phone.presence || 'sem telefone' %></small>
+          <span class="wa-number-count" hidden></span>
+        </button>
+        <% label = agent ? "#{agent.name}: #{agent.auto? ? 'respondendo sozinho' : 'sugerindo respostas'}" : 'Sem agente ligado' %>
+        <% classes = "wa-number-agent #{agent ? (agent.auto? ? 'is-auto' : 'is-approve') : 'is-off'}" %>
+        <% if manage %>
+          <%= link_to (agent ? whatsapp_automation_path(agent) : whatsapp_automations_path), class: classes, title: "#{label}. Clique para configurar." do %><i class="fas fa-robot"></i><span><%= agent ? (agent.auto? ? 'Sozinho' : 'Sugerindo') : 'Sem agente' %></span><% end %>
+        <% else %>
+          <span class="<%= classes %>" title="<%= label %>"><i class="fas fa-robot"></i><span><%= agent ? (agent.auto? ? 'Sozinho' : 'Sugerindo') : 'Sem agente' %></span></span>
+        <% end %>
+      </div>
     <% end %>
     <% if @connections.empty? %><span class="wa-number-none">Nenhum número liberado para você. Peça acesso à administração.</span><% end %>
   </nav>
