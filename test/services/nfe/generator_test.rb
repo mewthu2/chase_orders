@@ -18,6 +18,18 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     )
     Product.create!(sku: 'SKU-1', shopify_product_name: 'Camiseta', ncm: '61091000')
     Product.create!(sku: 'SKU-2', shopify_product_name: 'Calça', ncm: '62034200', cest: '2806100', commercial_unit: 'PC')
+    @sale_nature, @transfer_nature = create_natures(@company)
+  end
+
+  def create_natures(company)
+    [company.operation_natures.create!(description: 'Venda de mercadoria', kind: :sale, cfop: '?102', final_consumer: false,
+                                       icms_situation: '102', pis_cst: '49', cofins_cst: '49'),
+     company.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152', final_consumer: false,
+                                       icms_situation: '102', pis_cst: '49', cofins_cst: '49')]
+  end
+
+  def generate(order, company, nature: nil)
+    Nfe::Generator.call(order: order, company: company, nature: nature || (order.sale? ? @sale_nature : @transfer_nature))
   end
 
   def create_company(overrides = {})
@@ -42,7 +54,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
   test 'generates a signed note for a wholesale order and consumes the number' do
     order = build_order
 
-    note = Nfe::Generator.call(order: order, company: @company)
+    note = generate(order, @company)
 
     assert note.persisted?
     assert note.assinada?
@@ -66,7 +78,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
   test 'uses the interstate CFOP when the recipient is in another state' do
     @client.update!(state: 'SP', city_ibge_code: '3550308')
 
-    note = Nfe::Generator.call(order: build_order, company: @company)
+    note = generate(build_order, @company)
 
     assert_equal '6102', note.cfop_summary
   end
@@ -74,7 +86,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
   test 'generates a note for a stock transfer using the transfer CFOP, nature and the location as recipient' do
     order = build_order(kind: :stock_transfer)
 
-    note = Nfe::Generator.call(order: order, company: @company)
+    note = generate(order, @company)
 
     assert_equal 'Transferência de mercadoria', note.operation_nature
     assert_equal '5152', note.cfop_summary
@@ -86,14 +98,14 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
   test 'the unit price is the price minus the item discount' do
     order = build_order(items: [['SKU-1', 2, 10, 1.5]])
 
-    note = Nfe::Generator.call(order: order, company: @company)
+    note = generate(order, @company)
 
     assert_equal BigDecimal('17.00'), note.total_value
     assert_equal '8.5000', Nokogiri::XML(note.xml.download).at_xpath('//n:det/n:prod/n:vUnCom', NS).text
   end
 
   test 'product commercial unit and CEST come from the product' do
-    note = Nfe::Generator.call(order: build_order, company: @company)
+    note = generate(build_order, @company)
 
     second = Nokogiri::XML(note.xml.download).xpath('//n:det', NS)[1]
     assert_equal 'PC', second.at_xpath('n:prod/n:uCom', NS).text
@@ -105,7 +117,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     @client.update!(city_ibge_code: nil)
     order = build_order
 
-    error = assert_raises(Nfe::Generator::Error) { Nfe::Generator.call(order: order, company: @company) }
+    error = assert_raises(Nfe::Generator::Error) { generate(order, @company) }
 
     assert_match(/NCM do SKU SKU-2/, error.message)
     assert_match(/código IBGE do destinatário/i, error.message)
@@ -115,7 +127,7 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
 
   test 'a SKU that is not a product is reported' do
     error = assert_raises(Nfe::Generator::Error) do
-      Nfe::Generator.call(order: build_order(items: [['NAO-EXISTE', 1, 10, 0]]), company: @company)
+      generate(build_order(items: [['NAO-EXISTE', 1, 10, 0]]), @company)
     end
 
     assert_match(/NAO-EXISTE/, error.message)
@@ -123,14 +135,14 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
 
   test 'a second note for the same order is blocked while the first is active, then allowed after an error' do
     order = build_order
-    first = Nfe::Generator.call(order: order, company: @company)
+    first = generate(order, @company)
 
-    error = assert_raises(Nfe::Generator::Error) { Nfe::Generator.call(order: order, company: @company) }
+    error = assert_raises(Nfe::Generator::Error) { generate(order, @company) }
     assert_match(/nota fiscal ativa/i, error.message)
     assert_equal 1, FiscalNote.count
 
     first.update!(status: :erro)
-    second = Nfe::Generator.call(order: order, company: @company.reload)
+    second = generate(order, @company.reload)
     assert_equal 2, second.number
   end
 
@@ -140,15 +152,15 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
       neighbourhood: 'B', city: 'BH', city_ibge_code: '3106200', state: 'MG', zip: '30000000'
     )
 
-    error = assert_raises(Nfe::Generator::Error) { Nfe::Generator.call(order: build_order, company: company) }
+    error = assert_raises(Nfe::Generator::Error) { generate(build_order, company) }
 
     assert_match(/certificado/i, error.message)
   end
 
   test 'a failure while building rolls back so the number is not consumed' do
-    @company.update_column(:icms_situation, '500')
+    @sale_nature.update_column(:icms_situation, '500')
 
-    assert_raises(Nfe::Generator::Error) { Nfe::Generator.call(order: build_order, company: @company.reload) }
+    assert_raises(Nfe::Generator::Error) { generate(build_order, @company.reload) }
 
     assert_equal 0, FiscalNote.count
     assert_equal 1, @company.reload.next_nfe_number

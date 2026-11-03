@@ -16,6 +16,10 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
       city: 'Contagem', state: 'MG', zip: '32000-000', city_ibge_code: '3118601'
     )
     Product.create!(sku: 'SKU-1', shopify_product_name: 'Camiseta', ncm: '61091000')
+    @sale_nature = @company.operation_natures.create!(description: 'Venda de mercadoria', kind: :sale, cfop: '?102', final_consumer: false,
+                                                      icms_situation: '102', pis_cst: '49', cofins_cst: '49')
+    @transfer_nature = @company.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152',
+                                                          final_consumer: false, icms_situation: '102', pis_cst: '49', cofins_cst: '49')
     @sale = build_order(:sale)
     @transfer = build_order(:stock_transfer)
     sign_in @admin
@@ -73,8 +77,9 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     get new_fiscal_note_path(b2b_order_id: @sale.id)
 
     assert_response :success
-    assert_select 'select[name=company_id] option', count: 1
-    assert_select 'select[name=company_id] option', text: /Empresa Emissora Ltda/
+    assert_select 'select[name=emission] optgroup', count: 1
+    assert_select 'select[name=emission] optgroup[label*="Empresa Emissora Ltda"] option', count: 2
+    assert_select 'select[name=emission] option[selected]', text: /Venda de mercadoria/
   end
 
   test 'new warns when there is no company ready' do
@@ -82,13 +87,13 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
 
     get new_fiscal_note_path(b2b_order_id: @sale.id)
 
-    assert_select 'select[name=company_id]', count: 0
+    assert_select 'select[name=emission]', count: 0
     assert_select 'a[href=?]', companies_path
   end
 
   test 'create generates the signed note and redirects to it' do
     assert_difference 'FiscalNote.count', 1 do
-      post fiscal_notes_path, params: { b2b_order_id: @sale.id, company_id: @company.id }
+      post fiscal_notes_path, params: { b2b_order_id: @sale.id, emission: "#{@company.id}:#{@sale_nature.id}" }
     end
 
     note = FiscalNote.last
@@ -100,7 +105,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
   end
 
   test 'create works for a stock transfer too' do
-    post fiscal_notes_path, params: { b2b_order_id: @transfer.id, company_id: @company.id }
+    post fiscal_notes_path, params: { b2b_order_id: @transfer.id, emission: "#{@company.id}:#{@transfer_nature.id}" }
 
     assert_equal @transfer, FiscalNote.last.b2b_order
     assert_equal '5152', FiscalNote.last.cfop_summary
@@ -111,7 +116,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     Product.create!(sku: 'SEM-NCM', shopify_product_name: 'Sem NCM')
 
     assert_no_difference 'FiscalNote.count' do
-      post fiscal_notes_path, params: { b2b_order_id: order.id, company_id: @company.id }
+      post fiscal_notes_path, params: { b2b_order_id: order.id, emission: "#{@company.id}:#{@sale_nature.id}" }
     end
 
     assert_response :unprocessable_entity
@@ -123,7 +128,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     @company.update_column(:active, false)
 
     assert_no_difference 'FiscalNote.count' do
-      post fiscal_notes_path, params: { b2b_order_id: @sale.id, company_id: @company.id }
+      post fiscal_notes_path, params: { b2b_order_id: @sale.id, emission: "#{@company.id}:#{@sale_nature.id}" }
     end
 
     assert_response :unprocessable_entity
@@ -131,10 +136,10 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
   end
 
   test 'a second note for the same order is refused while the first is active' do
-    post fiscal_notes_path, params: { b2b_order_id: @sale.id, company_id: @company.id }
+    post fiscal_notes_path, params: { b2b_order_id: @sale.id, emission: "#{@company.id}:#{@sale_nature.id}" }
 
     assert_no_difference 'FiscalNote.count' do
-      post fiscal_notes_path, params: { b2b_order_id: @sale.id, company_id: @company.id }
+      post fiscal_notes_path, params: { b2b_order_id: @sale.id, emission: "#{@company.id}:#{@sale_nature.id}" }
     end
     assert_response :unprocessable_entity
     assert_select '.flash-messages-container .alert', text: /nota fiscal ativa/

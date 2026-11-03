@@ -47,7 +47,7 @@ module Nfe
 
     def ensure_can_issue!
       raise Error, 'A empresa não está ativa ou não tem certificado digital válido.' unless @company.ready_to_issue?
-      raise Error, 'Escolha uma natureza de operação ativa desta empresa.' unless @nature&.active? && @nature.company_id == @company.id
+      raise Error, 'Escolha uma natureza de operação ativa vinculada a esta empresa.' unless @nature&.active? && @company.available_natures.exists?(@nature.id)
       raise Error, @shopify_order.blocking_issues.to_sentence if @shopify_order.blocking_issues.any?
       raise Error, 'Já existe nota fiscal ativa para este pedido.' if notes_for_order.active_statuses.exists?
       return unless notes_for_order.erro.exists?

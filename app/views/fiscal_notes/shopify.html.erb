@@ -182,12 +182,11 @@
       <div class="form-section">
         <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-paper-plane me-2"></i>Emissão</h5></div>
         <div class="form-section-body">
-          <% if @natures.any? %>
-            <% default_nature = params[:operation_nature_id].presence || @natures.find { |n| n.sale? && n.default_for_kind? }&.id %>
+          <% if @choices.any? %>
             <div class="form-grid">
               <div class="form-col-4">
-                <label class="field-label">Natureza de operação <span class="required">*</span></label>
-                <%= select_tag :operation_nature_id, options_for_select(@natures.map { |n| ["#{n.description} — #{n.company.trade_name.presence || n.company.legal_name} (#{n.company.environment_label.downcase})", n.id] }, default_nature), class: "field-input" %>
+                <label class="field-label">Empresa e natureza de operação <span class="required">*</span></label>
+                <%= select_tag :emission, grouped_options_for_select(@choices, @choice), class: "field-input" %>
               </div>
               <div class="form-col-3">
                 <label class="field-label">Pagamento</label>
@@ -203,7 +202,7 @@
                 <%= select_tag :freight_mode, options_for_select([['Remetente (CIF)', '0'], ['Destinatário (FOB)', '1'], ['Sem frete', '9']], params[:freight_mode] || '0'), class: "field-input" %>
               </div>
             </div>
-            <% if @natures.any? { |n| n.company.producao? } %>
+            <% if @companies.any? { |c| c.producao? && c.available_natures.any? } %>
               <p class="nfe-flag nfe-flag--warn mt-3 mb-0"><i class="fas fa-bolt me-2"></i>Empresas em <strong>produção</strong> emitem nota com valor fiscal.</p>
             <% end %>
             <div class="form-actions">
@@ -214,8 +213,8 @@
             <p class="text-muted-custom mb-3">Nenhuma empresa ativa com certificado digital válido.</p>
             <%= link_to companies_path, class: "btn-export" do %><i class="fas fa-building me-2"></i>Ir para Empresas<% end %>
           <% else %>
-            <p class="text-muted-custom mb-3">Cadastre uma natureza de operação de venda para emitir.</p>
-            <%= link_to operation_natures_path, class: "btn-export" do %><i class="fas fa-sliders-h me-2"></i>Naturezas de operação<% end %>
+            <p class="text-muted-custom mb-3">Vincule uma natureza de operação a uma empresa para emitir.</p>
+            <%= link_to companies_path, class: "btn-export" do %><i class="fas fa-building me-2"></i>Ir para Empresas<% end %>
           <% end %>
         </div>
       </div>

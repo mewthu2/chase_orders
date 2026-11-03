@@ -20,6 +20,10 @@ class OperationNature < ApplicationRecord
 
   belongs_to :company
   has_many :fiscal_notes, dependent: :restrict_with_error
+  has_many :company_links, class_name: 'CompanyOperationNature', dependent: :destroy
+  has_many :linked_companies, through: :company_links, source: :company
+  # A empresa em que a natureza é criada já fica vinculada a ela.
+  after_create { company_links.find_or_create_by(company: company) }
 
   enum :kind, { sale: 0, transfer: 1, other: 2 }
 
@@ -35,12 +39,29 @@ class OperationNature < ApplicationRecord
   validates :icms_rate, :pis_rate, :cofins_rate, numericality: { greater_than_or_equal_to: 0, less_than: 100 }
   validates :icms_rate, numericality: { greater_than: 0, message: 'é obrigatória para ICMS tributado' }, if: -> { icms_situation == '00' }
   validate :situations_match_company_regime
+  validate :linked_companies_still_compatible, on: :update
 
   scope :active, -> { where(active: true) }
   scope :ordered, -> { order(:description) }
 
+  SIMPLES_CODES = %w[102 103 300 400].freeze
+
+  # Natureza padrão de um tipo entre as vinculadas à empresa.
   def self.default_for(company, kind)
-    company.operation_natures.active.where(kind: kind).order(default_for_kind: :desc, id: :asc).first
+    company.available_natures.active.where(kind: kind).order(default_for_kind: :desc, id: :asc).first
+  end
+
+  def compatible_with?(company)
+    (company.tax_regime != 3) == SIMPLES_CODES.include?(icms_situation)
+  end
+
+  def regime_label
+    SIMPLES_CODES.include?(icms_situation) ? 'CSOSN (Simples Nacional)' : 'CST (Regime Normal)'
+  end
+
+  # Texto curto para listas: "Venda de mercadoria · CFOP ?102 · ICMS 102".
+  def summary
+    "#{description} · CFOP #{cfop} · ICMS #{icms_situation}"
   end
 
   # CFOP do item conforme o destino. Para consumidor não contribuinte de outra UF usa o CFOP próprio, se houver.
@@ -96,6 +117,11 @@ class OperationNature < ApplicationRecord
     elsif !simples && simples_codes.include?(icms_situation)
       errors.add(:icms_situation, 'deve ser um CST (empresa do Regime Normal)')
     end
+  end
+
+  def linked_companies_still_compatible
+    bad = linked_companies.reject { |c| compatible_with?(c) }
+    errors.add(:icms_situation, "não serve para #{bad.map(&:legal_name).to_sentence}, que usa esta natureza") if bad.any?
   end
 
   def unset_other_defaults

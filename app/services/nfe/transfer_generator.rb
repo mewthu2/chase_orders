@@ -1,8 +1,8 @@
 module Nfe
   # Gera e assina a NF-e de transferência de uma remessa da Transferência Interna: a empresa da loja de
   # origem emite para a empresa da loja de destino. A transmissão é do Nfe::Transmitter.
-  # Usa a natureza de transferência padrão da empresa (Naturezas de Operação); sem ela, a natureza, os
-  # CFOPs de transferência e as situações tributárias do cadastro da empresa.
+  # Usa a natureza de transferência vinculada à empresa (a marcada como padrão, se houver mais de uma):
+  # dela vêm a descrição, o CFOP e a tributação.
   # Se a última nota da remessa foi rejeitada pela SEFAZ, reaproveita o número dela.
   class TransferGenerator
     class Error < StandardError; end
@@ -44,6 +44,7 @@ module Nfe
 
     def ensure_can_issue!
       raise Error, "A empresa #{@company.legal_name} não está ativa ou não tem certificado digital válido." unless @company.ready_to_issue?
+      raise Error, "Vincule uma natureza de operação de transferência à empresa #{@company.legal_name} (Empresas → Naturezas de operação)." unless @nature
       raise Error, 'Já existe nota fiscal ativa para esta remessa.' if notes.active_statuses.exists?
       raise Error, 'A última nota desta remessa ficou sem resposta da SEFAZ. Consulte-a antes de emitir outra.' if notes.erro.exists?
     end
@@ -62,11 +63,7 @@ module Nfe
     end
 
     def cfop(recipient)
-      if @nature
-        @nature.cfop_for(company_state: @company.state, recipient_state: recipient[:state])
-      else
-        recipient[:state] == @company.state ? @company.cfop_transfer_in_state : @company.cfop_transfer_out_of_state
-      end
+      @nature.cfop_for(company_state: @company.state, recipient_state: recipient[:state])
     end
 
     # Transferência vai pelo custo do produto; sem custo, pelo preço de venda.
@@ -98,7 +95,7 @@ module Nfe
     end
 
     def operation_nature
-      @nature ? @nature.description : @company.operation_nature_transfer
+      @nature.description
     end
 
     def additional_info

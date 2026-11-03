@@ -12,6 +12,9 @@ class Company < ApplicationRecord
 
   has_many :fiscal_notes, dependent: :restrict_with_error
   has_many :operation_natures, dependent: :destroy
+  # Naturezas que a empresa pode usar na emissão (podem ter sido criadas em outra empresa).
+  has_many :nature_links, class_name: 'CompanyOperationNature', dependent: :destroy
+  has_many :available_natures, through: :nature_links, source: :operation_nature
   # A loja da empresa: na Transferência Interna, emite as notas das remessas que saem dela e recebe as que chegam.
   has_one :location, dependent: :nullify
   after_save :apply_location, if: -> { defined?(@location_choice) }
@@ -83,6 +86,21 @@ class Company < ApplicationRecord
     Nfe::Certificate.new(certificate.download, certificate_password)
   end
 
+  # Troca as naturezas vinculadas pelas escolhidas. Recusa as de regime incompatível.
+  def link_natures(ids)
+    natures = OperationNature.where(id: Array(ids).reject(&:blank?)).to_a
+    bad = natures.reject { |n| n.compatible_with?(self) }
+    if bad.any?
+      errors.add(:base, "Estas naturezas não servem para o regime tributário da empresa: #{bad.map(&:description).to_sentence}.")
+      return false
+    end
+    transaction do
+      nature_links.where.not(operation_nature_id: natures.map(&:id)).destroy_all
+      natures.each { |n| nature_links.find_or_create_by!(operation_nature: n) }
+    end
+    true
+  end
+
   private
 
   def apply_location
@@ -128,4 +146,5 @@ class Company < ApplicationRecord
   rescue Nfe::Certificate::Error => e
     errors.add(:certificate_file, e.message)
   end
+
 end

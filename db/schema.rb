@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_03_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_03_180000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -337,6 +337,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_140000) do
     t.datetime "updated_at", null: false
     t.integer "next_nfe_number_homologation", default: 1, null: false
     t.index ["cnpj"], name: "index_companies_on_cnpj", unique: true
+  end
+
+  create_table "company_operation_natures", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "company_id", null: false
+    t.bigint "operation_nature_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "operation_nature_id"], name: "idx_company_operation_natures", unique: true
+    t.index ["company_id"], name: "index_company_operation_natures_on_company_id"
+    t.index ["operation_nature_id"], name: "index_company_operation_natures_on_operation_nature_id"
   end
 
   create_table "customers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1379,6 +1389,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_140000) do
   add_foreign_key "cashback_unification_sources", "cashback_unifications"
   add_foreign_key "cashback_unifications", "customers"
   add_foreign_key "cashback_unifications", "users"
+  add_foreign_key "company_operation_natures", "companies"
+  add_foreign_key "company_operation_natures", "operation_natures"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
   add_foreign_key "fiscal_notes", "internal_transfer_shipments"

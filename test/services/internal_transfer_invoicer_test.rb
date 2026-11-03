@@ -15,6 +15,8 @@ class InternalTransferInvoicerTest < ActiveSupport::TestCase
     @bh = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '222', company: @origin_company)
     @rj = Location.create!(slug: 'rj', name: 'Barra Shopping', shopify_location_id: '333', company: @destination_company)
     @requester = User.create!(name: 'Solicitante', email: 'solicitante_inv@example.com', password: 'password123')
+    @origin_company.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152',
+                                              final_consumer: false, icms_situation: '41', pis_cst: '49', cofins_cst: '49')
     @product = Product.create!(sku: 'SKU-A', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001', ncm: '61091000', cost: '35.50', price: '129.90')
   end
 
@@ -47,6 +49,12 @@ class InternalTransferInvoicerTest < ActiveSupport::TestCase
     assert_equal '45723174000110', doc.at_xpath('//n:dest/n:CNPJ', NS).text
     assert_equal '0', doc.at_xpath('//n:ide/n:indFinal', NS).text
     assert_match(/Transferência interna nº #{shipment.internal_transfer_id}: de BH Shopping para Barra Shopping/, doc.at_xpath('//n:infCpl', NS).text)
+  end
+
+  test 'without a transfer nature linked to the company the note is not issued' do
+    @origin_company.nature_links.destroy_all
+    error = assert_raises(StandardError) { Nfe::Transmitter.stub(:call, authorize) { InternalTransferInvoicer.call(build_shipment) } }
+    assert_match(/Vincule uma natureza de operação de transferência/, error.message)
   end
 
   test 'uses the default transfer nature of the company when there is one' do

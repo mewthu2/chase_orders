@@ -1,16 +1,18 @@
 module Nfe
-  # Gera e assina a NF-e de um pedido B2B para uma empresa emissora.
+  # Gera e assina a NF-e de um pedido B2B para uma empresa emissora, com a natureza de operação
+  # escolhida (uma das vinculadas à empresa): dela vêm a descrição, o CFOP e a tributação.
   # Não transmite à SEFAZ: a nota fica "assinada".
   class Generator
     class Error < StandardError; end
 
-    def self.call(order:, company:)
-      new(order: order, company: company).call
+    def self.call(order:, company:, nature:)
+      new(order: order, company: company, nature: nature).call
     end
 
-    def initialize(order:, company:)
+    def initialize(order:, company:, nature:)
       @order = order
       @company = company
+      @nature = nature
     end
 
     def call
@@ -35,6 +37,9 @@ module Nfe
     def ensure_can_issue!
       raise Error, 'A empresa não está ativa ou não tem certificado digital válido.' unless @company.ready_to_issue?
       raise Error, 'Já existe nota fiscal ativa para este pedido.' if FiscalNote.active_for?(@order)
+      unless @nature&.active? && @company.available_natures.exists?(@nature.id)
+        raise Error, 'Escolha uma natureza de operação ativa vinculada a esta empresa.'
+      end
     end
 
     def sale?
@@ -42,7 +47,7 @@ module Nfe
     end
 
     def operation_nature
-      sale? ? @company.operation_nature_sale : @company.operation_nature_transfer
+      @nature.description
     end
 
     def build_recipient
@@ -81,12 +86,8 @@ module Nfe
     end
 
     def cfop_for(recipient)
-      same_state = recipient[:state] == @company.state
-      if sale?
-        same_state ? @company.cfop_sale_in_state : @company.cfop_sale_out_of_state
-      else
-        same_state ? @company.cfop_transfer_in_state : @company.cfop_transfer_out_of_state
-      end
+      @nature.cfop_for(company_state: @company.state, recipient_state: recipient[:state],
+                       non_contributor: recipient[:ie_indicator].to_i == 9)
     end
 
     def build_items(recipient)
@@ -116,19 +117,35 @@ module Nfe
       issued_at = Time.current
       result = XmlBuilder.new(
         company: @company, recipient: recipient, items: items, number: number, series: @company.nfe_series,
-        operation_nature: operation_nature, issued_at: issued_at
+        operation_nature: operation_nature, issued_at: issued_at, purpose: @nature.purpose,
+        final_consumer: @nature.final_consumer?, tax: @nature.tax_rules, additional_info: additional_info,
+        fisco_info: render(@nature.fisco_notes)
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 
       note = FiscalNote.create!(
         company: @company, b2b_order: @order, number: number, series: @company.nfe_series,
         access_key: result.access_key, environment: @company.environment, operation_nature: operation_nature,
+        operation_nature_id: @nature.id,
         cfop_summary: items.map { |item| item[:cfop] }.uniq.join(', '), status: :assinada,
         total_value: result.total, issued_at: issued_at
       )
       note.xml.attach(io: StringIO.new(signed_xml), filename: "NFe#{result.access_key}.xml", content_type: 'application/xml')
       @company.advance_nfe_number!(number)
       note
+    end
+
+    def recipient_name
+      source = sale? ? @order.client : @order.transfer_location
+      sale? ? (source&.business_name.presence || source&.responsible_name) : source&.name
+    end
+
+    def render(text)
+      @nature.render_notes(text, order_name: "Pedido #{@order.id}", customer: recipient_name)
+    end
+
+    def additional_info
+      render(@nature.notes)
     end
   end
 end

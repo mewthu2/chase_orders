@@ -3,7 +3,7 @@ class CompaniesController < ApplicationController
   before_action :set_company, only: [:edit, :update, :destroy, :toggle_environment]
 
   def index
-    @companies = Company.includes(:certificate_attachment, :location).order(:legal_name)
+    @companies = Company.includes(:certificate_attachment, :location, :available_natures).order(:legal_name)
     @note_counts = FiscalNote.group(:company_id).count
   end
 
@@ -13,7 +13,10 @@ class CompaniesController < ApplicationController
 
   def create
     @company = Company.new(company_params)
-    if @company.save
+    saved = Company.transaction do
+      (@company.save && link_natures?) || raise(ActiveRecord::Rollback)
+    end
+    if saved
       redirect_to companies_path, notice: 'Empresa criada com sucesso.'
     else
       render :new, status: :unprocessable_entity
@@ -27,7 +30,10 @@ class CompaniesController < ApplicationController
     # Senha em branco sem arquivo novo = manter o certificado e a senha atuais.
     attrs = attrs.except(:certificate_password) if attrs[:certificate_password].blank? && attrs[:certificate_file].blank?
 
-    if @company.update(attrs)
+    saved = Company.transaction do
+      (@company.update(attrs) && link_natures?) || raise(ActiveRecord::Rollback)
+    end
+    if saved
       redirect_to companies_path, notice: 'Empresa atualizada com sucesso.'
     else
       render :edit, status: :unprocessable_entity
@@ -56,13 +62,18 @@ class CompaniesController < ApplicationController
     @company = Company.find(params[:id])
   end
 
+  # Naturezas de operação marcadas no formulário (o campo vazio garante que dá para desmarcar todas).
+  def link_natures?
+    return true unless params[:company]&.key?(:nature_ids)
+
+    @company.link_natures(params[:company][:nature_ids])
+  end
+
   def company_params
     params.require(:company).permit(
       :legal_name, :trade_name, :cnpj, :state_registration, :municipal_registration, :cnae, :tax_regime,
       :street, :number, :complement, :neighbourhood, :city, :city_ibge_code, :state, :zip, :phone, :email,
       :environment, :nfe_series, :next_nfe_number, :next_nfe_number_homologation,
-      :cfop_sale_in_state, :cfop_sale_out_of_state, :cfop_transfer_in_state, :cfop_transfer_out_of_state,
-      :operation_nature_sale, :operation_nature_transfer, :icms_situation, :pis_cst, :cofins_cst,
       :active, :certificate_file, :certificate_password, :location_id
     )
   end

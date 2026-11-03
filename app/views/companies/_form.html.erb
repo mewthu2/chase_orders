@@ -118,14 +118,6 @@
           <label class="field-label">Próximo número (homologação) <span class="required">*</span></label>
           <%= form.number_field :next_nfe_number_homologation, class: "field-input", min: 1 %>
         </div>
-        <div class="form-col-6">
-          <label class="field-label">Natureza da operação - venda</label>
-          <%= form.text_field :operation_nature_sale, class: "field-input" %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">Natureza da operação - transferência</label>
-          <%= form.text_field :operation_nature_transfer, class: "field-input" %>
-        </div>
       </div>
     </div>
   </div>
@@ -145,41 +137,38 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <div class="form-section" id="naturezas">
     <div class="form-section-header">
-      <h5 class="form-section-title"><i class="fas fa-percent me-2"></i>CFOP e tributação padrão</h5>
+      <h5 class="form-section-title"><i class="fas fa-sliders-h me-2"></i>Naturezas de operação</h5>
     </div>
     <div class="form-section-body">
-      <div class="form-grid">
-        <div class="form-col-3">
-          <label class="field-label">CFOP venda (mesma UF)</label>
-          <%= form.text_field :cfop_sale_in_state, class: "field-input", maxlength: 4 %>
+      <p class="text-muted-custom mb-3"><i class="fas fa-info-circle me-1"></i>Marque as naturezas que esta empresa usa. Na hora de emitir a nota você escolhe uma delas, e o CFOP e a tributação vêm da natureza escolhida.</p>
+      <% natures = OperationNature.active.includes(:company).order(:kind, :description) %>
+      <% linked = params.dig(:company, :nature_ids)&.map(&:to_i) || @company.available_nature_ids %>
+      <%= hidden_field_tag 'company[nature_ids][]', '', id: nil %>
+      <% if natures.any? %>
+        <div class="nature-pick">
+          <% natures.group_by(&:kind).each do |kind, list| %>
+            <div class="nature-pick-group">
+              <h6><%= OperationNature::KINDS[kind] %></h6>
+              <% list.each do |n| %>
+                <% ok = @company.tax_regime.blank? || n.compatible_with?(@company) %>
+                <label class="nature-pick-item<%= ' is-disabled' unless ok %>">
+                  <input type="checkbox" name="company[nature_ids][]" value="<%= n.id %>" <%= 'checked' if linked.include?(n.id) %> <%= 'disabled' unless ok %>>
+                  <span class="nature-pick-body">
+                    <strong><%= n.description %><% if n.default_for_kind? %> <em class="nature-pick-tag">padrão</em><% end %></strong>
+                    <small>CFOP <%= n.cfop %><%= " / #{n.cfop_interstate_non_contributor}" if n.cfop_interstate_non_contributor.present? %> · ICMS <%= n.icms_situation %> · PIS <%= n.pis_cst %> · COFINS <%= n.cofins_cst %> · criada em <%= n.company.trade_name.presence || n.company.legal_name %></small>
+                    <% unless ok %><small class="nature-pick-warn">Usa <%= n.regime_label %>: não serve para o regime desta empresa.</small><% end %>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          <% end %>
         </div>
-        <div class="form-col-3">
-          <label class="field-label">CFOP venda (outra UF)</label>
-          <%= form.text_field :cfop_sale_out_of_state, class: "field-input", maxlength: 4 %>
-        </div>
-        <div class="form-col-3">
-          <label class="field-label">CFOP transferência (mesma UF)</label>
-          <%= form.text_field :cfop_transfer_in_state, class: "field-input", maxlength: 4 %>
-        </div>
-        <div class="form-col-3">
-          <label class="field-label">CFOP transferência (outra UF)</label>
-          <%= form.text_field :cfop_transfer_out_of_state, class: "field-input", maxlength: 4 %>
-        </div>
-        <div class="form-col-4">
-          <label class="field-label">ICMS (CSOSN/CST)</label>
-          <%= form.select :icms_situation, CompaniesHelper::ICMS_SITUATIONS, {}, { class: "field-input" } %>
-        </div>
-        <div class="form-col-4">
-          <label class="field-label">PIS (CST)</label>
-          <%= form.select :pis_cst, CompaniesHelper::PIS_COFINS_CSTS, {}, { class: "field-input" } %>
-        </div>
-        <div class="form-col-4">
-          <label class="field-label">COFINS (CST)</label>
-          <%= form.select :cofins_cst, CompaniesHelper::PIS_COFINS_CSTS, {}, { class: "field-input" } %>
-        </div>
-      </div>
+      <% else %>
+        <p class="text-muted-custom">Nenhuma natureza de operação criada ainda.</p>
+      <% end %>
+      <%= link_to operation_natures_path, class: 'btn-export mt-3 d-inline-flex' do %><i class="fas fa-sliders-h me-2"></i>Criar ou editar naturezas<% end %>
     </div>
   </div>
 

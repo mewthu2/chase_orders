@@ -114,4 +114,31 @@ class CompaniesControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select '.flash-messages-container .alert', text: /notas fiscais/
   end
+
+  test 'company links natures created in another company; incompatible regime is refused' do
+    sign_in @admin
+    owner = Company.create!(company_params)
+    other = Company.create!(company_params(legal_name: 'Outra Simples Ltda', cnpj: '45.723.174/0001-10'))
+    normal = Company.create!(company_params(legal_name: 'Regime Normal Ltda', cnpj: '25.405.327/0001-74', tax_regime: 3))
+    transfer = owner.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152',
+                                               icms_situation: '102', pis_cst: '49', cofins_cst: '49')
+    assert_equal [transfer], owner.available_natures.to_a, 'a natureza fica vinculada à empresa em que foi criada'
+
+    get edit_company_path(other)
+    assert_select 'h5', text: /Naturezas de operação/
+    assert_select 'h5', text: /CFOP e tributação padrão/, count: 0
+    assert_select "input[name='company[nature_ids][]'][value='#{transfer.id}']"
+
+    patch company_path(other), params: { company: { legal_name: other.legal_name, nature_ids: ['', transfer.id.to_s] } }
+    assert_redirected_to companies_path
+    assert_equal [transfer], other.reload.available_natures.to_a
+
+    patch company_path(normal), params: { company: { legal_name: normal.legal_name, nature_ids: ['', transfer.id.to_s] } }
+    assert_response :unprocessable_entity
+    assert_empty normal.reload.available_natures
+
+    patch company_path(other), params: { company: { legal_name: other.legal_name, nature_ids: [''] } }
+    assert_empty other.reload.available_natures
+  end
+
 end

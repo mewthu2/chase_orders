@@ -17,10 +17,10 @@ class FiscalNotesController < ApplicationController
   end
 
   def create
-    company = Company.ready_to_issue.find_by(id: params[:company_id])
-    return render_new_with_alert('Escolha uma empresa ativa com certificado digital válido.') unless company
+    company, nature = chosen_company_and_nature
+    return render_new_with_alert('Escolha a empresa e a natureza de operação da nota.') unless company && nature
 
-    note = Nfe::Generator.call(order: @order, company: company)
+    note = Nfe::Generator.call(order: @order, company: company, nature: nature)
     redirect_to fiscal_note_path(note), notice: 'Nota fiscal gerada e assinada. Confira e transmita à SEFAZ.'
   rescue Nfe::Generator::Error => e
     render_new_with_alert(e.message)
@@ -42,9 +42,8 @@ class FiscalNotesController < ApplicationController
     @shopify_order = Nfe::ShopifyOrder.find(params[:shopify_order_id])
     @recipient = recipient_params.to_h.symbolize_keys
     @payment = payment_params.to_h.symbolize_keys
-    nature = OperationNature.active.find_by(id: params[:operation_nature_id])
-    company = Company.ready_to_issue.find_by(id: nature&.company_id)
-    return render_shopify_with_alert('Escolha uma natureza de operação de empresa ativa com certificado válido.') unless company
+    company, nature = chosen_company_and_nature
+    return render_shopify_with_alert('Escolha a empresa e a natureza de operação da nota.') unless company && nature
 
     note = Nfe::ShopifyGenerator.call(company: company, nature: nature, shopify_order: @shopify_order, recipient: @recipient,
                                       payment: @payment, freight_mode: params[:freight_mode].presence || '0')
@@ -100,14 +99,36 @@ class FiscalNotesController < ApplicationController
     @order = B2bOrder.find(params[:b2b_order_id])
   end
 
+  # "empresa:natureza" escolhido na lista agrupada por empresa (só naturezas vinculadas a ela).
+  def chosen_company_and_nature
+    company_id, nature_id = params[:emission].to_s.split(':')
+    company = Company.ready_to_issue.find_by(id: company_id)
+    nature = company&.available_natures&.active&.find_by(id: nature_id)
+    [company, nature]
+  end
+
+  # Lista para o select: [[empresa, [[natureza, "empresa:natureza"], ...]], ...] e a opção sugerida.
+  def emission_choices(companies, kind)
+    default = nil
+    groups = companies.map do |c|
+      natures = c.available_natures.active.ordered.to_a
+      pick = natures.select { |n| n.kind == kind.to_s }.max_by { |n| n.default_for_kind? ? 1 : 0 }
+      default ||= "#{c.id}:#{pick.id}" if pick
+      label = "#{c.trade_name.presence || c.legal_name} (#{c.environment_label.downcase})"
+      [label, natures.map { |n| ["#{n.description} · #{n.kind_label} · CFOP #{n.cfop} · ICMS #{n.icms_situation}", "#{c.id}:#{n.id}"] }]
+    end
+    [groups.reject { |_, list| list.empty? }, params[:emission].presence || default]
+  end
+
   def load_new_page_data
     @companies = Company.ready_to_issue.order(:legal_name)
+    @choices, @choice = emission_choices(@companies, @order.sale? ? :sale : :transfer)
     @active_note = FiscalNote.active_statuses.find_by(b2b_order_id: @order.id)
   end
 
   def load_shopify_page_data
     @companies = Company.ready_to_issue.order(:legal_name)
-    @natures = OperationNature.active.where(company: @companies).includes(:company).ordered
+    @choices, @choice = emission_choices(@companies, :sale)
     # Com um pedido aberto a lista de recentes não aparece: nem consulta.
     @recent_orders = params[:order].present? ? Order.none : recent_site_orders
   end

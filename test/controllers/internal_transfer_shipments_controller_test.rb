@@ -89,6 +89,10 @@ class InternalTransferShipmentsControllerTest < ActionDispatch::IntegrationTest
   def two_companies!
     @bh.update!(company: create_nfe_company)
     @lagoa.update!(company: create_nfe_company(legal_name: 'Chase Lagoa Ltda', cnpj: '45.723.174/0001-10', state_registration: '87654321'))
+    [@bh, @lagoa].each do |location|
+      location.company.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152',
+                                                 final_consumer: false, icms_situation: '41', pis_cst: '49', cofins_cst: '49')
+    end
     @product.update!(ncm: '61091000', cost: '20.00')
   end
 

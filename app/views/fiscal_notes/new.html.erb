@@ -41,11 +41,16 @@
         <%= form_with url: fiscal_notes_path, method: :post, local: true do %>
           <%= hidden_field_tag :b2b_order_id, @order.id %>
           <div class="form-grid">
-            <div class="form-col-6">
-              <label class="field-label">Empresa <span class="required">*</span></label>
-              <%= select_tag :company_id, options_for_select(@companies.map { |c| ["#{c.legal_name} - #{c.cnpj_formatted} (#{c.homologacao? ? 'homologação' : 'produção'})", c.id] }, params[:company_id]), class: 'field-input' %>
+            <div class="form-col-8">
+              <label class="field-label">Empresa e natureza de operação <span class="required">*</span></label>
+              <% if @choices.any? %>
+                <%= select_tag :emission, grouped_options_for_select(@choices, @choice), class: 'field-input' %>
+              <% else %>
+                <p class="text-muted-custom">Nenhuma natureza vinculada às empresas. Vincule em <%= link_to 'Empresas', companies_path %>.</p>
+              <% end %>
             </div>
           </div>
+          <p class="text-muted-custom mt-2"><i class="fas fa-sliders-h me-1"></i>O CFOP e a tributação da nota vêm da natureza escolhida (venda, transferência…).</p>
           <p class="text-muted-custom mt-3"><i class="fas fa-info-circle me-1"></i>A nota é gerada e assinada com o certificado da empresa; a autorização na SEFAZ é feita na tela da nota.</p>
           <div class="form-actions">
             <%= submit_tag 'Gerar nota fiscal', class: "btn-submit", disabled: @active_note.present? %>

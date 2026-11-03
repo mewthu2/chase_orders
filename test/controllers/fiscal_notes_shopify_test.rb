@@ -33,7 +33,7 @@ class FiscalNotesShopifyTest < ActionDispatch::IntegrationTest
 
   def post_emission(recipient: recipient_params)
     post create_from_shopify_fiscal_notes_path, params: {
-      shopify_order_id: '6100000000001', operation_nature_id: @nature.id, freight_mode: '0',
+      shopify_order_id: '6100000000001', emission: "#{@company.id}:#{@nature.id}", freight_mode: '0',
       recipient: recipient, payment: { method: '03', installments: '3', description: 'cartão' }
     }
   end
@@ -45,7 +45,7 @@ class FiscalNotesShopifyTest < ActionDispatch::IntegrationTest
     assert_select '.nfe-hero__title', text: '#1001'
     assert_select 'input[name="recipient[document]"][value="52998224725"]'
     assert_select 'input[name="recipient[city_ibge_code]"][value="3106200"]'
-    assert_select 'select[name="operation_nature_id"] option[selected]', text: /Venda Online/
+    assert_select 'select[name="emission"] option[selected]', text: /Venda Online/
     assert_select 'select[name="payment[method]"] option[selected][value="03"]'
     assert_select '.ncm-ok', count: 2
   end
