@@ -5,10 +5,14 @@ module Whatsapp
   class AgentJob < ApplicationJob
     queue_as :whatsapp
     DELAY = 12.seconds
+    THINKING = 'Pensando numa resposta…'.freeze
 
     def self.schedule(conversation, message)
       return if conversation.agent_paused? # modo conversa: o agente nem lê
       return unless Automation.where(connection_id: conversation.connection_id, enabled: true).exists?
+      # A cliente falou mais: a sugestão antiga sai e o agente reanalisa a conversa inteira.
+      conversation.clear_agent_draft
+      conversation.update!(agent_note: THINKING, needs_human: false)
       set(wait: DELAY).perform_later(conversation.id, message.id)
     end
 
@@ -16,11 +20,13 @@ module Whatsapp
     def perform(conversation_id, message_id, force = false)
       conversation = Conversation.find_by(id: conversation_id) || return
       unless current_turn?(conversation, message_id, force)
-        conversation.update_columns(agent_note: nil, updated_at: Time.current) if force
+        # Cliente escreveu de novo: o job da mensagem mais nova cuida. Outro motivo: para de "pensar".
+        settle(conversation) if force || !newer_customer_message?(conversation, message_id)
         return
       end
-      return if conversation.agent_paused? && !force
-      automation = Automation.active_for(conversation.connection_id) || return
+      return settle(conversation) if conversation.agent_paused? && !force
+      automation = Automation.active_for(conversation.connection_id)
+      return settle(conversation) unless automation
 
       history = conversation.messages.where(historical: [false, true]).order(sent_at: :desc, id: :desc).limit(Agent::HISTORY).to_a.reverse
       rows = history.map { |m| { from: m.direction == 'incoming' ? 'cliente' : 'loja', text: m.body.presence || "[#{m.preview}]", at: m.sent_at } }
@@ -35,8 +41,11 @@ module Whatsapp
       conversation.connection.with_lock do
         conversation.reload
         # Alguém respondeu ou o cliente escreveu de novo enquanto o agente pensava.
-        return unless current_turn?(conversation, message_id, force)
-        return if conversation.agent_paused? && !force
+        unless current_turn?(conversation, message_id, force)
+          settle(conversation) unless newer_customer_message?(conversation, message_id)
+          return
+        end
+        return settle(conversation) if conversation.agent_paused? && !force
         apply(conversation, automation, decision, message_id, auto: automation.auto? && !force, force: force) { |m| send_now = m }
       end
       SendJob.perform_later(send_now.id) if send_now
@@ -45,6 +54,15 @@ module Whatsapp
     private
 
     # A mensagem ainda é a última do cliente e ninguém respondeu depois dela.
+    def settle(conversation)
+      conversation.update_columns(agent_note: nil, updated_at: Time.current) if conversation.reload.agent_note == THINKING
+      nil
+    end
+
+    def newer_customer_message?(conversation, message_id)
+      conversation.messages.where(direction: 'incoming', historical: false).where('id > ?', message_id.to_i).exists?
+    end
+
     # A resposta automática ignora o histórico importado; o pedido manual (force) não.
     def current_turn?(conversation, message_id, force = false)
       scope = force ? conversation.messages : conversation.messages.where(historical: false)

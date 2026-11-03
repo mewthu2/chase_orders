@@ -78,7 +78,7 @@ module Whatsapp
           last = conversation.messages.order(sent_at: :desc, id: :desc).first
           raise ArgumentError, 'O agente só sugere resposta quando a última mensagem é do cliente.' unless last&.direction == 'incoming'
           raise ArgumentError, 'Nenhuma automação ligada neste número. Ligue uma em Automações.' unless Automation.active_for(conversation.connection_id)
-          conversation.agent_note = 'Pensando numa resposta…'
+          conversation.agent_note = AgentJob::THINKING
           AgentJob.perform_later(conversation.id, last.id, true)
         else raise ArgumentError, 'Ação inválida.'
         end

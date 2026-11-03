@@ -52,7 +52,7 @@ module Whatsapp
       self.state = 'open'
       self.stage = 'responding'
       self.needs_human = false
-      self.agent_note = nil if pause_agent
+      self.agent_note = nil if pause_agent || agent_note == AgentJob::THINKING
       self.agent_paused = true if pause_agent
       clear_agent_draft
       save! if changed?
