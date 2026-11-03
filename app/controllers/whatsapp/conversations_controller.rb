@@ -27,8 +27,10 @@ module Whatsapp
           end
           page = params[:page].to_i.clamp(1, 1000)
           rows = scope.order(last_message_at: :desc, id: :desc).limit(51).offset((page - 1) * 50).to_a
+          pending = authorized_conversations.where(stage: 'pending').group(:connection_id).count
+          human = authorized_conversations.where(needs_human: true, state: 'open').group(:connection_id).count
           render json: { conversations: rows.first(50).map { |c| summary(c) }, more: rows.length > 50,
-            connections: @connections.map { |c| c.slice(:id, :name, :phone, :state) } }
+            connections: @connections.map { |c| c.slice(:id, :name, :phone, :state).merge(connected: c.connected?, pending_count: pending[c.id].to_i, human_count: human[c.id].to_i) } }
         end
       end
     end

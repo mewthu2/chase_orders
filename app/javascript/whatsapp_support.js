@@ -372,14 +372,7 @@
     });
     const result = await api(`/whatsapp/conversations.json?${p}`);
     numbers = result.connections;
-    const selection = $("wa-number").value;
-    $("wa-number").replaceChildren(new Option("Todos os meus números", ""));
-    numbers.forEach((n) =>
-      $("wa-number").add(
-        new Option(`${n.name}${n.phone ? " · " + n.phone : ""}`, n.id),
-      ),
-    );
-    $("wa-number").value = selection;
+    renderTabs();
     if (!append) $("wa-threads").replaceChildren();
     result.conversations.forEach((c) => {
       const button = el(
@@ -915,11 +908,63 @@
     }
     box.append(actions);
   }
+  // Uma aba para cada número conectado: a lista carrega só as conversas do número aberto.
+  const tabsRoot = $("wa-number-tabs");
+  const tabButtons = () => [...tabsRoot.querySelectorAll(".wa-number-tab")];
+  function setNumber(id) {
+    $("wa-number").value = id ? String(id) : "";
+    tabButtons().forEach((b) => {
+      const on = b.dataset.id === String(id);
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    try {
+      localStorage.setItem("honey:wa-number", String(id));
+    } catch (_) {}
+  }
+  function renderTabs() {
+    numbers.forEach((n) => {
+      const b = tabsRoot.querySelector(`[data-id="${n.id}"]`);
+      if (!b) return;
+      b.querySelector(".wa-number-dot").classList.toggle("is-on", !!n.connected);
+      const count = b.querySelector(".wa-number-count");
+      count.hidden = !n.pending_count && !n.human_count;
+      count.textContent = n.pending_count || n.human_count;
+      count.classList.toggle("is-human", n.human_count > 0);
+      count.title = `${n.pending_count} pendente(s)${n.human_count ? ` · ${n.human_count} precisa(m) de você` : ""}`;
+    });
+  }
+  tabButtons().forEach((b) => {
+    b.onclick = safe(async () => {
+      if (b.dataset.id === $("wa-number").value) return;
+      setNumber(b.dataset.id);
+      listPage = 1;
+      $("wa-threads").replaceChildren();
+      await refreshList();
+    });
+  });
+  {
+    let stored = null;
+    try {
+      stored = localStorage.getItem("honey:wa-number");
+    } catch (_) {}
+    const first = tabButtons().find((b) => b.dataset.id === stored) || tabButtons()[0];
+    if (first) setNumber(first.dataset.id);
+  }
   // Link direto para uma conversa (?c=ID), usado pela tela de Automações.
   const deepLink = Number(new URLSearchParams(location.search).get("c"));
   if (deepLink) {
     $("wa-state").value = "";
-    setTimeout(safe(() => selectConversation(deepLink)), 300);
+    setTimeout(
+      safe(async () => {
+        await selectConversation(deepLink);
+        if (selected && String(selected.connection_id) !== $("wa-number").value) {
+          setNumber(selected.connection_id);
+          await refreshList();
+        }
+      }),
+      300,
+    );
   }
   function setRecording(on) {
     const b = $("wa-record");
@@ -983,6 +1028,7 @@
         new Option(`${n.name} · ${n.phone || "não conectado"}`, n.id),
       ),
     );
+    $("wa-start-number").value = $("wa-number").value;
     $("wa-new-dialog").showModal();
   };
   $("wa-cancel-new").onclick = () => $("wa-new-dialog").close();

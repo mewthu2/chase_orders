@@ -9,6 +9,17 @@
 <% end %>
 <section class="wa-app wa-chat-app" id="wa-inbox" data-wa-theme="dark" aria-label="Atendimento WhatsApp">
   <div class="wa-notice" id="wa-error" role="status" hidden></div>
+  <nav class="wa-number-tabs" id="wa-number-tabs" role="tablist" aria-label="Números conectados">
+    <% @connections.each do |c| %>
+      <button type="button" role="tab" class="wa-number-tab" data-id="<%= c.id %>" aria-selected="false">
+        <span class="wa-number-dot<%= ' is-on' if c.connected? %>" title="<%= c.connected? ? 'Conectado' : 'Desconectado' %>"></span>
+        <span class="wa-number-name"><i class="fab fa-whatsapp"></i><%= c.name %></span>
+        <small><%= c.phone.presence || 'sem telefone' %></small>
+        <span class="wa-number-count" hidden></span>
+      </button>
+    <% end %>
+    <% if @connections.empty? %><span class="wa-number-none">Nenhum número liberado para você. Peça acesso à administração.</span><% end %>
+  </nav>
   <div class="wa-workspace">
     <aside class="wa-inbox-list" aria-label="Lista de conversas">
       <header class="wa-side-head">
@@ -20,7 +31,7 @@
       </header>
       <div class="wa-side-search">
         <div class="wa-search-box"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><label class="visually-hidden" for="wa-search">Buscar nome ou telefone</label><input id="wa-search" class="form-control" placeholder="Pesquisar nome ou telefone" type="search"></div>
-        <label class="visually-hidden" for="wa-number">Número da empresa</label><select id="wa-number" class="form-select"><option value="">Todos os meus números</option></select>
+        <input type="hidden" id="wa-number" value="">
         <div class="wa-filters">
           <select id="wa-state" class="form-select wa-chip-select" aria-label="Situação"><option value="open">Em aberto</option><option value="pending">Pendentes</option><option value="responding">Respondendo</option><option value="closed">Finalizadas</option><option value="">Todas</option></select>
           <label class="wa-chip"><input id="wa-unread" type="checkbox"> Não lidas</label>

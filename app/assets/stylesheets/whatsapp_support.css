@@ -1904,3 +1904,100 @@
 }
 .wa-auto textarea.form-control { height: auto; min-height: 64px; resize: vertical; line-height: 1.5; }
 .wa-auto :is(p, small, label, .wa-auto-rule-text, .wa-auto-hint, .wa-auto-gap-q) :is(b, a, strong, code) { font-size: inherit; }
+
+/* ---------- Abas: uma por número conectado ---------- */
+#wa-inbox .wa-number-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 6px;
+  scrollbar-width: none;
+}
+#wa-inbox .wa-number-tabs::-webkit-scrollbar { display: none; }
+#wa-inbox .wa-number-tab {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-areas: "dot name count" "dot phone count";
+  align-items: center;
+  column-gap: 8px;
+  flex-shrink: 0;
+  min-width: 170px;
+  padding: 8px 14px 9px 12px;
+  border: 1px solid var(--wa-line);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--wa-panel);
+  color: var(--wa-text-2);
+  text-align: left;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s, background 0.15s, transform 0.15s;
+  transform: translateY(3px);
+}
+#wa-inbox .wa-number-tab:hover { opacity: 1; transform: translateY(1px); }
+#wa-inbox .wa-number-tab.is-active {
+  opacity: 1;
+  background: var(--wa-side);
+  color: var(--wa-text);
+  transform: none;
+  z-index: 4;
+}
+#wa-inbox .wa-number-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 0;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--wa-accent);
+  animation: wa-pop 0.3s ease;
+}
+#wa-inbox .wa-number-tab:focus-visible { outline: 2px solid var(--wa-accent); outline-offset: -2px; }
+#wa-inbox .wa-number-dot {
+  grid-area: dot;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--wa-danger);
+}
+#wa-inbox .wa-number-dot.is-on { background: var(--wa-accent); animation: wa-pulse 2.2s infinite; }
+#wa-inbox .wa-number-name {
+  grid-area: name;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#wa-inbox .wa-number-name i { color: #25d366; }
+#wa-inbox .wa-number-tab small {
+  grid-area: phone;
+  font-size: 0.72rem;
+  color: var(--wa-text-2);
+  white-space: nowrap;
+}
+#wa-inbox .wa-number-count {
+  grid-area: count;
+  justify-self: end;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e3b341;
+  color: #111b21;
+  font-size: 0.72rem;
+  font-weight: 700;
+  animation: wa-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#wa-inbox .wa-number-count.is-human { background: var(--wa-danger); color: #fff; }
+#wa-inbox .wa-number-none { padding: 10px 6px; color: var(--wa-text-2); font-size: 0.85rem; }
+#wa-inbox .wa-number-tabs + .wa-workspace { border-top-left-radius: 0; }
+@media (max-width: 700px) {
+  #wa-inbox .wa-number-tab { min-width: 140px; padding: 6px 10px 7px; }
+  #wa-inbox .wa-number-tab small { display: none; }
+}
