@@ -3,7 +3,7 @@ class ApplicationController < ActionController::Base
 
   before_action :authenticate_user!
   before_action :preload_current_user
-  protect_from_forgery unless: -> { request.format.json? }
+  protect_from_forgery prepend: true, unless: -> { request.format.json? }
 
   layout 'layouts/application'
 
@@ -45,7 +45,8 @@ class ApplicationController < ActionController::Base
   # permissões não consultam de novo, e o Bullet não confunde o usuário logado com um N+1 de uma
   # lista que por acaso também o contém.
   def preload_current_user
-    return unless current_user && request.get? && request.format.html?
+    # current_user por último: no POST do login ele autenticaria antes da checagem de CSRF.
+    return unless request.get? && request.format.html? && current_user
 
     ActiveRecord::Associations::Preloader.new(records: [current_user], associations: %i[profiles avatar_attachment]).call
   end
