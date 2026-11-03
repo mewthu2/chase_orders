@@ -2001,3 +2001,49 @@
   #wa-inbox .wa-number-tab { min-width: 140px; padding: 6px 10px 7px; }
   #wa-inbox .wa-number-tab small { display: none; }
 }
+
+/* ---------- Finalizar direto da lista e no topo da conversa ---------- */
+#wa-inbox .wa-thread-row {
+  position: relative;
+  transition: opacity 0.25s, transform 0.25s;
+}
+#wa-inbox .wa-thread-row.is-leaving { opacity: 0; transform: translateX(-16px); }
+#wa-inbox .wa-thread-finish {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--wa-line);
+  border-radius: 50%;
+  background: var(--wa-side);
+  color: var(--wa-accent);
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%) scale(0.8);
+  transition: opacity 0.15s, transform 0.15s, background 0.15s, color 0.15s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+#wa-inbox .wa-thread-row:hover .wa-thread-finish,
+#wa-inbox .wa-thread-finish:focus-visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+#wa-inbox .wa-thread-finish:hover { background: var(--wa-accent); color: #fff; border-color: var(--wa-accent); }
+#wa-inbox .wa-thread-finish.is-closed { color: var(--wa-text-2); }
+#wa-inbox .wa-thread-finish.is-closed:hover { background: var(--wa-selected); color: var(--wa-text); border-color: var(--wa-line); }
+#wa-inbox .wa-thread-finish:disabled { opacity: 0.5; cursor: wait; }
+@media (hover: none) {
+  #wa-inbox .wa-thread-finish { opacity: 1; transform: translateY(-50%) scale(0.9); }
+}
+#wa-inbox #wa-close.is-finish {
+  margin-left: auto;
+  background: var(--wa-accent);
+  border-color: var(--wa-accent);
+  color: #fff;
+  font-weight: 600;
+}
+#wa-inbox #wa-close.is-finish:hover { background: var(--wa-accent-2); border-color: var(--wa-accent-2); color: #fff; }

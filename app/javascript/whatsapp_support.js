@@ -402,7 +402,24 @@
       body.append(top, bottom, foot);
       button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name), body);
       button.onclick = safe(() => selectConversation(c.id));
-      $("wa-threads").append(button);
+      // Finalizar (ou reabrir) direto da lista, sem abrir a conversa.
+      const row = el("div", undefined, "wa-thread-row");
+      const closed = c.state === "closed";
+      const quick = el("button", undefined, `wa-thread-finish${closed ? " is-closed" : ""}`);
+      quick.type = "button";
+      quick.title = closed ? "Reabrir conversa" : "Marcar como finalizada";
+      quick.setAttribute("aria-label", `${quick.title}: ${c.name}`);
+      quick.append(el("i", undefined, closed ? "fas fa-rotate-left" : "fas fa-check"));
+      quick.onclick = safe(async (e) => {
+        e.stopPropagation();
+        quick.disabled = true;
+        await api(`/whatsapp/conversations/${c.id}`, json("PATCH", { operation: closed ? "reopen" : "close" }));
+        row.classList.add("is-leaving");
+        if (selected?.id === c.id) await refreshSelected();
+        await refreshList();
+      });
+      row.append(button, quick);
+      $("wa-threads").append(row);
     });
     if (!result.conversations.length && !append)
       $("wa-threads").append(
@@ -425,7 +442,11 @@
       `Pelo número ${c.connection_name}${c.connection_phone ? " · " + c.connection_phone : ""} · ${stateLabels[c.connection_state] || c.connection_state}`;
     $("wa-owner").textContent =
       `${c.stage_label} · Responsável: ${c.assignee_name || "ninguém"}`;
-    $("wa-close").textContent = c.state === "closed" ? "Reabrir" : "Finalizar";
+    $("wa-close").replaceChildren(
+      el("i", undefined, c.state === "closed" ? "fas fa-rotate-left" : "fas fa-circle-check"),
+      document.createTextNode(c.state === "closed" ? " Reabrir" : " Finalizar"),
+    );
+    $("wa-close").classList.toggle("is-finish", c.state !== "closed");
     renderAgent(c);
     const oldAssignee = $("wa-assignee").value;
     $("wa-assignee").replaceChildren(new Option("Transferir para…", ""));
