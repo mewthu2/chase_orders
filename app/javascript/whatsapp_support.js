@@ -894,7 +894,7 @@
     agentSignature = "";
   function renderAgent(c) {
     const box = $("wa-agent");
-    const signature = JSON.stringify([c.id, c.automation, c.agent_draft, c.agent_draft_finish, c.needs_human, c.agent_paused, c.agent_note, c.state]);
+    const signature = JSON.stringify([c.id, c.automation, c.agent_draft, c.agent_draft_finish, c.needs_human, c.agent_paused, c.agent_paused_until, c.agent_note, c.state]);
     if (signature === agentSignature) return;
     agentSignature = signature;
     box.replaceChildren();
@@ -973,7 +973,11 @@
       btn(" Tentar de novo", "fas fa-rotate", "wa-pill", () => askAgent(c.id));
     } else if (c.agent_paused) {
       box.classList.add("is-paused");
-      box.append(el("p", "Modo conversa ligado: o agente não lê nem responde esta conversa enquanto você atende.", "wa-agent-text"));
+      const until = c.agent_paused_until ? new Date(c.agent_paused_until) : null;
+      const back = until
+        ? (until <= new Date() ? " O agente volta na próxima mensagem da cliente." : ` O agente volta às ${until.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} se ninguém da equipe escrever.`)
+        : "";
+      box.append(el("p", "Modo conversa ligado: o agente não lê nem responde esta conversa enquanto você atende." + back, "wa-agent-text"));
       btn(" Voltar para o agente", "fas fa-robot", "wa-pill", () => act("resume_agent"));
       btn(" Pedir sugestão", "fas fa-wand-magic-sparkles", "wa-pill", () => askAgent(c.id));
     } else {

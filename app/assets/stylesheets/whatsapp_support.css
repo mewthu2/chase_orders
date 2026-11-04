@@ -1707,6 +1707,10 @@
   letter-spacing: 0.03em;
 }
 .wa-auto-label small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.wa-auto-minutes { display: flex; align-items: center; gap: 8px; }
+.wa-auto-minutes .form-control { width: 110px; }
+.wa-auto-minutes span { color: var(--text-3, #7d8897); font-size: 13px; }
+.wa-auto-hint { display: block; margin-top: 5px; color: var(--text-3, #7d8897); font-size: 12px; line-height: 1.45; }
 .wa-auto-actions {
   display: flex;
   justify-content: flex-end;

@@ -10,6 +10,8 @@ module Whatsapp
     validates :name, presence: true, length: { maximum: 80 }
     validates :mode, inclusion: { in: MODES.keys }
     validates :instructions, length: { maximum: 8_000 }
+    # Minutos sem a equipe escrever até o modo conversa desligar sozinho (0 = só desliga à mão).
+    validates :conversation_mode_minutes, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 10_080 }
     # Só uma automação ligada por número: ligar uma desliga as outras.
     after_save :disable_siblings, if: -> { saved_change_to_enabled? && enabled? }
 

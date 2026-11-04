@@ -8,8 +8,10 @@ module Whatsapp
     THINKING = 'Pensando numa resposta…'.freeze
 
     def self.schedule(conversation, message)
+      automation = Automation.active_for(conversation.connection_id)
+      return unless automation
+      conversation.expire_agent_pause!(automation) # modo conversa esgotado: o agente volta a ler
       return if conversation.agent_paused? # modo conversa: o agente nem lê
-      return unless Automation.where(connection_id: conversation.connection_id, enabled: true).exists?
       # A cliente falou mais: a sugestão antiga sai e o agente reanalisa a conversa inteira.
       conversation.clear_agent_draft
       conversation.update!(agent_note: THINKING, needs_human: false)

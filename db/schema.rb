@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_03_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1205,6 +1205,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_180000) do
     t.text "instructions"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "conversation_mode_minutes", default: 30, null: false
     t.index ["connection_id"], name: "index_whatsapp_automations_on_connection_id"
     t.index ["created_by_id"], name: "index_whatsapp_automations_on_created_by_id"
   end
@@ -1265,6 +1266,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_03_180000) do
     t.datetime "updated_at", null: false
     t.string "stage", default: "pending", null: false
     t.boolean "agent_paused", default: false, null: false
+    t.datetime "agent_paused_at"
     t.boolean "needs_human", default: false, null: false
     t.string "agent_note", limit: 500
     t.text "agent_draft"

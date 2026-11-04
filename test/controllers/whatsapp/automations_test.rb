@@ -55,6 +55,36 @@ class WhatsappAutomationsTest < ActionDispatch::IntegrationTest
     assert_equal 'Respondendo', response.parsed_body['stage_label']
   end
 
+  test 'conversation mode turns itself off after the configured minutes without the team writing' do
+    automation = @a.automations.create!(name: 'Auto', enabled: true, conversation_mode_minutes: 20)
+    sign_in @admin
+    patch whatsapp_automation_path(automation), params: { automation: { conversation_mode_minutes: '15' } }
+    assert_equal 15, automation.reload.conversation_mode_minutes
+
+    sign_in @agent
+    post whatsapp_conversation_messages_path(@conversation), params: { client_nonce: SecureRandom.uuid, body: 'Escrevi eu' }
+    assert @conversation.reload.agent_paused?
+    get whatsapp_conversation_path(@conversation, format: :json)
+    assert_in_delta 15.minutes.from_now, Time.zone.parse(response.parsed_body['agent_paused_until']), 5
+
+    # Ainda dentro do prazo: a cliente escreve e o agente segue fora.
+    message = @conversation.messages.create!(connection: @a, direction: 'incoming', body: 'Oi?', sent_at: Time.current)
+    Whatsapp::AgentJob.schedule(@conversation, message)
+    assert @conversation.reload.agent_paused?
+    assert_no_enqueued_jobs(only: Whatsapp::AgentJob) { Whatsapp::AgentJob.schedule(@conversation, message) }
+
+    travel 16.minutes do
+      message = @conversation.messages.create!(connection: @a, direction: 'incoming', body: 'Alguém?', sent_at: Time.current)
+      assert_enqueued_with(job: Whatsapp::AgentJob) { Whatsapp::AgentJob.schedule(@conversation, message) }
+      refute @conversation.reload.agent_paused?
+    end
+
+    automation.update!(conversation_mode_minutes: 0)
+    @conversation.update!(agent_paused: true)
+    assert_nil @conversation.agent_paused_until
+    travel(2.days) { refute @conversation.expire_agent_pause! }
+  end
+
   test 'stage filters list pending and needs-human conversations' do
     sign_in @agent
     get whatsapp_conversations_path(format: :json), params: { state: 'pending' }

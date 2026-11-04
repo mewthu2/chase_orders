@@ -21,6 +21,8 @@ module Whatsapp
         end
       end
     end
+    # Modo conversa ligado agora: guarda quando, para desligar sozinho depois do tempo da automação.
+    before_save { self.agent_paused_at = Time.current if will_save_change_to_agent_paused? && agent_paused? }
     validate { errors.add(:contact, 'de outro número') if contact && contact.connection_id != connection_id }
 
     def self.visible_to(user) = where(connection_id: Connection.visible_to(user).select(:id))
@@ -53,9 +55,29 @@ module Whatsapp
       self.stage = 'responding'
       self.needs_human = false
       self.agent_note = nil if pause_agent || agent_note == AgentJob::THINKING
-      self.agent_paused = true if pause_agent
+      if pause_agent
+        self.agent_paused = true
+        self.agent_paused_at = Time.current # a equipe segue conversando: o prazo recomeça
+      end
       clear_agent_draft
       save! if changed?
+    end
+
+    # Quando o modo conversa desliga sozinho (nil: não está ligado ou só desliga à mão).
+    def agent_paused_until(automation = Automation.active_for(connection_id))
+      minutes = automation&.conversation_mode_minutes.to_i
+      return unless agent_paused? && minutes.positive?
+
+      (agent_paused_at || updated_at) + minutes.minutes
+    end
+
+    # Passou o tempo do modo conversa: o agente volta a valer nesta conversa.
+    def expire_agent_pause!(automation = Automation.active_for(connection_id))
+      until_at = agent_paused_until(automation)
+      return false unless until_at && until_at <= Time.current
+
+      update!(agent_paused: false, agent_paused_at: nil)
+      true
     end
 
     def mark_read!(user, message_id)

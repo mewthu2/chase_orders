@@ -35,6 +35,12 @@
               </label>
             <% end %>
           </div>
+          <label class="wa-auto-label" for="automation_conversation_mode_minutes">Modo conversa desliga sozinho depois de <small>(minutos sem a equipe escrever; 0 = só desliga à mão)</small></label>
+          <div class="wa-auto-minutes">
+            <%= f.number_field :conversation_mode_minutes, class: 'form-control', min: 0, max: 10080, step: 1, required: true %>
+            <span>minutos</span>
+          </div>
+          <small class="wa-auto-hint">Quando alguém da equipe escreve na conversa, o agente para de sugerir. Passado esse tempo sem nova resposta da equipe, ele volta a sugerir na próxima mensagem da cliente.</small>
           <label class="wa-auto-label" for="automation_instructions">Instruções gerais <small>(tom de voz, o que nunca fazer, quem é a CHASE…)</small></label>
           <%= f.text_area :instructions, class: 'form-control', rows: 6, maxlength: 8000, placeholder: 'Ex.: Atenda de forma cordial e próxima, chame a cliente pelo nome, mensagens curtas…' %>
           <div class="wa-auto-actions"><button class="btn btn-export"><i class="fas fa-floppy-disk"></i>Salvar</button></div>

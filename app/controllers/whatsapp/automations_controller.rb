@@ -34,7 +34,7 @@ module Whatsapp
     end
 
     def update
-      @automation.update!(params.require(:automation).permit(:name, :mode, :enabled, :instructions))
+      @automation.update!(params.require(:automation).permit(:name, :mode, :enabled, :instructions, :conversation_mode_minutes))
       redirect_back fallback_location: whatsapp_automation_path(@automation), notice: 'Automação salva.'
     end
 

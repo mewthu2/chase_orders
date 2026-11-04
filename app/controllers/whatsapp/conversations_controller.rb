@@ -131,7 +131,7 @@ module Whatsapp
       result = summary(c).merge(assignees: people.map { |u| u.slice(:id, :name) },
         can_link_customer: current_user.can_access_screen?('customers'),
         agent_note: c.agent_note, agent_draft: c.agent_draft, agent_draft_finish: c.agent_draft_finish,
-        automation: automation_payload(c))
+        agent_paused_until: c.agent_paused_until, automation: automation_payload(c))
       if current_user.can_access_screen?('customers') && c.contact.customer
         result[:customer] = customer_payload(c.contact.customer)
         result[:orders_url] = orders_path(customer_id: c.contact.customer_id) if current_user.can_access_screen?('orders')
@@ -142,6 +142,7 @@ module Whatsapp
       automation = Automation.active_for(c.connection_id)
       return unless automation
       { id: automation.id, name: automation.name, mode: automation.mode, mode_label: automation.mode_label,
+        conversation_mode_minutes: automation.conversation_mode_minutes,
         url: (whatsapp_automation_path(automation) if Connection.administrable_by?(current_user)),
         open_gaps: automation.gaps.open.where(conversation_id: c.id).count }
     end
