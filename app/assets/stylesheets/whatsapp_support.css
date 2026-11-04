@@ -2149,3 +2149,31 @@
   0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
   30% { transform: translateY(-4px); opacity: 1; }
 }
+
+/* Funcionalidades do agente: classe de pergunta ligada a uma consulta (estoque, pedido). */
+.wa-auto-caps { display: grid; gap: 10px; }
+.wa-auto-cap {
+  position: relative;
+  padding: 12px 14px;
+  border: 1px solid var(--border-2, #30363d);
+  border-radius: 12px;
+  background: var(--surface-2, #151a22);
+  animation: wa-rise-in 0.35s ease both;
+  animation-delay: calc(var(--i) * 60ms);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.wa-auto-cap.is-on { border-color: #00a884; box-shadow: 0 0 0 1px rgba(0, 168, 132, 0.25), 0 8px 24px -14px rgba(0, 168, 132, 0.6); }
+.wa-auto-cap header { display: flex; align-items: center; gap: 12px; }
+.wa-auto-cap header > div { flex: 1; min-width: 0; }
+.wa-auto-cap header strong { display: block; }
+.wa-auto-cap header small { display: block; color: var(--text-3, #7d8897); font-size: 12px; line-height: 1.4; }
+.wa-auto-cap-icon {
+  display: grid; place-items: center; flex: none;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 168, 132, 0.25), rgba(83, 189, 235, 0.18));
+  color: #00a884;
+}
+.wa-auto-cap.is-on .wa-auto-cap-icon { animation: wa-pulse 2.4s ease-in-out infinite; }
+.wa-sim-msg.is-tool { background: rgba(83, 189, 235, 0.12); color: var(--text-2, #c9d1d9); border-left: 3px solid #53bdeb; font-size: 0.85rem; }
+.wa-sim-msg.is-tool small::before { content: "🔎 "; }
+@media (max-width: 640px) { .wa-auto-cap header { flex-wrap: wrap; } }

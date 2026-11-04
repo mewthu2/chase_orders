@@ -22,6 +22,7 @@ Rails.application.routes.draw do
         delete 'rules/:rule_id', action: :destroy_rule
         post 'gaps/:gap_id/teach', action: :teach_gap, as: :teach_gap
         post 'gaps/:gap_id/dismiss', action: :dismiss_gap, as: :dismiss_gap
+        patch 'capabilities/:key', action: :update_capability, as: :capability
       end
     end
     resources :conversations, only: [:index, :show, :create, :update] do

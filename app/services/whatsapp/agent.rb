@@ -8,7 +8,8 @@ module Whatsapp
   class Agent
     class NotConfigured < StandardError; end
     class Failure < StandardError; end
-    Decision = Struct.new(:action, :reply, :question, :reason, keyword_init: true) do
+    # tools: consultas feitas antes de decidir ([{ name:, args:, result: }]).
+    Decision = Struct.new(:action, :reply, :question, :reason, :tools, keyword_init: true) do
       def reply? = %w[reply finish].include?(action) && reply.present?
       def finish? = action == 'finish'
       def unsure? = action == 'unsure'
@@ -16,21 +17,45 @@ module Whatsapp
     ACTIONS = %w[reply finish unsure wait].freeze
     ENDPOINT = 'https://api.openai.com/v1/chat/completions'.freeze
     HISTORY = 30
+    MAX_TOOL_ROUNDS = 3
 
     def self.configured? = ENV['OPENAI_API_KEY'].present?
     def self.model = ENV['OPENAI_MODEL'].presence || 'gpt-4.1-mini'
 
-    def initialize(automation)
+    # capabilities: funcionalidades em uso (padrão: as ligadas na automação; o teste usa todas).
+    # graphql: dublê da Shopify para as consultas (testes).
+    def initialize(automation, capabilities: nil, graphql: nil)
       @automation = automation
+      @capabilities = capabilities || automation.capabilities.select(&:enabled?)
+      @graphql = graphql
     end
 
     # history: [{ from: 'cliente'|'loja', text:, at: }] em ordem cronológica.
     def decide(history, contact_name: nil)
       raise NotConfigured, 'A chave da OpenAI (OPENAI_API_KEY) não está configurada no servidor.' unless self.class.configured?
-      body = { model: self.class.model, response_format: { type: 'json_object' },
-               messages: [{ role: 'system', content: system_prompt(contact_name) },
-                          { role: 'user', content: transcript(history) }] }
-      parse(request(body))
+      tools = AgentTools.new(@capabilities.map(&:key), history.last(HISTORY), graphql: @graphql)
+      messages = [{ role: 'system', content: system_prompt(contact_name) }, { role: 'user', content: transcript(history) }]
+      body = { model: self.class.model, response_format: { type: 'json_object' }, messages: messages }
+      body[:tools] = tools.definitions if tools.any?
+
+      rounds = 0
+      loop do
+        body[:tool_choice] = 'none' if tools.any? && rounds >= MAX_TOOL_ROUNDS
+        message = request(body)
+        calls = Array(message['tool_calls'])
+        if calls.empty? || rounds >= MAX_TOOL_ROUNDS
+          decision = parse(message['content'].to_s)
+          decision.tools = tools.used
+          return decision
+        end
+
+        rounds += 1
+        messages << { role: 'assistant', content: message['content'], tool_calls: calls }
+        calls.each do |call|
+          result = tools.call(call.dig('function', 'name'), call.dig('function', 'arguments'))
+          messages << { role: 'tool', tool_call_id: call['id'], content: result.to_json }
+        end
+      end
     end
 
     def system_prompt(contact_name = nil)
@@ -39,6 +64,9 @@ module Whatsapp
         rules.each_with_index.map { |r, i| "#{i + 1}. QUANDO: #{r.trigger.squish}\n   FAÇA: #{r.response.strip}" }.join("\n")
       else
         '(nenhum comando ensinado ainda)'
+      end
+      functions = @capabilities.map do |c|
+        "- QUANDO: #{c.trigger_text.squish}\n  USE A FERRAMENTA #{c.info[:tool]}. #{c.info[:guide]}"
       end
       <<~PROMPT
         Você é o agente de atendimento pelo WhatsApp da CHASE (moda fitness e lifestyle), atendendo pelo número "#{@automation.connection.name}".
@@ -50,9 +78,10 @@ module Whatsapp
 
         COMANDOS ENSINADOS PELA EQUIPE (siga-os à risca):
         #{commands}
+        #{"\nFUNCIONALIDADES (consultas de verdade que você pode fazer antes de responder):\n#{functions.join("\n")}\n- O resultado das ferramentas é a verdade: responda com base nele e nunca acrescente o que ele não diz.\n" if functions.any?}
 
         REGRAS QUE VOCÊ NUNCA QUEBRA:
-        - Responda só com base nos comandos e instruções acima e no que o próprio cliente disse na conversa.
+        - Responda só com base nos comandos e instruções acima, no resultado das ferramentas e no que o próprio cliente disse na conversa.
         - Nunca invente prazos, valores, situação de pedido, estoque, estorno, links ou telefones que não estejam nos comandos.
         - Nunca responda "sim", "não", "temos" ou "não temos" sobre algo que os comandos não dizem (ex.: desconto, cupom, promoção, Black Friday, preço, tamanho ou cor disponível, frete). Nesses casos use "unsure".
         - Se a última mensagem do cliente pede algo que os comandos não cobrem, ou se você não tem certeza de como a equipe responderia, use a ação "unsure". É melhor deixar para a equipe do que errar.
@@ -92,7 +121,7 @@ module Whatsapp
         detail = (JSON.parse(response.body).dig('error', 'message') rescue nil)
         raise Failure, "OpenAI respondeu #{response.status}#{": #{detail.to_s.truncate(160)}" if detail}"
       end
-      JSON.parse(response.body).dig('choices', 0, 'message', 'content').to_s
+      JSON.parse(response.body).dig('choices', 0, 'message') || {}
     rescue Faraday::Error => e
       raise Failure, "Sem comunicação com a OpenAI (#{e.class.name.demodulize})."
     end

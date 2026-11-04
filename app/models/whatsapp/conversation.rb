@@ -23,6 +23,8 @@ module Whatsapp
     end
     # Modo conversa ligado agora: guarda quando, para desligar sozinho depois do tempo da automação.
     before_save { self.agent_paused_at = Time.current if will_save_change_to_agent_paused? && agent_paused? }
+    # Agenda o fim do prazo para o agente voltar sozinho (e sugerir) quando a equipe parar de escrever.
+    after_commit :schedule_agent_resume, if: -> { saved_change_to_agent_paused_at? && agent_paused? && agent_paused_at }
     validate { errors.add(:contact, 'de outro número') if contact && contact.connection_id != connection_id }
 
     def self.visible_to(user) = where(connection_id: Connection.visible_to(user).select(:id))
@@ -78,6 +80,11 @@ module Whatsapp
 
       update!(agent_paused: false, agent_paused_at: nil)
       true
+    end
+
+    def schedule_agent_resume
+      until_at = agent_paused_until
+      ResumeAgentJob.set(wait_until: until_at + 1.second).perform_later(id) if until_at
     end
 
     def mark_read!(user, message_id)

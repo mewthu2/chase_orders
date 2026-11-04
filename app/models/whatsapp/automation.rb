@@ -7,6 +7,7 @@ module Whatsapp
     belongs_to :created_by, class_name: 'User', optional: true
     has_many :rules, -> { order(:position, :id) }, class_name: 'Whatsapp::AutomationRule', dependent: :destroy, inverse_of: :automation
     has_many :gaps, class_name: 'Whatsapp::AutomationGap', dependent: :destroy, inverse_of: :automation
+    has_many :capabilities, class_name: 'Whatsapp::AutomationCapability', dependent: :destroy, inverse_of: :automation
     validates :name, presence: true, length: { maximum: 80 }
     validates :mode, inclusion: { in: MODES.keys }
     validates :instructions, length: { maximum: 8_000 }
@@ -18,6 +19,14 @@ module Whatsapp
     def self.active_for(connection_id) = where(connection_id: connection_id, enabled: true).order(updated_at: :desc).first
     def auto? = mode == 'auto'
     def mode_label = MODES[mode]
+
+    # Todas as funcionalidades do catálogo, salvas ou não (as não salvas estão desligadas).
+    def capability_list
+      saved = capabilities.index_by(&:key)
+      AutomationCapability::CATALOG.keys.map { |key| saved[key] || AutomationCapability.new(automation: self, key: key) }
+    end
+
+    def capability(key) = capabilities.find_or_initialize_by(key: key)
 
     private
     def disable_siblings

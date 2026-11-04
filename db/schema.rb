@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_04_160000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1170,6 +1170,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
     t.index ["user_id"], name: "index_whatsapp_activities_on_user_id"
   end
 
+  create_table "whatsapp_automation_capabilities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "automation_id", null: false
+    t.string "key", null: false
+    t.boolean "enabled", default: false, null: false
+    t.text "trigger"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["automation_id", "key"], name: "index_wa_capabilities_on_automation_and_key", unique: true
+    t.index ["automation_id"], name: "index_whatsapp_automation_capabilities_on_automation_id"
+  end
+
   create_table "whatsapp_automation_gaps", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "automation_id", null: false
     t.bigint "conversation_id", null: false
@@ -1205,7 +1216,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
     t.text "instructions"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "conversation_mode_minutes", default: 30, null: false
+    t.integer "conversation_mode_minutes", default: 10, null: false
     t.index ["connection_id"], name: "index_whatsapp_automations_on_connection_id"
     t.index ["created_by_id"], name: "index_whatsapp_automations_on_created_by_id"
   end
@@ -1457,6 +1468,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_04_120000) do
   add_foreign_key "whatsapp_activities", "users"
   add_foreign_key "whatsapp_activities", "users", column: "assignee_id"
   add_foreign_key "whatsapp_activities", "whatsapp_conversations", column: "conversation_id"
+  add_foreign_key "whatsapp_automation_capabilities", "whatsapp_automations", column: "automation_id"
   add_foreign_key "whatsapp_automation_gaps", "whatsapp_automation_rules", column: "rule_id"
   add_foreign_key "whatsapp_automation_gaps", "whatsapp_automations", column: "automation_id"
   add_foreign_key "whatsapp_automation_gaps", "whatsapp_conversations", column: "conversation_id"

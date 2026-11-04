@@ -82,6 +82,32 @@
           <div class="wa-auto-actions"><button class="btn btn-export"><i class="fas fa-plus"></i>Adicionar comando</button></div>
         <% end %>
       </section>
+
+      <section class="panel pg-card wa-auto-section" id="funcionalidades">
+        <h2><i class="fas fa-plug"></i>Funcionalidades <span class="wa-auto-count"><%= @capabilities.count(&:enabled?) %>/<%= @capabilities.size %></span></h2>
+        <p class="wa-auto-hint">Uma classe de pergunta ligada a uma consulta de verdade: <b>quando</b> a cliente perguntar isso, o agente consulta a Shopify antes de responder. Desligada, o agente não usa nas conversas, mas dá para testar ao lado em <b>Testar o agente</b>.</p>
+        <div class="wa-auto-caps">
+          <% @capabilities.each_with_index do |cap, i| %>
+            <article class="wa-auto-cap<%= ' is-on' if cap.enabled? %>" style="--i: <%= i %>">
+              <header>
+                <span class="wa-auto-cap-icon"><i class="<%= cap.info[:icon] %>"></i></span>
+                <div><strong><%= cap.name %></strong><small><%= cap.info[:does] %></small></div>
+                <%= form_with url: capability_whatsapp_automation_path(@automation, key: cap.key), method: :patch, local: true, scope: :capability, class: 'wa-auto-power-form' do |f| %>
+                  <%= f.hidden_field :enabled, value: !cap.enabled? %>
+                  <button class="wa-auto-power<%= ' is-on' if cap.enabled? %>" title="<%= cap.enabled? ? 'Desligar' : 'Ligar' %> nas conversas">
+                    <span class="wa-auto-switch"><i></i></span><%= cap.enabled? ? 'Ligada' : 'Desligada' %>
+                  </button>
+                <% end %>
+              </header>
+              <%= form_with url: capability_whatsapp_automation_path(@automation, key: cap.key), method: :patch, local: true, scope: :capability do |f| %>
+                <label class="wa-auto-label" for="cap_trigger_<%= cap.key %>">Quando</label>
+                <%= f.text_area :trigger, value: cap.trigger_text, id: "cap_trigger_#{cap.key}", class: 'form-control', rows: 2, maxlength: 1000, required: true %>
+                <div class="wa-auto-actions"><button class="btn btn-export btn-sm"><i class="fas fa-floppy-disk"></i>Salvar</button></div>
+              <% end %>
+            </article>
+          <% end %>
+        </div>
+      </section>
     </div>
 
     <aside class="wa-auto-side">
@@ -151,6 +177,15 @@
       const data = await res.json(); thinking.remove();
       if (!res.ok) { bubble('from-agent is-error', data.error || 'Não foi possível testar agora.'); return; }
       const note = `${labels[data.action] || data.action}${data.reason ? ' · ' + data.reason : ''}`;
+      (data.tools || []).forEach((t) => {
+        const names = { consultar_estoque: 'Consultou o estoque', buscar_pedidos: 'Buscou pedidos' };
+        const args = Object.values(t.args || {}).filter(Boolean).join(' · ');
+        const r = t.result || {};
+        const found = r.erro ? r.erro : r.pedidos ? r.pedidos.map((p) => `${p.numero}: ${p.pagamento}, ${p.envio}`).join(' | ')
+          : r.produtos ? r.produtos.map((p) => `${p.nome}: ${p.disponivel_em.length ? p.disponivel_em.map((d) => `${d.loja} (${d.tamanhos.join(', ')})`).join('; ') : 'sem estoque'}`).join(' | ')
+          : r.varios_produtos ? `Vários: ${r.varios_produtos.join(', ')}` : (r.mensagem || '');
+        bubble('from-agent is-tool', found, `${names[t.name] || t.name}${args ? ' · ' + args : ''}`);
+      });
       if (data.action === 'unsure') bubble('from-agent is-unsure', data.question, note);
       else bubble(`from-agent is-${data.action}`, data.reply, note);
       history.push({ from: 'cliente', text });

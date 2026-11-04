@@ -16,6 +16,18 @@ module Whatsapp
       @rules = @automation.rules.to_a
       @gaps = @automation.gaps.open.includes(conversation: :contact).order(created_at: :desc).limit(100)
       @taught = @automation.gaps.where(state: 'taught').count
+      @capabilities = @automation.capability_list
+    end
+
+    # Funcionalidade (classe de pergunta ligada a uma consulta): liga/desliga e ajusta o "quando".
+    def update_capability
+      key = params[:key].to_s
+      raise ActiveRecord::RecordNotFound unless AutomationCapability::CATALOG.key?(key)
+
+      capability = @automation.capability(key)
+      capability.update!(params.require(:capability).permit(:enabled, :trigger))
+      redirect_to whatsapp_automation_path(@automation, anchor: 'funcionalidades'),
+                  notice: "#{capability.name}: #{capability.enabled? ? 'ligada' : 'desligada'}."
     end
 
     def create
@@ -82,7 +94,8 @@ module Whatsapp
         row = row.respond_to?(:permit) ? row.permit(:from, :text) : row
         { from: row[:from] == 'loja' ? 'loja' : 'cliente', text: row[:text].to_s.truncate(1_500), at: Time.current } if row[:text].present?
       end
-      decision = Agent.new(@automation).decide(history + [{ from: 'cliente', text: text, at: Time.current }])
+      # O teste usa todas as funcionalidades, mesmo as desligadas, para conferir antes de ligar.
+      decision = Agent.new(@automation, capabilities: @automation.capability_list).decide(history + [{ from: 'cliente', text: text, at: Time.current }])
       render json: decision.to_h
     rescue Agent::NotConfigured, Agent::Failure => e
       render json: { error: e.message }, status: :service_unavailable

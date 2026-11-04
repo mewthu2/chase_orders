@@ -68,13 +68,13 @@ class WhatsappAutomationsTest < ActionDispatch::IntegrationTest
     assert_in_delta 15.minutes.from_now, Time.zone.parse(response.parsed_body['agent_paused_until']), 5
 
     # Ainda dentro do prazo: a cliente escreve e o agente segue fora.
-    message = @conversation.messages.create!(connection: @a, direction: 'incoming', body: 'Oi?', sent_at: Time.current)
+    message = @conversation.messages.create!(connection: @a, direction: 'incoming', state: 'received', body: 'Oi?', sent_at: Time.current)
     Whatsapp::AgentJob.schedule(@conversation, message)
     assert @conversation.reload.agent_paused?
     assert_no_enqueued_jobs(only: Whatsapp::AgentJob) { Whatsapp::AgentJob.schedule(@conversation, message) }
 
     travel 16.minutes do
-      message = @conversation.messages.create!(connection: @a, direction: 'incoming', body: 'Alguém?', sent_at: Time.current)
+      message = @conversation.messages.create!(connection: @a, direction: 'incoming', state: 'received', body: 'Alguém?', sent_at: Time.current)
       assert_enqueued_with(job: Whatsapp::AgentJob) { Whatsapp::AgentJob.schedule(@conversation, message) }
       refute @conversation.reload.agent_paused?
     end
@@ -83,6 +83,45 @@ class WhatsappAutomationsTest < ActionDispatch::IntegrationTest
     @conversation.update!(agent_paused: true)
     assert_nil @conversation.agent_paused_until
     travel(2.days) { refute @conversation.expire_agent_pause! }
+  end
+
+  test 'capabilities start off and the admin turns one on and edits its question class' do
+    automation = @a.automations.create!(name: 'Auto', enabled: true)
+    sign_in @admin
+    get whatsapp_automation_path(automation)
+    assert_response :success
+    assert_includes response.body, 'Disponibilidade nas lojas'
+    assert_includes response.body, 'Pedido da cliente'
+    assert_empty automation.capabilities
+
+    patch capability_whatsapp_automation_path(automation, key: 'stock_lookup'), params: { capability: { enabled: 'true' } }
+    assert_redirected_to whatsapp_automation_path(automation, anchor: 'funcionalidades')
+    patch capability_whatsapp_automation_path(automation, key: 'stock_lookup'), params: { capability: { trigger: 'perguntar onde tem' } }
+    cap = automation.capabilities.sole
+    assert cap.enabled?
+    assert_equal 'perguntar onde tem', cap.trigger_text
+    patch capability_whatsapp_automation_path(automation, key: 'inventada'), params: { capability: { enabled: 'true' } }
+    assert_response :not_found
+  end
+
+  test 'when the conversation mode time runs out the agent comes back and suggests for the unanswered customer message' do
+    @a.automations.create!(name: 'Auto', enabled: true)
+    assert_equal 10, @a.automations.sole.conversation_mode_minutes
+    sign_in @agent
+    assert_enqueued_with(job: Whatsapp::ResumeAgentJob) do
+      post whatsapp_conversation_messages_path(@conversation), params: { client_nonce: SecureRandom.uuid, body: 'Já te respondo' }
+    end
+    message = @conversation.messages.create!(connection: @a, direction: 'incoming', state: 'received', body: 'E aí?', sent_at: Time.current)
+
+    Whatsapp::ResumeAgentJob.perform_now(@conversation.id) # cedo demais: segue no modo conversa
+    assert @conversation.reload.agent_paused?
+
+    travel 11.minutes do
+      assert_enqueued_with(job: Whatsapp::AgentJob, args: [@conversation.id, message.id]) { Whatsapp::ResumeAgentJob.perform_now(@conversation.id) }
+      @conversation.reload
+      refute @conversation.agent_paused?
+      assert_equal Whatsapp::AgentJob::THINKING, @conversation.agent_note
+    end
   end
 
   test 'stage filters list pending and needs-human conversations' do
