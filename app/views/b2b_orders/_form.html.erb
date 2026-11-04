@@ -249,11 +249,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function currentPriceList() {
     return PRICE_LIST;
   }
-  // Preço inicial do item (editável): atacado = sugerido, abastecimento = 50% do varejo, transferência B2C = 70% do custo.
+  // Preço inicial do item (editável): atacado = sugerido, abastecimento = 80% do varejo, transferência B2C = 70% do custo.
   var ORDER_KIND = '<%= @b2b_order.kind %>';
   function defaultPrice(product, suggestedPrice) {
     if (ORDER_KIND === 'b2c_transfer') return product.b2c_transfer_price || 0;
-    if (currentPriceList() === 'transfer') return Math.round((product.retail_price || 0) * 50) / 100;
+    if (currentPriceList() === 'transfer') return Math.round((product.retail_price || 0) * 80) / 100;
     return suggestedPrice || 0;
   }
 
