@@ -112,4 +112,23 @@ class WhatsappIngestTest < ActiveSupport::TestCase
     assert_in_delta (at + 30.seconds).to_f, @a.qr_expires_at.to_f, 0.001
   end
 
+
+  test 'videos, video notes and stickers arrive as viewable media' do
+    { 'videoMessage' => 'video', 'ptvMessage' => 'video', 'stickerMessage' => 'image' }.each do |field, kind|
+      payload = wa_message("media-#{field}")
+      payload['message'] = { field => { 'mimetype' => 'video/mp4', 'fileLength' => 1000 } }
+      message = Whatsapp::Ingest.new(@a).message!(payload)
+      assert_equal kind, message.kind
+      assert_equal 'pending', message.media_state
+    end
+  end
+
+  test 'mp4 container keeps the kind WhatsApp reported and uses extension for uploads' do
+    mp4 = "\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom".b + ("\x00" * 64).b
+    assert_equal 'video', Whatsapp::Media.inspect_upload(StringIO.new(mp4), filename: 'clip.mp4')[1]
+    assert_equal 'audio', Whatsapp::Media.inspect_upload(StringIO.new(mp4), filename: 'voz.m4a')[1]
+    @message.update!(kind: 'audio', media_state: 'pending')
+    Whatsapp::Media.store!(@message, StringIO.new(mp4), filename: 'arquivo')
+    assert_equal 'audio', @message.reload.kind
+  end
 end

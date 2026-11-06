@@ -2,6 +2,9 @@ module Whatsapp
   class Ingest
     STATUS_RANKS = { 'SERVER_ACK' => 1, 'DELIVERY_ACK' => 2, 'READ' => 3, 'PLAYED' => 3,
       '2' => 1, '3' => 2, '4' => 3, '5' => 3 }.freeze
+    # Figurinha é uma imagem WEBP; vídeo de bolinha (ptv) é um vídeo comum.
+    MEDIA_KINDS = { 'imageMessage' => 'image', 'stickerMessage' => 'image', 'documentMessage' => 'document',
+      'audioMessage' => 'audio', 'videoMessage' => 'video', 'ptvMessage' => 'video' }.freeze
     def initialize(connection) = @connection = connection
 
     def message!(data, historical: false, outgoing: nil)
@@ -28,7 +31,7 @@ module Whatsapp
       %w[ephemeralMessage viewOnceMessage viewOnceMessageV2 documentWithCaptionMessage].each do |wrapper|
         raw = raw.dig(wrapper, 'message') || raw
       end
-      kind, media = %w[image document audio].filter_map { |k| [k, raw["#{k}Message"]] if raw["#{k}Message"].is_a?(Hash) }.first
+      kind, media = MEDIA_KINDS.filter_map { |field, k| [k, raw[field]] if raw[field].is_a?(Hash) }.first
       text = raw['conversation'] || raw.dig('extendedTextMessage', 'text') || media&.dig('caption')
       kind ||= text.present? ? 'text' : 'unsupported'
       timestamp = data['messageTimestamp'].to_i

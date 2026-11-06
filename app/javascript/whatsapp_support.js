@@ -158,6 +158,36 @@
     };
     setTimeout(tick, interval);
   }
+  // Visualizador: imagem, PDF e TXT abrem na própria conversa, sem baixar.
+  const viewable = (m) => m.kind === "image" || (m.kind === "document" && !/\.(docx?|xlsx?|zip)$/i.test(m.filename || ""));
+  const openViewer = (m, label) => {
+    const dialog = $("wa-viewer"),
+      stage = $("wa-viewer-stage");
+    stage.replaceChildren();
+    $("wa-viewer-name").textContent = label;
+    $("wa-viewer-download").href = `${m.media_url}?download=1`;
+    $("wa-viewer-download").download = m.filename || "";
+    if (m.kind === "image") {
+      const image = el("img");
+      image.src = m.media_url;
+      image.alt = label;
+      image.onclick = () => image.classList.toggle("is-zoomed");
+      stage.append(image);
+    } else {
+      const frame = el("iframe");
+      frame.src = m.media_url;
+      frame.title = label;
+      stage.append(frame);
+    }
+    dialog.showModal();
+  };
+  if ($("wa-viewer")) {
+    $("wa-viewer-close").onclick = () => $("wa-viewer").close();
+    $("wa-viewer").onclick = (e) => {
+      if (e.target === e.currentTarget || e.target.id === "wa-viewer-stage") $("wa-viewer").close();
+    };
+    $("wa-viewer").onclose = () => $("wa-viewer-stage").replaceChildren();
+  }
   let mediaRecorder, audioStream, recordedFile;
   function stopRecording() {
     if (mediaRecorder?.state === "recording") mediaRecorder.stop();
@@ -508,22 +538,44 @@
             next.append(el("span", m.by_agent ? `🤖 ${m.author}` : m.author, "wa-author"));
           if (m.body) next.append(el("p", m.body));
           if (m.media_url) {
+            const label = m.filename || { image: "Imagem", video: "Vídeo", audio: "Áudio" }[m.kind] || "Arquivo";
             if (m.kind === "image") {
               const image = el("img");
               image.src = m.media_url;
               image.alt = m.filename || "Imagem recebida";
               image.loading = "lazy";
+              image.title = "Clique para ampliar";
+              image.onclick = () => openViewer(m, label);
               next.append(image);
+            } else if (m.kind === "video") {
+              const video = el("video", undefined, "wa-video");
+              video.src = m.media_url;
+              video.controls = true;
+              video.playsInline = true;
+              video.preload = "metadata";
+              next.append(video);
             } else if (m.kind === "audio") {
               const audio = el("audio");
               audio.src = m.media_url;
               audio.controls = true;
               audio.preload = "none";
               next.append(audio);
+            } else if (m.kind === "document" && viewable(m)) {
+              const open = el("button", undefined, "wa-doc-card");
+              open.type = "button";
+              open.title = "Visualizar aqui, sem baixar";
+              open.append(
+                el("i", undefined, `fas ${/\.txt$/i.test(m.filename || "") ? "fa-file-lines" : "fa-file-pdf"}`),
+                el("span", label),
+                el("small", "Visualizar"),
+              );
+              open.onclick = () => openViewer(m, label);
+              next.append(open);
             }
-            const link = el("a", m.filename || "Baixar arquivo");
-            link.href = m.media_url;
+            const link = el("a", m.kind === "document" && viewable(m) ? "Baixar" : label, "wa-download");
+            link.href = `${m.media_url}?download=1`;
             link.download = m.filename || "";
+            link.title = "Baixar arquivo";
             next.append(link);
           } else if (m.media_state)
             next.append(

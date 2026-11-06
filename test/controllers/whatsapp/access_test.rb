@@ -212,4 +212,22 @@ class WhatsappAccessTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, 'WA-OTHER-ORDER'
   end
 
+
+  test 'attachments open inline for viewing, download on request, and answer byte ranges' do
+    Whatsapp::Media.store!(@message, StringIO.new("documento de teste\n"), filename: 'teste.txt')
+    get attachment_whatsapp_conversation_message_path(@conversation, @message)
+    assert_response :success
+    assert_match(/\Ainline/, response.headers['Content-Disposition'])
+    assert_equal 'nosniff', response.headers['X-Content-Type-Options']
+    get attachment_whatsapp_conversation_message_path(@conversation, @message, download: 1)
+    assert_match(/\Aattachment/, response.headers['Content-Disposition'])
+    get attachment_whatsapp_conversation_message_path(@conversation, @message), headers: { 'Range' => 'bytes=0-8' }
+    assert_response :partial_content
+    assert_equal 'documento', response.body
+    assert_equal 'bytes 0-8/19', response.headers['Content-Range']
+    get attachment_whatsapp_conversation_message_path(@conversation, @message), headers: { 'Range' => 'bytes=-6' }
+    assert_equal "teste\n", response.body
+    get attachment_whatsapp_conversation_message_path(@conversation, @message), headers: { 'Range' => 'bytes=50-' }
+    assert_response :range_not_satisfiable
+  end
 end

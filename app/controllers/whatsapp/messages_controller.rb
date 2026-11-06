@@ -76,8 +76,25 @@ module Whatsapp
       message = @conversation.messages.find(params[:id])
       media = message.media || raise(ActiveRecord::RecordNotFound)
       # Private route, authorized on every request. No blob IDs or remote URLs leave the server.
-      send_data media.download, type: media.content_type, filename: media.filename,
-        disposition: %w[image audio].include?(message.kind) ? 'inline' : 'attachment'
+      # Tudo abre direto na conversa; o link "Baixar" usa ?download=1.
+      data = media.download
+      disposition = params[:download].present? ? 'attachment' : 'inline'
+      response.headers['X-Content-Type-Options'] = 'nosniff'
+      response.headers['Accept-Ranges'] = 'bytes'
+      # Safari só toca vídeo/áudio quando o servidor responde a pedidos parciais (Range).
+      if (range = request.headers['Range'].to_s.match(/\Abytes=(\d*)-(\d*)\z/)) && (range[1].present? || range[2].present?)
+        total = data.bytesize
+        first, last = if range[1].empty? then [[total - range[2].to_i, 0].max, total - 1]
+                      else [range[1].to_i, range[2].present? ? [range[2].to_i, total - 1].min : total - 1] end
+        if first > last || first >= total
+          response.headers['Content-Range'] = "bytes */#{total}"
+          return head(:range_not_satisfiable)
+        end
+        response.headers['Content-Range'] = "bytes #{first}-#{last}/#{total}"
+        return send_data(data.byteslice(first..last), type: media.content_type, filename: media.filename,
+          disposition: disposition, status: :partial_content)
+      end
+      send_data data, type: media.content_type, filename: media.filename, disposition: disposition
     end
 
     private
