@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'minitest/mock'
 require_relative '../../support/whatsapp_factory'
 class WhatsappIngestTest < ActiveSupport::TestCase
   include WhatsappFactory
@@ -45,6 +46,62 @@ class WhatsappIngestTest < ActiveSupport::TestCase
     assert_equal '+5511988887777', result.conversation.contact.phone
     unknown = ingest.message!(wa_message('lid2', jid: '333333333333333@lid'))
     assert_nil unknown.conversation.contact.phone
+  end
+
+  test 'webhook that lost the LID finds it in the provider and keeps one conversation' do
+    lid = '281311918997594@lid'
+    ingest = Whatsapp::Ingest.new(@a)
+    old = ingest.message!(wa_message('history', jid: lid, at: 1.day.ago), historical: true)
+    assert_not_equal @conversation.id, old.conversation_id
+    @conversation.mark_read!(@agent, @message.id)
+    payload = wa_message('live')
+    payload['key'].merge!('remoteJidAlt' => @jid, 'addressingMode' => 'lid')
+    gateway = Object.new
+    calls = 0
+    gateway.define_singleton_method(:find_message) do |id|
+      calls += 1
+      [{ 'key' => { 'id' => id, 'remoteJid' => lid, 'remoteJidAlt' => '5511988887777@s.whatsapp.net' } }]
+    end
+    @a.stub(:gateway, gateway) do
+      live = ingest.message!(payload)
+      assert_equal @conversation.id, live.conversation_id
+      again = wa_message('live2')
+      again['key'].merge!('remoteJidAlt' => @jid, 'addressingMode' => 'lid')
+      ingest.message!(again)
+    end
+    assert_equal 1, calls, 'depois de ligar o LID não consulta de novo'
+    assert_not Whatsapp::Conversation.exists?(old.conversation_id)
+    assert_equal @conversation.id, old.reload.conversation_id
+    assert_equal 4, @conversation.messages.count
+    assert_equal %w[281311918997594@lid 5511988887777@s.whatsapp.net], @conversation.contact.aliases.pluck(:jid).sort
+    assert_equal '5511988887777@s.whatsapp.net', @conversation.reload.contact.provider_jid
+    assert_equal 1, @a.contacts.count
+    assert_equal 2, @conversation.unread_count(@agent)
+  end
+
+  test 'provider down keeps the message and does not merge' do
+    payload = wa_message('live')
+    payload['key'].merge!('remoteJidAlt' => @jid, 'addressingMode' => 'lid')
+    gateway = Object.new
+    gateway.define_singleton_method(:find_message) { |_| raise Whatsapp::Providers::Evolution::Unavailable, 'provider_unavailable' }
+    message = @a.stub(:gateway, gateway) { Whatsapp::Ingest.new(@a).message!(payload) }
+    assert_equal @conversation.id, message.conversation_id
+  end
+
+  test 'sync re-reading a known message with LID and number joins the duplicate conversations' do
+    lid = '123456789012345@lid'
+    ingest = Whatsapp::Ingest.new(@a)
+    other = ingest.message!(wa_message('from-lid', jid: lid, at: 1.minute.from_now)).conversation
+    other.update!(assignee: @agent, stage: 'responding')
+    record = wa_message('from-lid', jid: lid)
+    record['key']['remoteJidAlt'] = @jid
+    ingest.message!(record)
+    assert_not Whatsapp::Conversation.exists?(other.id)
+    conversation = @conversation.reload
+    assert_equal 2, conversation.messages.count
+    assert_equal @agent.id, conversation.assignee_id
+    assert_equal 'responding', conversation.stage
+    assert_equal '+5511988887777', conversation.contact.phone
   end
 
   test 'groups broadcast and newsletters are ignored' do

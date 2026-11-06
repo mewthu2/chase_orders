@@ -87,6 +87,30 @@ module Whatsapp
       ResumeAgentJob.set(wait_until: until_at + 1.second).perform_later(id) if until_at
     end
 
+    # Mesma pessoa em duas conversas (LID e número): traz tudo da outra para esta e apaga a outra.
+    def absorb!(other)
+      return if other.id == id
+      transaction do
+        Message.where(conversation_id: other.id).update_all(conversation_id: id)
+        Activity.where(conversation_id: other.id).update_all(conversation_id: id)
+        AutomationGap.where(conversation_id: other.id).update_all(conversation_id: id)
+        other.reads.each do |read|
+          cursor = reads.find_or_initialize_by(user_id: read.user_id)
+          cursor.last_message_id = [cursor.last_message_id.to_i, read.last_message_id.to_i].max
+          cursor.save!
+        end
+        other.reads.delete_all
+        # A conversa com a mensagem mais recente manda na situação (aberta, etapa, agente).
+        if other.last_message_at && (!last_message_at || other.last_message_at > last_message_at)
+          assign_attributes(other.attributes.slice(*%w[state stage agent_paused agent_paused_at needs_human agent_note
+            agent_draft agent_draft_finish agent_draft_for_id last_message_at last_message_preview]))
+        end
+        self.assignee_id ||= other.assignee_id
+        save!
+        other.reload.destroy!
+      end
+    end
+
     def mark_read!(user, message_id)
       with_lock do
         cursor = reads.find_or_initialize_by(user: user)

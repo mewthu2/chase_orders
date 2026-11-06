@@ -75,6 +75,11 @@ module Whatsapp
         request(:post, "/chat/findMessages/#{instance}", where: { key: { id: id } }, page: 1, offset: 10).dig('messages', 'records') || []
       end
 
+      # A conversa guardada na Evolution traz a chave original da última mensagem (LID + número).
+      def chat(jid)
+        request(:post, "/chat/findChats/#{instance}", where: { remoteJid: jid }).first
+      end
+
       private
 
       def instance = connection.instance_key

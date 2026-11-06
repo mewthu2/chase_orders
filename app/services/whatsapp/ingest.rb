@@ -14,9 +14,12 @@ module Whatsapp
       # Called under the connection lock by webhook, sync, or send workers.
       existing = @connection.messages.find_by(provider_id: key['id'])
       if existing
+        # A sincronização relê a chave completa (LID + número): aproveita para juntar contatos.
+        Contact.resolve!(@connection, key) if !outgoing && lid_pair?(key)
         receipt!(data.merge('keyId' => key['id']))
         return existing
       end
+      key = with_lid(key) unless outgoing
       if outgoing
         conversation = outgoing.conversation
         contact = conversation.contact
@@ -64,6 +67,26 @@ module Whatsapp
         message.update!(media_state: 'rejected') if size > Media::MAX_BYTES
       end
       message
+    end
+
+    # A Evolution 2.3.7 troca o LID pelo número no webhook e perde o LID (remoteJid == remoteJidAlt).
+    # Ela guarda a chave original: busca uma vez para ligar o LID ao número e não abrir outra conversa.
+    def with_lid(key)
+      return key if key['addressingMode'] != 'lid' || lid_pair?(key)
+      pn = [key['remoteJid'], key['remoteJidAlt']].find { |j| j.to_s.end_with?('@s.whatsapp.net') }
+      return key unless pn
+      known = ContactAlias.find_by(connection: @connection, jid: pn)
+      return key if known && ContactAlias.where(contact_id: known.contact_id).where('jid LIKE ?', '%@lid').exists?
+      stored = @connection.gateway.find_message(key['id']).first&.dig('key') || {}
+      lid = [stored['remoteJid'], stored['remoteJidAlt']].find { |j| j.to_s.end_with?('@lid') && Phone.individual_jid?(j) }
+      lid ? key.merge('remoteJid' => lid, 'remoteJidAlt' => pn) : key
+    rescue Providers::Evolution::Error
+      key
+    end
+
+    def lid_pair?(key)
+      jids = [key['remoteJid'], key['remoteJidAlt']].select { |j| Phone.individual_jid?(j) }
+      jids.any? { |j| j.end_with?('@lid') } && jids.any? { |j| j.end_with?('@s.whatsapp.net') }
     end
 
     def receipt!(data)
