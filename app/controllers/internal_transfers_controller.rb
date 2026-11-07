@@ -76,11 +76,16 @@ class InternalTransfersController < ApplicationController
   end
 
   def update
+    before = approval_signature(@transfer)
     @transfer.assign_attributes(header_params)
-    @transfer.shipments.each(&:mark_for_destruction)
-    build_shipments(@transfer)
+    # Salvar sem mudar destino nem itens (só observação, ou nada) não mexe nas remessas nem na aprovação:
+    # antes, qualquer "Salvar alterações" devolvia a transferência aprovada para a fila de aprovação.
+    unless approval_signature(@transfer, rows: item_rows) == before
+      @transfer.shipments.each(&:mark_for_destruction)
+      build_shipments(@transfer)
+    end
     # Mudou o que foi aprovado: precisa de nova aprovação.
-    reapproval = @transfer.approval_aprovada?
+    reapproval = @transfer.approval_aprovada? && approval_signature(@transfer) != before
     @transfer.assign_attributes(approval_status: :pendente, reviewed_by: nil, reviewed_at: nil) if reapproval
 
     if @transfer.save
@@ -272,16 +277,36 @@ class InternalTransfersController < ApplicationController
   # Cada célula da grade (produto x loja de origem) vira um item; célula em branco é ignorada.
   # As linhas são agrupadas por loja de origem em uma remessa por origem.
   def build_shipments(transfer)
-    excluded_ids = Location.where(slug: EXCLUDED_LOCATION_SLUGS).ids
-    rows = params.require(:internal_transfer).permit(items: [:product_id, :location_id, :quantity])[:items]
-    rows = rows.respond_to?(:values) ? rows.values : Array(rows)
-    rows = rows.reject { |row| row[:quantity].blank? || excluded_ids.include?(row[:location_id].to_i) }
+    rows = item_rows
     products = Product.where(id: rows.map { |row| row[:product_id] }).index_by(&:id)
 
     rows.group_by { |row| row[:location_id].to_i }.each do |location_id, group|
       shipment = transfer.shipments.build(origin_location_id: location_id)
       group.each { |row| shipment.items.build(product: products[row[:product_id].to_i], product_id: row[:product_id], quantity: row[:quantity]) }
     end
+  end
+
+  # Linhas da grade enviadas no formulário (célula em branco e Correios Log ficam de fora).
+  def item_rows
+    @item_rows ||= begin
+      excluded_ids = Location.where(slug: EXCLUDED_LOCATION_SLUGS).ids
+      rows = params.require(:internal_transfer).permit(items: [:product_id, :location_id, :quantity])[:items]
+      rows = rows.respond_to?(:values) ? rows.values : Array(rows)
+      rows.reject { |row| row[:quantity].blank? || excluded_ids.include?(row[:location_id].to_i) }
+    end
+  end
+
+  # O que a aprovação cobre: destino e, por loja de origem, produto e quantidade. Com `rows`, usa as
+  # linhas do formulário no lugar das remessas atuais.
+  def approval_signature(transfer, rows: nil)
+    items = if rows
+              rows.map { |row| [row[:location_id].to_i, row[:product_id].to_i, row[:quantity].to_i] }
+            else
+              transfer.shipments.reject(&:marked_for_destruction?).flat_map do |shipment|
+                shipment.items.reject(&:marked_for_destruction?).map { |item| [shipment.origin_location_id, item.product_id, item.quantity.to_i] }
+              end
+            end
+    [transfer.destination_location_id, items.sort]
   end
 
   # As lojas de origem para a grade nunca incluem a loja de destino escolhida (não dá para

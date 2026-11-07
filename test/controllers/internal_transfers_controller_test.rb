@@ -426,6 +426,26 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     refute transfer.shipments.first.reservable?
   end
 
+  test 'saving an approved transfer without changing items keeps it approved and reservable' do
+    transfer = build_transfer
+    transfer.update!(reviewed_by: @admin, reviewed_at: Time.current)
+    shipment_id = transfer.shipments.first.id
+
+    patch internal_transfer_path(transfer), params: { internal_transfer: {
+      destination_location_id: @lagoa.id, notes: 'Só a observação',
+      items: { '0' => { product_id: @a.id, location_id: @bh.id, quantity: '2' } }
+    } }
+
+    assert_redirected_to internal_transfer_path(transfer)
+    transfer.reload
+    assert transfer.approval_aprovada?
+    assert_equal @admin, transfer.reviewed_by
+    assert_equal 'Só a observação', transfer.notes
+    assert_equal [shipment_id], transfer.shipments.ids
+    assert transfer.shipments.first.reservable?
+    refute transfer.events.exists?(action: 'updated')
+  end
+
   # ---- Lista: busca, filtros, abas de status e paginação ----
   test 'the list searches by number, SKU, product name, requester and tracking code' do
     camiseta = build_transfer(items: [[@bh, @a, 1]])
