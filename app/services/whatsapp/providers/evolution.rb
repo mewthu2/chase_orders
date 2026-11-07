@@ -75,6 +75,17 @@ module Whatsapp
         request(:post, "/chat/findMessages/#{instance}", where: { key: { id: id } }, page: 1, offset: 10).dig('messages', 'records') || []
       end
 
+      # Editar/apagar usa a chave exatamente como a Evolution guardou (LID ou número).
+      def edit_message(message, text)
+        key = stored_key(message)
+        request(:post, "/chat/updateMessage/#{instance}", number: key['remoteJid'], key: key, text: text)
+      end
+
+      def delete_message(message)
+        key = stored_key(message)
+        request(:delete, "/chat/deleteMessageForEveryone/#{instance}", id: key['id'], remoteJid: key['remoteJid'], fromMe: true)
+      end
+
       # A conversa guardada na Evolution traz a chave original da última mensagem (LID + número).
       def chat(jid)
         request(:post, "/chat/findChats/#{instance}", where: { remoteJid: jid }).first
@@ -83,6 +94,12 @@ module Whatsapp
       private
 
       def instance = connection.instance_key
+      def stored_key(message)
+        key = find_message(message.provider_id).first&.dig('key') || message.provider_key || {}
+        key = { 'id' => key['id'], 'remoteJid' => key['remoteJid'], 'fromMe' => true }
+        raise Rejected, 'message_not_found' unless key['id'] == message.provider_id && Phone.individual_jid?(key['remoteJid'])
+        key
+      end
       def webhook_config
         base = ENV.fetch('WHATSAPP_WEBHOOK_BASE_URL', '').delete_suffix('/')
         raise NotConfigured, 'provider_not_configured' if base.blank?

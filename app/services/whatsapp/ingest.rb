@@ -11,6 +11,8 @@ module Whatsapp
       return unless data.is_a?(Hash)
       key = data['key'] || {}
       return unless Phone.individual_jid?(key['remoteJid']) && key['id'].to_s.match?(/\A[\w.:-]{1,191}\z/)
+      # Edição/exclusão chegam como mensagem de protocolo: não viram balão "não suportado".
+      return if data['message'].is_a?(Hash) && (data['message'].key?('protocolMessage') || data['message'].key?('editedMessage'))
       # Called under the connection lock by webhook, sync, or send workers.
       existing = @connection.messages.find_by(provider_id: key['id'])
       if existing

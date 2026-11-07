@@ -31,7 +31,7 @@ Rails.application.routes.draw do
         patch :link_customer
         get :customers
       end
-      resources :messages, only: [:index, :create] do
+      resources :messages, only: [:index, :create, :update, :destroy] do
         member do
           get :attachment
           post :retry_send

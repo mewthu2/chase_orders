@@ -72,8 +72,42 @@ module Whatsapp
       render json: payload(message), status: :accepted
     end
 
+    # Editar o texto de uma mensagem própria (o WhatsApp só aceita até 15 minutos depois).
+    def update
+      message = @conversation.messages.find(params[:id])
+      text = params.require(:body).to_s
+      raise ArgumentError, 'Escreva o novo texto da mensagem.' if text.strip.empty?
+      raise ArgumentError, 'A mensagem deve ter até 10.000 caracteres.' if text.length > 10_000
+      unless message.editable_by?(current_user)
+        raise ArgumentError, 'Só dá para editar suas mensagens de texto até 15 minutos depois do envio.'
+      end
+      if text != message.body
+        @conversation.connection.gateway.edit_message(message, text)
+        message.update!(body: text, edited_at: Time.current)
+        refresh_preview(message)
+      end
+      render json: payload(message)
+    rescue Providers::Evolution::Error
+      render json: { error: 'O WhatsApp não confirmou a edição. A mensagem continua como estava; tente de novo.' }, status: :unprocessable_entity
+    end
+
+    # Apagar para todos uma mensagem própria.
+    def destroy
+      message = @conversation.messages.find(params[:id])
+      unless message.deletable_by?(current_user)
+        raise ArgumentError, 'Só dá para apagar suas próprias mensagens enviadas, até 2 dias depois do envio.'
+      end
+      @conversation.connection.gateway.delete_message(message)
+      message.update!(deleted_at: Time.current)
+      refresh_preview(message)
+      render json: payload(message)
+    rescue Providers::Evolution::Error
+      render json: { error: 'O WhatsApp não confirmou a exclusão. A mensagem continua para o cliente; tente de novo.' }, status: :unprocessable_entity
+    end
+
     def attachment
       message = @conversation.messages.find(params[:id])
+      raise ActiveRecord::RecordNotFound if message.deleted?
       media = message.media || raise(ActiveRecord::RecordNotFound)
       # Private route, authorized on every request. No blob IDs or remote URLs leave the server.
       # Tudo abre direto na conversa; o link "Baixar" usa ?download=1.
@@ -100,9 +134,20 @@ module Whatsapp
     private
     def set_conversation = @conversation = authorized_conversations.find(params[:conversation_id])
     def payload(message)
+      deleted = message.deleted?
       message.slice(:id, :body, :kind, :direction, :state, :sent_at, :media_state, :client_nonce).merge(
-        author: message.author_name, by_agent: message.by_agent?, media_url: message.media ? attachment_whatsapp_conversation_message_path(@conversation, message) : nil,
-        filename: message.media&.filename)
+        author: message.author_name, by_agent: message.by_agent?,
+        media_url: message.media && !deleted ? attachment_whatsapp_conversation_message_path(@conversation, message) : nil,
+        filename: deleted ? nil : message.media&.filename,
+        body: deleted ? nil : message.body, media_state: deleted ? nil : message.media_state,
+        edited: message.edited?, deleted: deleted,
+        can_edit: message.editable_by?(current_user), can_delete: message.deletable_by?(current_user))
+    end
+
+    # A lista de conversas mostra a última mensagem: acompanha a edição ou exclusão.
+    def refresh_preview(message)
+      last = @conversation.messages.order(sent_at: :desc, id: :desc).first
+      @conversation.update!(last_message_preview: message.preview.truncate(180)) if last&.id == message.id
     end
   end
 end

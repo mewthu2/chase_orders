@@ -362,6 +362,112 @@
     draftRequest,
     busy = false;
   const drafts = new Map(); // Memory only: never store customer text in localStorage.
+  const editing = new Map(); // id da mensagem -> texto sendo editado (sobrevive ao polling)
+  let openMenu = null;
+  const closeMenu = () => {
+    if (openMenu) openMenu.hidden = true;
+    openMenu = null;
+  };
+  document.addEventListener("click", (e) => {
+    if (openMenu && !openMenu.parentElement.contains(e.target)) closeMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+  const messageUrl = (m) => `/whatsapp/conversations/${selected.id}/messages/${m.id}`;
+  const saveMessage = (m, result) => {
+    messages.set(m.id, result);
+    renderMessages([]);
+  };
+  // Menu do balão (como no WhatsApp): só aparece nas mensagens da própria pessoa.
+  function messageMenu(m) {
+    const wrap = el("div", undefined, "wa-msg-actions");
+    const toggle = el("button", undefined, "wa-msg-toggle");
+    toggle.type = "button";
+    toggle.title = "Opções da mensagem";
+    toggle.setAttribute("aria-label", "Opções da mensagem");
+    toggle.append(el("i", undefined, "fas fa-chevron-down"));
+    const menu = el("div", undefined, "wa-msg-menu");
+    menu.hidden = true;
+    menu.setAttribute("role", "menu");
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      const wasOpen = openMenu === menu;
+      closeMenu();
+      if (!wasOpen) {
+        menu.hidden = false;
+        openMenu = menu;
+        // Perto do fim da conversa o menu abre para cima, para não ficar cortado.
+        const room = history.getBoundingClientRect().bottom - toggle.getBoundingClientRect().bottom;
+        menu.classList.toggle("is-up", room < menu.offsetHeight + 16);
+      }
+    };
+    const item = (icon, label, cls, fn) => {
+      const b = el("button", undefined, `wa-msg-item ${cls}`);
+      b.type = "button";
+      b.setAttribute("role", "menuitem");
+      b.append(el("i", undefined, `fas ${icon}`), el("span", label));
+      b.onclick = (e) => {
+        e.stopPropagation();
+        closeMenu();
+        fn();
+      };
+      menu.append(b);
+    };
+    if (m.can_edit)
+      item("fa-pen", "Editar", "", () => {
+        editing.set(m.id, m.body || "");
+        renderMessages([]);
+        const box = document.querySelector(`#wa-message-${m.id} textarea`);
+        box?.focus();
+        box?.setSelectionRange(box.value.length, box.value.length);
+      });
+    if (m.can_delete)
+      item("fa-trash-can", "Apagar para todos", "is-danger", safe(async () => {
+        if (!confirm("Apagar esta mensagem para todos? O cliente verá \"Mensagem apagada\" no WhatsApp.")) return;
+        saveMessage(m, await api(messageUrl(m), { method: "DELETE" }));
+      }));
+    wrap.append(toggle, menu);
+    return wrap;
+  }
+  function messageEditor(m) {
+    const form = el("form", undefined, "wa-msg-editor");
+    const box = el("textarea");
+    box.value = editing.get(m.id);
+    box.rows = Math.min(8, Math.max(2, box.value.split("\n").length));
+    box.maxLength = 10000;
+    box.oninput = () => editing.set(m.id, box.value);
+    const actions = el("div", undefined, "wa-msg-editor-actions");
+    const cancel = el("button", "Cancelar", "btn btn-sm btn-light");
+    cancel.type = "button";
+    const save = el("button", "Salvar", "btn btn-sm btn-success");
+    save.type = "submit";
+    cancel.onclick = () => {
+      editing.delete(m.id);
+      renderMessages([]);
+    };
+    box.onkeydown = (e) => {
+      if (e.key === "Escape") cancel.onclick();
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    };
+    form.onsubmit = safe(async (e) => {
+      e.preventDefault();
+      save.disabled = true;
+      try {
+        const result = await api(messageUrl(m), json("PATCH", { body: box.value }));
+        editing.delete(m.id);
+        saveMessage(m, result);
+      } finally {
+        save.disabled = false;
+      }
+    });
+    actions.append(el("small", "Enter salva · Esc cancela", "wa-msg-editor-hint"), cancel, save);
+    form.append(box, actions);
+    return form;
+  }
   const history = $("wa-history");
   const nearBottom = () =>
     history.scrollHeight - history.scrollTop - history.clientHeight < 100;
@@ -526,7 +632,7 @@
       .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at) || a.id - b.id)
       .forEach((m, index) => {
         let node = document.getElementById(`wa-message-${m.id}`);
-        const signature = JSON.stringify(m);
+        const signature = JSON.stringify(m) + (editing.has(m.id) ? "|editing" : "");
         if (!node || node.dataset.signature !== signature) {
           const row = el("article", undefined, `wa-message ${m.direction}`);
           row.id = `wa-message-${m.id}`;
@@ -536,7 +642,20 @@
           if (m.by_agent) next.classList.add("by-agent");
           if (m.author && m.direction === "outgoing")
             next.append(el("span", m.by_agent ? `🤖 ${m.author}` : m.author, "wa-author"));
-          if (m.body) next.append(el("p", m.body));
+          if (editing.has(m.id) && !m.can_edit) editing.delete(m.id); // passou dos 15 minutos
+          if (m.deleted) {
+            next.classList.add("is-deleted");
+            const gone = el("p", undefined, "wa-deleted");
+            gone.append(
+              el("i", undefined, "fas fa-ban"),
+              document.createTextNode(m.direction === "outgoing" ? " Você apagou esta mensagem" : " Mensagem apagada"),
+            );
+            next.append(gone);
+          } else if (editing.has(m.id) && m.can_edit) {
+            next.classList.add("is-editing");
+            next.append(messageEditor(m));
+          } else if (m.body) next.append(el("p", m.body));
+          if ((m.can_edit || m.can_delete) && !editing.has(m.id)) next.append(messageMenu(m));
           if (m.media_url) {
             const label = m.filename || { image: "Imagem", video: "Vídeo", audio: "Áudio" }[m.kind] || "Arquivo";
             if (m.kind === "image") {
@@ -594,6 +713,7 @@
             );
           const meta = el("small", undefined, "wa-meta");
           meta.title = `${date(m.sent_at)} · ${messageLabels[m.state] || m.state}`;
+          if (m.edited && !m.deleted) meta.append(el("span", "Editada", "wa-edited"));
           meta.append(el("time", hour(m.sent_at)));
           if (m.direction === "outgoing" && ticks[m.state]) {
             const tick = el("i", undefined, `${ticks[m.state]} wa-tick is-${m.state}`);
@@ -677,6 +797,8 @@
     const c = await api(`/whatsapp/conversations/${id}.json`);
     if (ticket !== generation) return;
     messages = new Map();
+    editing.clear();
+    closeMenu();
     $("wa-messages").replaceChildren();
     renderHeader(c);
     $("wa-empty").hidden = true;

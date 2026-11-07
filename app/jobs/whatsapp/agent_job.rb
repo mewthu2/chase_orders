@@ -31,7 +31,7 @@ module Whatsapp
       return settle(conversation) unless automation
 
       history = conversation.messages.where(historical: [false, true]).order(sent_at: :desc, id: :desc).limit(Agent::HISTORY).to_a.reverse
-      rows = history.map { |m| { from: m.direction == 'incoming' ? 'cliente' : 'loja', text: m.body.presence || "[#{m.preview}]", at: m.sent_at } }
+      rows = history.map { |m| { from: m.direction == 'incoming' ? 'cliente' : 'loja', text: m.deleted? ? '[mensagem apagada]' : m.body.presence || "[#{m.preview}]", at: m.sent_at } }
       decision = begin
         Agent.new(automation).decide(rows, contact_name: conversation.contact.display_name)
       rescue Agent::NotConfigured, Agent::Failure => e
