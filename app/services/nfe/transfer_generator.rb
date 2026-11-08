@@ -99,10 +99,16 @@ module Nfe
     end
 
     def additional_info
-      origin = @shipment.origin_location.name
-      destination = @transfer.destination_location.name
-      [@nature&.render_notes(@nature.notes, order_name: "Transferência #{@transfer.id}", customer: @recipient_company.legal_name),
-       "Transferência interna nº #{@transfer.id}: de #{origin} para #{destination}"].compact.join(' | ')
+      origin = "#{@shipment.origin_location.name} (CNPJ #{Cnpj.format(@company.cnpj)}, #{@company.city}/#{@company.state})"
+      destination = "#{@transfer.destination_location.name} (CNPJ #{Cnpj.format(@recipient_company.cnpj)}, " \
+                    "#{@recipient_company.city}/#{@recipient_company.state})"
+      [@nature&.notes_for(**note_context),
+       "Transferência interna nº #{@transfer.id} - ORIGEM: #{origin} -> DESTINO: #{destination}"].compact.join(' | ')
+    end
+
+    def note_context
+      { company_state: @company.state, recipient_state: @recipient_company.state,
+        order_name: "Transferência #{@transfer.id}", customer: @recipient_company.legal_name }
     end
 
     def reusable_note
@@ -116,8 +122,9 @@ module Nfe
       result = XmlBuilder.new(
         company: @company, recipient: recipient, items: items, number: number, series: @company.nfe_series,
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature&.purpose || 1, final_consumer: false,
-        tax: @nature&.tax_rules, additional_info: additional_info,
-        fisco_info: @nature&.render_notes(@nature.fisco_notes, order_name: "Transferência #{@transfer.id}", customer: @recipient_company.legal_name)
+        tax: @nature&.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
+        additional_info: additional_info, ibs_cbs_exempt: XmlBuilder::IBS_CBS_TRANSFER,
+        fisco_info: @nature&.fisco_notes_for(**note_context)
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 

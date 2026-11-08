@@ -42,7 +42,7 @@ module Nfe
                  consulta_protocolo: 'NFeConsultaProtocolo4' }
       }.freeze
 
-      SVRS_STATES = %w[AC AL AP DF ES PB PI RJ RN RO RR SC SE TO].freeze
+      SVRS_STATES = %w[AC AL AP CE DF ES PB PI RJ RN RO RR SC SE TO].freeze
       AUTHORIZERS = { 'SP' => SP, 'RS' => RS, 'MG' => MG, 'PR' => PR }
                     .merge(SVRS_STATES.to_h { |uf| [uf, SVRS] }).freeze
 

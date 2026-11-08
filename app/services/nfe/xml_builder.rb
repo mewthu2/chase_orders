@@ -26,6 +26,9 @@ module Nfe
     NO_PAYMENT = [{ method: '90', amount: 0 }].freeze
     # Reforma tributária, ano de teste (2026): IBS e CBS destacados com alíquotas simbólicas, sem somar ao total.
     IBS_CBS = { cst: '000', class: '000001', ibs_uf: BigDecimal('0.1'), ibs_mun: ZERO, cbs: BigDecimal('0.9') }.freeze
+    # Transferência entre estabelecimentos do mesmo titular: não incidência de IBS/CBS (LC 214/2025, art. 6º).
+    # A SVRS já exige o grupo IBSCBS; vai só com CST e cClassTrib, sem valores.
+    IBS_CBS_TRANSFER = { cst: '410', class: '410002' }.freeze
 
     def self.access_key_check_digit(digits43)
       weights = [2, 3, 4, 5, 6, 7, 8, 9]
@@ -39,8 +42,9 @@ module Nfe
     # tax: regras de tributação (OperationNature#tax_rules); sem ela valem as situações cadastradas na empresa.
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
-                   fisco_info: nil, purpose: 1, tax: nil)
+                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil)
       @company = company
+      @ibs_cbs_exempt = ibs_cbs_exempt
       @tax = tax || { icms_situation: company.icms_situation, pis_cst: company.pis_cst, cofins_cst: company.cofins_cst }
       @fisco_info = fisco_info
       @purpose = purpose
@@ -155,7 +159,7 @@ module Nfe
         base = line_totals[index] - money(item[:discount]) + money(item[:freight])
         taxes = { base: base, icms_base: ZERO, icms_rate: ZERO, icms: ZERO }
         if icms_taxed?
-          icms_rate = id_dest == '2' ? IcmsRates.interstate(@company.state, @recipient[:state], item[:origin]) : rate(:icms_rate)
+          icms_rate = item_icms_rate(item)
           taxes.merge!(icms_base: base, icms_rate: icms_rate, icms: percent(base, icms_rate))
         end
         taxes[:difal] = difal_tax(base, taxes[:icms_rate]) if difal?
@@ -165,6 +169,17 @@ module Nfe
         taxes[:ibs_cbs] = ibs_cbs_tax(base, taxes) if ibs_cbs?
         taxes
       end
+    end
+
+    # Mesma UF: alíquota da natureza. Outra UF: tabela 12%/7%, ou a alíquota da exceção do ICMS (icms_rate_fixed),
+    # menos para mercadoria importada, que fica sempre nos 4% da Resolução do Senado 13/2012.
+    def item_icms_rate(item)
+      return rate(:icms_rate) if id_dest != '2'
+
+      interstate = IcmsRates.interstate(@company.state, @recipient[:state], item[:origin])
+      return interstate if !@tax[:icms_rate_fixed] || IcmsRates::IMPORTED_ORIGINS.include?(item[:origin].to_i)
+
+      rate(:icms_rate)
     end
 
     # DIFAL por base dupla, igual ao Tiny: o valor é "inflado" pela alíquota interna + FCP do destino
@@ -180,7 +195,11 @@ module Nfe
 
     # Venda a consumidor no Regime Normal leva o grupo IBS/CBS, como o Tiny já emite.
     def ibs_cbs?
-      @final_consumer && normal_regime?
+      @final_consumer && normal_regime? && !@ibs_cbs_exempt
+    end
+
+    def ibs_cbs_exempt?
+      @ibs_cbs_exempt.present?
     end
 
     # A base do IBS/CBS exclui ICMS (próprio e DIFAL/FCP), PIS e COFINS.
@@ -363,6 +382,7 @@ module Nfe
           build_pis_cofins(xml, 'COFINS', @tax[:cofins_cst], taxes[:cofins])
           build_icms_uf_dest(xml, taxes[:difal]) if taxes[:difal]
           build_ibs_cbs(xml, taxes[:ibs_cbs]) if taxes[:ibs_cbs]
+          xml.IBSCBS { xml.CST @ibs_cbs_exempt[:cst]; xml.cClassTrib @ibs_cbs_exempt[:class] } if ibs_cbs_exempt?
         end
       end
     end
@@ -484,6 +504,9 @@ module Nfe
         end
         if ibs_cbs?
           build_ibs_cbs_total(xml)
+          xml.vNFTot format('%.2f', total)
+        elsif ibs_cbs_exempt?
+          xml.IBSCBSTot { xml.vBCIBSCBS '0.00' }
           xml.vNFTot format('%.2f', total)
         end
       end

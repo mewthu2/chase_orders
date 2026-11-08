@@ -22,6 +22,10 @@ class OperationNature < ApplicationRecord
   has_many :fiscal_notes, dependent: :restrict_with_error
   has_many :company_links, class_name: 'CompanyOperationNature', dependent: :destroy
   has_many :linked_companies, through: :company_links, source: :company
+  has_many :icms_exceptions, -> { order(:id) }, class_name: 'OperationNatureIcmsException', dependent: :destroy,
+                                                inverse_of: :operation_nature
+  accepts_nested_attributes_for :icms_exceptions, allow_destroy: true,
+                                                  reject_if: ->(attrs) { Array(attrs['destination_states']).reject(&:blank?).empty? && attrs['id'].blank? }
   # A empresa em que a natureza é criada já fica vinculada a ela.
   after_create { company_links.find_or_create_by(company: company) }
 
@@ -40,6 +44,7 @@ class OperationNature < ApplicationRecord
   validates :icms_rate, numericality: { greater_than: 0, message: 'é obrigatória para ICMS tributado' }, if: -> { icms_situation == '00' }
   validate :situations_match_company_regime
   validate :linked_companies_still_compatible, on: :update
+  validate :exceptions_match_company_regime
 
   scope :active, -> { where(active: true) }
   scope :ordered, -> { order(:description) }
@@ -64,8 +69,19 @@ class OperationNature < ApplicationRecord
     "#{description} · CFOP #{cfop} · ICMS #{icms_situation}"
   end
 
-  # CFOP do item conforme o destino. Para consumidor não contribuinte de outra UF usa o CFOP próprio, se houver.
+  # Primeira exceção do ICMS que vale para o emitente e o destinatário (como no Tiny, a de cima ganha).
+  def icms_exception_for(company_state:, recipient_state:)
+    icms_exceptions.reject(&:marked_for_destruction?)
+                   .find { |exception| exception.applies_to?(company_state: company_state, recipient_state: recipient_state) }
+  end
+
+  # CFOP do item conforme o destino. A exceção do ICMS com CFOP próprio ganha; depois, para consumidor não
+  # contribuinte de outra UF usa o CFOP próprio, se houver.
   def cfop_for(company_state:, recipient_state:, non_contributor: false)
+    exception_cfop = icms_exception_for(company_state: company_state, recipient_state: recipient_state)
+                     &.cfop_for(company_state: company_state, recipient_state: recipient_state)
+    return exception_cfop if exception_cfop
+
     same_state = company_state == recipient_state
     return cfop_interstate_non_contributor if !same_state && non_contributor && cfop_interstate_non_contributor.present?
     return cfop unless %w[? 5 6].include?(cfop[0])
@@ -82,13 +98,36 @@ class OperationNature < ApplicationRecord
     icms_situation == '00'
   end
 
-  # Tributação no formato do Nfe::XmlBuilder.
-  def tax_rules
-    {
+  # Tributação no formato do Nfe::XmlBuilder. Com as UFs do emitente e do destinatário aplica a exceção do ICMS,
+  # se houver: CST, alíquota (inclusive interestadual: icms_rate_fixed), DIFAL e FCP da exceção.
+  def tax_rules(company_state: nil, recipient_state: nil)
+    rules = {
       icms_situation: icms_situation, icms_rate: icms_rate, difal: difal?, uf_rates: ->(state) { rates_for(state) },
       pis_cst: pis_cst, pis_rate: pis_rate, cofins_cst: cofins_cst, cofins_rate: cofins_rate,
       exclude_icms_from_pis_cofins_base: exclude_icms_from_pis_cofins_base?
     }
+    exception = icms_exception_for(company_state: company_state, recipient_state: recipient_state)
+    return rules unless exception
+
+    rules.merge(
+      icms_situation: exception.icms_situation, icms_rate: exception.icms_rate, icms_rate_fixed: true,
+      difal: exception.difal?,
+      uf_rates: lambda { |state|
+        rates = rates_for(state)
+        exception.fcp_rate.positive? ? rates.merge(fcp: BigDecimal(exception.fcp_rate.to_s)) : rates
+      }
+    )
+  end
+
+  # Observações da nota: as da natureza mais as da exceção do ICMS (sem repetir o mesmo texto).
+  def notes_for(company_state:, recipient_state:, **vars)
+    exception = icms_exception_for(company_state: company_state, recipient_state: recipient_state)
+    join_notes(render_notes(notes, **vars), exception && render_notes(exception.notes, **vars))
+  end
+
+  def fisco_notes_for(company_state:, recipient_state:, **vars)
+    exception = icms_exception_for(company_state: company_state, recipient_state: recipient_state)
+    join_notes(render_notes(fisco_notes, **vars), exception && render_notes(exception.fisco_notes, **vars))
   end
 
   def render_notes(text, order_name: nil, customer: nil)
@@ -100,6 +139,21 @@ class OperationNature < ApplicationRecord
   end
 
   private
+
+  def join_notes(*texts)
+    texts.compact.uniq.join(' | ').presence
+  end
+
+  def exceptions_match_company_regime
+    return unless company
+
+    simples = company.tax_regime != 3
+    icms_exceptions.reject(&:marked_for_destruction?).each do |exception|
+      next if SIMPLES_CODES.include?(exception.icms_situation) == simples
+
+      errors.add(:base, "Exceção do ICMS (#{exception.destination_states.to_a.join(', ')}): use #{simples ? 'um CSOSN' : 'um CST'}, como na regra geral.")
+    end
+  end
 
   def normalize
     self.cfop = cfop.to_s.delete('.').strip

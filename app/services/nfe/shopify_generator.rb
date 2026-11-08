@@ -130,9 +130,11 @@ module Nfe
       result = XmlBuilder.new(
         company: @company, recipient: @recipient, items: items, number: number, series: @company.nfe_series,
         operation_nature: @nature.description, issued_at: issued_at, purpose: @nature.purpose,
-        final_consumer: @nature.final_consumer?, presence: '2', freight_mode: @freight_mode, tax: @nature.tax_rules,
+        final_consumer: @nature.final_consumer?, presence: '2', freight_mode: @freight_mode,
+        tax: @nature.tax_rules(company_state: @company.state, recipient_state: @recipient[:state]),
         payments: [@payment.to_h.symbolize_keys.merge(amount: total_for(items))],
-        additional_info: additional_info, fisco_info: render(@nature.fisco_notes)
+        additional_info: additional_info,
+        fisco_info: @nature.fisco_notes_for(**note_context)
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 
@@ -150,12 +152,13 @@ module Nfe
       note
     end
 
-    def render(text)
-      @nature.render_notes(text, order_name: @shopify_order.name, customer: @recipient[:name])
+    def additional_info
+      [@nature.notes_for(**note_context), "Pedido #{@shopify_order.name} (loja virtual)"].compact.join(' | ')
     end
 
-    def additional_info
-      [render(@nature.notes), "Pedido #{@shopify_order.name} (loja virtual)"].compact.join(' | ')
+    def note_context
+      { company_state: @company.state, recipient_state: @recipient[:state], order_name: @shopify_order.name,
+        customer: @recipient[:name] }
     end
 
     def total_for(items)

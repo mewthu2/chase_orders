@@ -1,0 +1,81 @@
+<%# Uma exceção do ICMS (fields_for). Também vira o <template> do "adicionar exceção", com NEW_EXCEPTION no índice. %>
+<% exception = f.object %>
+<% destination = Array(exception.destination_states) %>
+<% origin = Array(exception.origin_states) %>
+<div class="icms-exc" data-icms-exc>
+  <div class="icms-exc__head">
+    <span class="icms-exc__badge"><i class="fas fa-code-branch"></i></span>
+    <strong class="icms-exc__title" data-icms-exc-title><%= destination.any? ? "Destino: #{destination.join(', ')}" : 'Nova exceção' %></strong>
+    <% if exception.persisted? %>
+      <%= f.hidden_field :id %>
+    <% end %>
+    <%= f.hidden_field :_destroy, value: '0', data: { icms_exc_destroy: true } %>
+    <button type="button" class="icms-exc__remove" data-icms-exc-remove title="Remover exceção"><i class="fas fa-trash-alt"></i></button>
+  </div>
+
+  <div class="icms-exc__block">
+    <span class="field-label">Quando o destinatário for de um destes estados <span class="required">*</span></span>
+    <div class="uf-chips">
+      <%= hidden_field_tag "#{f.object_name}[destination_states][]", '' %>
+      <% Company::STATES.keys.sort.each do |uf| %>
+        <label class="uf-chip">
+          <%= check_box_tag "#{f.object_name}[destination_states][]", uf, destination.include?(uf), id: nil, data: { icms_exc_dest: true } %>
+          <span><%= uf %></span>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <details class="icms-exc__block" <%= 'open' if origin.any? %>>
+    <summary class="icms-exc__summary">
+      E o emitente for de <em><%= origin.any? ? origin.join(', ') : 'qualquer UF' %></em>
+    </summary>
+    <p class="text-muted-custom mb-2">Use quando a natureza é compartilhada por empresas de estados diferentes: a alíquota interestadual depende da origem (MG → DF é 7%, CE → DF é 12%).</p>
+    <div class="uf-chips">
+      <%= hidden_field_tag "#{f.object_name}[origin_states][]", '' %>
+      <% Company::STATES.keys.sort.each do |uf| %>
+        <label class="uf-chip uf-chip--origin">
+          <%= check_box_tag "#{f.object_name}[origin_states][]", uf, origin.include?(uf), id: nil %>
+          <span><%= uf %></span>
+        </label>
+      <% end %>
+    </div>
+  </details>
+
+  <div class="form-grid icms-exc__block">
+    <div class="form-col-6">
+      <label class="field-label">Situação tributária (CST / CSOSN)</label>
+      <%= f.select :icms_situation, OperationNature::ICMS_SITUATIONS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+    </div>
+    <div class="form-col-3">
+      <label class="field-label">CFOP</label>
+      <%= f.text_field :cfop, class: "field-input", maxlength: 5, placeholder: "6152" %>
+      <span class="text-muted-custom d-block mt-1">Em branco: CFOP da regra geral.</span>
+    </div>
+    <div class="form-col-3">
+      <label class="field-label">Alíquota (%)</label>
+      <%= f.number_field :icms_rate, class: "field-input", step: 0.01, min: 0 %>
+      <span class="text-muted-custom d-block mt-1">Vale também fora da UF (importado segue 4%).</span>
+    </div>
+    <div class="form-col-3">
+      <div class="form-check form-switch mt-4">
+        <%= f.check_box :difal, class: 'form-check-input', role: 'switch' %>
+        <label class="form-check-label text-main fw-bold">ICMS DIFAL para não contribuinte</label>
+      </div>
+    </div>
+    <div class="form-col-3">
+      <label class="field-label">Alíquota FCP (%)</label>
+      <%= f.number_field :fcp_rate, class: "field-input", step: 0.01, min: 0 %>
+      <span class="text-muted-custom d-block mt-1">0: usa o FCP da tabela da UF.</span>
+    </div>
+    <div class="form-col-6">
+      <label class="field-label">Observações do ICMS</label>
+      <%= f.text_area :notes, class: "field-input", rows: 2 %>
+      <span class="text-muted-custom d-block mt-1">Somadas às observações da natureza (texto igual não repete).</span>
+    </div>
+    <div class="form-col-6">
+      <label class="field-label">Informações ao Fisco</label>
+      <%= f.text_area :fisco_notes, class: "field-input", rows: 2 %>
+    </div>
+  </div>
+</div>

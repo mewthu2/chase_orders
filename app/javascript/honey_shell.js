@@ -511,3 +511,16 @@ function init () {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init)
 else init()
+
+/* ---------------------------------------------------------------------------
+   Modais do Bootstrap: o conteúdo da página (.content) tem z-index próprio, então um modal
+   desenhado dentro dele fica preso numa camada abaixo do fundo escuro (que o Bootstrap põe no
+   <body>) e nada nele é clicável. Antes de abrir, o modal vai para o <body>; o que está dentro
+   de um formulário fica onde está (os campos dele são enviados junto) e o CSS tira o z-index do
+   .content enquanto houver modal aberto (body.modal-open).
+   --------------------------------------------------------------------------- */
+document.addEventListener('show.bs.modal', (e) => {
+  const modal = e.target
+  if (!modal.classList?.contains('modal') || modal.parentElement === body || modal.closest('form')) return
+  body.appendChild(modal)
+})

@@ -4,7 +4,7 @@ class OperationNaturesController < ApplicationController
   before_action :load_companies, only: [:new, :create, :edit, :update]
 
   def index
-    @natures = OperationNature.includes(:company).order(:company_id, :kind, :description)
+    @natures = OperationNature.includes(:company, :icms_exceptions).order(:company_id, :kind, :description)
     @note_counts = FiscalNote.where.not(operation_nature_id: nil).group(:operation_nature_id).count
   end
 
@@ -58,7 +58,9 @@ class OperationNaturesController < ApplicationController
       :company_id, :description, :kind, :default_for_kind, :purpose, :final_consumer, :cfop,
       :cfop_interstate_non_contributor, :icms_situation, :icms_rate, :difal, :pis_cst, :pis_rate, :cofins_cst,
       :cofins_rate, :exclude_icms_from_pis_cofins_base, :notes, :fisco_notes, :active,
-      uf_rates: Company::STATES.keys.index_with { %i[internal fcp] }
+      uf_rates: Company::STATES.keys.index_with { %i[internal fcp] },
+      icms_exceptions_attributes: [:id, :_destroy, :icms_situation, :cfop, :icms_rate, :difal, :fcp_rate, :notes,
+                                   :fisco_notes, { destination_states: [], origin_states: [] }]
     )
     permitted[:uf_rates] = permitted[:uf_rates].to_h if permitted[:uf_rates]
     permitted

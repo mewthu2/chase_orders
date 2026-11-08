@@ -104,6 +104,59 @@
     </div>
   </div>
 
+  <div class="form-section" data-icms-exceptions>
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-code-branch me-2"></i>Exceções do ICMS</h5></div>
+    <div class="form-section-body">
+      <p class="text-muted-custom mb-3">Como no Tiny: para os estados escolhidos a nota sai com esta tributação no lugar da regra geral acima. Vale a primeira exceção que servir.</p>
+      <div class="icms-exc-list" data-icms-exc-list>
+        <%= form.fields_for :icms_exceptions do |exception_form| %>
+          <%= render 'icms_exception_fields', f: exception_form %>
+        <% end %>
+      </div>
+      <p class="icms-exc-empty text-muted-custom" data-icms-exc-empty <%= 'hidden' if @nature.icms_exceptions.any? %>>Nenhuma exceção: todos os destinos usam a regra geral.</p>
+      <template data-icms-exc-template>
+        <%= form.fields_for :icms_exceptions, OperationNatureIcmsException.new, child_index: 'NEW_EXCEPTION' do |exception_form| %>
+          <%= render 'icms_exception_fields', f: exception_form %>
+        <% end %>
+      </template>
+      <button type="button" class="icms-exc-add" data-icms-exc-add><i class="fas fa-plus"></i> adicionar exceção</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.querySelector('[data-icms-exceptions]');
+      if (!root || root.dataset.ready) return;
+      root.dataset.ready = '1';
+      const list = root.querySelector('[data-icms-exc-list]');
+      const empty = root.querySelector('[data-icms-exc-empty]');
+      const visible = () => list.querySelectorAll('[data-icms-exc]:not([hidden])').length;
+      const refresh = () => { empty.hidden = visible() > 0; };
+      root.querySelector('[data-icms-exc-add]').addEventListener('click', () => {
+        const html = root.querySelector('[data-icms-exc-template]').innerHTML.replace(/NEW_EXCEPTION/g, Date.now());
+        list.insertAdjacentHTML('beforeend', html);
+        const card = list.lastElementChild;
+        card.classList.add('is-new');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        refresh();
+      });
+      list.addEventListener('click', (event) => {
+        const remove = event.target.closest('[data-icms-exc-remove]');
+        if (!remove) return;
+        const card = remove.closest('[data-icms-exc]');
+        card.querySelector('[data-icms-exc-destroy]').value = '1';
+        card.classList.add('is-leaving');
+        setTimeout(() => { card.hidden = true; refresh(); }, 220);
+      });
+      list.addEventListener('change', (event) => {
+        if (!event.target.matches('[data-icms-exc-dest]')) return;
+        const card = event.target.closest('[data-icms-exc]');
+        const ufs = [...card.querySelectorAll('[data-icms-exc-dest]:checked')].map((box) => box.value);
+        card.querySelector('[data-icms-exc-title]').textContent = ufs.length ? `Destino: ${ufs.join(', ')}` : 'Nova exceção';
+      });
+    })();
+  </script>
+
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-coins me-2"></i>PIS e COFINS</h5></div>
     <div class="form-section-body">

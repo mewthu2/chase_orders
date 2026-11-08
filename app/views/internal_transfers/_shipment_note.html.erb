@@ -1,12 +1,19 @@
 <%# Nota de transferência da remessa: emitida ao enviar, da empresa da loja de origem para a da loja de destino. %>
 <% origin_company, destination_company = InternalTransferInvoicer.companies_for(shipment) %>
 <% note = shipment.fiscal_notes.max_by { |n| [n.created_at, n.id] } %>
+<% route = capture do %>
+  <span class="transfer-note__route">
+    <span><small>Origem</small> <strong><%= shipment.origin_location.name %></strong><%= " · CNPJ #{Nfe::Cnpj.format(origin_company.cnpj)}" if origin_company %></span>
+    <i class="fas fa-arrow-right"></i>
+    <span><small>Destino</small> <strong><%= shipment.internal_transfer.destination_location.name %></strong><%= " · CNPJ #{Nfe::Cnpj.format(destination_company.cnpj)}" if destination_company %></span>
+  </span>
+<% end %>
 <% if note || shipment.sendable? %>
 <div class="px-3 pb-3">
   <% if note&.autorizada? %>
     <div class="callout is-ok transfer-note"><i class="fas fa-file-invoice"></i><div>
       <strong>NF-e de transferência nº <%= note.number %> autorizada<%= ' (homologação, sem valor fiscal)' if note.homologacao? %>.</strong>
-      De <%= note.company.legal_name %> para <%= destination_company&.legal_name || 'a empresa de destino' %>, <%= number_to_currency(note.total_value) %>.
+      <%= route %> <%= number_to_currency(note.total_value) %>.
       <% if note.xml_available? && screen_can?(:fiscal_notes, :export) %>
         <span class="transfer-note__links">
           <%= link_to danfe_fiscal_note_path(note), target: '_blank', rel: 'noopener' do %><i class="fas fa-file-pdf"></i>DANFE<% end %>
@@ -34,8 +41,8 @@
       </div></div>
     <% else %>
       <div class="callout is-info transfer-note"><i class="fas fa-file-invoice"></i><div>
-        Ao enviar, o Honey emite a NF-e de transferência de <strong><%= origin_company.legal_name %></strong> para <strong><%= destination_company.legal_name %></strong>
-        direto na SEFAZ<%= ' (homologação, sem valor fiscal)' if origin_company.homologacao? %>. A remessa só é marcada como enviada com a nota autorizada.
+        <%= route %>
+        Ao enviar, o Honey emite a NF-e de transferência direto na SEFAZ<%= ' (homologação, sem valor fiscal)' if origin_company.homologacao? %>. A remessa só é marcada como enviada com a nota autorizada.
       </div></div>
     <% end %>
   <% end %>

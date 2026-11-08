@@ -48,7 +48,34 @@ class InternalTransferInvoicerTest < ActiveSupport::TestCase
     doc = Nokogiri::XML(xml)
     assert_equal '45723174000110', doc.at_xpath('//n:dest/n:CNPJ', NS).text
     assert_equal '0', doc.at_xpath('//n:ide/n:indFinal', NS).text
-    assert_match(/Transferência interna nº #{shipment.internal_transfer_id}: de BH Shopping para Barra Shopping/, doc.at_xpath('//n:infCpl', NS).text)
+    assert_match(/Transferência interna nº #{shipment.internal_transfer_id} - ORIGEM: BH Shopping \(CNPJ 11\.222\.333\/0001-81, .*\) -> DESTINO: Barra Shopping \(CNPJ 45\.723\.174\/0001-10, /,
+                 doc.at_xpath('//n:infCpl', NS).text)
+    assert_equal '410', doc.at_xpath('//n:det/n:imposto/n:IBSCBS/n:CST', NS).text, 'transferência entre filiais: não incidência de IBS/CBS'
+    assert_equal '410002', doc.at_xpath('//n:det/n:imposto/n:IBSCBS/n:cClassTrib', NS).text
+    assert_nil doc.at_xpath('//n:det/n:imposto/n:IBSCBS/n:gIBSCBS', NS)
+    assert_equal '0.00', doc.at_xpath('//n:total/n:IBSCBSTot/n:vBCIBSCBS', NS).text
+    assert_equal '106.50', doc.at_xpath('//n:total/n:vNFTot', NS).text
+  end
+
+  test 'the ICMS exception for the destination state overrides the rate, CFOP and notes' do
+    nature = @origin_company.operation_natures.transfer.first
+    nature.update!(icms_situation: '00', icms_rate: 18, notes: 'Remessa em transferência.', cfop: '?152',
+                   icms_exceptions_attributes: [
+                     { destination_states: %w[RJ], origin_states: %w[CE], icms_rate: 4, cfop: '6949' },
+                     { destination_states: %w[RJ SP], origin_states: %w[MG], icms_rate: 10, cfop: '6152',
+                       notes: 'Remessa em transferência.', fisco_notes: 'Exceção RJ' }
+                   ])
+    shipment = build_shipment
+    note = Nfe::Transmitter.stub(:call, authorize) { InternalTransferInvoicer.call(shipment) }
+
+    xml = note.xml.download
+    assert_equal [], NfeSchema.errors(xml)
+    doc = Nokogiri::XML(xml)
+    assert_equal '6152', doc.at_xpath('//n:det/n:prod/n:CFOP', NS).text, 'a exceção de emitente CE não vale para MG'
+    assert_equal '10.0000', doc.at_xpath('//n:ICMS00/n:pICMS', NS).text, 'a alíquota da exceção substitui a interestadual de 12%'
+    assert_equal '10.65', doc.at_xpath('//n:ICMS00/n:vICMS', NS).text
+    assert_equal 1, doc.at_xpath('//n:infCpl', NS).text.scan('Remessa em transferência.').size, 'observação igual não repete'
+    assert_equal 'Exceção RJ', doc.at_xpath('//n:infAdFisco', NS).text
   end
 
   test 'without a transfer nature linked to the company the note is not issued' do

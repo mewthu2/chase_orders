@@ -3,10 +3,11 @@
 <% kinds = { 'sale' => ['Venda', 'blue', 'Venda de mercadoria.'], 'transfer' => ['Transferência', 'purple', 'Transferência entre filiais da mesma empresa.'], 'other' => ['Outra', 'gray', 'Outros tipos de operação.'] } %>
 <% pct = ->(v) { "#{number_with_precision(v.to_f, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" } %>
 <% rows = @natures.map do |n|
+     excs = n.icms_exceptions.map(&:summary)
      { id: n.id, record: n, desc: n.description, empresa: n.company.trade_name.presence || n.company.legal_name, tipo: n.kind, padrao: n.default_for_kind,
        cfop: n.cfop, cfopInter: n.cfop_interstate_non_contributor.presence || '—', icms: "#{n.icms_situation} · #{pct.call(n.icms_rate)}",
        pis: "#{n.pis_cst} · #{pct.call(n.pis_rate)}", cofins: "#{n.cofins_cst} · #{pct.call(n.cofins_rate)}", difal: n.difal ? 'Sim' : 'Não',
-       consumidor: n.final_consumer ? 'Sim' : 'Não', obs: n.notes.presence || '—', st: n.active, notas: @note_counts[n.id].to_i, padraoTxt: n.default_for_kind ? 'Padrão do tipo' : '' }
+       consumidor: n.final_consumer ? 'Sim' : 'Não', obs: n.notes.presence || '—', excecoes: excs.any? ? excs.join(' | ') : '—', st: n.active, notas: @note_counts[n.id].to_i, padraoTxt: n.default_for_kind ? 'Padrão do tipo' : '' }
    end %>
 <% table = HoneyTable.new(params, rows: rows, unit: 'naturezas', unit1: 'natureza', page_size: 10,
      tabs: { col: :st, items: [['', 'Todas'], ['true', 'Ativas'], ['false', 'Inativas']] },
@@ -22,6 +23,7 @@
        { k: :pis, label: 'PIS', hide: true },
        { k: :cofins, label: 'COFINS', hide: true },
        { k: :difal, label: 'Calcula DIFAL', hide: true },
+       { k: :excecoes, label: 'Exceções do ICMS', hide: true },
        { k: :consumidor, label: 'Consumidor final', hide: true },
        { k: :obs, label: 'Informações complementares', hide: true },
        { k: :notas, label: 'Notas', t: :qty, sort: true },

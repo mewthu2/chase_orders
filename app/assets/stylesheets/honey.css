@@ -281,7 +281,9 @@ kbd, .kbd {
    ========================================================================== */
 body.honey .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; transition: grid-template-columns var(--t-slow) var(--ease); }
 body.honey[data-sidebar="collapsed"] .app { grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr); }
-.app-enter { animation: fadeIn 500ms var(--ease) both; }
+/* backwards, não both: com o fill no fim a opacidade animada deixa o .app numa camada própria e
+   todo modal do Bootstrap dentro dele fica atrás do fundo escuro (que vai para o <body>). */
+.app-enter { animation: fadeIn 500ms var(--ease) backwards; }
 body.honey .main { min-width: 0; display: flex; flex-direction: column; position: relative; }
 body.honey .main::before { /* brilho de fundo bem sutil, sem padrão */
   content: ''; position: fixed; inset: 0 0 auto var(--sidebar-w); height: 420px; pointer-events: none; z-index: 0;
@@ -1260,6 +1262,58 @@ body.honey .select-wrap select.field-input { appearance: none; -webkit-appearanc
 body.honey .modal-content, body.honey .modal-box { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: var(--r-xl); box-shadow: var(--shadow-3); color: var(--text); }
 body.honey .modal-header, body.honey .modal-footer { border-color: var(--border); }
 body.honey .modal-backdrop.show { opacity: .74; }
+
+/* ---------- Modais do Bootstrap com a cara do Honey ----------
+   O .content tem z-index próprio: com modal aberto ele sai, senão o modal que ficou dentro dele
+   (os de formulário não vão para o <body>, ver honey_shell.js) cai atrás do fundo escuro. */
+body.honey.modal-open .content { z-index: auto; }
+body.honey .modal-backdrop { background: #03050a; }
+body.honey .modal-backdrop.show { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+body.honey .modal.fade .modal-dialog { transform: translateY(18px) scale(.965); opacity: 0; transition: transform 380ms var(--spring), opacity 220ms var(--ease-out); }
+body.honey .modal.show .modal-dialog { transform: none; opacity: 1; }
+body.honey .modal-content { position: relative; overflow: hidden; background: linear-gradient(180deg, rgba(58,163,234,.06), transparent 140px), var(--surface-2) !important; color: var(--text) !important; }
+body.honey .modal-content::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, transparent, var(--brand-400), #8b7cf6, var(--brand-400), transparent); background-size: 200% 100%; animation: hcModalGlow 4s linear infinite; pointer-events: none; }
+@keyframes hcModalGlow { from { background-position: 0 0; } to { background-position: 200% 0; } }
+body.honey .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--border) !important; }
+body.honey .modal-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; letter-spacing: -.01em; color: var(--text) !important; }
+body.honey .modal-title > i:first-child, body.honey .modal-title .m-ic { width: 32px; height: 32px; flex: none; display: inline-grid; place-items: center; margin: 0 !important; border-radius: 10px; font-size: 14px; color: var(--brand-300); background: var(--brand-bg); border: 1px solid rgba(58,163,234,.3); animation: popIn 480ms var(--spring) both; }
+body.honey .modal-body { padding: 20px 22px; color: var(--text-2); }
+body.honey .modal-footer { padding: 14px 22px; gap: 8px; border-top: 1px solid var(--border) !important; background: rgba(0,0,0,.16); }
+body.honey .modal-footer > * { margin: 0; }
+body.honey .modal .btn-close, body.honey .modal .btn-close-white { filter: invert(1) grayscale(1) brightness(1.7); opacity: .5; border-radius: 8px; transition: opacity var(--t), transform var(--t) var(--spring); }
+body.honey .modal .btn-close:hover { opacity: .95; transform: rotate(90deg); }
+/* Utilitários antigos (tema escuro do Bootstrap) passam a usar as cores do Honey. */
+body.honey .modal .bg-dark { background-color: transparent !important; }
+body.honey .modal .bg-black, body.honey .modal .hc-code { background: rgba(5,7,10,.6) !important; border: 1px solid var(--border); border-radius: var(--r-sm) !important; }
+body.honey .modal pre, body.honey .modal textarea.font-monospace, body.honey .modal .hc-code pre { font-family: var(--mono) !important; font-size: 12px !important; line-height: 1.55; color: var(--text-2) !important; }
+body.honey .modal pre.text-danger { color: #ff9b94 !important; }
+body.honey .modal .text-white { color: var(--text) !important; }
+body.honey .modal .text-white-50, body.honey .modal .text-muted { color: var(--text-3) !important; }
+body.honey .modal .text-dark { color: inherit !important; }
+body.honey .modal .text-info { color: var(--brand-300) !important; }
+body.honey .modal h6.text-info, body.honey .modal h6.text-danger, body.honey .modal .hc-modal-label { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+body.honey .modal .border-secondary { border-color: var(--border) !important; }
+body.honey .modal .table, body.honey .modal .table-dark { --bs-table-bg: transparent; --bs-table-color: var(--text-2); --bs-table-border-color: var(--border); --bs-table-striped-bg: rgba(255,255,255,.025); --bs-table-hover-bg: rgba(255,255,255,.04); color: var(--text-2); }
+body.honey .modal .table th { color: var(--text-3); font-weight: 600; font-size: 12.5px; }
+body.honey .modal .table th, body.honey .modal .table td { border-top: 0; border-color: var(--border); }
+body.honey .modal .table td { color: var(--text); font-size: 13px; }
+body.honey .modal .btn-outline-info, body.honey .modal .btn-outline-light, body.honey .modal .btn-outline-success, body.honey .modal .btn-outline-dark { color: var(--brand-300); background: var(--brand-bg); border: 1px solid rgba(58,163,234,.3); }
+body.honey .modal .btn-outline-success { color: #6fdc7f; background: var(--green-bg); border-color: rgba(63,185,80,.35); }
+body.honey .modal .btn-outline-info:hover, body.honey .modal .btn-outline-light:hover, body.honey .modal .btn-outline-dark:hover { color: #fff; background: rgba(58,163,234,.22); }
+body.honey .modal .btn-outline-success:hover { color: #fff; background: rgba(63,185,80,.24); }
+body.honey .modal .btn-dark { color: var(--text); background: var(--surface-3); border-color: var(--border-2); }
+body.honey .modal .alert { border-radius: var(--r); border: 1px solid var(--border-2); color: var(--text); animation: fadeUp 300ms var(--ease-out) both; }
+body.honey .modal .alert-success { background: var(--green-bg); border-color: rgba(63,185,80,.35); color: #8be29a; }
+body.honey .modal .alert-warning { background: var(--yellow-bg); border-color: rgba(227,179,65,.35); color: #f0cd78; }
+body.honey .modal .alert-danger { background: var(--red-bg); border-color: rgba(248,81,73,.35); color: #ff9b94; }
+body.honey .modal .alert-info { background: var(--blue-bg); border-color: rgba(88,166,255,.35); color: #9ccaff; }
+body.honey .modal .badge.bg-success { background: var(--green-bg) !important; color: #8be29a; border: 1px solid rgba(63,185,80,.35); }
+body.honey .modal .badge.bg-danger { background: var(--red-bg) !important; color: #ff9b94; border: 1px solid rgba(248,81,73,.35); }
+body.honey .modal .badge.bg-secondary, body.honey .modal .badge.bg-info { background: rgba(255,255,255,.06) !important; color: var(--text-2); border: 1px solid var(--border-2); }
+body.honey .modal .progress { background: rgba(255,255,255,.06); border-radius: 99px; overflow: hidden; }
+body.honey .modal .progress-bar { background: linear-gradient(90deg, var(--brand-500), var(--brand-300)) !important; transition: width 400ms var(--ease-out); }
+body.honey .modal .spinner-border.text-primary { color: var(--brand-400) !important; }
+body.honey .modal .form-control.bg-black { color: var(--text-2) !important; }
 body.honey .dropdown-menu { background: var(--surface-2); border: 1px solid var(--border-2); border-radius: var(--r); box-shadow: var(--shadow-3); }
 body.honey .dropdown-item { color: var(--text-2); border-radius: 7px; }
 body.honey .dropdown-item:hover { background: rgba(255,255,255,.06); color: var(--text); }
@@ -1908,6 +1962,52 @@ body.honey .transfer-note { margin: 0; animation: fadeUp .35s ease both; }
 body.honey .transfer-note__links { display: inline-flex; gap: 12px; margin-left: 10px; }
 body.honey .transfer-note__links a { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; text-decoration: none; }
 body.honey .transfer-note__links a:hover { text-decoration: underline; }
+body.honey .transfer-note__route { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 6px; }
+body.honey .transfer-note__route > span { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.55); }
+body.honey .transfer-note__route small { text-transform: uppercase; letter-spacing: .06em; font-size: 10px; font-weight: 700; opacity: .7; }
+body.honey .transfer-note__route > i { animation: transferRouteNudge 1.4s ease-in-out infinite; }
+@keyframes transferRouteNudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+
+/* ---------- Natureza de operação: exceções do ICMS ---------- */
+.icms-exc-list { display: grid; gap: 14px; }
+.icms-exc {
+  position: relative; padding: 16px 18px; border: 1px solid var(--border-2); border-radius: var(--r-lg, 14px);
+  background: linear-gradient(180deg, rgba(58,163,234,.05), transparent 90px), var(--surface-2);
+  transition: border-color var(--t) var(--ease), opacity 220ms var(--ease), transform 220ms var(--ease);
+  animation: fadeUp .35s var(--ease-out) both;
+}
+.icms-exc:hover { border-color: var(--border-3); }
+.icms-exc.is-new { border-color: var(--brand-500); box-shadow: 0 0 0 4px rgba(18,135,214,.12); }
+.icms-exc.is-leaving { opacity: 0; transform: translateX(14px) scale(.98); }
+.icms-exc__head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.icms-exc__badge { width: 30px; height: 30px; flex: none; display: inline-grid; place-items: center; border-radius: 9px; color: var(--brand-300); background: var(--brand-bg); border: 1px solid rgba(58,163,234,.3); font-size: 13px; }
+.icms-exc__title { flex: 1; min-width: 0; font-size: 14px; color: var(--text); letter-spacing: -.01em; }
+.icms-exc__remove { width: 32px; height: 32px; border: 1px solid var(--border-2); border-radius: 9px; background: transparent; color: var(--text-3); transition: color var(--t), background var(--t), transform var(--t) var(--spring); }
+.icms-exc__remove:hover { color: #ff9b94; background: var(--red-bg); transform: rotate(-8deg) scale(1.06); }
+.icms-exc__block { margin-top: 12px; }
+.icms-exc__summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.icms-exc__summary em { font-style: normal; color: var(--brand-300); }
+.uf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.uf-chip { position: relative; margin: 0; cursor: pointer; }
+.uf-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.uf-chip span {
+  display: inline-grid; place-items: center; min-width: 40px; padding: 5px 8px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--text-3);
+  border: 1px solid var(--border-2); background: rgba(255,255,255,.02);
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--spring);
+}
+.uf-chip:hover span { border-color: var(--border-3); color: var(--text-2); transform: translateY(-1px); }
+.uf-chip input:checked + span { color: #fff; border-color: var(--brand-400); background: linear-gradient(135deg, var(--brand-500), #6d5cf0); box-shadow: 0 4px 14px rgba(18,135,214,.28); animation: popIn 320ms var(--spring) both; }
+.uf-chip--origin input:checked + span { background: linear-gradient(135deg, #2f9e5b, #1f8a8a); border-color: #3fb950; box-shadow: 0 4px 14px rgba(63,185,80,.25); }
+.uf-chip input:focus-visible + span { outline: 2px solid var(--brand-400); outline-offset: 2px; }
+.icms-exc-add {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 8px 14px; border-radius: 999px;
+  border: 1px dashed rgba(58,163,234,.5); background: var(--brand-bg); color: var(--brand-300); font-weight: 700; font-size: 13px;
+  transition: background var(--t), transform var(--t) var(--spring);
+}
+.icms-exc-add:hover { background: rgba(58,163,234,.2); transform: translateY(-1px); }
+.icms-exc-add i { transition: transform var(--t) var(--spring); }
+.icms-exc-add:hover i { transform: rotate(90deg); }
 
 /* ---------- Empresa: naturezas de operação vinculadas ---------- */
 .nature-pick { display: grid; gap: 16px; }

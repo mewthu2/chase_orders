@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_06_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -635,6 +635,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_06_150000) do
     t.string "step"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "operation_nature_icms_exceptions", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "operation_nature_id", null: false
+    t.json "destination_states", null: false
+    t.json "origin_states"
+    t.string "icms_situation", default: "00", null: false
+    t.string "cfop"
+    t.decimal "icms_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.boolean "difal", default: false, null: false
+    t.decimal "fcp_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.text "notes"
+    t.text "fisco_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["operation_nature_id"], name: "index_operation_nature_icms_exceptions_on_operation_nature_id"
   end
 
   create_table "operation_natures", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1430,6 +1446,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_06_150000) do
   add_foreign_key "logs", "users"
   add_foreign_key "marketing_tasks", "marketing_campaigns"
   add_foreign_key "marketing_tasks", "users"
+  add_foreign_key "operation_nature_icms_exceptions", "operation_natures"
   add_foreign_key "operation_natures", "companies"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"

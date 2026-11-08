@@ -118,8 +118,10 @@ module Nfe
       result = XmlBuilder.new(
         company: @company, recipient: recipient, items: items, number: number, series: @company.nfe_series,
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature.purpose,
-        final_consumer: @nature.final_consumer?, tax: @nature.tax_rules, additional_info: additional_info,
-        fisco_info: render(@nature.fisco_notes)
+        final_consumer: @nature.final_consumer?,
+        tax: @nature.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
+        additional_info: @nature.notes_for(**note_context(recipient)),
+        fisco_info: @nature.fisco_notes_for(**note_context(recipient))
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 
@@ -140,12 +142,9 @@ module Nfe
       sale? ? (source&.business_name.presence || source&.responsible_name) : source&.name
     end
 
-    def render(text)
-      @nature.render_notes(text, order_name: "Pedido #{@order.id}", customer: recipient_name)
-    end
-
-    def additional_info
-      render(@nature.notes)
+    def note_context(recipient)
+      { company_state: @company.state, recipient_state: recipient[:state], order_name: "Pedido #{@order.id}",
+        customer: recipient_name }
     end
   end
 end
