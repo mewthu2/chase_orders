@@ -79,6 +79,7 @@ class WhatsappJobsTest < ActiveSupport::TestCase
     gateway.define_singleton_method(:state) { { 'state' => 'open' } }
     rows = [wa_message('message-1'), wa_message('recovered')]
     gateway.define_singleton_method(:history) { |**_| { 'records' => rows, 'pages' => 1 } }
+    gateway.define_singleton_method(:allow_groups) { nil }
     Whatsapp::Connection.stub(:find, @a) { @a.stub(:gateway, gateway) { 2.times { Whatsapp::SyncJob.perform_now(@a.id) } } }
     assert_equal 2, @a.messages.count
     assert @a.reload.last_synced_at

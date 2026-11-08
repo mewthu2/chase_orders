@@ -136,7 +136,7 @@ module Whatsapp
     def payload(message)
       deleted = message.deleted?
       message.slice(:id, :body, :kind, :direction, :state, :sent_at, :media_state, :client_nonce).merge(
-        author: message.author_name, by_agent: message.by_agent?,
+        author: message.author_name, sender: message.sender_name, by_agent: message.by_agent?,
         media_url: message.media && !deleted ? attachment_whatsapp_conversation_message_path(@conversation, message) : nil,
         filename: deleted ? nil : message.media&.filename,
         body: deleted ? nil : message.body, media_state: deleted ? nil : message.media_state,

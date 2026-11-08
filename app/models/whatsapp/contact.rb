@@ -3,7 +3,26 @@ module Whatsapp
     belongs_to :connection
     belongs_to :customer, optional: true
     has_many :aliases, class_name: 'Whatsapp::ContactAlias'
-    def display_name = name.presence || phone.presence || 'Contato do WhatsApp'
+    def display_name = name.presence || phone.presence || (group? ? 'Grupo do WhatsApp' : 'Contato do WhatsApp')
+    def group? = Phone.group_jid?(provider_jid)
+    scope :groups, -> { where('whatsapp_contacts.provider_jid LIKE ?', '%@g.us') }
+
+    # Grupo: um contato só, pelo JID do grupo. O nome (assunto) vem da Evolution na primeira mensagem.
+    def self.group!(connection, jid)
+      raise ArgumentError, 'Grupo inválido' unless Phone.group_jid?(jid)
+      contact = ContactAlias.find_by(connection: connection, jid: jid)&.contact ||
+                connection.contacts.find_by(provider_jid: jid) || connection.contacts.create!(provider_jid: jid)
+      ContactAlias.find_or_create_by!(connection: connection, jid: jid) { |a| a.contact = contact }
+      contact.refresh_group_name! if contact.name.blank?
+      contact
+    end
+
+    def refresh_group_name!
+      subject = connection.gateway.group_subject(provider_jid)
+      update!(name: subject.truncate(100)) if subject.present?
+    rescue Providers::Evolution::Error
+      nil
+    end
 
     # Never infer a phone number from a LID. Only confirmed PN aliases are used.
     def self.resolve!(connection, key, name: nil)

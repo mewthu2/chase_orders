@@ -10,7 +10,7 @@ module Whatsapp
     def message!(data, historical: false, outgoing: nil)
       return unless data.is_a?(Hash)
       key = data['key'] || {}
-      return unless Phone.individual_jid?(key['remoteJid']) && key['id'].to_s.match?(/\A[\w.:-]{1,191}\z/)
+      return unless Phone.chat_jid?(key['remoteJid']) && key['id'].to_s.match?(/\A[\w.:-]{1,191}\z/)
       # Edição/exclusão chegam como mensagem de protocolo: não viram balão "não suportado".
       return if data['message'].is_a?(Hash) && (data['message'].key?('protocolMessage') || data['message'].key?('editedMessage'))
       # Called under the connection lock by webhook, sync, or send workers.
@@ -21,13 +21,17 @@ module Whatsapp
         receipt!(data.merge('keyId' => key['id']))
         return existing
       end
-      key = with_lid(key) unless outgoing
+      group = Phone.group_jid?(key['remoteJid'])
+      key = with_lid(key) unless outgoing || group
       if outgoing
         conversation = outgoing.conversation
         contact = conversation.contact
         [key['remoteJid'], key['remoteJidAlt']].compact.select { |jid| Phone.individual_jid?(jid) }.each do |jid|
           ContactAlias.find_or_create_by!(connection: @connection, jid: jid) { |a| a.contact = contact }
         end
+      elsif group
+        contact = Contact.group!(@connection, key['remoteJid'])
+        conversation = @connection.conversations.find_or_create_by!(contact: contact)
       else
         contact = Contact.resolve!(@connection, key, name: key['fromMe'] ? nil : data['pushName'])
         conversation = @connection.conversations.find_or_create_by!(contact: contact)
@@ -42,19 +46,21 @@ module Whatsapp
       timestamp = data['messageTimestamp'].to_i
       time = timestamp.positive? && timestamp <= 5.minutes.from_now.to_i ? Time.at(timestamp).utc : Time.current
       message = outgoing || conversation.messages.new(connection: @connection)
-      message.assign_attributes(provider_id: key['id'], provider_key: key.slice('id', 'remoteJid', 'remoteJidAlt', 'fromMe'),
+      message.assign_attributes(provider_id: key['id'], provider_key: key.slice('id', 'remoteJid', 'remoteJidAlt', 'fromMe', 'participant'),
         direction: key['fromMe'] ? 'outgoing' : 'incoming', state: key['fromMe'] ? 'sent' : 'received',
         receipt_rank: key['fromMe'] ? 1 : 0, sent_at: time, historical: historical)
       unless outgoing
         message.assign_attributes(kind: kind, body: text.to_s.truncate(10_000), media_state: media ? 'pending' : nil)
       end
+      message.sender_name = group_sender(key, data) if group && !key['fromMe']
       message.save!
       receipt!(data.merge('keyId' => key['id']))
       message.apply_receipt!(@connection.receipts.find_by(provider_id: key['id'])&.rank.to_i)
       if !conversation.last_message_at || time >= conversation.last_message_at
         conversation.update!(last_message_at: time, last_message_preview: message.preview.truncate(180))
       end
-      unless historical
+      # Grupo não entra na fila de atendimento nem passa pelo agente: só fica registrado (e conta como não lida).
+      unless historical || group
         if message.direction == 'incoming'
           conversation.customer_wrote!
           AgentJob.schedule(conversation, message)
@@ -84,6 +90,14 @@ module Whatsapp
       lid ? key.merge('remoteJid' => lid, 'remoteJidAlt' => pn) : key
     rescue Providers::Evolution::Error
       key
+    end
+
+    # Quem escreveu no grupo: nome do WhatsApp; sem nome, o telefone (o LID não é telefone).
+    def group_sender(key, data)
+      name = data['pushName'].to_s.strip
+      return name.truncate(120) if name.present?
+      jid = [key['participantAlt'], key['participant']].find { |j| j.to_s.end_with?('@s.whatsapp.net') }
+      Phone.from_jid(jid) || 'Participante'
     end
 
     def lid_pair?(key)

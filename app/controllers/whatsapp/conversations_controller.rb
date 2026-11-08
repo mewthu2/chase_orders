@@ -14,6 +14,8 @@ module Whatsapp
           scope = scope.where(stage: params[:state]) if %w[pending responding].include?(params[:state])
           scope = scope.where(needs_human: true) if params[:human] == '1'
           scope = scope.where(assignee_id: current_user.id) if params[:mine] == '1'
+          # Grupos ficam escondidos; o filtro "Grupos" mostra só eles.
+          scope = params[:groups] == '1' ? scope.where(contact_id: Contact.groups.select(:id)) : scope.where.not(contact_id: Contact.groups.select(:id))
           if params[:q].present?
             q = ActiveRecord::Base.sanitize_sql_like(params[:q].to_s.truncate(100))
             scope = scope.joins(:contact).where('whatsapp_contacts.name LIKE :q OR whatsapp_contacts.phone LIKE :q', q: "%#{q}%")
@@ -27,8 +29,9 @@ module Whatsapp
           end
           page = params[:page].to_i.clamp(1, 1000)
           rows = scope.order(last_message_at: :desc, id: :desc).limit(51).offset((page - 1) * 50).to_a
-          pending = authorized_conversations.where(stage: 'pending').group(:connection_id).count
-          human = authorized_conversations.where(needs_human: true, state: 'open').group(:connection_id).count
+          people = authorized_conversations.where.not(contact_id: Contact.groups.select(:id))
+          pending = people.where(stage: 'pending').group(:connection_id).count
+          human = people.where(needs_human: true, state: 'open').group(:connection_id).count
           render json: { conversations: rows.first(50).map { |c| summary(c) }, more: rows.length > 50,
             connections: @connections.map { |c| c.slice(:id, :name, :phone, :state).merge(connected: c.connected?, pending_count: pending[c.id].to_i, human_count: human[c.id].to_i) } }
         end
@@ -75,6 +78,7 @@ module Whatsapp
         when 'resolve_human' then conversation.assign_attributes(needs_human: false, agent_note: nil)
         when 'ask_agent'
           # Pedido manual vale também para conversas que vieram do histórico importado.
+          raise ArgumentError, 'O agente não responde em grupos.' if conversation.contact.group?
           last = conversation.messages.order(sent_at: :desc, id: :desc).first
           raise ArgumentError, 'O agente só sugere resposta quando a última mensagem é do cliente.' unless last&.direction == 'incoming'
           raise ArgumentError, 'Nenhuma automação ligada neste número. Ligue uma em Automações.' unless Automation.active_for(conversation.connection_id)
@@ -97,6 +101,7 @@ module Whatsapp
     def link_customer
       return head :forbidden unless current_user.can_access_screen?('customers')
       conversation = authorized_conversations.find(params[:id])
+      raise ArgumentError, 'Grupo não se vincula a um cliente.' if conversation.contact.group?
       customer = params[:customer_id].present? ? Customer.find(params[:customer_id]) : nil
       conversation.contact.update!(customer: customer)
       render json: details(conversation)
@@ -121,7 +126,7 @@ module Whatsapp
     private
     def summary(c)
       c.slice(:id, :state, :stage, :needs_human, :agent_paused, :last_message_at, :last_message_preview, :assignee_id).merge(
-        stage_label: c.stage_label, has_draft: !c.agent_draft.nil?,
+        stage_label: c.contact.group? ? 'Grupo' : c.stage_label, has_draft: !c.agent_draft.nil?, group: c.contact.group?,
         name: c.contact.display_name, phone: c.contact.phone, connection_id: c.connection_id,
         connection_name: c.connection.name, connection_phone: c.connection.phone, connection_state: c.connection.state,
         assignee_name: c.assignee&.name, unread_count: c.unread_count(current_user))
@@ -129,7 +134,7 @@ module Whatsapp
     def details(c)
       people = User.active.order(:name).select { |u| Connection.visible_to(u).where(id: c.connection_id).exists? }
       result = summary(c).merge(assignees: people.map { |u| u.slice(:id, :name) },
-        can_link_customer: current_user.can_access_screen?('customers'),
+        can_link_customer: current_user.can_access_screen?('customers') && !c.contact.group?,
         agent_note: c.agent_note, agent_draft: c.agent_draft, agent_draft_finish: c.agent_draft_finish,
         agent_paused_until: c.agent_paused_until, automation: automation_payload(c))
       if current_user.can_access_screen?('customers') && c.contact.customer
@@ -139,6 +144,7 @@ module Whatsapp
       result
     end
     def automation_payload(c)
+      return if c.contact.group? # agente e modo conversa não valem em grupo
       automation = Automation.active_for(c.connection_id)
       return unless automation
       { id: automation.id, name: automation.name, mode: automation.mode, mode_label: automation.mode_label,

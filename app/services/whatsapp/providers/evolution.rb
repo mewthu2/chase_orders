@@ -22,10 +22,26 @@ module Whatsapp
         existing = instances.find { |i| i['name'] == connection.instance_key }
         unless existing
           request(:post, '/instance/create', instanceName: connection.instance_key, integration: 'WHATSAPP-BAILEYS',
-            qrcode: false, groupsIgnore: true, readMessages: false, readStatus: false, syncFullHistory: false,
+            qrcode: false, groupsIgnore: false, readMessages: false, readStatus: false, syncFullHistory: false,
             webhook: webhook_config)
         end
         request(:post, "/webhook/set/#{instance}", webhook: webhook_config)
+        allow_groups
+      end
+
+      # Instâncias antigas foram criadas com groupsIgnore: liga o recebimento de grupos sem mexer no resto.
+      def allow_groups
+        current = request(:get, "/settings/find/#{instance}")
+        current = {} unless current.is_a?(Hash)
+        return if current.key?('groupsIgnore') && current['groupsIgnore'] == false
+        settings = { rejectCall: false, msgCall: '', groupsIgnore: false, alwaysOnline: false, readMessages: false,
+          readStatus: false, syncFullHistory: false }
+        settings.each_key { |k| settings[k] = current[k.to_s] if current.key?(k.to_s) && !current[k.to_s].nil? }
+        request(:post, "/settings/set/#{instance}", settings.merge(groupsIgnore: false))
+      end
+
+      def group_subject(jid)
+        request(:get, "/group/findGroupInfos/#{instance}?groupJid=#{CGI.escape(jid)}")['subject'].to_s
       end
       def connect = request(:get, "/instance/connect/#{instance}")
       def reconnect
@@ -47,7 +63,7 @@ module Whatsapp
 
       def send_message(message)
         target = message.conversation.contact.provider_jid
-        raise Rejected, 'invalid_recipient' unless Phone.individual_jid?(target)
+        raise Rejected, 'invalid_recipient' unless Phone.chat_jid?(target)
         if message.kind == 'text'
           request(:post, "/message/sendText/#{instance}", number: target, text: message.body, linkPreview: false)
         else
@@ -97,7 +113,7 @@ module Whatsapp
       def stored_key(message)
         key = find_message(message.provider_id).first&.dig('key') || message.provider_key || {}
         key = { 'id' => key['id'], 'remoteJid' => key['remoteJid'], 'fromMe' => true }
-        raise Rejected, 'message_not_found' unless key['id'] == message.provider_id && Phone.individual_jid?(key['remoteJid'])
+        raise Rejected, 'message_not_found' unless key['id'] == message.provider_id && Phone.chat_jid?(key['remoteJid'])
         key
       end
       def webhook_config

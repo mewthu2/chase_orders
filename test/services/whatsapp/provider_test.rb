@@ -17,9 +17,40 @@ class WhatsappProviderTest < ActiveSupport::TestCase
           data.dig('webhook', 'headers', 'X-Honey-Webhook-Token') == @a.webhook_token && data['syncFullHistory'] == false
       end.to_return(status: 201, body: '{}')
       webhook = stub_request(:post, "#{root}/webhook/set/#{@a.instance_key}").to_return(status: 201, body: '{}')
+      stub_request(:get, "#{root}/settings/find/#{@a.instance_key}").to_return(status: 200, body: { groupsIgnore: false }.to_json)
       @a.gateway.ensure_instance
       assert_requested create
       assert_requested webhook
+    end
+  end
+
+  test 'old instances that ignored groups start receiving them, keeping the other settings' do
+    with_provider_env do
+      root = 'http://evolution.test:8080'
+      stub_request(:get, "#{root}/settings/find/#{@a.instance_key}").to_return(status: 200,
+        body: { rejectCall: true, msgCall: 'Ligue depois', groupsIgnore: true, alwaysOnline: false, readMessages: false,
+                readStatus: false, syncFullHistory: false }.to_json)
+      set = stub_request(:post, "#{root}/settings/set/#{@a.instance_key}").with do |r|
+        data = JSON.parse(r.body)
+        data['groupsIgnore'] == false && data['rejectCall'] == true && data['msgCall'] == 'Ligue depois'
+      end.to_return(status: 201, body: '{}')
+      @a.gateway.allow_groups
+      assert_requested set, times: 1
+      WebMock.reset!
+      stub_request(:get, "#{root}/settings/find/#{@a.instance_key}").to_return(status: 200, body: { groupsIgnore: false }.to_json)
+      @a.gateway.allow_groups # já liberado: não grava de novo
+    end
+  end
+
+  test 'messages can be sent to a group' do
+    with_provider_env do
+      group = '120363401234567890@g.us'
+      @conversation.contact.update!(provider_jid: group)
+      req = stub_request(:post, "http://evolution.test:8080/message/sendText/#{@a.instance_key}")
+        .with(body: { number: group, text: 'Resposta', linkPreview: false }.to_json)
+        .to_return(status: 201, body: wa_message('sent', jid: group, from_me: true).to_json)
+      @a.gateway.send_message(wa_outgoing)
+      assert_requested req, times: 1
     end
   end
 

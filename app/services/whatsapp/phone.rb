@@ -6,6 +6,9 @@ module Whatsapp
       digits.match?(/\A[1-9]\d{7,14}\z/) ? "+#{digits}" : nil
     end
     def self.individual_jid?(jid) = jid.to_s.match?(/\A[1-9]\d{4,20}(?::\d+)?@(s\.whatsapp\.net|lid)\z/)
+    # Grupo: "120363...@g.us" (novo) ou "5511999999999-1600000000@g.us" (antigo). Status e canais ficam de fora.
+    def self.group_jid?(jid) = jid.to_s.match?(/\A[1-9]\d{4,25}(?:-\d{6,15})?@g\.us\z/)
+    def self.chat_jid?(jid) = individual_jid?(jid) || group_jid?(jid)
     def self.equivalent_jid?(left, right)
       return true if left == right
       a, b = [left, right].map { |jid| from_jid(jid)&.delete_prefix('+') }

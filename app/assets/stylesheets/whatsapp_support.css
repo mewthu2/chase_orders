@@ -1562,6 +1562,8 @@
 #wa-inbox .wa-stage.is-pending { color: #e3b341; background: rgba(227, 179, 65, 0.14); }
 #wa-inbox .wa-stage.is-pending::before { animation: wa-blink 1.4s ease-in-out infinite; }
 #wa-inbox .wa-stage.is-responding { color: var(--wa-accent); background: rgba(0, 168, 132, 0.14); }
+#wa-inbox .wa-stage.is-group { color: #c79bff; background: rgba(199, 155, 255, 0.15); }
+#wa-inbox .wa-stage.is-group::before { animation: none; }
 #wa-inbox .wa-stage.is-finished { color: var(--wa-text-2); background: rgba(134, 150, 160, 0.14); }
 #wa-inbox .wa-human-flag,
 #wa-inbox .wa-draft-flag {
@@ -2470,3 +2472,17 @@
   margin-right: 3px;
   font-style: italic;
 }
+
+/* Grupos: chip lilás, avatar com ícone e nome de quem falou na cor da pessoa. */
+#wa-inbox .wa-chip-group i { font-size: 0.8em; }
+#wa-inbox .wa-chip-group:has(input:checked) { background-color: rgba(199, 155, 255, 0.18); color: #c79bff; }
+#wa-inbox[data-wa-theme="light"] .wa-chip-group:has(input:checked) { color: #7c4dcc; }
+#wa-inbox .wa-avatar.is-group i { font-size: 0.95em; }
+#wa-inbox .wa-avatar.is-group { box-shadow: 0 0 0 2px rgba(199, 155, 255, 0.45); }
+#wa-inbox .wa-author.wa-sender { color: var(--wa-sender, var(--wa-accent)); animation: wa-sender-in 0.35s ease-out; }
+#wa-inbox[data-wa-theme="light"] .wa-author.wa-sender { filter: brightness(0.72) saturate(1.3); }
+@keyframes wa-sender-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { #wa-inbox .wa-author.wa-sender { animation: none; } }

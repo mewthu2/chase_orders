@@ -37,13 +37,20 @@
       .map((w) => w[0])
       .join("")
       .toUpperCase() || "#";
-  const paintAvatar = (node, name) => {
+  const nameHash = (name) => {
     let h = 0;
     for (const ch of name || "") h = (h * 31 + ch.codePointAt(0)) >>> 0;
-    node.textContent = initials(name);
-    node.style.setProperty("--wa-avatar", palette[h % palette.length]);
+    return h;
+  };
+  const paintAvatar = (node, name, group = false) => {
+    if (group) node.replaceChildren(el("i", undefined, "fas fa-users"));
+    else node.textContent = initials(name);
+    node.classList.toggle("is-group", !!group);
+    node.style.setProperty("--wa-avatar", palette[nameHash(name) % palette.length]);
     return node;
   };
+  // Em grupo, cada participante ganha sua cor (como no WhatsApp).
+  const senderColors = ["#53bdeb", "#ff8fa3", "#ffb44f", "#a5d86e", "#c79bff", "#4fd1c5", "#f78c6c", "#e6c84f"];
   const sameDay = (a, b) => a.toDateString() === b.toDateString();
   const hour = (value) =>
     value
@@ -504,6 +511,7 @@
       mine: $("wa-mine").checked ? "1" : "",
       unread: $("wa-unread").checked ? "1" : "",
       human: $("wa-human").checked ? "1" : "",
+      groups: $("wa-groups").checked ? "1" : "",
       page: listPage,
     });
     const result = await api(`/whatsapp/conversations.json?${p}`);
@@ -525,7 +533,7 @@
       bottom.append(el("small", c.last_message_preview || c.phone || "Sem mensagens"));
       if (c.unread_count) bottom.append(el("span", c.unread_count, "wa-badge"));
       const foot = el("em", undefined, "wa-thread-number");
-      foot.append(el("span", c.stage_label, `wa-stage is-${c.stage}`), document.createTextNode(c.connection_name));
+      foot.append(el("span", c.stage_label, `wa-stage is-${c.group ? "group" : c.stage}`), document.createTextNode(c.connection_name));
       if (c.needs_human) {
         const h = el("span", " Precisa de você", "wa-human-flag");
         h.prepend(el("i", undefined, "fas fa-robot"));
@@ -536,7 +544,7 @@
         foot.append(d);
       }
       body.append(top, bottom, foot);
-      button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name), body);
+      button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name, c.group), body);
       button.onclick = safe(() => selectConversation(c.id));
       // Finalizar (ou reabrir) direto da lista, sem abrir a conversa.
       const row = el("div", undefined, "wa-thread-row");
@@ -572,8 +580,8 @@
   function renderHeader(c) {
     selected = c;
     $("wa-contact-name").textContent = c.name;
-    paintAvatar($("wa-contact-avatar"), c.name);
-    paintAvatar($("wa-contact-avatar-lg"), c.name);
+    paintAvatar($("wa-contact-avatar"), c.name, c.group);
+    paintAvatar($("wa-contact-avatar-lg"), c.name, c.group);
     $("wa-company-number").textContent =
       `Pelo número ${c.connection_name}${c.connection_phone ? " · " + c.connection_phone : ""} · ${stateLabels[c.connection_state] || c.connection_state}`;
     $("wa-owner").textContent =
@@ -598,8 +606,9 @@
     $("wa-assignee").replaceChildren(new Option("Transferir para…", ""));
     c.assignees?.forEach((u) => $("wa-assignee").add(new Option(u.name, u.id)));
     $("wa-assignee").value = oldAssignee;
-    $("wa-contact-phone").textContent =
-      c.phone || "Telefone ainda não informado pelo WhatsApp";
+    $("wa-contact-phone").textContent = c.group
+      ? "Grupo do WhatsApp · o agente não responde aqui"
+      : c.phone || "Telefone ainda não informado pelo WhatsApp";
     $("wa-linked").replaceChildren();
     if (c.customer) {
       $("wa-linked").append(
@@ -642,6 +651,11 @@
           if (m.by_agent) next.classList.add("by-agent");
           if (m.author && m.direction === "outgoing")
             next.append(el("span", m.by_agent ? `🤖 ${m.author}` : m.author, "wa-author"));
+          if (m.sender && m.direction === "incoming") {
+            const who = el("span", m.sender, "wa-author wa-sender");
+            who.style.setProperty("--wa-sender", senderColors[nameHash(m.sender) % senderColors.length]);
+            next.append(who);
+          }
           if (editing.has(m.id) && !m.can_edit) editing.delete(m.id); // passou dos 15 minutos
           if (m.deleted) {
             next.classList.add("is-deleted");
@@ -1259,7 +1273,7 @@
   $("wa-text").addEventListener("input", grow);
   $("wa-new-side").onclick = () => $("wa-new").click();
   let debounce;
-  ["wa-search", "wa-number", "wa-state", "wa-unread", "wa-mine", "wa-human"].forEach(
+  ["wa-search", "wa-number", "wa-state", "wa-unread", "wa-groups", "wa-mine", "wa-human"].forEach(
     (id) => {
       $(id).addEventListener(id === "wa-search" ? "input" : "change", () => {
         clearTimeout(debounce);

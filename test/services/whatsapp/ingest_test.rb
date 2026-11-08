@@ -3,6 +3,7 @@ require 'minitest/mock'
 require_relative '../../support/whatsapp_factory'
 class WhatsappIngestTest < ActiveSupport::TestCase
   include WhatsappFactory
+  include ActiveJob::TestHelper
   self.fixture_table_names = []
   setup { setup_whatsapp }
 
@@ -104,11 +105,40 @@ class WhatsappIngestTest < ActiveSupport::TestCase
     assert_equal '+5511988887777', conversation.contact.phone
   end
 
-  test 'groups broadcast and newsletters are ignored' do
-    %w[12345@g.us status@broadcast 12345@newsletter].each do |jid|
+  test 'status broadcast and newsletters are ignored' do
+    %w[status@broadcast 12345@newsletter].each do |jid|
       assert_nil Whatsapp::Ingest.new(@a).message!(wa_message('group', jid: jid))
     end
     assert_equal 1, @a.messages.count
+  end
+
+  test 'group messages land in one group conversation with the sender and skip the queue and agent' do
+    group = '120363401234567890@g.us'
+    gateway = Object.new
+    gateway.define_singleton_method(:group_subject) { |_jid| 'Revendedoras Chase' }
+    first = second = nil
+    @a.stub(:gateway, gateway) do
+      payload = wa_message('g1', jid: group)
+      payload['key']['participant'] = '5511977776666@s.whatsapp.net'
+      first = Whatsapp::Ingest.new(@a).message!(payload)
+      nameless = wa_message('g2', jid: group).merge('pushName' => nil)
+      nameless['key']['participant'] = '123456789012345@lid'
+      nameless['key']['participantAlt'] = '5511966665555@s.whatsapp.net'
+      second = Whatsapp::Ingest.new(@a).message!(nameless)
+    end
+    assert_equal first.conversation_id, second.conversation_id
+    contact = first.conversation.contact
+    assert contact.group?
+    assert_equal 'Revendedoras Chase', contact.display_name
+    assert_nil contact.phone
+    assert_equal 'Cliente Teste', first.sender_name
+    assert_equal '+5511966665555', second.sender_name
+    assert_equal '5511977776666@s.whatsapp.net', first.provider_key['participant']
+    assert_equal 2, first.conversation.unread_count(@agent)
+    assert_nil first.conversation.reload.agent_note
+    assert_enqueued_jobs 0, only: Whatsapp::AgentJob
+    # Contato do participante não vira conversa separada.
+    assert_equal 1, @a.conversations.where.not(id: @conversation.id).count
   end
 
   test 'historical sync does not create unread counts or reopen an ended conversation' do

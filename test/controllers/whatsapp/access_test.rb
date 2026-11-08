@@ -14,6 +14,23 @@ class WhatsappAccessTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test 'groups stay out of the list and of the counters until the Grupos filter is on' do
+    stub_request(:get, /findGroupInfos/).to_return(body: { subject: 'Revendedoras Chase' }.to_json)
+    group = with_provider_env { Whatsapp::Ingest.new(@a).message!(wa_message('g1', jid: '120363401234567890@g.us')).conversation }
+    get whatsapp_conversations_path(format: :json)
+    body = response.parsed_body
+    assert_equal [@conversation.id], body['conversations'].map { |c| c['id'] }
+    assert_equal 1, body['connections'].find { |c| c['id'] == @a.id }['pending_count']
+    get whatsapp_conversations_path(format: :json), params: { groups: '1', state: '' }
+    rows = response.parsed_body['conversations']
+    assert_equal [group.id], rows.map { |c| c['id'] }
+    assert rows.first['group']
+    assert_equal 'Revendedoras Chase', rows.first['name']
+    get whatsapp_conversation_path(group, format: :json)
+    assert_nil response.parsed_body['automation']
+    assert_not response.parsed_body['can_link_customer']
+  end
+
   test 'listing filtering direct history and attachment access are scoped by number' do
     other_message = Whatsapp::Ingest.new(@b).message!(wa_message('b'))
     get whatsapp_conversations_path(format: :json)
