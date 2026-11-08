@@ -33,11 +33,17 @@ module Whatsapp
       def allow_groups
         current = request(:get, "/settings/find/#{instance}")
         current = {} unless current.is_a?(Hash)
-        return if current.key?('groupsIgnore') && current['groupsIgnore'] == false
+        return false if current.key?('groupsIgnore') && current['groupsIgnore'] == false
         settings = { rejectCall: false, msgCall: '', groupsIgnore: false, alwaysOnline: false, readMessages: false,
           readStatus: false, syncFullHistory: false }
         settings.each_key { |k| settings[k] = current[k.to_s] if current.key?(k.to_s) && !current[k.to_s].nil? }
         request(:post, "/settings/set/#{instance}", settings.merge(groupsIgnore: false))
+        true
+      end
+
+      # Todos os grupos em que o número está, direto do WhatsApp (a Evolution não guardou os ignorados).
+      def groups
+        Array(request(:get, "/group/fetchAllGroups/#{instance}?getParticipants=false")).select { |g| g.is_a?(Hash) }
       end
 
       def group_subject(jid)

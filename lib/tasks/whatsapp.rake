@@ -4,6 +4,16 @@ namespace :whatsapp do
     Whatsapp::Recovery.call
   end
 
+  desc 'Traz para o Honey todos os grupos de cada número conectado'
+  task import_groups: :environment do
+    Whatsapp::Connection.find_each do |connection|
+      next unless connection.enabled? && connection.connected?
+      puts "#{connection.name}: #{Whatsapp::GroupImport.call(connection)} grupo(s) novo(s)"
+    rescue Whatsapp::Providers::Evolution::Error => e
+      puts "#{connection.name}: #{e.message}"
+    end
+  end
+
   desc 'Liga contatos só com LID ao número e junta conversas duplicadas (LID x número)'
   task merge_lid_contacts: :environment do
     merged = linked = 0

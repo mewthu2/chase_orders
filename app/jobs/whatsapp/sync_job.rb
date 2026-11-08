@@ -8,7 +8,8 @@ module Whatsapp
       gateway = connection.gateway
       connection.with_lock { Ingest.new(connection).connection!(gateway.state) }
       return unless connection.connected?
-      gateway.allow_groups # números criados antes ignoravam grupos
+      # Números criados antes ignoravam grupos: ao liberar, traz a lista de grupos do WhatsApp.
+      GroupImport.call(connection) if gateway.allow_groups
       from = (connection.last_synced_at || 7.days.ago) - 5.minutes
       to = Time.current
       page = 1

@@ -8,12 +8,16 @@ module Whatsapp
     scope :groups, -> { where('whatsapp_contacts.provider_jid LIKE ?', '%@g.us') }
 
     # Grupo: um contato só, pelo JID do grupo. O nome (assunto) vem da Evolution na primeira mensagem.
-    def self.group!(connection, jid)
+    def self.group!(connection, jid, name: nil)
       raise ArgumentError, 'Grupo inválido' unless Phone.group_jid?(jid)
       contact = ContactAlias.find_by(connection: connection, jid: jid)&.contact ||
                 connection.contacts.find_by(provider_jid: jid) || connection.contacts.create!(provider_jid: jid)
       ContactAlias.find_or_create_by!(connection: connection, jid: jid) { |a| a.contact = contact }
-      contact.refresh_group_name! if contact.name.blank?
+      if name.present?
+        contact.update!(name: name.to_s.truncate(100)) if contact.name != name.to_s.truncate(100)
+      elsif contact.name.blank?
+        contact.refresh_group_name!
+      end
       contact
     end
 

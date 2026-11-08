@@ -112,6 +112,22 @@ class WhatsappIngestTest < ActiveSupport::TestCase
     assert_equal 1, @a.messages.count
   end
 
+  test 'group import brings every group once, named, and later messages reuse it' do
+    gateway = Object.new
+    gateway.define_singleton_method(:groups) do
+      [{ 'id' => '120363411839718288@g.us', 'subject' => 'MEGA LABS & CHASE', 'creation' => 1.week.ago.to_i },
+       { 'id' => 'status@broadcast', 'subject' => 'x' }]
+    end
+    @a.stub(:gateway, gateway) do
+      assert_equal 1, Whatsapp::GroupImport.call(@a)
+      assert_equal 0, Whatsapp::GroupImport.call(@a)
+      message = Whatsapp::Ingest.new(@a).message!(wa_message('g9', jid: '120363411839718288@g.us'))
+      assert_equal 'MEGA LABS & CHASE', message.conversation.contact.name
+    end
+    assert_equal 1, @a.contacts.groups.count
+    assert_equal 1, @a.conversations.where(contact_id: @a.contacts.groups.select(:id)).count
+  end
+
   test 'group messages land in one group conversation with the sender and skip the queue and agent' do
     group = '120363401234567890@g.us'
     gateway = Object.new
