@@ -2078,3 +2078,15 @@ body.honey form:has(> .it-slot__issue) { margin: 0; }
 @keyframes itSlotShine { from { background-position: 200% 0; } to { background-position: 0 0; } }
 @keyframes itSlotPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--st) 60%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
 @media (prefers-reduced-motion: reduce) { body.honey .it-slot, body.honey .it-slot::before, body.honey .it-slot__dot { animation: none; } }
+
+/* Lista de transferências: pílulas das notas fiscais */
+body.honey .it-pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+body.honey .it-pill { --st: var(--green); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap;
+  color: var(--text); background: color-mix(in srgb, var(--st) 13%, transparent); border: 1px solid color-mix(in srgb, var(--st) 35%, transparent);
+  transition: transform var(--t) var(--spring), box-shadow var(--t) var(--ease); }
+body.honey .it-pill i { color: var(--st); }
+body.honey .it-pill small { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+body.honey .it-pill--homologacao { border-style: dashed; }
+body.honey .it-pill.is-wait { --st: var(--yellow); }
+body.honey .it-pill.is-err { --st: var(--red); }
+body.honey .it-pill:hover { color: var(--text); transform: translateY(-1px) scale(1.03); box-shadow: 0 8px 18px -10px var(--st); }

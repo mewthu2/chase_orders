@@ -72,7 +72,7 @@
           <table class="orders-table pg-tbl">
             <thead>
               <tr>
-                <th>Pedido</th><th>Destino</th><th>Origens</th><th class="is-r">Peças</th><th>Etapa</th><th>Status</th><th style="text-align: right">Ações</th>
+                <th>Pedido</th><th>Destino</th><th>Origens</th><th class="is-r">Peças</th><th>Etapa</th><th>Nota fiscal</th><th>Status</th><th style="text-align: right">Ações</th>
               </tr>
             </thead>
             <tbody class="stagger">
@@ -88,6 +88,7 @@
                   <%= hc_td 'Origens' do %><% transfer.shipments.map(&:origin_location).uniq.each do |origin| %><%= hc_location(origin.name, key: origin.slug) %><% end %><% end %>
                   <%= hc_td 'Peças', type: :qty do %><%= hc_qty(transfer.total_quantity) %><% end %>
                   <%= hc_td 'Etapa' do %><%= hc_steps(at, 5, error: error) %><% end %>
+                  <%= hc_td 'Nota fiscal' do %><%= render 'note_pills', transfer: transfer, url: (editable ? edit_internal_transfer_path(transfer, tab: 'nota') : internal_transfer_path(transfer)) %><% end %>
                   <%= hc_td 'Status', sub: ('Aguardando sua ação' if transfer.my_action_needed?(current_user, approver_ids: internal_transfer_approver_ids)) do %><%= hc_status(*statuses[status][0, 2], tip: statuses[status][2]) %><% end %>
                   <td class="td-actions" style="text-align: right" data-label="">
                     <% unless editable %>

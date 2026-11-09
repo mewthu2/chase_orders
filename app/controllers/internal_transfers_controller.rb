@@ -33,7 +33,7 @@ class InternalTransfersController < ApplicationController
     scope = only_my_action(scope) if params[:mine] == '1'
 
     @per_page = PER_PAGE_OPTIONS.include?(params[:per_page].to_i) ? params[:per_page].to_i : PER_PAGE_OPTIONS.first
-    @transfers = scope.includes(:destination_location, shipments: [:origin_location, :items]).paginate(page: params[:page], per_page: @per_page)
+    @transfers = scope.includes(:destination_location, shipments: [:origin_location, :items, :fiscal_notes]).paginate(page: params[:page], per_page: @per_page)
     @filter_locations = Location.where.not(slug: EXCLUDED_LOCATION_SLUGS).order(:name)
     # Só o nome do solicitante: pré-carregar os User faria o Bullet confundir o current_user (quando
     # ele também é solicitante) com um N+1 de profiles.

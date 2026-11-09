@@ -110,6 +110,14 @@ class InternalTransferFiscalNotesControllerTest < ActionDispatch::IntegrationTes
     assert_equal 2, @shipment.items.reload.sum(&:quantity)
   end
 
+  test 'the transfers list shows the notes of each transfer' do
+    issue('homologacao')
+
+    get internal_transfers_path
+
+    assert_select "a.it-pill.is-ok.it-pill--homologacao[href='#{edit_internal_transfer_path(@transfer, tab: 'nota')}']", text: /nº 7.*Homolog/m
+  end
+
   test 'stores of the same company have no transfer note' do
     @lagoa.update_column(:company_id, @bh.company_id)
 

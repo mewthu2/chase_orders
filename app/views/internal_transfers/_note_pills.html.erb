@@ -1,0 +1,17 @@
+<%# Lista: a última nota de cada remessa em cada ambiente, como pílula (verde autorizada, amarela pendente, vermelha recusada). %>
+<% notes = transfer.shipments.flat_map { |shipment| shipment.fiscal_notes.group_by(&:environment).values.map { |list| list.max_by { |n| [n.created_at, n.id] } } } %>
+<% if notes.empty? %>
+  <span class="text-muted-custom">—</span>
+<% else %>
+  <span class="it-pills">
+    <% notes.sort_by { |n| [n.producao? ? 0 : 1, n.number] }.each do |note| %>
+      <% tone = note.autorizada? ? 'ok' : (note.erro? || note.assinada? ? 'wait' : 'err') %>
+      <%= link_to url, class: "it-pill is-#{tone} it-pill--#{note.environment}",
+                  title: "NF-e nº #{note.number} · #{note.environment_label} · #{note.status_label}#{" · #{number_to_currency(note.total_value)}" if note.total_value}" do %>
+        <i class="fas <%= note.autorizada? ? 'fa-file-circle-check' : (tone == 'wait' ? 'fa-hourglass-half' : 'fa-file-circle-xmark') %>"></i>
+        <span>nº <%= note.number %></span>
+        <small><%= note.producao? ? 'Produção' : 'Homolog.' %></small>
+      <% end %>
+    <% end %>
+  </span>
+<% end %>
