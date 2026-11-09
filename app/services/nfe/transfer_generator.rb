@@ -75,7 +75,7 @@ module Nfe
       @nature.cfop_for(company_state: @company.state, recipient_state: recipient[:state])
     end
 
-    # Transferência vai pelo custo do produto; sem custo, pelo preço de venda.
+    # Valor do item na transferência: 80% do preço de venda do produto (sem preço, o custo).
     def build_items(recipient)
       lines = @shipment.items.includes(:product).reject { |item| item.cancelled? || item.failed? }
       missing << 'itens na remessa' if lines.empty?
@@ -85,7 +85,7 @@ module Nfe
         product = line.product
         missing << "NCM do SKU #{product.sku}" if product.ncm.blank?
         price = unit_price(product)
-        missing << "custo ou preço do SKU #{product.sku}" unless price.positive?
+        missing << "preço ou custo do SKU #{product.sku}" unless price.positive?
 
         {
           code: product.sku, description: product.shopify_product_name.presence || product.sku,
@@ -95,11 +95,18 @@ module Nfe
       end
     end
 
+    PRICE_SHARE = BigDecimal('0.8')
+
     def unit_price(product)
-      [product.cost, product.price].each do |value|
-        amount = BigDecimal(value.to_s.tr(',', '.').presence || '0') rescue BigDecimal('0')
-        return amount.round(2) if amount.positive?
-      end
+      price = decimal(product.price)
+      return (price * PRICE_SHARE).round(2) if price.positive?
+
+      decimal(product.cost).round(2)
+    end
+
+    def decimal(value)
+      BigDecimal(value.to_s.tr(',', '.').presence || '0')
+    rescue ArgumentError
       BigDecimal('0')
     end
 

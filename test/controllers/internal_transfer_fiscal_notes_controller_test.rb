@@ -13,7 +13,7 @@ class InternalTransferFiscalNotesControllerTest < ActionDispatch::IntegrationTes
     @admin.profiles << Profile.find(Profile::ADMIN)
     @lagoa = Location.create!(slug: 'lagoa_seca', name: 'Lagoa Seca', shopify_location_id: '111')
     @bh = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '222')
-    @product = Product.create!(sku: 'SKU-A', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001', ncm: '61091000', cost: '20.00')
+    @product = Product.create!(sku: 'SKU-A', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001', ncm: '61091000', cost: '20.00', price: '99.90')
     @bh.update!(company: create_nfe_company(environment: :homologacao, next_nfe_number: 500, next_nfe_number_homologation: 7))
     @lagoa.update!(company: create_nfe_company(legal_name: 'Chase Lagoa Ltda', cnpj: '45.723.174/0001-10', state_registration: '87654321'))
     [@bh, @lagoa].each do |location|
@@ -66,6 +66,13 @@ class InternalTransferFiscalNotesControllerTest < ActionDispatch::IntegrationTes
     follow_redirect!
     assert_select '.it-slot--producao.is-ok', text: /Autorizada.*nº 500/m
     assert_select '.it-tabs [data-it-tab="nota"] .count', text: '2'
+  end
+
+  test 'the item goes on the transfer note at 80% of the sale price' do
+    note = issue('homologacao')
+
+    assert_match(%r{<vUnCom>79.9200</vUnCom>}, note.xml.download)
+    assert_equal BigDecimal('159.84'), note.total_value
   end
 
   test 'a homologation note can be deleted and issued again' do
