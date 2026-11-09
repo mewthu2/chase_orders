@@ -5,14 +5,59 @@ module Whatsapp
     # Figurinha é uma imagem WEBP; vídeo de bolinha (ptv) é um vídeo comum.
     MEDIA_KINDS = { 'imageMessage' => 'image', 'stickerMessage' => 'image', 'documentMessage' => 'document',
       'audioMessage' => 'audio', 'videoMessage' => 'video', 'ptvMessage' => 'video' }.freeze
+    # Avisos sem conteúdo próprio: reação, álbum (as fotos chegam separadas), histórico, enquete votada…
+    SILENT = %w[protocolMessage editedMessage reactionMessage encReactionMessage albumMessage messageHistoryNotice
+      pollUpdateMessage keepInChatMessage pinInChatMessage senderKeyDistributionMessage].freeze
+    WRAPPERS = %w[ephemeralMessage viewOnceMessage viewOnceMessageV2 viewOnceMessageV2Extension documentWithCaptionMessage].freeze
+
+    def self.unwrap(message)
+      raw = message.is_a?(Hash) ? message : {}
+      WRAPPERS.each { |wrapper| raw = raw.dig(wrapper, 'message') || raw }
+      raw
+    end
+
+    # [kind, media, text]; kind nil quando é só um aviso que não vira balão.
+    def self.content(raw)
+      kind, media = MEDIA_KINDS.filter_map { |field, k| [k, raw[field]] if raw[field].is_a?(Hash) }.first
+      text = media&.dig('caption') || text_of(raw)
+      return [kind, media, text] if kind
+      return ['text', nil, text] if text.present?
+      [raw.keys.any? { |k| SILENT.include?(k) } ? nil : 'unsupported', nil, nil]
+    end
+
+    def self.text_of(raw)
+      template = raw['templateMessage'] || {}
+      poll = raw['pollCreationMessage'] || raw['pollCreationMessageV2'] || raw['pollCreationMessageV3']
+      location = raw['locationMessage'] || raw['liveLocationMessage']
+      contacts = raw.dig('contactsArrayMessage', 'contacts')
+      raw['conversation'].presence || raw.dig('extendedTextMessage', 'text').presence ||
+        template.dig('interactiveMessageTemplate', 'body', 'text').presence ||
+        template.dig('hydratedTemplate', 'hydratedContentText').presence ||
+        template.dig('hydratedFourRowTemplate', 'hydratedContentText').presence ||
+        raw.dig('interactiveMessage', 'body', 'text').presence ||
+        raw.dig('buttonsMessage', 'contentText').presence ||
+        raw.dig('listMessage', 'description').presence ||
+        raw.dig('buttonsResponseMessage', 'selectedDisplayText').presence ||
+        raw.dig('templateButtonReplyMessage', 'selectedDisplayText').presence ||
+        raw.dig('listResponseMessage', 'title').presence ||
+        raw.dig('interactiveResponseMessage', 'body', 'text').presence ||
+        (poll && "📊 Enquete: #{poll['name']}\n#{Array(poll['options']).map { |o| "• #{o['optionName']}" }.join("\n")}".strip) ||
+        (raw['contactMessage'] && "👤 Contato: #{raw.dig('contactMessage', 'displayName')}") ||
+        (contacts && "👤 Contatos: #{contacts.map { |c| c['displayName'] }.compact.join(', ')}") ||
+        (location && "📍 Localização: #{[location['name'], location['address']].compact_blank.join(' – ').presence ||
+          "https://maps.google.com/?q=#{location['degreesLatitude']},#{location['degreesLongitude']}"}")
+    end
+
     def initialize(connection) = @connection = connection
 
     def message!(data, historical: false, outgoing: nil)
       return unless data.is_a?(Hash)
       key = data['key'] || {}
       return unless Phone.chat_jid?(key['remoteJid']) && key['id'].to_s.match?(/\A[\w.:-]{1,191}\z/)
-      # Edição/exclusão chegam como mensagem de protocolo: não viram balão "não suportado".
-      return if data['message'].is_a?(Hash) && (data['message'].key?('protocolMessage') || data['message'].key?('editedMessage'))
+      raw = self.class.unwrap(data['message'])
+      # Edição/exclusão, reação, álbum etc. não viram balão "não suportado".
+      kind, media, text = self.class.content(raw)
+      return unless kind
       # Called under the connection lock by webhook, sync, or send workers.
       existing = @connection.messages.find_by(provider_id: key['id'])
       if existing
@@ -36,13 +81,6 @@ module Whatsapp
         contact = Contact.resolve!(@connection, key, name: key['fromMe'] ? nil : data['pushName'])
         conversation = @connection.conversations.find_or_create_by!(contact: contact)
       end
-      raw = data['message'].is_a?(Hash) ? data['message'] : {}
-      %w[ephemeralMessage viewOnceMessage viewOnceMessageV2 documentWithCaptionMessage].each do |wrapper|
-        raw = raw.dig(wrapper, 'message') || raw
-      end
-      kind, media = MEDIA_KINDS.filter_map { |field, k| [k, raw[field]] if raw[field].is_a?(Hash) }.first
-      text = raw['conversation'] || raw.dig('extendedTextMessage', 'text') || media&.dig('caption')
-      kind ||= text.present? ? 'text' : 'unsupported'
       timestamp = data['messageTimestamp'].to_i
       time = timestamp.positive? && timestamp <= 5.minutes.from_now.to_i ? Time.at(timestamp).utc : Time.current
       message = outgoing || conversation.messages.new(connection: @connection)

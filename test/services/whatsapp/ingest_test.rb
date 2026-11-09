@@ -216,6 +216,35 @@ class WhatsappIngestTest < ActiveSupport::TestCase
   end
 
 
+  test 'reactions, albums and history notices do not become unsupported bubbles' do
+    [{ 'reactionMessage' => { 'text' => '❤️', 'key' => { 'id' => 'x' } }, 'messageContextInfo' => {} },
+     { 'albumMessage' => { 'expectedImageCount' => 2 } },
+     { 'messageHistoryNotice' => {}, 'messageContextInfo' => {} }].each_with_index do |raw, i|
+      payload = wa_message("silent-#{i}")
+      payload['message'] = raw
+      assert_nil Whatsapp::Ingest.new(@a).message!(payload)
+    end
+    assert_equal 1, @a.messages.count
+  end
+
+  test 'template, button, poll and location messages show their text' do
+    {
+      { 'templateMessage' => { 'interactiveMessageTemplate' => { 'body' => { 'text' => 'Seu cashback: R$ 10' } } } } => 'Seu cashback: R$ 10',
+      { 'templateMessage' => { 'hydratedTemplate' => { 'hydratedContentText' => 'Pedido enviado' } } } => 'Pedido enviado',
+      { 'buttonsResponseMessage' => { 'selectedDisplayText' => 'Sim' } } => 'Sim',
+      { 'pollCreationMessageV3' => { 'name' => 'Cor?', 'options' => [{ 'optionName' => 'Azul' }] } } => "📊 Enquete: Cor?\n• Azul",
+      { 'locationMessage' => { 'degreesLatitude' => -19.9, 'degreesLongitude' => -43.9 } } => '📍 Localização: https://maps.google.com/?q=-19.9,-43.9'
+    }.each_with_index do |(raw, text), i|
+      payload = wa_message("rich-#{i}")
+      payload['message'] = { 'messageContextInfo' => {} }.merge(raw)
+      message = Whatsapp::Ingest.new(@a).message!(payload)
+      assert_equal ['text', text], [message.kind, message.body]
+    end
+    payload = wa_message('odd')
+    payload['message'] = { 'someFutureMessage' => {} }
+    assert_equal 'unsupported', Whatsapp::Ingest.new(@a).message!(payload).kind
+  end
+
   test 'videos, video notes and stickers arrive as viewable media' do
     { 'videoMessage' => 'video', 'ptvMessage' => 'video', 'stickerMessage' => 'image' }.each do |field, kind|
       payload = wa_message("media-#{field}")
