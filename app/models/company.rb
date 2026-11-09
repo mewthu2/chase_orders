@@ -68,14 +68,20 @@ class Company < ApplicationRecord
     active? && %i[valid expiring].include?(certificate_status)
   end
 
-  # Cada ambiente tem a sua numeração; a nota usa a do ambiente em que a empresa está agora.
-  def current_nfe_number
-    homologacao? ? next_nfe_number_homologation : next_nfe_number
+  # Cada ambiente tem a sua numeração; sem ambiente, vale o que a empresa está usando agora.
+  def current_nfe_number(env = environment)
+    env.to_s == 'homologacao' ? next_nfe_number_homologation : next_nfe_number
   end
 
-  def advance_nfe_number!(used_number)
-    column = homologacao? ? :next_nfe_number_homologation : :next_nfe_number
-    update_column(column, used_number + 1)
+  def advance_nfe_number!(used_number, env = environment)
+    update_column(nfe_number_column(env), used_number + 1)
+  end
+
+  # Devolve o número de uma nota que nunca valeu na SEFAZ (excluída sem ter sido autorizada), se ela
+  # era a última emitida no ambiente: assim a próxima nota não deixa buraco na numeração.
+  def release_nfe_number!(number, env)
+    column = nfe_number_column(env)
+    update_column(column, number) if self[column] == number + 1
   end
 
   def environment_label
@@ -102,6 +108,10 @@ class Company < ApplicationRecord
   end
 
   private
+
+  def nfe_number_column(env)
+    env.to_s == 'homologacao' ? :next_nfe_number_homologation : :next_nfe_number
+  end
 
   def apply_location
     Location.where(company_id: id).where.not(id: @location_choice).update_all(company_id: nil)

@@ -69,10 +69,12 @@ class InternalTransfersController < ApplicationController
     load_approvers
   end
 
-  # A edição também mostra a aprovação, para a transferência ter uma tela só enquanto está aberta.
+  # A edição também mostra a aprovação, para a transferência ter uma tela só enquanto está aberta,
+  # e tem duas abas: Pedido (o formulário) e Nota fiscal (NF-e de cada remessa, homologação e produção).
   def edit
     load_approvers
     prepare_form
+    load_fiscal_tab
   end
 
   def update
@@ -80,7 +82,16 @@ class InternalTransfersController < ApplicationController
     @transfer.assign_attributes(header_params)
     # Salvar sem mudar destino nem itens (só observação, ou nada) não mexe nas remessas nem na aprovação:
     # antes, qualquer "Salvar alterações" devolvia a transferência aprovada para a fila de aprovação.
-    unless approval_signature(@transfer, rows: item_rows) == before
+    items_changed = approval_signature(@transfer, rows: item_rows) != before
+    # Mudar os itens recria as remessas, e a nota emitida é da remessa: exclui a nota antes.
+    if items_changed && @transfer.shipments.any? { |shipment| shipment.fiscal_notes.exists? }
+      @transfer.errors.add(:base, 'Esta transferência já tem nota fiscal emitida. Exclua as notas na aba Nota fiscal antes de mudar a loja de destino ou os itens.')
+      load_approvers
+      prepare_form
+      load_fiscal_tab
+      return render :edit, status: :unprocessable_entity
+    end
+    if items_changed
       @transfer.shipments.each(&:mark_for_destruction)
       build_shipments(@transfer)
     end
@@ -94,6 +105,7 @@ class InternalTransfersController < ApplicationController
     else
       load_approvers
       prepare_form
+      load_fiscal_tab
       render :edit, status: :unprocessable_entity
     end
   end
@@ -191,6 +203,15 @@ class InternalTransfersController < ApplicationController
               InternalTransfer
             end
     @transfer = scope.find(params[:id])
+  end
+
+  # Remessas com empresas e notas para a aba Nota fiscal; `@tab` diz qual aba abre.
+  def load_fiscal_tab
+    @tab = params[:tab] == 'nota' ? 'nota' : 'pedido'
+    shipments = @transfer.shipments.reject(&:marked_for_destruction?).select(&:persisted?)
+    ActiveRecord::Associations::Preloader.new(records: shipments, associations: [{ origin_location: :company }, :fiscal_notes]).call
+    ActiveRecord::Associations::Preloader.new(records: [@transfer], associations: { destination_location: :company }).call
+    @fiscal_shipments = shipments.sort_by { |shipment| shipment.origin_location.name }
   end
 
   def load_approvers

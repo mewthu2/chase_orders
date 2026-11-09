@@ -118,9 +118,18 @@ class Nfe::TransmitterTest < ActiveSupport::TestCase
     assert @note.reload.assinada?
   end
 
-  test 'refuses to transmit when the company switched environment after the note was signed' do
+  test 'talks to the environment of the note even after the company switched environment' do
     @company.update_column(:environment, Company.environments[:producao])
-    assert_raises(Nfe::Transmitter::Error) { Nfe::Transmitter.call(@note.reload, client: FakeClient.new, wait: 0) }
+    stub_request(:post, 'https://hnfe.fazenda.mg.gov.br/nfe2/services/NFeAutorizacao4').to_return(
+      status: 200,
+      body: '<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body>' \
+            '<nfeResultMsg xmlns="http://www.portalfiscal.inf.br/nfe/wsdl/NFeAutorizacao4">' \
+            "#{ret_envi('104', 'Lote processado', prot('100', 'Autorizado'))}</nfeResultMsg></soap:Body></soap:Envelope>"
+    )
+
+    Nfe::Transmitter.call(@note.reload, wait: 0)
+
+    assert @note.reload.autorizada?
   end
 
   test 'client posts the SOAP envelope to the authorizer of the company state with mutual TLS' do

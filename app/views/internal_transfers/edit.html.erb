@@ -1,4 +1,5 @@
 <% content_for :title, "Editar Transferência Interna" %>
+<% authorized_notes = @fiscal_shipments.sum { |shipment| shipment.fiscal_notes.count(&:autorizada?) } %>
 <div class="users-container">
   <div class="page-header">
     <div class="header-left has-icon">
@@ -15,5 +16,54 @@
     </div>
   </div>
   <%= render 'approval', transfer: @transfer, approvers: @approvers %>
-  <%= render 'form' %>
+
+  <div class="scope-tabs it-tabs" role="tablist">
+    <span class="scope-indicator"></span>
+    <%= link_to edit_internal_transfer_path(@transfer, tab: 'pedido'), class: "scope-tab#{' is-active' if @tab == 'pedido'}", role: 'tab',
+                'aria-selected': @tab == 'pedido', data: { it_tab: 'pedido' } do %><i class="fas fa-box-open"></i>Pedido<% end %>
+    <%= link_to edit_internal_transfer_path(@transfer, tab: 'nota'), class: "scope-tab#{' is-active' if @tab == 'nota'}", role: 'tab',
+                'aria-selected': @tab == 'nota', data: { it_tab: 'nota' } do %>
+      <i class="fas fa-file-invoice"></i>Nota fiscal<% if authorized_notes.positive? %><span class="count"><%= authorized_notes %></span><% end %>
+    <% end %>
+  </div>
+
+  <div data-it-panel="pedido" <%= 'hidden' unless @tab == 'pedido' %>>
+    <%= render 'form' %>
+  </div>
+  <div data-it-panel="nota" <%= 'hidden' unless @tab == 'nota' %>>
+    <%= render 'fiscal_tab' %>
+  </div>
 </div>
+
+<% content_for :scripts do %>
+<script>
+// Abas Pedido / Nota fiscal: troca sem recarregar (o formulário não perde o que foi digitado) e guarda a aba na URL.
+document.addEventListener('DOMContentLoaded', function () {
+  var tabs = document.querySelector('.it-tabs');
+  if (!tabs) return;
+  var indicator = tabs.querySelector('.scope-indicator');
+
+  function place(tab) {
+    indicator.style.left = tab.offsetLeft + 'px';
+    indicator.style.width = tab.offsetWidth + 'px';
+  }
+
+  tabs.querySelectorAll('[data-it-tab]').forEach(function (tab) {
+    tab.addEventListener('click', function (event) {
+      event.preventDefault();
+      var key = tab.dataset.itTab;
+      tabs.querySelectorAll('[data-it-tab]').forEach(function (other) {
+        var on = other === tab;
+        other.classList.toggle('is-active', on);
+        other.setAttribute('aria-selected', on);
+      });
+      document.querySelectorAll('[data-it-panel]').forEach(function (panel) { panel.hidden = panel.dataset.itPanel !== key; });
+      place(tab);
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', key);
+      window.history.replaceState(null, '', url);
+    });
+  });
+});
+</script>
+<% end %>

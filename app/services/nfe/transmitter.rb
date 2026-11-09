@@ -24,13 +24,13 @@ module Nfe
     def initialize(note, consult: false, client: nil, wait: RECEIPT_WAIT)
       @note = note
       @consult = consult
-      @client = client || Sefaz::Client.new(note.company)
+      # Fala com a SEFAZ no ambiente da nota, mesmo que a empresa já tenha trocado de ambiente.
+      @client = client || Sefaz::Client.new(note.company, environment: note.environment)
       @wait = wait
     end
 
     def call
       raise Error, 'A nota não tem XML assinado.' unless @note.xml_available?
-      raise Error, 'A empresa da nota está em outro ambiente agora; volte o ambiente para transmitir.' if environment_mismatch?
       raise Error, 'Esta nota não pode ser transmitida.' unless @consult || @note.transmittable?
 
       @consult ? consult_by_key : authorize
@@ -41,10 +41,6 @@ module Nfe
     end
 
     private
-
-    def environment_mismatch?
-      @note.environment != @note.company.environment
-    end
 
     def signed_nfe
       @signed_nfe ||= begin

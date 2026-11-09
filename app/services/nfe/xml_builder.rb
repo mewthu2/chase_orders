@@ -42,8 +42,10 @@ module Nfe
     # tax: regras de tributação (OperationNature#tax_rules); sem ela valem as situações cadastradas na empresa.
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
-                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil)
+                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil)
       @company = company
+      # Ambiente da nota; sem ele, o da empresa.
+      @environment = (environment || company.environment).to_s
       @ibs_cbs_exempt = ibs_cbs_exempt
       @tax = tax || { icms_situation: company.icms_situation, pis_cst: company.pis_cst, cofins_cst: company.cofins_cst }
       @fisco_info = fisco_info
@@ -90,7 +92,7 @@ module Nfe
     private
 
     def homologation?
-      @company.homologacao?
+      @environment == 'homologacao'
     end
 
     def validate!

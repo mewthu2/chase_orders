@@ -2,7 +2,8 @@
 class InternalTransferEvent < ApplicationRecord
   ACTION_LABELS = {
     'created' => 'Transferência criada', 'approved' => 'Aprovada', 'updated' => 'Editada', 'rejected' => 'Reprovada', 'reserved' => 'Itens reservados', 'reservation_failed' => 'Falha ao reservar',
-    'shipped' => 'Marcada como enviada', 'received' => 'Recebida', 'cancelled' => 'Cancelada'
+    'shipped' => 'Marcada como enviada', 'received' => 'Recebida', 'cancelled' => 'Cancelada',
+    'fiscal_note_issued' => 'Nota fiscal emitida', 'fiscal_note_deleted' => 'Nota fiscal excluída'
   }.freeze
 
   belongs_to :internal_transfer

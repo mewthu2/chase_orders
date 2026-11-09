@@ -1,0 +1,60 @@
+<%# Aba Nota fiscal da edição: por remessa (loja de origem), uma vaga de homologação e uma de produção. %>
+<div class="callout it-fiscal-intro">
+  <i class="fas fa-circle-info"></i>
+  <div>
+    Cada loja de origem é uma remessa e tem a <strong>própria nota</strong>: a empresa da loja de origem emite para a empresa da loja de destino, direto na SEFAZ.
+    Dá para ter uma nota de <strong>homologação</strong> (teste, sem valor fiscal) e uma de <strong>produção</strong> por remessa; excluindo a nota, dá para emitir outra.
+    Se já houver nota de produção autorizada, ela é usada quando a remessa for enviada.
+  </div>
+</div>
+
+<% if @fiscal_shipments.empty? %>
+  <div class="callout is-warn"><i class="fas fa-box-open"></i><div>Salve os itens da transferência na aba Pedido para emitir a nota.</div></div>
+<% end %>
+
+<div class="it-fiscal-list stagger">
+  <% @fiscal_shipments.each do |shipment| %>
+    <% origin_company = shipment.origin_location.company %>
+    <% destination_company = @transfer.destination_location.company %>
+    <% units = shipment.items.reject { |item| item.cancelled? || item.failed? }.sum(&:quantity) %>
+    <%
+      blocker =
+        if origin_company.nil? || destination_company.nil?
+          missing = [(shipment.origin_location.name if origin_company.nil?), (@transfer.destination_location.name if destination_company.nil?)].compact
+          "#{missing.to_sentence} ainda #{missing.size == 1 ? 'não está ligada' : 'não estão ligadas'} a uma empresa (Empresas → Loja desta empresa)."
+        elsif origin_company.id == destination_company.id
+          "As duas lojas são da mesma empresa (#{origin_company.legal_name}): não há nota de transferência."
+        elsif !origin_company.ready_to_issue?
+          "A empresa #{origin_company.legal_name} não está ativa ou está sem certificado digital válido."
+        elsif OperationNature.default_for(origin_company, :transfer).nil?
+          "Vincule uma natureza de operação de transferência à empresa #{origin_company.legal_name} (Empresas → Naturezas de operação)."
+        elsif shipment.cancelado?
+          'Esta remessa foi cancelada.'
+        end
+    %>
+    <section class="it-fiscal-card">
+      <header class="it-fiscal-card__head">
+        <span class="transfer-note__route">
+          <span><small>Origem</small> <strong><%= shipment.origin_location.name %></strong><%= " · #{Nfe::Cnpj.format(origin_company.cnpj)}" if origin_company %></span>
+          <i class="fas fa-arrow-right"></i>
+          <span><small>Destino</small> <strong><%= @transfer.destination_location.name %></strong><%= " · #{Nfe::Cnpj.format(destination_company.cnpj)}" if destination_company %></span>
+        </span>
+        <span class="it-fiscal-card__meta"><i class="fas fa-cubes"></i><%= pluralize(units, 'unidade', plural: 'unidades') %> · remessa <%= shipment.status_label.downcase %></span>
+      </header>
+
+      <% if blocker && shipment.fiscal_notes.empty? %>
+        <div class="callout is-warn mb-0"><i class="fas fa-building-circle-exclamation"></i><div>
+          <%= blocker %>
+          <% if blocker.include?('Empresas') && screen_can?(:companies, :edit) %><%= link_to 'Abrir Empresas', companies_path %><% end %>
+        </div></div>
+      <% else %>
+        <div class="it-fiscal-slots">
+          <% %w[homologacao producao].each do |env| %>
+            <%= render 'fiscal_slot', shipment: shipment, env: env, company: origin_company, blocker: blocker,
+                                      note: shipment.fiscal_notes.select { |n| n.environment == env }.max_by { |n| [n.created_at, n.id] } %>
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+  <% end %>
+</div>

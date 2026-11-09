@@ -4,6 +4,8 @@ module Nfe
   # Usa a natureza de transferência vinculada à empresa (a marcada como padrão, se houver mais de uma):
   # dela vêm a descrição, o CFOP e a tributação.
   # Se a última nota da remessa foi rejeitada pela SEFAZ, reaproveita o número dela.
+  # environment: homologação ou produção (sem ele, o ambiente atual da empresa). Cada remessa tem no
+  # máximo uma nota ativa por ambiente, cada uma com a numeração do seu ambiente.
   class TransferGenerator
     class Error < StandardError; end
 
@@ -11,8 +13,11 @@ module Nfe
       new(**args).call
     end
 
-    def initialize(shipment:, company:, recipient_company:)
+    def initialize(shipment:, company:, recipient_company:, environment: nil)
       @shipment = shipment
+      @environment = (environment.presence || company.environment).to_s
+      raise ArgumentError, "ambiente inválido: #{@environment}" unless FiscalNote.environments.key?(@environment)
+
       @transfer = shipment.internal_transfer
       @company = company
       @recipient_company = recipient_company
@@ -39,14 +44,18 @@ module Nfe
     end
 
     def notes
-      @shipment.fiscal_notes.where(company: @company, environment: @company.environment)
+      @shipment.fiscal_notes.where(company: @company, environment: @environment)
     end
 
     def ensure_can_issue!
       raise Error, "A empresa #{@company.legal_name} não está ativa ou não tem certificado digital válido." unless @company.ready_to_issue?
       raise Error, "Vincule uma natureza de operação de transferência à empresa #{@company.legal_name} (Empresas → Naturezas de operação)." unless @nature
-      raise Error, 'Já existe nota fiscal ativa para esta remessa.' if notes.active_statuses.exists?
+      raise Error, "Já existe nota fiscal de #{environment_label} ativa para esta remessa." if notes.active_statuses.exists?
       raise Error, 'A última nota desta remessa ficou sem resposta da SEFAZ. Consulte-a antes de emitir outra.' if notes.erro.exists?
+    end
+
+    def environment_label
+      @environment == 'homologacao' ? 'homologação' : 'produção'
     end
 
     def build_recipient
@@ -117,20 +126,20 @@ module Nfe
 
     def create_note(recipient, items)
       reused = reusable_note
-      number = reused&.number || @company.current_nfe_number
+      number = reused&.number || @company.current_nfe_number(@environment)
       issued_at = Time.current
       result = XmlBuilder.new(
         company: @company, recipient: recipient, items: items, number: number, series: @company.nfe_series,
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature&.purpose || 1, final_consumer: false,
         tax: @nature&.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
         additional_info: additional_info, ibs_cbs_exempt: XmlBuilder::IBS_CBS_TRANSFER,
-        fisco_info: @nature&.fisco_notes_for(**note_context)
+        fisco_info: @nature&.fisco_notes_for(**note_context), environment: @environment
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 
       note = reused || FiscalNote.new(company: @company, number: number, series: @company.nfe_series)
       note.assign_attributes(
-        internal_transfer_shipment: @shipment, access_key: result.access_key, environment: @company.environment,
+        internal_transfer_shipment: @shipment, access_key: result.access_key, environment: @environment,
         operation_nature_id: @nature&.id, operation_nature: operation_nature,
         cfop_summary: items.map { |i| i[:cfop] }.uniq.join(', '), status: :assinada, total_value: result.total,
         issued_at: issued_at, protocol: nil, error_message: nil, sefaz_status_code: nil, sefaz_message: nil,
@@ -138,7 +147,7 @@ module Nfe
       )
       note.save!
       note.xml.attach(io: StringIO.new(signed_xml), filename: "NFe#{result.access_key}.xml", content_type: 'application/xml')
-      @company.advance_nfe_number!(number) unless reused
+      @company.advance_nfe_number!(number, @environment) unless reused
       note
     end
   end

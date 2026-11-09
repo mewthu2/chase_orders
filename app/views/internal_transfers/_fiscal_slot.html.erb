@@ -1,0 +1,73 @@
+<%# Vaga de um ambiente (homologação ou produção) na remessa: a última nota dele, com as ações, ou o botão de emitir. %>
+<% production = env == 'producao' %>
+<% transfer = shipment.internal_transfer %>
+<% can_issue = blocker.nil? && (note.nil? || note.rejeitada? || note.cancelada?) && !note&.denied? %>
+<% tone = if note.nil? then 'idle'
+          elsif note.autorizada? then 'ok'
+          elsif note.erro? || note.assinada? then 'wait'
+          else 'err'
+          end %>
+<div class="it-slot it-slot--<%= env %> is-<%= tone %>">
+  <div class="it-slot__head">
+    <span class="it-slot__env">
+      <i class="fas <%= production ? 'fa-landmark' : 'fa-flask' %>"></i><%= production ? 'Produção' : 'Homologação' %>
+    </span>
+    <small><%= production ? 'Vale como documento fiscal' : 'Teste, sem valor fiscal' %></small>
+  </div>
+
+  <% if note %>
+    <div class="it-slot__status">
+      <span class="it-slot__dot"></span>
+      <strong><%= note.status_label %></strong>
+      <span>NF-e nº <%= note.number %> · série <%= note.series %></span>
+    </div>
+    <dl class="it-slot__facts">
+      <div><dt>Valor</dt><dd><%= number_to_currency(note.total_value) %></dd></div>
+      <div><dt><%= note.autorizada? ? 'Autorizada em' : 'Emitida em' %></dt><dd><%= (note.authorized_at || note.issued_at || note.created_at)&.in_time_zone&.strftime('%d/%m/%Y %H:%M') %></dd></div>
+      <% if note.protocol.present? %><div><dt>Protocolo</dt><dd><%= note.protocol %></dd></div><% end %>
+      <% if note.access_key.present? %><div class="is-wide"><dt>Chave</dt><dd class="it-slot__key"><%= note.access_key.scan(/.{1,4}/).join(' ') %></dd></div><% end %>
+    </dl>
+    <% if note.rejeitada? || note.erro? %>
+      <p class="it-slot__msg"><i class="fas fa-triangle-exclamation"></i><%= note.error_message.presence || note.sefaz_message %></p>
+    <% elsif note.assinada? %>
+      <p class="it-slot__msg"><i class="fas fa-paper-plane"></i>Assinada, mas ainda não chegou à SEFAZ.</p>
+    <% end %>
+
+    <div class="it-slot__actions">
+      <% if note.xml_available? && screen_can?(:fiscal_notes, :export) %>
+        <%= link_to danfe_fiscal_note_path(note), class: 'it-slot__link', target: '_blank', rel: 'noopener' do %><i class="fas fa-file-pdf"></i>DANFE<% end %>
+        <%= link_to xml_fiscal_note_path(note), class: 'it-slot__link' do %><i class="fas fa-file-code"></i>XML<% end %>
+      <% end %>
+      <% if screen_can?(:fiscal_notes) %>
+        <%= link_to fiscal_note_path(note), class: 'it-slot__link' do %><i class="fas fa-up-right-from-square"></i>Abrir nota<% end %>
+      <% end %>
+      <% if note.assinada? || note.erro? %>
+        <%= button_to transmit_internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :post, class: 'btn-back btn-sm' do %>
+          <i class="fas <%= note.erro? ? 'fa-magnifying-glass' : 'fa-paper-plane' %> me-1"></i><%= note.erro? ? 'Consultar na SEFAZ' : 'Enviar para a SEFAZ' %>
+        <% end %>
+      <% end %>
+      <% if note.deletable? %>
+        <%= button_to internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :delete, class: 'it-slot__delete',
+                      form: { data: { turbo_confirm: "Excluir a NF-e nº #{note.number} de #{production ? 'produção' : 'homologação'}? Depois dá para emitir outra." } } do %>
+          <i class="fas fa-trash"></i>Excluir
+        <% end %>
+      <% else %>
+        <span class="it-slot__locked" title="<%= note.undeletable_reason %>"><i class="fas fa-lock"></i><%= note.undeletable_reason %></span>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="it-slot__empty">Nenhuma nota de <%= production ? 'produção' : 'homologação' %> nesta remessa.</p>
+  <% end %>
+
+  <% if can_issue %>
+    <% number = note&.rejeitada? ? note.number : company.current_nfe_number(env) %>
+    <%= button_to internal_transfer_shipment_fiscal_notes_path(transfer, shipment), method: :post, params: { environment: env },
+                  class: production ? 'btn-export it-slot__issue' : 'btn-back it-slot__issue',
+                  form: { data: { turbo_confirm: (production ? "Emitir a NF-e nº #{number} (série #{company.nfe_series}) de PRODUÇÃO? Ela vale como documento fiscal e é autorizada na SEFAZ agora." : nil) } } do %>
+      <i class="fas <%= note ? 'fa-rotate-right' : 'fa-file-circle-plus' %> me-1"></i><%= note ? 'Emitir de novo' : "Emitir nota de #{production ? 'produção' : 'homologação'}" %>
+      <small>nº <%= number %> · série <%= company.nfe_series %></small>
+    <% end %>
+  <% elsif note.nil? && blocker %>
+    <p class="it-slot__empty"><%= blocker %></p>
+  <% end %>
+</div>

@@ -18,8 +18,10 @@ module Nfe
       # Os servidores da SEFAZ usam certificados da ICP-Brasil, que não vêm no repositório padrão de CAs.
       ICP_BRASIL_ROOTS = Rails.root.join('config/certs/icp_brasil_roots.pem').to_s.freeze
 
-      def initialize(company)
+      # environment: o da nota (pode ser diferente do que a empresa está usando agora).
+      def initialize(company, environment: company.environment)
         @company = company
+        @environment = environment.to_s
       end
 
       # signed_nfe: o XML da NFe assinada, sem declaração <?xml?>.
@@ -42,7 +44,7 @@ module Nfe
       private
 
       def tp_amb
-        @company.homologacao? ? '2' : '1'
+        @environment == 'homologacao' ? '2' : '1'
       end
 
       def strip_declaration(xml)
@@ -51,7 +53,7 @@ module Nfe
 
       def call(service, payload)
         wsdl, action = OPERATIONS.fetch(service)
-        uri = URI(Webservices.url(@company.state, @company.environment, service))
+        uri = URI(Webservices.url(@company.state, @environment, service))
         envelope = '<?xml version="1.0" encoding="utf-8"?>' \
                    '<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">' \
                    "<soap12:Body><nfeDadosMsg xmlns=\"#{WSDL_NS}#{wsdl}\">#{payload}</nfeDadosMsg></soap12:Body>" \

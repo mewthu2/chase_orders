@@ -2026,3 +2026,55 @@ body.honey .transfer-note__route > i { animation: transferRouteNudge 1.4s ease-i
 .nature-pick-body small { font-size: 12px; color: var(--text-3); }
 .nature-pick-tag { font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--green-bg); color: var(--green); }
 .nature-pick-warn { color: var(--yellow) !important; }
+
+/* Edição da Transferência Interna: abas Pedido / Nota fiscal e vagas de NF-e (homologação e produção) por remessa */
+body.honey .it-tabs { margin-bottom: 18px; }
+body.honey .it-fiscal-list { display: grid; gap: 16px; }
+body.honey .it-fiscal-card { padding: 16px 18px 18px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); }
+body.honey .it-fiscal-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
+body.honey .it-fiscal-card__head .transfer-note__route { margin: 0; }
+body.honey .it-fiscal-card__head .transfer-note__route > span { background: var(--surface-3); }
+body.honey .it-fiscal-card__meta { display: inline-flex; align-items: center; gap: 7px; color: var(--text-3); font-size: 12.5px; }
+body.honey .it-fiscal-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { body.honey .it-fiscal-slots { grid-template-columns: 1fr; } }
+
+body.honey .it-slot { --env: var(--yellow); --st: var(--text-3); position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px 16px 14px; border-radius: var(--r); overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--env) 9%, transparent), transparent 55%), var(--surface-2, var(--surface)); border: 1px solid color-mix(in srgb, var(--env) 26%, var(--border));
+  transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), border-color var(--t) var(--ease); animation: fadeUp .4s var(--ease-out) both; }
+body.honey .it-slot--producao { --env: var(--green); animation-delay: 70ms; }
+body.honey .it-slot::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--env), transparent); background-size: 200% 100%; animation: itSlotShine 3.2s linear infinite; }
+body.honey .it-slot:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--env) 50%, var(--border)); box-shadow: 0 16px 34px -22px color-mix(in srgb, var(--env) 80%, transparent); }
+body.honey .it-slot.is-ok { --st: var(--green); }
+body.honey .it-slot.is-wait { --st: var(--yellow); }
+body.honey .it-slot.is-err { --st: var(--red); }
+body.honey .it-slot__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+body.honey .it-slot__env { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--env); }
+body.honey .it-slot__env i { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; background: color-mix(in srgb, var(--env) 16%, transparent); transition: transform var(--t) var(--spring); }
+body.honey .it-slot:hover .it-slot__env i { transform: rotate(-8deg) scale(1.08); }
+body.honey .it-slot__head small { color: var(--text-3); font-size: 11.5px; }
+body.honey .it-slot__status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14px; }
+body.honey .it-slot__status strong { color: var(--st); }
+body.honey .it-slot__status span:last-child { color: var(--text-2); }
+body.honey .it-slot__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--st); box-shadow: 0 0 0 0 color-mix(in srgb, var(--st) 60%, transparent); animation: itSlotPulse 1.8s ease-out infinite; }
+body.honey .it-slot.is-ok .it-slot__dot { animation-iteration-count: 2; }
+body.honey .it-slot__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin: 0; }
+body.honey .it-slot__facts .is-wide { grid-column: 1 / -1; }
+body.honey .it-slot__facts dt { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+body.honey .it-slot__facts dd { margin: 1px 0 0; color: var(--text); font-size: 13px; }
+body.honey .it-slot__key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px !important; word-break: break-all; }
+body.honey .it-slot__msg { display: flex; gap: 8px; margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; color: var(--text-2); background: color-mix(in srgb, var(--st) 10%, transparent); border: 1px solid color-mix(in srgb, var(--st) 25%, transparent); }
+body.honey .it-slot__msg i { color: var(--st); margin-top: 2px; }
+body.honey .it-slot__empty { margin: 0; color: var(--text-3); font-size: 13px; }
+body.honey .it-slot__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: auto; }
+body.honey .it-slot__actions form { margin: 0; }
+body.honey .it-slot__link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; text-decoration: none; }
+body.honey .it-slot__link:hover { text-decoration: underline; }
+body.honey .it-slot__delete { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-3); background: transparent; border: 1px solid var(--border); transition: color var(--t), background-color var(--t), border-color var(--t); }
+body.honey .it-slot__delete:hover { color: #ff8a82; background: var(--red-bg); border-color: rgba(248,81,73,.35); }
+body.honey .it-slot__locked { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+body.honey .it-slot__issue { display: inline-flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; align-self: flex-start; }
+body.honey .it-slot__issue small { opacity: .75; font-weight: 500; }
+body.honey form:has(> .it-slot__issue) { margin: 0; }
+@keyframes itSlotShine { from { background-position: 200% 0; } to { background-position: 0 0; } }
+@keyframes itSlotPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--st) 60%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+@media (prefers-reduced-motion: reduce) { body.honey .it-slot, body.honey .it-slot::before, body.honey .it-slot__dot { animation: none; } }

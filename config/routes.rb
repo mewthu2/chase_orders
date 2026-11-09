@@ -190,6 +190,10 @@ Rails.application.routes.draw do
         post :receive
         post :cancel
       end
+      # Aba "Nota fiscal" da edição: NF-e de transferência da remessa, em homologação ou produção.
+      resources :fiscal_notes, controller: 'internal_transfer_fiscal_notes', only: [:create, :destroy] do
+        member { post :transmit }
+      end
     end
     collection do
       get :search_product

@@ -79,6 +79,39 @@ class FiscalNote < ApplicationRecord
     STATUS_LABELS[status]
   end
 
+  def denied?
+    rejeitada? && Nfe::Transmitter::DENIED_CODES.include?(sefaz_status_code.to_s)
+  end
+
+  # Por que a nota não pode ser excluída do Honey (nil quando pode). Homologação não tem valor fiscal: sai
+  # sempre. Em produção, a autorizada vale na SEFAZ (precisa de cancelamento, que o Honey ainda não faz), a
+  # sem resposta pode ter sido autorizada e a denegada fica registrada com o número.
+  def undeletable_reason
+    return nil if homologacao?
+    return 'A nota de produção autorizada vale na SEFAZ: ela precisa ser cancelada, não excluída.' if autorizada? || cancelada?
+    return 'Esta nota ficou sem resposta da SEFAZ e pode ter sido autorizada. Consulte-a antes de excluir.' if erro?
+    return 'A SEFAZ denegou esta nota: o número fica registrado e a nota não pode ser excluída.' if denied?
+
+    nil
+  end
+
+  def deletable?
+    undeletable_reason.nil?
+  end
+
+  # Exclui a nota. Se ela nunca valeu na SEFAZ e era a última do ambiente, o número volta para a próxima.
+  def discard!
+    reason = undeletable_reason
+    raise ActiveRecord::RecordNotDestroyed.new(reason, self) if reason
+
+    transaction do
+      company.with_lock do
+        company.release_nfe_number!(number, environment) if (rascunho? || assinada? || rejeitada?) && series == company.nfe_series
+        destroy!
+      end
+    end
+  end
+
   def purpose
     nature_key = NATURE_PURPOSE_KEYS[nature&.purpose]
     return nature_key if nature_key
