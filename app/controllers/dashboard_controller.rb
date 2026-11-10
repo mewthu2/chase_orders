@@ -101,29 +101,30 @@ class DashboardController < ApplicationController
 
   def send_xml
     processed_ids = Attempt.where(kinds: :send_xml, status: 2, created_at: 30.days.ago..Time.current)
-                           .pluck(:order_correios_id)
+                           .distinct.pluck(:order_correios_id)
 
     invoiced_ids = Attempt.where(kinds: :emission_invoice, status: :success)
-                          .pluck(:order_correios_id)
+                          .distinct.pluck(:order_correios_id)
 
     @send_xml = Attempt.where(kinds: :create_correios_order, status: 2, created_at: 30.days.ago..Time.current)
+                       .select(light_attempt_columns)
                        .distinct(:order_correios_id)
                        .where.not(order_correios_id: processed_ids)
                        .where(order_correios_id: invoiced_ids)
 
     pending_order_ids = @send_xml.map(&:tiny_order_id).compact
 
-    @last_errors = {}
-    Attempt.where(kinds: :send_xml, status: [:fail, :error], tiny_order_id: pending_order_ids)
-           .where.not(message: [nil, ''])
-           .group_by(&:tiny_order_id).each do |order_id, attempts|
-             last = attempts.max_by(&:updated_at)
-             @last_errors[order_id.to_s] = {
-               message: last.message,
-               status: last.status,
-               updated_at: last.updated_at
-             }
-           end
+    # Só a última tentativa com erro de cada pedido e sem as colunas pesadas: o job repete o envio
+    # a cada rodada, então são milhares de tentativas por pedido.
+    latest_error_ids = Attempt.where(kinds: :send_xml, status: [:fail, :error], tiny_order_id: pending_order_ids)
+                              .where.not(message: [nil, ''])
+                              .group(:tiny_order_id).maximum(:id).values
+
+    @last_errors = Attempt.where(id: latest_error_ids)
+                          .select(:id, :tiny_order_id, :message, :status, :updated_at)
+                          .to_h do |last|
+                            [last.tiny_order_id.to_s, { message: last.message, status: last.status, updated_at: last.updated_at }]
+                          end
 
     @job_running = b2b_job_running?(:send_xml)
     load_queue_stats(@send_xml, :send_xml)
@@ -918,11 +919,18 @@ class DashboardController < ApplicationController
   # O tipo é deduzido por pedido (B2bOrderType), então o filtro usa o resultado já calculado.
   # Números da fila no padrão das telas novas: o que saiu hoje, o último erro de cada pedido
   # da fila e quando a rotina rodou pela última vez.
+  # Colunas da Attempt para listas: sem xml_nota/requisition, que são textos grandes.
+  def light_attempt_columns
+    Attempt.column_names - %w[xml_nota requisition]
+  end
+
   def load_queue_stats(queue, kind)
     ids = queue.map(&:tiny_order_id).compact
     @done_today = Attempt.where(kinds: kind, status: :success, created_at: Time.zone.today.all_day).count
-    @queue_errors = Attempt.where(kinds: kind, status: :error, tiny_order_id: ids).order(:id).index_by(&:tiny_order_id)
-    @last_run_at = Attempt.where(kinds: kind).maximum(:created_at)
+    latest_error_ids = Attempt.where(kinds: kind, status: :error, tiny_order_id: ids).group(:tiny_order_id).maximum(:id).values
+    @queue_errors = Attempt.where(id: latest_error_ids).select(:id, :tiny_order_id, :message, :error, :status, :updated_at).index_by(&:tiny_order_id)
+    # A tentativa mais recente é a de maior id (índice por kinds); maximum(:created_at) varria a tabela.
+    @last_run_at = Attempt.where(kinds: kind).order(id: :desc).pick(:created_at)
   end
 
   def filter_by_order_type(scope, order_types)
