@@ -2,6 +2,8 @@
 // sistema, tour guiado, dicas flutuantes, tamanho da letra e menu do usuário.
 // Os dados (telas liberadas, glossário, passos do tour) vêm do JSON #honeyData do layout.
 
+// Tudo num bloco: um `const $` global taparia o jQuery dos scripts das telas ($(...).click não ligaria nada).
+(() => {
 const $ = (sel, root = document) => root.querySelector(sel)
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel))
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -524,3 +526,4 @@ document.addEventListener('show.bs.modal', (e) => {
   if (!modal.classList?.contains('modal') || modal.parentElement === body || modal.closest('form')) return
   body.appendChild(modal)
 })
+})()
