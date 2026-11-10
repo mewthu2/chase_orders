@@ -276,7 +276,8 @@
 .location-badge { border-radius: $radius-pill; padding: 0.28rem 0.75rem; font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
 .location-badge--empty { background: $border-muted; color: $text-muted; }
 
-.customer-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+// Em <td> o flex tira a célula do layout de tabela e desalinha a linha: lá ela fica como célula comum.
+.customer-name-cell:not(td) { display: flex; align-items: center; gap: 0.75rem; }
 
 .attempt-customer-cell { min-width: 160px; max-width: 240px; }
 .attempt-customer-name {
