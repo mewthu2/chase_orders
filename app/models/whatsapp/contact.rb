@@ -32,14 +32,19 @@ module Whatsapp
     def self.resolve!(connection, key, name: nil)
       jids = [key['remoteJid'], key['remoteJidAlt']].compact.select { |j| Phone.individual_jid?(j) }.uniq
       raise ArgumentError, 'Conversa individual inválida' if jids.empty?
-      matches = ContactAlias.where(connection: connection, jid: jids).pluck(:contact_id).uniq
+      # O número com e sem o nono dígito é o mesmo celular: procura pelas duas formas.
+      lookup = jids.flat_map { |j| Phone.br_variants(j) }.uniq
+      matches = ContactAlias.where(connection: connection, jid: lookup).pluck(:contact_id).uniq
       primary_id = ContactAlias.find_by(connection: connection, jid: jids.first)&.contact_id
       contact = connection.contacts.find_by(id: primary_id || matches.first) || connection.contacts.create!(provider_jid: jids.first)
       pn = jids.find { |j| j.end_with?('@s.whatsapp.net') }
-      # O WhatsApp só manda LID + número juntos na mesma chave quando são a mesma pessoa:
-      # aí as duas conversas que nasceram separadas (uma pelo LID, outra pelo número) viram uma.
-      if pn && jids.any? { |j| j.end_with?('@lid') } && matches.size > 1
+      # Todos os JIDs procurados são da mesma pessoa (LID + número na mesma chave do WhatsApp, ou o
+      # número com e sem o nono dígito): as conversas que nasceram separadas viram uma.
+      if pn && matches.size > 1
         keep_id = ContactAlias.find_by(connection: connection, jid: pn)&.contact_id || contact.id
+        # Fica o contato com nome (o que a cliente usa), não o criado ao digitar o número.
+        named = connection.contacts.where(id: matches).where.not(name: [nil, '']).order(:id).first
+        keep_id = named.id if named && connection.contacts.find(keep_id).name.blank?
         contact = connection.contacts.find(keep_id)
         connection.contacts.where(id: matches - [keep_id]).find_each { |other| contact.absorb!(other) }
         matches = [contact.id]

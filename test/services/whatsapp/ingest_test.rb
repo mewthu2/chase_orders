@@ -263,4 +263,41 @@ class WhatsappIngestTest < ActiveSupport::TestCase
     Whatsapp::Media.store!(@message, StringIO.new(mp4), filename: 'arquivo')
     assert_equal 'audio', @message.reload.kind
   end
+
+  test 'brazilian mobile with and without the ninth digit are the same WhatsApp account' do
+    assert_equal %w[5585997669677@s.whatsapp.net 558597669677@s.whatsapp.net], Whatsapp::Phone.br_variants('5585997669677@s.whatsapp.net')
+    assert_equal %w[558597669677@s.whatsapp.net 5585997669677@s.whatsapp.net], Whatsapp::Phone.br_variants('558597669677@s.whatsapp.net')
+    assert_equal %w[553133334444@s.whatsapp.net], Whatsapp::Phone.br_variants('553133334444@s.whatsapp.net'), 'fixo não ganha o 9'
+    assert_equal %w[123456789012345@lid], Whatsapp::Phone.br_variants('123456789012345@lid')
+  end
+
+  test 'number typed with the ninth digit opens the conversation of the customer saved without it' do
+    reply = nil
+    @a.with_lock { reply = Whatsapp::Ingest.new(@a).message!(wa_message('stela-1', jid: '558597669677@s.whatsapp.net')) }
+    typed = Whatsapp::Contact.resolve!(@a, { 'remoteJid' => '5585997669677@s.whatsapp.net' })
+
+    assert_equal reply.conversation.contact_id, typed.id
+    assert_equal 1, @a.conversations.where(contact_id: typed.id).count
+  end
+
+  test 'contacts already split by the ninth digit become one, keeping the named one and every message' do
+    split = lambda do |jid, name, body, at|
+      contact = @a.contacts.create!(provider_jid: jid, name: name)
+      Whatsapp::ContactAlias.create!(connection: @a, contact: contact, jid: jid)
+      conv = @a.conversations.create!(contact: contact, last_message_at: at)
+      conv.messages.create!(connection: @a, user: @agent, body: body, direction: 'outgoing', state: 'sent', sent_at: at)
+      contact
+    end
+    named = split.call('558597669677@s.whatsapp.net', 'Stela Sarquis', 'Conversa antiga', 2.days.ago)
+    typed = split.call('5585997669677@s.whatsapp.net', nil, 'Olá! Sou a Amanda', 1.hour.ago)
+
+    kept = Whatsapp::Contact.resolve!(@a, { 'remoteJid' => '5585997669677@s.whatsapp.net' })
+
+    assert_equal named.id, kept.id
+    assert_equal 'Stela Sarquis', kept.reload.name
+    assert_nil Whatsapp::Contact.find_by(id: typed.id)
+    conv = @a.conversations.find_by!(contact: kept)
+    assert_equal ['Conversa antiga', 'Olá! Sou a Amanda'], conv.messages.order(:sent_at).pluck(:body)
+    assert_equal %w[5585997669677@s.whatsapp.net 558597669677@s.whatsapp.net].sort, kept.aliases.pluck(:jid).sort
+  end
 end

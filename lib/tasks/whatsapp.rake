@@ -37,4 +37,22 @@ namespace :whatsapp do
     end
     puts "Conversas juntadas: #{merged} · contatos ligados ao número: #{linked}"
   end
+
+  desc 'Junta contatos do mesmo celular gravados com e sem o nono dígito (DRY_RUN=1 só mostra)'
+  task merge_ninth_digit_contacts: :environment do
+    canonical = ->(jid) { n = jid.split('@').first; n.length == 13 && n.start_with?('55') && n[4] == '9' ? n[0, 4] + n[5..] : n }
+    merged = 0
+    Whatsapp::Connection.find_each do |connection|
+      rows = Whatsapp::ContactAlias.where(connection: connection).where('jid LIKE ?', '%@s.whatsapp.net').pluck(:jid, :contact_id)
+      rows.group_by { |jid, _| canonical.(jid) }.each_value do |group|
+        next if group.map(&:last).uniq.size < 2
+        names = Whatsapp::Contact.where(id: group.map(&:last)).map { |c| "#{c.id}:#{c.display_name}" }
+        puts "#{connection.name}: #{group.map(&:first).uniq.join(' + ')} -> #{names.join(' | ')}"
+        next if ENV['DRY_RUN']
+        connection.with_lock { Whatsapp::Contact.resolve!(connection, { 'remoteJid' => group.first.first }) }
+        merged += 1
+      end
+    end
+    puts "Contatos juntados: #{merged}"
+  end
 end

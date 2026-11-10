@@ -359,6 +359,8 @@
   }
 
   let selected,
+    // Trocando de conversa: até a nova carregar, nada é enviado nem redesenhado na anterior.
+    switching = false,
     generation = 0,
     messages = new Map(),
     before,
@@ -545,7 +547,7 @@
       }
       body.append(top, bottom, foot);
       button.append(paintAvatar(el("span", undefined, "wa-avatar"), c.name, c.group), body);
-      button.onclick = safe(() => selectConversation(c.id));
+      button.onclick = safe(() => selectConversation(c.id, c.name));
       // Finalizar (ou reabrir) direto da lista, sem abrir a conversa.
       const row = el("div", undefined, "wa-thread-row");
       const closed = c.state === "closed";
@@ -803,11 +805,38 @@
     else if (rows.some((m) => m.id > afterId))
       $("wa-new-indicator").hidden = false;
   }
-  async function selectConversation(id) {
+  async function selectConversation(id, name) {
     if (busy) return;
     saveDraft();
     stopRecording();
     const ticket = ++generation;
+    switching = true;
+    $("wa-send").disabled = true;
+    $("wa-text").readOnly = true;
+    $("wa-messages").replaceChildren();
+    $("wa-new-indicator").hidden = true;
+    $("wa-contact-name").textContent = name ? `${name} · carregando…` : "Carregando…";
+    let loaded;
+    try {
+      loaded = await loadConversation(id, ticket);
+    } catch (e) {
+      // Não deixa a conversa anterior aberta pela metade, pronta para receber o envio.
+      if (ticket === generation) {
+        selected = undefined;
+        $("wa-selected").hidden = true;
+        $("wa-empty").hidden = false;
+      }
+      throw e;
+    } finally {
+      if (ticket === generation) {
+        switching = false;
+        $("wa-send").disabled = busy || selected?.id !== id || selected?.connection_state !== "connected";
+        lockDraft(!!draftRequest);
+      }
+    }
+    if (loaded && ticket === generation) await autoSuggest(...loaded);
+  }
+  async function loadConversation(id, ticket) {
     const c = await api(`/whatsapp/conversations/${id}.json`);
     if (ticket !== generation) return;
     messages = new Map();
@@ -836,7 +865,7 @@
     $("wa-older").hidden = !before;
     scrollBottom();
     await markRead();
-    await autoSuggest(c, result.messages);
+    return [c, result.messages];
   }
   // Ao abrir uma conversa em que a cliente está esperando e ainda não há sugestão,
   // o agente é chamado sozinho (inclusive para mensagens do histórico importado).
@@ -861,7 +890,7 @@
       );
   }
   async function refreshSelected() {
-    if (!selected) return;
+    if (!selected || switching) return;
     const id = selected.id,
       ticket = generation;
     const ids = [...messages.keys()].slice(-200);
@@ -975,7 +1004,7 @@
   };
   $("wa-compose").onsubmit = safe(async (e) => {
     e.preventDefault();
-    if (busy || !selected) return;
+    if (busy || !selected || switching) return;
     if (mediaRecorder?.state === "recording")
       throw new Error("Pare a gravação antes de enviar.");
     const file = recordedFile || $("wa-file").files[0];
