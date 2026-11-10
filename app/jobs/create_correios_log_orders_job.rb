@@ -8,11 +8,8 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
     Attempt.where(kinds: :create_correios_order, status: :success).find_each do |attempt|
       next unless attempt.message.present?
 
-      if attempt.message =~ /\/pedidos\/(\d+)/
-        order_id = attempt.message[/\/pedidos\/(\d+)/, 1]
-
-        attempt.update(order_correios_id: order_id)
-      end
+      order_id = Correios::Orders.order_id_from(attempt.message)
+      attempt.update(order_correios_id: order_id) if order_id
     end
 
     case param
@@ -45,8 +42,8 @@ class CreateCorreiosLogOrdersJob < ActiveJob::Base
       kinds: :create_correios_order
     ).last
 
-    if attempt&.message.to_s =~ /ID do pedido: (\d+)/
-      order_id = Regexp.last_match(1)
+    # "Pedido já Cadastrado" com ID 0 é pedido travado por falta de estoque: tenta criar de novo.
+    if (order_id = Correios::Orders.order_id_from(attempt&.message))
       attempt.update(order_correios_id: order_id, status: :success)
       return
     end

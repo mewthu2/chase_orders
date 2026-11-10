@@ -5,6 +5,15 @@ module Correios::Orders
   # Serviço adicional de mão própria: vai junto do serviço de postagem (params[:mao_propria]).
   MAO_PROPRIA = '002'.freeze
 
+  # Número do pedido nos Correios lido da resposta ("/pedidos/123", "ID do pedido: 123" ou "ID: 123").
+  # Quando falta estoque, os Correios guardam o pedido com ID 0 e respondem "Pedido já Cadastrado (ID do pedido: 0)"
+  # nas tentativas seguintes: 0 não é pedido criado, então devolve nil e o pedido segue travado.
+  def order_id_from(text)
+    text = text.to_s
+    id = text[%r{pedidos/(\d+)}, 1] || text[/ID do pedido: (\d+)/, 1] || text[/ID: (\d+)/, 1]
+    id if id.to_i.positive?
+  end
+
   def truncate_value(attempt, key, value)
     v = value.to_s
     column = attempt.class.columns_hash[key.to_s]
@@ -116,12 +125,13 @@ module Correios::Orders
       end
     end
 
-    if @request['mensagem'].to_s.include?('/efulfillment/v1/pedidos/')
+    created_id = order_id_from(@request['mensagem'])
+    if @request['mensagem'].to_s.include?('/efulfillment/v1/pedidos/') && created_id
       safe_update(
         attempt,
         message: @request,
         status: :success,
-        order_correios_id: @request['mensagem'][/pedidos\/(\d+)/, 1]
+        order_correios_id: created_id
       )
     end
 
@@ -139,15 +149,10 @@ module Correios::Orders
         user: @request['user']
       )
 
-      if @request['statusCode'] == '200'
-        order_id = @request['mensagem'][/pedidos\/(\d+)/, 1]
-        safe_update(attempt, status: :success, status_code: 200, order_correios_id: order_id)
-      elsif @request['mensagem'].to_s.include?('Pedido já Cadastrado')
-        safe_update(
-          attempt,
-          status: :success,
-          order_correios_id: /ID: (\d+)/.match(@request['mensagem'])[1]
-        )
+      if @request['statusCode'] == '200' && created_id
+        safe_update(attempt, status: :success, status_code: 200, order_correios_id: created_id)
+      elsif @request['mensagem'].to_s.include?('Pedido já Cadastrado') && created_id
+        safe_update(attempt, status: :success, order_correios_id: created_id)
       else
         safe_update(attempt, status: :fail)
       end

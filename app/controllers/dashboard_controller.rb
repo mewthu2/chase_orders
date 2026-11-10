@@ -18,6 +18,8 @@ class DashboardController < ApplicationController
 
   # Janela de pedidos/tentativas exibidos nas telas Correios B2B.
   B2B_ORDERS_LOOKBACK = 8.weeks
+  # Criação e erros de estoque do Log03: pedido travado por falta de estoque pode esperar semanas pela reposição.
+  B2C_ORDERS_LOOKBACK = 8.weeks
 
   DASHBOARD_ACTION_OVERRIDES = { delete_order_from_queue: :destroy, update_invoice_id: :edit }.freeze
 
@@ -352,14 +354,14 @@ class DashboardController < ApplicationController
   end
 
   def order_correios_create
-    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), 4.weeks.ago.strftime('%d/%m/%Y'))
+    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY3_PRODUCTION'), B2C_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
     @orders = @orders_response&.dig('pedidos') || []
     @tiny_error = tiny_listing_error(@orders_response)
 
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order,
       status: :success,
-      created_at: 1.month.ago..Time.current
+      created_at: B2C_ORDERS_LOOKBACK.ago..Time.current
     ).pluck(:tiny_order_id).map(&:to_s)
 
     @pending_orders = @orders.reject do |order_data|
@@ -372,7 +374,7 @@ class DashboardController < ApplicationController
     relevant_attempts = Attempt.where(
       kinds: :create_correios_order,
       tiny_order_id: pending_order_ids,
-      created_at: 1.month.ago..Time.current
+      created_at: B2C_ORDERS_LOOKBACK.ago..Time.current
     ).order(:created_at)
 
     queue_attempts = []
@@ -627,7 +629,7 @@ class DashboardController < ApplicationController
       'preparando_envio',
       ENV.fetch('TOKEN_TINY3_PRODUCTION'),
       '',
-      4.weeks.ago.strftime('%d/%m/%Y')
+      B2C_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y')
     )
 
     @orders = @orders_response&.dig('pedidos') || []
@@ -635,7 +637,7 @@ class DashboardController < ApplicationController
     successfully_processed_ids = Attempt.where(
       kinds: :create_correios_order,
       status: :success,
-      created_at: 1.month.ago..Time.current
+      created_at: B2C_ORDERS_LOOKBACK.ago..Time.current
     ).pluck(:tiny_order_id).map(&:to_s)
 
     @pending_orders = @orders.reject do |order_data|
@@ -1087,7 +1089,7 @@ class DashboardController < ApplicationController
     latest_ids = Attempt.where(
       kinds: kind,
       tiny_order_id: tiny_order_ids,
-      created_at: 1.month.ago..Time.current
+      created_at: B2C_ORDERS_LOOKBACK.ago..Time.current
     ).group(:tiny_order_id).maximum(:id).values
 
     Attempt.where(id: latest_ids)

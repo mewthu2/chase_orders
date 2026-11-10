@@ -132,4 +132,38 @@ class Correios::OrdersTest < ActiveSupport::TestCase
     assert_equal 'S/N', numero_endereco_sent_for('s/n')
     assert_equal 'S/N', numero_endereco_sent_for('')
   end
+
+  test 'order_id_from reads the Correios id but treats id 0 (stock shortage) as not created' do
+    assert_equal '25326220', Correios::Orders.order_id_from('/efulfillment/v1/pedidos/25326220')
+    assert_equal '25241307', Correios::Orders.order_id_from('Pedido já Cadastrado: Número do pedido: 1 (ID do pedido: 25241307 URI: /efulfillment/v1/pedidos/25241307 )')
+    assert_nil Correios::Orders.order_id_from('Pedido já Cadastrado: Número do pedido: 920192831 (ID do pedido: 0 URI: /efulfillment/v1/pedidos/0 )')
+    assert_nil Correios::Orders.order_id_from(nil)
+  end
+
+  test 'creation answered with "Pedido já Cadastrado" and id 0 stays failed, without a Correios id' do
+    ENV['CORREIOS_COD_ARMAZEM'] = '1'
+    ENV['CORREIOS_CNPJ_TRANSPORTADORA'] = '123'
+    ENV['CORREIOS_CRIAR_PEDIDO'] = 'https://correios-log.example.com/pedidos'
+    body = { statusCode: '200', mensagem: 'Pedido já Cadastrado: Número do pedido: 919929089 (ID do pedido: 0 URI: /efulfillment/v1/pedidos/0 )' }
+    stub_request(:post, 'https://correios-log.example.com/pedidos').to_return(status: 200, body: body.to_json)
+
+    attempt = Attempt.create!(kinds: :create_correios_order, tiny_order_id: 919_929_089)
+    Correios::Orders.create_orders(build_params('1'), attempt)
+
+    assert_equal 'fail', attempt.reload.status
+    assert_nil attempt.order_correios_id
+  end
+
+  test 'the next creation run does not turn a "Pedido já Cadastrado" with id 0 into success' do
+    Attempt.create!(kinds: :create_correios_order, tiny_order_id: 919_929_089, status: :fail,
+                    message: 'Pedido já Cadastrado: Número do pedido: 919929089 (ID do pedido: 0 URI: /efulfillment/v1/pedidos/0 )')
+    job = CreateCorreiosLogOrdersJob.new
+    retried = false
+    job.stub(:create_one_log_order, ->(_order) { retried = true }) do
+      job.process_order({ pedido: { id: '919929089' } })
+    end
+
+    assert retried, 'deveria tentar criar de novo'
+    assert_not Attempt.where(kinds: :create_correios_order, tiny_order_id: 919_929_089, status: :success).exists?
+  end
 end
