@@ -37,6 +37,7 @@
                 <tr>
                   <th>SKU</th>
                   <th>Estoque Disponível</th>
+                  <th>Estoque B2C (Log03)</th>
                   <th>Reservado</th>
                   <th>Pedidos Travados</th>
                   <th>Status</th>
@@ -364,16 +365,25 @@
         return skus;
       }
 
-      function fetchStockForSku(sku) {
+      function fetchStockForSku(sku, b2b) {
         return $.ajax({
           url: '<%= stockend_dashboard_index_path %>',
           type: 'GET',
-          data: { item_code: sku, b2b: IS_B2B_PAGE },
+          data: { item_code: sku, b2b: b2b === undefined ? IS_B2B_PAGE : b2b },
           dataType: 'json'
         });
       }
 
-      function appendBulkStockRow(sku, quantity, reservado, stuckOrdersCount, stuckQuantity, statusHtml) {
+      // Estoque do outro armazém (B2C ↔ B2B). Se a consulta falhar, a linha sai mesmo assim, com "-".
+      function fetchOtherStock(sku) {
+        var done = $.Deferred();
+        fetchStockForSku(sku, IS_B2B_PAGE ? 0 : 1)
+          .done(function (response) { done.resolve(response && response.disponivel != null ? response.disponivel : '-'); })
+          .fail(function () { done.resolve('-'); });
+        return done.promise();
+      }
+
+      function appendBulkStockRow(sku, quantity, otherQuantity, reservado, stuckOrdersCount, stuckQuantity, statusHtml) {
         var hasReserved = reservado !== '-' && Number(reservado) > 0;
         var hasStuck = Number(stuckOrdersCount) > 0;
         var reservedHtml = hasReserved
@@ -384,7 +394,7 @@
             stuckOrdersCount + ' pedido(s) (' + stuckQuantity + ' un.)</span>'
           : '-';
         var rowStyle = hasStuck ? ' style="background-color: rgba(220,53,69,0.15);"' : (hasReserved ? ' style="background-color: rgba(255,193,7,0.12);"' : '');
-        var row = '<tr' + rowStyle + '><td>' + sku + '</td><td>' + quantity + '</td><td>' + reservedHtml + '</td><td>' + stuckHtml + '</td><td>' + statusHtml + '</td></tr>';
+        var row = '<tr' + rowStyle + '><td>' + sku + '</td><td>' + quantity + '</td><td>' + otherQuantity + '</td><td>' + reservedHtml + '</td><td>' + stuckHtml + '</td><td>' + statusHtml + '</td></tr>';
         $('#bulk_stock_table_body').append(row);
       }
 
@@ -420,20 +430,20 @@
             var sku = skus[index];
             $('#bulk_stock_progress').html('<i class="fas fa-spinner fa-spin me-1"></i>Consultando ' + (index + 1) + '/' + skus.length + ': ' + sku);
 
-            $.when(fetchStockForSku(sku), fetchStuckOrders(sku))
-              .done(function (stockResult, stuckResult) {
+            $.when(fetchStockForSku(sku), fetchStuckOrders(sku), fetchOtherStock(sku))
+              .done(function (stockResult, stuckResult, otherQuantity) {
                 var response = stockResult[0];
                 var stuck = stuckResult[0] || { orders_count: 0, total_quantity: 0 };
 
                 if (response && response.disponivel !== undefined && response.disponivel !== null) {
                   var reservado = response.reservado !== undefined ? response.reservado : 0;
-                  appendBulkStockRow(sku, response.disponivel, reservado, stuck.orders_count, stuck.total_quantity, '<span class="text-success"><i class="fas fa-check-circle me-1"></i>OK</span>');
+                  appendBulkStockRow(sku, response.disponivel, otherQuantity, reservado, stuck.orders_count, stuck.total_quantity, '<span class="text-success"><i class="fas fa-check-circle me-1"></i>OK</span>');
                 } else {
-                  appendBulkStockRow(sku, '-', '-', stuck.orders_count, stuck.total_quantity, '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Não encontrado</span>');
+                  appendBulkStockRow(sku, '-', otherQuantity, '-', stuck.orders_count, stuck.total_quantity, '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Não encontrado</span>');
                 }
               })
               .fail(function () {
-                appendBulkStockRow(sku, '-', '-', 0, 0, '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Erro</span>');
+                appendBulkStockRow(sku, '-', '-', '-', 0, 0, '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Erro</span>');
               })
               .always(function () {
                 index++;
