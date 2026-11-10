@@ -25,6 +25,7 @@ module Nfe
     # Pagamento padrão do B2B: sem pagamento informado na nota.
     NO_PAYMENT = [{ method: '90', amount: 0 }].freeze
     # Reforma tributária, ano de teste (2026): IBS e CBS destacados com alíquotas simbólicas, sem somar ao total.
+    # Padrão de quando a natureza não informa nada (tax[:ibs_cbs], ver OperationNature#tax_rules).
     IBS_CBS = { cst: '000', class: '000001', ibs_uf: BigDecimal('0.1'), ibs_mun: ZERO, cbs: BigDecimal('0.9') }.freeze
     # Transferência entre estabelecimentos do mesmo titular: não incidência de IBS/CBS (LC 214/2025, art. 6º).
     # A SVRS já exige o grupo IBSCBS; vai só com CST e cClassTrib, sem valores.
@@ -195,22 +196,38 @@ module Nfe
         fcp: percent(dest_base, fcp_rate), dest: [dest, ZERO].max }
     end
 
-    # Venda a consumidor no Regime Normal leva o grupo IBS/CBS, como o Tiny já emite.
+    # Regra do IBS/CBS: a da natureza (modo, CST, cClassTrib e alíquotas) sobre o padrão. No modo "auto" a
+    # nota de transferência (ibs_cbs_exempt) vai só com CST e cClassTrib de não incidência.
+    def ibs_cbs_rule
+      @ibs_cbs_rule ||= begin
+        rule = IBS_CBS.merge(mode: 'auto').merge((@tax[:ibs_cbs] || {}).compact)
+        rule[:mode] == 'auto' && @ibs_cbs_exempt ? rule.merge(@ibs_cbs_exempt).merge(mode: 'no_values') : rule
+      end
+    end
+
+    # Com valores: no "auto", venda a consumidor no Regime Normal (como o Tiny já emite); no "taxed", toda nota
+    # do Regime Normal.
     def ibs_cbs?
-      @final_consumer && normal_regime? && !@ibs_cbs_exempt
+      return false unless normal_regime?
+
+      case ibs_cbs_rule[:mode]
+      when 'auto' then @final_consumer
+      when 'taxed' then true
+      else false
+      end
     end
 
     def ibs_cbs_exempt?
-      @ibs_cbs_exempt.present?
+      ibs_cbs_rule[:mode] == 'no_values'
     end
 
     # A base do IBS/CBS exclui ICMS (próprio e DIFAL/FCP), PIS e COFINS.
     def ibs_cbs_tax(base, taxes)
       difal = taxes[:difal] || {}
       ibs_base = base - taxes[:icms] - taxes[:pis][:value] - taxes[:cofins][:value] - (difal[:dest] || ZERO) - (difal[:fcp] || ZERO)
-      ibs_uf = percent(ibs_base, IBS_CBS[:ibs_uf])
-      ibs_mun = percent(ibs_base, IBS_CBS[:ibs_mun])
-      { base: ibs_base, ibs_uf: ibs_uf, ibs_mun: ibs_mun, ibs: ibs_uf + ibs_mun, cbs: percent(ibs_base, IBS_CBS[:cbs]) }
+      ibs_uf = percent(ibs_base, ibs_cbs_rule[:ibs_uf])
+      ibs_mun = percent(ibs_base, ibs_cbs_rule[:ibs_mun])
+      { base: ibs_base, ibs_uf: ibs_uf, ibs_mun: ibs_mun, ibs: ibs_uf + ibs_mun, cbs: percent(ibs_base, ibs_cbs_rule[:cbs]) }
     end
 
     def pis_cofins_tax(cst, base, rate)
@@ -384,7 +401,7 @@ module Nfe
           build_pis_cofins(xml, 'COFINS', @tax[:cofins_cst], taxes[:cofins])
           build_icms_uf_dest(xml, taxes[:difal]) if taxes[:difal]
           build_ibs_cbs(xml, taxes[:ibs_cbs]) if taxes[:ibs_cbs]
-          xml.IBSCBS { xml.CST @ibs_cbs_exempt[:cst]; xml.cClassTrib @ibs_cbs_exempt[:class] } if ibs_cbs_exempt?
+          xml.IBSCBS { xml.CST ibs_cbs_rule[:cst]; xml.cClassTrib ibs_cbs_rule[:class] } if ibs_cbs_exempt?
         end
       end
     end
@@ -450,14 +467,14 @@ module Nfe
 
     def build_ibs_cbs(xml, tax)
       xml.IBSCBS do
-        xml.CST IBS_CBS[:cst]
-        xml.cClassTrib IBS_CBS[:class]
+        xml.CST ibs_cbs_rule[:cst]
+        xml.cClassTrib ibs_cbs_rule[:class]
         xml.gIBSCBS do
           xml.vBC format('%.2f', tax[:base])
-          xml.gIBSUF { xml.pIBSUF format('%.2f', IBS_CBS[:ibs_uf]); xml.vIBSUF format('%.2f', tax[:ibs_uf]) }
-          xml.gIBSMun { xml.pIBSMun format('%.2f', IBS_CBS[:ibs_mun]); xml.vIBSMun format('%.2f', tax[:ibs_mun]) }
+          xml.gIBSUF { xml.pIBSUF format('%.2f', ibs_cbs_rule[:ibs_uf]); xml.vIBSUF format('%.2f', tax[:ibs_uf]) }
+          xml.gIBSMun { xml.pIBSMun format('%.2f', ibs_cbs_rule[:ibs_mun]); xml.vIBSMun format('%.2f', tax[:ibs_mun]) }
           xml.vIBS format('%.2f', tax[:ibs])
-          xml.gCBS { xml.pCBS format('%.2f', IBS_CBS[:cbs]); xml.vCBS format('%.2f', tax[:cbs]) }
+          xml.gCBS { xml.pCBS format('%.2f', ibs_cbs_rule[:cbs]); xml.vCBS format('%.2f', tax[:cbs]) }
         end
       end
     end

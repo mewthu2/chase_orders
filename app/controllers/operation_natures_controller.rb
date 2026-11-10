@@ -58,6 +58,7 @@ class OperationNaturesController < ApplicationController
       :company_id, :description, :kind, :default_for_kind, :purpose, :final_consumer, :cfop,
       :cfop_interstate_non_contributor, :icms_situation, :icms_rate, :difal, :pis_cst, :pis_rate, :cofins_cst,
       :cofins_rate, :exclude_icms_from_pis_cofins_base, :notes, :fisco_notes, :active,
+      :ibs_cbs_mode, :ibs_cbs_cst, :ibs_cbs_class, :ibs_uf_rate, :ibs_mun_rate, :cbs_rate,
       uf_rates: Company::STATES.keys.index_with { %i[internal fcp] },
       icms_exceptions_attributes: [:id, :_destroy, :icms_situation, :cfop, :icms_rate, :difal, :fcp_rate, :notes,
                                    :fisco_notes, { destination_states: [], origin_states: [] }]

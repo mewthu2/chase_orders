@@ -188,6 +188,39 @@
   </div>
 
   <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-landmark me-2"></i>IBS e CBS (reforma tributária)</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Quando informar</label>
+          <%= form.select :ibs_cbs_mode, OperationNature::IBS_CBS_MODES.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CST do IBS/CBS</label>
+          <%= form.select :ibs_cbs_cst, OperationNature::IBS_CBS_SITUATIONS.map { |key, label| [label, key] }, {}, class: "field-input" %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">cClassTrib</label>
+          <%= form.text_field :ibs_cbs_class, class: "field-input", maxlength: 6, inputmode: 'numeric', placeholder: '000001' %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">IBS estadual (%)</label>
+          <%= form.number_field :ibs_uf_rate, class: "field-input", step: 0.01, min: 0 %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">IBS municipal (%)</label>
+          <%= form.number_field :ibs_mun_rate, class: "field-input", step: 0.01, min: 0 %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">CBS (%)</label>
+          <%= form.number_field :cbs_rate, class: "field-input", step: 0.01, min: 0 %>
+        </div>
+      </div>
+      <span class="text-muted-custom d-block mt-2">Em 2026 (ano de teste) o padrão é IBS 0,10% + CBS 0,90%, destacados na nota sem somar ao total. A base exclui ICMS, DIFAL/FCP, PIS e COFINS. Empresas do Simples não levam valores. No automático, a transferência entre lojas vai com CST 410 / cClassTrib 410002, sem valores; as alíquotas acima valem quando houver valores.</span>
+    </div>
+  </div>
+
+  <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-comment-alt me-2"></i>Observações</h5></div>
     <div class="form-section-body">
       <div class="form-grid">

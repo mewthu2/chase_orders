@@ -15,6 +15,19 @@ class OperationNature < ApplicationRecord
     '99' => '99 - Outras operações'
   }.freeze
   TAXED_PIS_COFINS = %w[01 02].freeze
+  # IBS e CBS (reforma tributária). "auto" é o que o emissor sempre fez: destaca na venda a consumidor final do
+  # Regime Normal e, na transferência entre lojas, vai só com CST 410 (não incidência).
+  IBS_CBS_MODES = {
+    'auto' => 'Automático (consumidor final no Regime Normal; transferência sem valores)',
+    'taxed' => 'Destacar sempre (Regime Normal)',
+    'no_values' => 'Só CST e cClassTrib, sem valores',
+    'off' => 'Não informar o grupo IBS/CBS'
+  }.freeze
+  IBS_CBS_SITUATIONS = {
+    '000' => '000 - Tributação integral', '200' => '200 - Alíquota reduzida', '410' => '410 - Imunidade e não incidência',
+    '510' => '510 - Diferimento', '550' => '550 - Suspensão', '620' => '620 - Tributação monofásica',
+    '800' => '800 - Transferência de crédito', '810' => '810 - Ajustes', '820' => '820 - Tributação em declaração de regime específico'
+  }.freeze
   # Variáveis aceitas nas observações.
   NOTE_VARIABLES = %w[{pedido} {cliente}].freeze
 
@@ -42,6 +55,10 @@ class OperationNature < ApplicationRecord
   validates :pis_cst, :cofins_cst, inclusion: { in: PIS_COFINS_SITUATIONS.keys }
   validates :icms_rate, :pis_rate, :cofins_rate, numericality: { greater_than_or_equal_to: 0, less_than: 100 }
   validates :icms_rate, numericality: { greater_than: 0, message: 'é obrigatória para ICMS tributado' }, if: -> { icms_situation == '00' }
+  validates :ibs_cbs_mode, inclusion: { in: IBS_CBS_MODES.keys }
+  validates :ibs_cbs_cst, format: { with: /\A\d{3}\z/, message: 'deve ter 3 dígitos' }
+  validates :ibs_cbs_class, format: { with: /\A\d{6}\z/, message: 'deve ter 6 dígitos' }
+  validates :ibs_uf_rate, :ibs_mun_rate, :cbs_rate, numericality: { greater_than_or_equal_to: 0, less_than: 100 }
   validate :situations_match_company_regime
   validate :linked_companies_still_compatible, on: :update
   validate :exceptions_match_company_regime
@@ -104,7 +121,9 @@ class OperationNature < ApplicationRecord
     rules = {
       icms_situation: icms_situation, icms_rate: icms_rate, difal: difal?, uf_rates: ->(state) { rates_for(state) },
       pis_cst: pis_cst, pis_rate: pis_rate, cofins_cst: cofins_cst, cofins_rate: cofins_rate,
-      exclude_icms_from_pis_cofins_base: exclude_icms_from_pis_cofins_base?
+      exclude_icms_from_pis_cofins_base: exclude_icms_from_pis_cofins_base?,
+      ibs_cbs: { mode: ibs_cbs_mode, cst: ibs_cbs_cst, class: ibs_cbs_class, ibs_uf: BigDecimal(ibs_uf_rate.to_s),
+                 ibs_mun: BigDecimal(ibs_mun_rate.to_s), cbs: BigDecimal(cbs_rate.to_s) }
     }
     exception = icms_exception_for(company_state: company_state, recipient_state: recipient_state)
     return rules unless exception
@@ -158,6 +177,8 @@ class OperationNature < ApplicationRecord
   def normalize
     self.cfop = cfop.to_s.delete('.').strip
     self.cfop_interstate_non_contributor = cfop_interstate_non_contributor.to_s.delete('.').strip.presence
+    self.ibs_cbs_cst = ibs_cbs_cst.to_s.strip
+    self.ibs_cbs_class = ibs_cbs_class.to_s.delete('.').strip
     self.uf_rates = Nfe::IcmsRates.default_table if uf_rates.blank?
   end
 

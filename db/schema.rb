@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_170000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_10_190000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -677,6 +677,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_170000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "ibs_cbs_mode", default: "auto", null: false
+    t.string "ibs_cbs_cst", default: "000", null: false
+    t.string "ibs_cbs_class", default: "000001", null: false
+    t.decimal "ibs_uf_rate", precision: 5, scale: 2, default: "0.1", null: false
+    t.decimal "ibs_mun_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.decimal "cbs_rate", precision: 5, scale: 2, default: "0.9", null: false
     t.index ["company_id"], name: "index_operation_natures_on_company_id"
   end
 

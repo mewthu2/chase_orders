@@ -174,4 +174,59 @@ class Nfe::XmlBuilderConsumerTest < ActiveSupport::TestCase
     error = assert_raises(Nfe::XmlBuilder::Error) { build(nature: nature(difal: false)) }
     assert_match(/DIFAL/, error.message)
   end
+  test 'IBS and CBS use the CST, class and rates of the operation nature' do
+    result = build(nature: nature(ibs_cbs_cst: '200', ibs_cbs_class: '200001', ibs_uf_rate: 0.5, ibs_mun_rate: 0.25, cbs_rate: 1.2))
+    xml = doc(result)
+    item = ->(path) { xml.at_xpath("//n:det[@nItem=\"1\"]/n:imposto/n:IBSCBS/#{path}", NS).text }
+    base = BigDecimal(item['n:gIBSCBS/n:vBC'])
+
+    assert_equal '200', item['n:CST']
+    assert_equal '200001', item['n:cClassTrib']
+    assert_equal '0.50', item['n:gIBSCBS/n:gIBSUF/n:pIBSUF']
+    assert_equal format('%.2f', (base * BigDecimal('0.5') / 100).round(2)), item['n:gIBSCBS/n:gIBSUF/n:vIBSUF']
+    assert_equal '0.25', item['n:gIBSCBS/n:gIBSMun/n:pIBSMun']
+    assert_equal '1.20', item['n:gIBSCBS/n:gCBS/n:pCBS']
+    assert_equal format('%.2f', (base * BigDecimal('1.2') / 100).round(2)), item['n:gIBSCBS/n:gCBS/n:vCBS']
+    assert_equal [], NfeSchema.errors(signed(result))
+  end
+
+  test 'nature without IBS/CBS settings keeps the 2026 test rates' do
+    item = doc(build).at_xpath('//n:det[@nItem="1"]/n:imposto/n:IBSCBS', NS)
+    assert_equal %w[000 000001 0.10 0.00 0.90],
+                 %w[n:CST n:cClassTrib n:gIBSCBS/n:gIBSUF/n:pIBSUF n:gIBSCBS/n:gIBSMun/n:pIBSMun n:gIBSCBS/n:gCBS/n:pCBS].map { |path| item.at_xpath(path, NS).text }
+  end
+
+  test 'nature can send IBS/CBS with only CST and class, or leave the group out' do
+    no_values = build(nature: nature(ibs_cbs_mode: 'no_values', ibs_cbs_cst: '410', ibs_cbs_class: '410999'))
+    xml = doc(no_values)
+    assert_equal '410', xml.at_xpath('//n:det[@nItem="1"]/n:imposto/n:IBSCBS/n:CST', NS).text
+    assert_nil xml.at_xpath('//n:det/n:imposto/n:IBSCBS/n:gIBSCBS', NS)
+    assert_equal '0.00', xml.at_xpath('//n:total/n:IBSCBSTot/n:vBCIBSCBS', NS).text
+    assert_equal [], NfeSchema.errors(signed(no_values))
+
+    off = doc(build(nature: nature(ibs_cbs_mode: 'off')))
+    assert_nil off.at_xpath('//n:IBSCBS', NS)
+    assert_nil off.at_xpath('//n:IBSCBSTot', NS)
+  end
+
+  test 'transfer exemption applies only while the nature is on automatic' do
+    exempt = Nfe::XmlBuilder::IBS_CBS_TRANSFER
+    builder = lambda do |nat|
+      Nfe::XmlBuilder.new(company: company, recipient: recipient, items: items('6152'), number: 7, series: 1,
+                          operation_nature: nat.description, issued_at: Time.utc(2026, 10, 28, 15), cnf: '12345678',
+                          tax: nat.tax_rules, ibs_cbs_exempt: exempt).call
+    end
+    assert_equal '410', doc(builder.call(nature)).at_xpath('//n:det/n:imposto/n:IBSCBS/n:CST', NS).text
+    taxed = doc(builder.call(nature(ibs_cbs_mode: 'taxed')))
+    assert_equal '000', taxed.at_xpath('//n:det/n:imposto/n:IBSCBS/n:CST', NS).text
+    assert taxed.at_xpath('//n:det/n:imposto/n:IBSCBS/n:gIBSCBS', NS)
+  end
+
+  test 'nature validates IBS/CBS fields' do
+    bad = nature(ibs_cbs_mode: 'x', ibs_cbs_cst: '12', ibs_cbs_class: '1234', cbs_rate: -1)
+    assert_includes bad.errors.attribute_names, :ibs_cbs_mode
+    assert_includes bad.errors.attribute_names, :ibs_cbs_cst
+    assert_includes bad.errors.attribute_names, :ibs_cbs_class
+    assert_includes bad.errors.attribute_names, :cbs_rate
+  end
 end
