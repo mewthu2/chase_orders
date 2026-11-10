@@ -19,7 +19,8 @@
             <div class="form-text text-muted mt-1">A planilha deve ter uma coluna chamada <strong>SKU</strong>, com um código por linha.</div>
           </div>
 
-          <div class="mb-3">
+          <div class="mb-3 hc-dropzone" id="bulk_stock_drop">
+            <div class="hc-dropzone-hint"><i class="fas fa-cloud-arrow-up"></i><span>Arraste a planilha .csv para cá (a consulta começa sozinha) ou escolha o arquivo.</span></div>
             <label for="bulk_stock_file" class="form-label text-white">Planilha (.csv)</label>
             <div class="input-group">
               <input type="file" class="form-control bg-dark text-white border-secondary" id="bulk_stock_file" accept=".csv">
@@ -455,6 +456,29 @@
         };
         reader.readAsText(file);
       });
+
+      // Arrastar a planilha para o modal: o arquivo entra no campo e a consulta começa.
+      (function () {
+        var modal = document.getElementById('bulkStockModal');
+        var depth = 0;
+        function hasFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1; }
+        function reset() { depth = 0; modal.classList.remove('is-dragging'); }
+        modal.addEventListener('dragenter', function (e) { if (!hasFiles(e)) return; e.preventDefault(); depth++; modal.classList.add('is-dragging'); });
+        modal.addEventListener('dragover', function (e) { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+        modal.addEventListener('dragleave', function () { if (--depth <= 0) reset(); });
+        modal.addEventListener('drop', function (e) {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          reset();
+          var file = e.dataTransfer.files[0];
+          if (!file || !/\.csv$/i.test(file.name)) { alert('Arraste uma planilha .csv.'); return; }
+          var transfer = new DataTransfer();
+          transfer.items.add(file);
+          document.getElementById('bulk_stock_file').files = transfer.files;
+          var button = $('#bulk_stock_search_button');
+          if (!button.prop('disabled')) button.click();
+        });
+      })();
 
       // ===== Veio de um link "Pesquisar item no outro Log" =====
       var skuFromUrl = new URLSearchParams(window.location.search).get('sku');

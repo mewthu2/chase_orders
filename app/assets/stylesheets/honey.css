@@ -1283,7 +1283,17 @@ body.honey .modal-footer > * { margin: 0; }
 body.honey .modal .btn-close, body.honey .modal .btn-close-white { filter: invert(1) grayscale(1) brightness(1.7); opacity: .5; border-radius: 8px; transition: opacity var(--t), transform var(--t) var(--spring); }
 body.honey .modal .btn-close:hover { opacity: .95; transform: rotate(90deg); }
 /* Utilitários antigos (tema escuro do Bootstrap) passam a usar as cores do Honey. */
-body.honey .modal .bg-dark { background-color: transparent !important; }
+/* A própria caixa do modal (modal-content bg-dark) fica opaca; só o que está dentro dela perde o fundo escuro. */
+body.honey .modal .bg-dark:not(.modal-content) { background-color: transparent !important; }
+/* Área para arrastar arquivo (ex.: planilha da consulta de estoque em lote). */
+body.honey .hc-dropzone { border: 1.5px dashed var(--border-2); border-radius: var(--r-lg); padding: 14px; transition: border-color var(--t), background var(--t), transform var(--t) var(--spring); }
+body.honey .hc-dropzone-hint { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 13px; margin-bottom: 10px; }
+body.honey .hc-dropzone-hint i { font-size: 18px; transition: color var(--t); }
+body.honey .modal.is-dragging .hc-dropzone { border-color: var(--brand-400); background: rgba(58,163,234,.08); transform: scale(1.015); }
+body.honey .modal.is-dragging .hc-dropzone-hint { color: var(--brand-300); }
+body.honey .modal.is-dragging .hc-dropzone-hint i { color: var(--brand-300); animation: hcDropBounce .6s ease-in-out infinite alternate; }
+@keyframes hcDropBounce { to { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { body.honey .modal.is-dragging .hc-dropzone { transform: none; } body.honey .modal.is-dragging .hc-dropzone-hint i { animation: none; } }
 body.honey .modal .bg-black, body.honey .modal .hc-code { background: rgba(5,7,10,.6) !important; border: 1px solid var(--border); border-radius: var(--r-sm) !important; }
 body.honey .modal pre, body.honey .modal textarea.font-monospace, body.honey .modal .hc-code pre { font-family: var(--mono) !important; font-size: 12px !important; line-height: 1.55; color: var(--text-2) !important; }
 body.honey .modal pre.text-danger { color: #ff9b94 !important; }
