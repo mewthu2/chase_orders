@@ -4,7 +4,7 @@ class OrderParcel < ApplicationRecord
   validates :payment_method, presence: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
   
-  enum payment_method: {
+  enum :payment_method, {
     dinheiro: 0,
     cartao_credito: 1,
     cartao_debito: 2,
@@ -14,7 +14,7 @@ class OrderParcel < ApplicationRecord
     outros: 6
   }
   
-  enum status: {
+  enum :status, {
     pending: 'pending',
     paid: 'paid',
     failed: 'failed'

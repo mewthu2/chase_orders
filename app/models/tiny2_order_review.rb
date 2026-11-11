@@ -1,5 +1,5 @@
 class Tiny2OrderReview < ApplicationRecord
-  enum status: [:approved, :ignored]
+  enum :status, [:approved, :ignored]
 
   validates :tiny_order_id, presence: true, uniqueness: true
 

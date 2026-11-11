@@ -1,5 +1,5 @@
 class Order < ApplicationRecord
-  enum kinds: [:lagoa_seca,
+  enum :kinds, [:lagoa_seca,
                :bh_shopping,
                :rj,
                :eldorado_sp,

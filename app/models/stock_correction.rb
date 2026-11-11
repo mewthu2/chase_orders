@@ -7,12 +7,12 @@ class StockCorrection < ApplicationRecord
   validates :correction_date, presence: true
   validates :reason, presence: true
 
-  enum status: { pending: 'pending', executed: 'executed' }
-  enum integration_status: {
+  enum :status, { pending: 'pending', executed: 'executed' }
+  enum :integration_status, {
     integration_pending: 'pending',
     integration_completed: 'completed',
     integration_error: 'error'
-  }, _prefix: true
+  }, prefix: true
 
   scope :active, -> { where(deleted_at: nil) }
   scope :recent, -> { order(created_at: :desc) }

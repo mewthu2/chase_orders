@@ -22,7 +22,7 @@ gem 'rqrcode', '~> 2.2'
 gem "shopify_api"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 7.2.3', '>= 7.2.3.1'
+gem 'rails', '~> 8.0.5', '>= 8.0.5.2'
 
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'

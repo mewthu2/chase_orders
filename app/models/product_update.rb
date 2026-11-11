@@ -1,6 +1,6 @@
 class ProductUpdate < ApplicationRecord
   # Callbacks
-  enum kinds: [:error, :success]
+  enum :kinds, [:error, :success]
   # Associacoes
   belongs_to :product
   belongs_to :user

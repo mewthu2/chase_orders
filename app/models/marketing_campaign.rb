@@ -14,21 +14,21 @@ class MarketingCampaign < ApplicationRecord
   validate :end_date_after_start_date
 
   # Enums
-  enum status: {
+  enum :status, {
     draft: 0,
     active: 1,
     paused: 2,
     completed: 3,
     cancelled: 4
-  }, _prefix: true
+  }, prefix: true
 
-  enum campaign_type: {
+  enum :campaign_type, {
     abandoned_cart: 0,
     product_recommendation: 1,
     win_back: 2,
     upsell: 3,
     cross_sell: 4
-  }, _prefix: true
+  }, prefix: true
 
   # Scopes
   scope :active_campaigns, -> { where(status: :active).where('start_date <= ? AND end_date >= ?', Date.current, Date.current) }

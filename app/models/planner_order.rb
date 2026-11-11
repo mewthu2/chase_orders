@@ -4,7 +4,7 @@ class PlannerOrder < ApplicationRecord
 
   validates :reference, presence: true, uniqueness: true
 
-  enum status: {
+  enum :status, {
     draft: 0,
     saved: 1,
     transmitted: 2,
