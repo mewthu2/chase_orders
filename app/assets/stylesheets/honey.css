@@ -1293,6 +1293,26 @@ body.honey .modal.is-dragging .hc-dropzone { border-color: var(--brand-400); bac
 body.honey .modal.is-dragging .hc-dropzone-hint { color: var(--brand-300); }
 body.honey .modal.is-dragging .hc-dropzone-hint i { color: var(--brand-300); animation: hcDropBounce .6s ease-in-out infinite alternate; }
 @keyframes hcDropBounce { to { transform: translateY(-4px); } }
+/* Efeitos usados pelos controllers Stimulus (hc-pop-in: resultado aparece; hc-row-in/out: linha entra/sai;
+   hc-flash: destaque rápido; hc-shake: aviso; hc-progress: barra da consulta em lote). */
+body.honey .hc-pop-in { animation: hcPopIn .32s var(--spring, cubic-bezier(.34,1.56,.64,1)) both; animation-delay: calc(var(--i, 0) * 35ms); }
+@keyframes hcPopIn { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+body.honey .hc-row-in { animation: hcRowIn .38s ease-out both; }
+@keyframes hcRowIn { from { opacity: 0; transform: translateX(-10px); background-color: rgba(58,163,234,.22); } }
+body.honey .hc-row-out { animation: hcRowOut .22s ease-in both; }
+@keyframes hcRowOut { to { opacity: 0; transform: translateX(14px); } }
+body.honey .hc-flash { animation: hcFlash .9s ease-out; }
+@keyframes hcFlash { 0% { box-shadow: 0 0 0 0 rgba(58,163,234,.7); } 100% { box-shadow: 0 0 0 10px rgba(58,163,234,0); } }
+body.honey .hc-shake { animation: hcShake .4s ease-in-out; }
+@keyframes hcShake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+body.honey .hc-progress { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+body.honey .hc-progress > span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--brand-400, #3aa3ea), #7dd3fc, var(--brand-400, #3aa3ea)); background-size: 200% 100%; transition: width .35s ease; animation: hcProgressShine 1.4s linear infinite; }
+body.honey .hc-progress > span.is-done { background: #238636; animation: none; }
+@keyframes hcProgressShine { to { background-position: -200% 0; } }
+/* O admin.css (Bootstrap antigo) pinta a linha ímpar de .table-striped de quase branco; nas tabelas escuras dos modais fica ilegível. */
+body.honey .modal .table-dark.table-striped > tbody > tr:nth-of-type(2n+1) { background-color: rgba(255,255,255,.035); }
+body.honey turbo-frame[aria-busy="true"] > * { opacity: .55; transition: opacity .2s; }
+@media (prefers-reduced-motion: reduce) { body.honey .hc-pop-in, body.honey .hc-row-in, body.honey .hc-row-out, body.honey .hc-flash, body.honey .hc-shake, body.honey .hc-progress > span { animation: none; } }
 @media (prefers-reduced-motion: reduce) { body.honey .modal.is-dragging .hc-dropzone { transform: none; } body.honey .modal.is-dragging .hc-dropzone-hint i { animation: none; } }
 body.honey .modal .bg-black, body.honey .modal .hc-code { background: rgba(5,7,10,.6) !important; border: 1px solid var(--border); border-radius: var(--r-sm) !important; }
 body.honey .modal pre, body.honey .modal textarea.font-monospace, body.honey .modal .hc-code pre { font-family: var(--mono) !important; font-size: 12px !important; line-height: 1.55; color: var(--text-2) !important; }

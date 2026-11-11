@@ -333,6 +333,9 @@ class DashboardController < ApplicationController
     else
       @tracking = nil
     end
+    # A tela API Correios pede pelo Turbo Frame e recebe o HTML do resultado; o resto continua em JSON.
+    return render(partial: 'dashboard/tracking_lookup_result', locals: { tracking: @tracking }) if turbo_frame_request?
+
     json_response(@tracking)
   end
 

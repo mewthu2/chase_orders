@@ -1,0 +1,13 @@
+<%# Resposta da busca de rastreio da tela API Correios, dentro do Turbo Frame "tracking_lookup". Local: tracking. %>
+<% code = tracking.is_a?(Array) && tracking.first.is_a?(Hash) ? tracking.first['codigoObjeto'] : nil %>
+<%= turbo_frame_tag 'tracking_lookup' do %>
+  <div class="pg-answer hc-pop-in" style="border-color: <%= code.present? ? '#238636' : '#da3633' %>">
+    <div class="text-main" aria-live="polite">
+      <% if code.present? %>
+        <i class="fas fa-check-circle me-2"></i><%= code %>
+      <% else %>
+        <i class="fas fa-times-circle me-2"></i>Nenhum resultado encontrado
+      <% end %>
+    </div>
+  </div>
+<% end %>

@@ -6,6 +6,8 @@
     <meta name="color-scheme" content="dark">
     <meta name="turbo-cache-control" content="no-cache">
     <meta name="turbolinks-visit-control" content="reload">
+    <%# Turbo Drive fica desligado (ver app/javascript/hotwire/boot.js); sem pré-carregar links ao passar o mouse. %>
+    <meta name="turbo-prefetch" content="false">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%233aa3ea'/><stop offset='1' stop-color='%23075a99'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><text x='32' y='44' font-family='Arial' font-weight='800' font-size='34' text-anchor='middle' fill='white'>H</text></svg>">
 
     <%= csrf_meta_tags %>
@@ -16,6 +18,7 @@
     <%= stylesheet_link_tag 'admin', media: 'all', 'data-turbo-track': 'reload'  %>
     <%= stylesheet_link_tag 'honey', media: 'all', 'data-turbo-track': 'reload' %>
     <%= javascript_include_tag "application", 'data-turbo-track': 'reload' %>
+    <%= javascript_importmap_tags 'hotwire' %>
 
      <!--  load popper.js  -->
     <script

@@ -1,7 +1,9 @@
-<%# Topo das telas "API Correios - Consultas" no layout do protótipo. Os ids são os do script da tela.
+<%# Topo das telas "API Correios - Consultas". O comportamento fica nos controllers Stimulus
+    stock-lookup (estoque de um item) e frame-lookup (rastreio, respondido num Turbo Frame).
     Locais: title, subtitle, cross_label, b2b. %>
+<% b2b_param = b2b ? 1 : 0 %>
 <%= hc_page_header title, subtitle, icon: 'fas fa-cogs' do %>
-  <button type="button" class="btn btn-export" data-bs-toggle="modal" data-bs-target="#bulkStockModal"><i class="fas fa-list-check"></i>Consultar estoque em lote</button>
+  <button type="button" class="btn btn-export" data-controller="modal-opener" data-modal-opener-modal-outlet="#bulkStockModal" data-action="modal-opener#open"><i class="fas fa-list-check"></i>Consultar estoque em lote</button>
 <% end %>
 
 <% if within_schedule? %>
@@ -13,52 +15,63 @@
 <div class="pg-blocks">
   <div class="pg-split" style="--cols: 1.5fr 1fr">
     <div class="pg-split-a">
-      <div class="panel pg-card pg-lookup spot">
+      <div class="panel pg-card pg-lookup spot"
+           data-controller="stock-lookup"
+           data-stock-lookup-b2b-value="<%= b2b %>"
+           data-stock-lookup-stock-url-value="<%= stockend_dashboard_index_path %>"
+           data-stock-lookup-search-url-value="<%= search_product_dashboard_index_path %>"
+           data-stock-lookup-stuck-url-value="<%= stuck_orders_dashboard_index_path %>"
+           data-stock-lookup-cross-url-value="<%= b2b ? api_correios_dashboard_index_path : api_correios_b2b_dashboard_index_path %>"
+           data-stock-lookup-export-filename-value="<%= b2b ? 'lista_estoque_b2b' : 'lista_estoque' %>">
         <h3><i class="fas fa-box"></i>Buscar estoque de item</h3>
         <p class="pg-p" style="margin-bottom: 12px">Mostra o estoque disponível no armazém do Correios e se há pedidos travados por falta desse SKU.</p>
         <div class="pg-lk-form">
           <div class="filter-field" style="flex: 1">
             <label class="field-label" for="item_code">Buscar por SKU ou nome do produto</label>
-            <div class="select-wrap pg-search"><input type="text" class="field-input" id="item_code" autocomplete="off" placeholder="Ex.: TOP-947-G ou &quot;harmony&quot;"></div>
+            <div class="select-wrap pg-search"><input type="text" class="field-input" id="item_code" autocomplete="off" placeholder="Ex.: TOP-947-G ou &quot;harmony&quot;" data-stock-lookup-target="input" data-action="input->stock-lookup#suggest keydown->stock-lookup#keydown"></div>
           </div>
-          <button class="btn btn-primary" type="button" id="search_button_stock"><i id="loading-stock" class="fas fa-magnifying-glass"></i>Consultar</button>
+          <button class="btn btn-primary" type="button" data-stock-lookup-target="button" data-action="stock-lookup#search"><i class="fas fa-magnifying-glass" data-stock-lookup-target="icon"></i>Consultar</button>
         </div>
-        <div id="product_search_results" class="list-group mt-2"></div>
-        <div class="pg-answer" id="stock_result_panel" style="display: none">
+        <div class="list-group mt-2" data-stock-lookup-target="results"></div>
+        <div class="pg-answer" data-stock-lookup-target="panel" hidden>
           <div style="display: flex; align-items: center; gap: 14px">
-            <img id="stock_result_image" src="" alt="" style="width: 64px; height: 64px; object-fit: cover; display: none; border-radius: 10px; flex: none">
-            <div id="stock_result" class="text-main" style="flex: 1"></div>
+            <img alt="" style="width: 64px; height: 64px; object-fit: cover; border-radius: 10px; flex: none" data-stock-lookup-target="image" hidden>
+            <div class="text-main" style="flex: 1" data-stock-lookup-target="result" aria-live="polite"></div>
           </div>
           <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap">
-            <button type="button" class="btn btn-secondary btn-sm" id="add_to_export_list_button" style="display: none"><i class="fas fa-plus"></i>Adicionar à lista</button>
-            <a href="#" target="_blank" class="btn btn-ghost btn-sm" id="cross_search_link" style="display: none"><i class="fas fa-exchange-alt"></i><%= cross_label %></a>
+            <button type="button" class="btn btn-secondary btn-sm" data-stock-lookup-target="addButton" data-action="stock-lookup#addToList" hidden><i class="fas fa-plus"></i>Adicionar à lista</button>
+            <a href="#" target="_blank" class="btn btn-ghost btn-sm" data-stock-lookup-target="crossLink" hidden><i class="fas fa-exchange-alt"></i><%= cross_label %></a>
           </div>
         </div>
-        <div id="export_list_section" style="display: none; margin-top: 16px">
-          <div class="pg-fsec">Lista para exportar (<span id="export_list_count">0</span>)</div>
+        <div style="margin-top: 16px" data-stock-lookup-target="exportSection" hidden>
+          <div class="pg-fsec">Lista para exportar (<span data-stock-lookup-target="exportCount">0</span>)</div>
           <div class="table-responsive" style="max-height: 260px; overflow-y: auto">
-            <table class="orders-table pg-tbl pg-mini" id="export_list_table">
+            <table class="orders-table pg-tbl pg-mini">
               <thead><tr><th></th><th>SKU</th><th>Nome</th><th style="width: 130px">Quantidade</th><th></th></tr></thead>
-              <tbody id="export_list_table_body"></tbody>
+              <tbody data-stock-lookup-target="exportBody"></tbody>
             </table>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" id="export_list_button" style="margin-top: 10px"><i class="fas fa-file-export"></i>Exportar lista (CSV)</button>
+          <button type="button" class="btn btn-primary btn-sm" style="margin-top: 10px" data-action="stock-lookup#downloadList"><i class="fas fa-file-export"></i>Exportar lista (CSV)</button>
         </div>
       </div>
 
-      <div class="panel pg-card pg-lookup spot">
+      <div class="panel pg-card pg-lookup spot" data-controller="frame-lookup">
         <h3><i class="fas fa-route"></i>Buscar código de rastreio</h3>
         <p class="pg-p" style="margin-bottom: 12px">Digite o número do pedido e veja o código de rastreio e onde o pacote está.</p>
-        <div class="pg-lk-form">
+        <%= form_with url: tracking_dashboard_index_path, method: :get, class: 'pg-lk-form',
+              data: { turbo: true, turbo_frame: 'tracking_lookup', action: 'turbo:submit-start->frame-lookup#start turbo:submit-end->frame-lookup#finish' } do %>
+          <%= hidden_field_tag :b2b, b2b_param, id: nil %>
           <div class="filter-field" style="flex: 1">
             <label class="field-label" for="tracking_number">Número do pedido</label>
-            <div class="select-wrap pg-search"><input type="text" class="field-input" id="tracking_number" placeholder="Ex.: 58213"></div>
+            <div class="select-wrap pg-search"><input type="text" class="field-input" id="tracking_number" name="tracking_number" placeholder="Ex.: 58213" required autocomplete="off"></div>
           </div>
-          <button class="btn btn-primary" type="button" id="search_button"><i id="loading" class="fas fa-magnifying-glass"></i>Consultar</button>
-        </div>
-        <div class="pg-answer" id="tracking_result_panel">
-          <div id="tracking_result" class="text-main"><i class="fas fa-circle-info"></i> Digite o número de um pedido e clique em Consultar.</div>
-        </div>
+          <button class="btn btn-primary" type="submit" data-frame-lookup-target="button"><i class="fas fa-magnifying-glass" data-frame-lookup-target="icon"></i>Consultar</button>
+        <% end %>
+        <%= turbo_frame_tag 'tracking_lookup', data: { frame_lookup_target: 'frame', action: 'turbo:frame-missing->frame-lookup#missing' } do %>
+          <div class="pg-answer">
+            <div class="text-main"><i class="fas fa-circle-info"></i> Digite o número de um pedido e clique em Consultar.</div>
+          </div>
+        <% end %>
       </div>
     </div>
 
