@@ -50,6 +50,9 @@
           <div class="form-text text-muted mt-2"><i class="fas fa-lock me-1"></i>"Pedidos Travados" são pedidos que a Tiny tentou criar no Correios e falharam por falta desse SKU no estoque.</div>
         </div>
         <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-success" id="bulk_stock_export_button" style="display:none;" disabled>
+            <i class="fas fa-file-export me-1"></i>Exportar planilha
+          </button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
         </div>
       </div>
@@ -384,6 +387,8 @@
         return done.promise();
       }
 
+      var bulkResults = [];
+
       function appendBulkStockRow(sku, quantity, otherQuantity, reservado, stuckOrdersCount, stuckQuantity, statusHtml) {
         var hasReserved = reservado !== '-' && Number(reservado) > 0;
         var hasStuck = Number(stuckOrdersCount) > 0;
@@ -395,6 +400,11 @@
             stuckOrdersCount + ' pedido(s) (' + stuckQuantity + ' un.)</span>'
           : '-';
         var rowStyle = hasStuck ? ' style="background-color: rgba(220,53,69,0.15);"' : (hasReserved ? ' style="background-color: rgba(255,193,7,0.12);"' : '');
+        bulkResults.push({
+          sku: sku, quantity: quantity, other: otherQuantity, reservado: reservado,
+          stuckOrders: hasStuck ? stuckOrdersCount : 0, stuckQuantity: hasStuck ? stuckQuantity : 0,
+          status: $('<div>').html(statusHtml).text().trim()
+        });
         var row = '<tr' + rowStyle + '><td>' + sku + '</td><td>' + quantity + '</td><td>' + otherQuantity + '</td><td>' + reservedHtml + '</td><td>' + stuckHtml + '</td><td>' + statusHtml + '</td></tr>';
         $('#bulk_stock_table_body').append(row);
       }
@@ -418,6 +428,8 @@
           var button = $('#bulk_stock_search_button');
           button.prop('disabled', true);
           $('#bulk_stock_table_body').empty();
+          bulkResults = [];
+          $('#bulk_stock_export_button').show().prop('disabled', true);
           $('#bulk_stock_progress').show();
 
           var index = 0;
@@ -425,6 +437,7 @@
             if (index >= skus.length) {
               $('#bulk_stock_progress').html('<i class="fas fa-check-circle me-1 text-success"></i>Consulta concluída: ' + skus.length + ' SKU(s).');
               button.prop('disabled', false);
+              $('#bulk_stock_export_button').prop('disabled', bulkResults.length === 0);
               return;
             }
 
@@ -455,6 +468,28 @@
           processNext();
         };
         reader.readAsText(file);
+      });
+
+      // Exporta o resultado da consulta em lote (";" e BOM para o Excel abrir com acentos e colunas certas).
+      $('#bulk_stock_export_button').click(function () {
+        if (bulkResults.length === 0) return;
+        function cell(v) {
+          var t = v === undefined || v === null ? '' : String(v);
+          return /[";\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+        }
+        var lines = [['SKU', 'Estoque Disponível', 'Estoque B2C (Log03)', 'Reservado', 'Pedidos Travados', 'Unidades Travadas', 'Status'].join(';')];
+        bulkResults.forEach(function (r) {
+          lines.push([r.sku, r.quantity, r.other, r.reservado, r.stuckOrders, r.stuckQuantity, r.status].map(cell).join(';'));
+        });
+        var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'resultado_estoque_lote_b2b_' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       });
 
       // Arrastar a planilha para o modal: o arquivo entra no campo e a consulta começa.
