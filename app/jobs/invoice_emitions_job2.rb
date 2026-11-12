@@ -1,4 +1,5 @@
 class InvoiceEmitionsJob2 < ActiveJob::Base
+  queue_as :correios_b2b
   include SingleRun
   runs_one_at_a_time if: ->(args) { args.first == 'all' }
 

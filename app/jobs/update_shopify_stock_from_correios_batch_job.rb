@@ -1,4 +1,5 @@
 class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
+  queue_as :stock_sync
   MAX_STORED_ERRORS = 50
   MAX_ERROR_LENGTH = 500
   MAX_MESSAGE_LENGTH = 1_000

@@ -1,4 +1,19 @@
+# Worker principal. Cada capsule é uma thread com fila própria: uma rodada lenta numa fila
+# (ex.: envio de XML do Log03) não segura as outras. A sincronização de estoque tem a dela.
 :concurrency: 1
 :queues:
   - default
   - products
+:capsules:
+  :stock_sync:
+    :concurrency: 1
+    :queues:
+      - stock_sync
+  :correios_b2c:
+    :concurrency: 1
+    :queues:
+      - correios_b2c
+  :correios_b2b:
+    :concurrency: 1
+    :queues:
+      - correios_b2b

@@ -2,7 +2,7 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
   include SingleRun
   runs_one_at_a_time if: ->(args) { args.first == 'all' }
 
-  queue_as :default
+  queue_as :correios_b2b
   include ApplicationHelper
 
   def perform(param, order, marker_id = nil)

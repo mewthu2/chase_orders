@@ -1,4 +1,5 @@
 class ScheduledStockSyncJob < ActiveJob::Base
+  queue_as :stock_sync
   include SingleRun
   runs_one_at_a_time
 
