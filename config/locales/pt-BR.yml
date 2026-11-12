@@ -260,6 +260,10 @@ pt-BR:
         price_list: Lista de preço
         freight_value: Valor do frete
         notes: Observações
+        payment_method: Forma de pagamento
+        order_discount: Desconto do pedido
+        order_discount_type: Tipo de desconto
+        freight_service: Serviço de frete
         shipping_street: Rua de entrega
         shipping_number: Número de entrega
         shipping_complement: Complemento de entrega

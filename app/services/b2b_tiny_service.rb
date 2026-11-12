@@ -31,7 +31,7 @@ class B2bTinyService
   # criação dos Correios B2B (CreateCorreiosLogOrdersJob2) usar SEDEX com o adicional de mão própria (002).
   # A transferência B2C não leva esse identificador (vai como transportadora, dentro do galpão do Log).
   HAND_DELIVERY_TAG = 'MAO PROPRIA'.freeze
-  # Abastecimento das lojas sempre vai por SEDEX (Correios Log).
+  # Abastecimento com mão própria vai por SEDEX (Correios Log); por transportadora, vai pela escolhida.
   STOCK_TRANSFER_FREIGHT_SERVICE = 'SEDEX CORREIOS LOG+'.freeze
   # Nome que vai no destinatário da entrega (endereco_entrega.nome_destinatario) da transferência.
   B2C_TRANSFER_RECIPIENT_NAME = 'TRANSFERENCIA B2B PARA B2C'.freeze
@@ -250,6 +250,8 @@ class B2bTinyService
       valor_frete: b2b_order.freight_value.to_f,
       obs: build_obs(b2b_order)
     }
+    # Desconto livre do pedido (R$ ou %), sempre enviado em reais.
+    pedido[:valor_desconto] = format('%.2f', b2b_order.discount_amount) if b2b_order.discount_amount.positive?
 
     pedido[:id_lista_preco] = TRANSFER_PRICE_LIST_ID if b2b_order.transfer?
 
@@ -299,9 +301,8 @@ class B2bTinyService
   # digitado na Honey só fica visível via observações.
   def build_obs(b2b_order)
     base = b2b_order.notes.presence || "Pedido B2B ##{b2b_order.id}"
-    return base if b2b_order.salesperson_name.blank?
-
-    "Vendedor: #{b2b_order.salesperson_name} | #{base}"
+    payment = "Pagamento: #{b2b_order.payment_label}" if b2b_order.payment_label
+    [("Vendedor: #{b2b_order.salesperson_name}" if b2b_order.salesperson_name.present?), payment, base].compact.join(' | ')
   end
 
   def receiver_obs(b2b_order)
@@ -311,7 +312,7 @@ class B2bTinyService
   def build_stock_transfer_pedido(b2b_order)
     location = b2b_order.transfer_location
 
-    {
+    pedido = {
       situacao: 'preparando_envio',
       data_pedido: b2b_order.created_at.strftime('%d/%m/%Y'),
       id_natureza_operacao: NATUREZA_OPERACAO_IDS['transfer'],
@@ -330,6 +331,14 @@ class B2bTinyService
       obs: [HAND_DELIVERY_TAG, "Abastecimento Loja ##{b2b_order.id}", receiver_obs(b2b_order), b2b_order.notes.presence].compact.join(' | '),
       obs_interna: HAND_DELIVERY_TAG
     }
+    return pedido unless b2b_order.stock_transfer_by_carrier?
+
+    # Por transportadora: igual ao pedido de atacado com forma "Transportadora" (sem o identificador de mão
+    # própria). A fila dos Correios B2B cria na modalidade 74926 com o CNPJ da transportadora da nota.
+    carrier_name = b2b_order.carrier.name.to_s.strip
+    pedido.merge(forma_envio: 'T', forma_frete: carrier_name, nome_transportador: carrier_name,
+                 obs: ["Abastecimento Loja ##{b2b_order.id}", receiver_obs(b2b_order), b2b_order.notes.presence].compact.join(' | '))
+          .except(:obs_interna)
   end
 
   def parse_pedido_response(response)

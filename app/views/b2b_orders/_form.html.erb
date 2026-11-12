@@ -30,8 +30,9 @@
         <% if @b2b_order.sale? %>
         <div class="form-col-6" id="clientSection">
           <label class="field-label">Cliente</label>
-          <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
+          <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente do Honey por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
           <div id="clientSearchResults" class="list-group mt-2"></div>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Só clientes cadastrados no Honey. <%= link_to 'Cadastrar cliente', new_client_path, target: '_blank' %></span>
           <%= form.hidden_field :client_id, id: 'clientIdField' %>
         </div>
 
@@ -46,13 +47,23 @@
           <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com a nota fiscal gerada, e entra na fila dos Correios B2B.</span>
         </div>
-        <div class="form-col-6">
+        <% by_carrier = @b2b_order.carrier_id.present? %>
+        <div class="form-col-6" id="stockDeliverySection">
           <label class="field-label">Entrega</label>
-          <span class="hand-delivery-badge"><i class="fas fa-hand-holding"></i>SEDEX · Mão Própria</span>
-          <span class="text-muted-custom d-block mt-1">Sempre SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
+          <div class="d-flex gap-3 flex-wrap">
+            <label class="form-check"><input type="radio" name="stock_delivery" value="hand" class="form-check-input" <%= 'checked' unless by_carrier %>><span><i class="fas fa-hand-holding me-1"></i>SEDEX · Mão Própria</span></label>
+            <label class="form-check"><input type="radio" name="stock_delivery" value="carrier" class="form-check-input" <%= 'checked' if by_carrier %>><span><i class="fas fa-truck-moving me-1"></i>Transportadora</span></label>
+          </div>
+          <span class="text-muted-custom d-block mt-1" id="stockDeliveryHandHint" style="<%= 'display: none;' if by_carrier %>">SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
+          <div id="stockCarrierSection" class="mt-2" style="<%= 'display: none;' unless by_carrier %>">
+            <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione a transportadora...' }, { class: 'field-input', id: 'stockCarrierSelect', required: by_carrier, disabled: !by_carrier } %>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Nos Correios B2B entra como transportadora (74926), com o CNPJ dela na nota. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+          </div>
+          <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
+          <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
         </div>
         <div class="form-col-6">
-          <label class="field-label">Responsável pelo Recebimento</label>
+          <label class="field-label">Responsável pelo Recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></label>
           <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
           <div id="receiverNamesList">
             <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
@@ -93,13 +104,34 @@
         <%# Correios Log precisa de um serviço (forma_frete no Tiny); o fluxo dos Correios do Honey depende do nome exato. %>
         <div class="form-col-6" id="freightServiceSection" style="display: none;">
           <label class="field-label">Serviço de frete (Correios Log)</label>
-          <%= form.select :freight_service, B2bOrder::FREIGHT_SERVICES, { include_blank: 'Selecione...' }, { id: 'freightServiceSelect', class: 'field-input', disabled: true } %>
+          <%= form.select :freight_service, B2bOrder::SALE_FREIGHT_SERVICES, { include_blank: 'Selecione...' }, { id: 'freightServiceSelect', class: 'field-input', disabled: true } %>
+          <span class="text-muted-custom d-block mt-1">No atacado, Correios Log é só SEDEX.</span>
         </div>
 
         <div class="form-col-6" id="carrierSection" style="display: none;">
           <label class="field-label">Transportadora</label>
           <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+        </div>
+
+        <% fixed_value = B2bSetting.current.fixed_freight_value %>
+        <% fixed_label = number_to_currency(fixed_value, unit: 'R$', separator: ',', delimiter: '.') %>
+        <div class="form-col-6" id="freightChoiceSection" data-fixed-value="<%= fixed_value.to_f %>">
+          <label class="field-label">Frete</label>
+          <%= form.select :fixed_freight, [["Frete fixo (#{fixed_label})", true], ['Outro valor', false]], {}, { class: 'field-input', id: 'fixedFreightSelect' } %>
+          <span class="text-muted-custom d-block mt-1">O frete fixo vem da configuração<%= ' (' if screen_can?(:b2b_orders, :edit) %><%= link_to('mudar o valor', edit_b2b_setting_path, target: '_blank') if screen_can?(:b2b_orders, :edit) %><%= ')' if screen_can?(:b2b_orders, :edit) %>; dá para ajustar só neste pedido.</span>
+        </div>
+
+        <div class="form-col-6">
+          <label class="field-label">Valor do frete (R$)</label>
+          <%= form.number_field :freight_value, step: 0.01, min: 0, class: 'field-input', id: 'freightValueField', placeholder: '0,00' %>
+          <span class="text-muted-custom d-block mt-1">Vai para o pedido no Tiny como valor do frete.</span>
+        </div>
+
+        <div class="form-col-6">
+          <label class="field-label">Forma de pagamento</label>
+          <%= form.select :payment_method, B2bOrder::PAYMENT_METHODS.map { |key, label| [label, key] }, { include_blank: 'Selecione...' },
+                          { class: 'field-input', required: @b2b_order.tiny_reference_id.blank? } %>
         </div>
         <% end %>
 
@@ -172,7 +204,7 @@
 
       <table class="orders-table" id="itemsTable" data-enforce-stock="<%= @b2b_order.tiny_reference_id.blank? && !@b2b_order.cancelado? %>">
         <thead>
-          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Desconto</th><th>Estoque · Reservado · Disponível</th><th></th></tr>
+          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><% unless @b2b_order.sale? %><th>Desconto</th><% end %><th>Estoque · Reservado · Disponível</th><th></th></tr>
         </thead>
         <tbody id="itemsTableBody">
           <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
@@ -191,7 +223,7 @@
               <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input', readonly: true %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][quantity]", item.quantity, class: 'field-input' %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][price]", item.price, step: 0.01, class: 'field-input' %></td>
-              <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][discount]", item.discount, step: 0.01, min: 0, class: 'field-input' %></td>
+              <% unless @b2b_order.sale? %><td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][discount]", item.discount, step: 0.01, min: 0, class: 'field-input' %></td><% end %>
               <td class="item-stock-cell" data-sku="<%= item.sku %>">-</td>
               <td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>
             </tr>
@@ -226,6 +258,32 @@
     </div>
   </div>
 
+  <% if @b2b_order.sale? %>
+  <div class="form-section" id="orderSummarySection">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-receipt me-2"></i>Resumo e desconto</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Desconto do pedido</label>
+          <div class="d-flex gap-2">
+            <%= form.number_field :order_discount, step: 0.01, min: 0, class: 'field-input', id: 'orderDiscountField' %>
+            <%= form.select :order_discount_type, B2bOrder::DISCOUNT_TYPES.map { |key, label| [label, key] }, {}, { class: 'field-input', id: 'orderDiscountTypeField', style: 'max-width: 90px' } %>
+          </div>
+          <span class="text-muted-custom d-block mt-1">Desconto livre sobre o total dos itens, em reais ou porcentagem. Vai ao Tiny em reais.</span>
+        </div>
+        <div class="form-col-6">
+          <div class="order-summary" id="orderSummary">
+            <div class="d-flex justify-content-between"><span class="text-muted-custom">Itens</span><span id="summaryItems">R$ 0,00</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted-custom">Desconto</span><span id="summaryDiscount">- R$ 0,00</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted-custom">Frete</span><span id="summaryFreight">R$ 0,00</span></div>
+            <div class="d-flex justify-content-between mt-1"><strong>Total</strong><strong id="summaryTotal">R$ 0,00</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% end %>
+
   <div class="form-section">
     <div class="form-section-body">
       <label class="field-label">Observações</label>
@@ -258,6 +316,65 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Responsáveis pelo recebimento: um campo por pessoa, salvos juntos separados por vírgula.
+  // Abastecimento: SEDEX com mão própria (sem transportadora, responsável obrigatório) ou transportadora.
+  var stockDelivery = document.getElementById('stockDeliverySection');
+  if (stockDelivery) {
+    var applyStockDelivery = function () {
+      var checked = stockDelivery.querySelector('input[name="stock_delivery"]:checked');
+      var byCarrier = !!checked && checked.value === 'carrier';
+      var select = document.getElementById('stockCarrierSelect');
+      document.getElementById('stockCarrierSection').style.display = byCarrier ? '' : 'none';
+      document.getElementById('stockDeliveryHandHint').style.display = byCarrier ? 'none' : '';
+      document.getElementById('receiverOptionalHint').style.display = byCarrier ? '' : 'none';
+      select.disabled = !byCarrier;
+      select.required = byCarrier;
+      document.getElementById('stockCarrierBlank').disabled = byCarrier;
+      var firstReceiver = document.querySelector('#receiverNamesList .receiver-name-input');
+      if (firstReceiver && <%= @b2b_order.tiny_reference_id.blank? %>) firstReceiver.required = !byCarrier;
+    };
+    stockDelivery.addEventListener('change', applyStockDelivery);
+    applyStockDelivery();
+  }
+
+  // Frete fixo: ao escolher, aplica o valor da configuração (que ainda pode ser ajustado no pedido).
+  var fixedSelect = document.getElementById('fixedFreightSelect');
+  if (fixedSelect) {
+    var fixedValue = parseFloat(document.getElementById('freightChoiceSection').dataset.fixedValue) || 0;
+    var freightField = document.getElementById('freightValueField');
+    fixedSelect.addEventListener('change', function () {
+      if (fixedSelect.value === 'true') freightField.value = fixedValue.toFixed(2);
+      freightField.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  // Resumo do atacado: itens, desconto livre (R$ ou %), frete e total, atualizados a cada mudança.
+  var summary = document.getElementById('orderSummary');
+  if (summary) {
+    var brl = function (v) { return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); };
+    var num = function (el) { return el ? (parseFloat(String(el.value).replace(',', '.')) || 0) : 0; };
+    var updateSummary = function () {
+      var items = 0;
+      document.querySelectorAll('#itemsTableBody tr').forEach(function (row) {
+        var qty = num(row.querySelector('input[name$="[quantity]"]'));
+        var price = num(row.querySelector('input[name$="[price]"]'));
+        var itemDiscount = num(row.querySelector('input[name$="[discount]"]'));
+        items += Math.max(price - itemDiscount, 0) * qty;
+      });
+      var value = num(document.getElementById('orderDiscountField'));
+      var percent = document.getElementById('orderDiscountTypeField').value === 'percent';
+      var discount = Math.min(percent ? items * value / 100 : value, items);
+      var freight = num(document.getElementById('freightValueField'));
+      document.getElementById('summaryItems').textContent = brl(items);
+      document.getElementById('summaryDiscount').textContent = '- ' + brl(discount);
+      document.getElementById('summaryFreight').textContent = brl(freight);
+      document.getElementById('summaryTotal').textContent = brl(items - discount + freight);
+    };
+    document.getElementById('b2bOrderForm').addEventListener('input', updateSummary);
+    document.getElementById('b2bOrderForm').addEventListener('change', updateSummary);
+    new MutationObserver(updateSummary).observe(document.getElementById('itemsTableBody'), { childList: true });
+    updateSummary();
+  }
+
   var receiverList = document.getElementById('receiverNamesList');
   if (receiverList) {
     var receiverField = document.getElementById('receiverNameField');
@@ -321,6 +438,7 @@ document.addEventListener('DOMContentLoaded', function () {
     freightSelect.disabled = !isCorreiosLog;
     freightSelect.required = isCorreiosLog;
     if (!isCorreiosLog) freightSelect.value = '';
+    else if (!freightSelect.value) freightSelect.value = '<%= B2bOrder::SALE_FREIGHT_SERVICES.first %>';
   }
 
   // Forma de Envio via AJAX (lista vem do Tiny). A transferência B2C vai como transportadora e não tem esse campo.
@@ -331,6 +449,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var select = document.getElementById('shippingMethodSelect');
       select.innerHTML = '<option value="">Selecione...</option>';
       (data.shipping_methods || []).forEach(function (m) {
+        // Atacado: só Correios Log (SEDEX) e Transportadora.
+        if (['5', '2'].indexOf(String(m.logistics_type)) === -1 && m.method !== '<%= @b2b_order.carrier_shipping_method %>') return;
         var opt = document.createElement('option');
         opt.value = m.method;
         opt.textContent = m.name;
@@ -458,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
       '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '" readonly></td>' +
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
       '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
-      '<td><input type="number" step="0.01" min="0" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][discount]" value="0"></td>' +
+      <% unless @b2b_order.sale? %>'<td><input type="number" step="0.01" min="0" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][discount]" value="0"></td>' +<% end %>
       '<td class="item-stock-cell" data-sku="' + (sku || '') + '" data-new-row="true">-</td>' +
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);

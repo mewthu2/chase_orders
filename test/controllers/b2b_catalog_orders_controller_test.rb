@@ -59,7 +59,7 @@ class B2bCatalogOrdersControllerTest < ActionDispatch::IntegrationTest
       .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '1', numero: '2' } } } }.to_json)
 
     assert_difference('B2bOrder.count', 1) do
-      post b2b_orders_path, params: { catalog_order_id: @order.id, b2b_order: { client_id: @client.id, b2b_order_items_attributes: {
+      post b2b_orders_path, params: { catalog_order_id: @order.id, b2b_order: { client_id: @client.id, payment_method: 'pix', b2b_order_items_attributes: {
         '0' => { sku: 'A-P', name: 'Top A Black - P', quantity: 2, price: 40 }
       } } }
     end

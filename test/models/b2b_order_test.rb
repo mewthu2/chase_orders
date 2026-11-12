@@ -99,9 +99,14 @@ class B2bOrderTest < ActiveSupport::TestCase
     assert order.valid?
   end
 
-  test 'freight_service only accepts the Correios Log services (or blank)' do
+  test 'freight_service only accepts the Correios Log services (or blank); a new wholesale order only SEDEX' do
     base = { kind: :sale, user: @user, client: @client }
-    B2bOrder::FREIGHT_SERVICES.each do |service|
+    pac = B2bOrder.new(base.merge(freight_service: 'PAC CORREIOS LOG+'))
+    pac.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 1, price: 1)
+    assert_not pac.valid?
+    assert_includes pac.errors[:freight_service], 'do atacado é só SEDEX'
+
+    B2bOrder::SALE_FREIGHT_SERVICES.each do |service|
       order = B2bOrder.new(base.merge(freight_service: service))
       order.b2b_order_items.build(sku: 'ABC', name: 'Produto', quantity: 1, price: 1)
       assert order.valid?, "#{service} deveria ser válido: #{order.errors.full_messages.to_sentence}"

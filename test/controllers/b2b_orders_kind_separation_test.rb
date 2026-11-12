@@ -24,7 +24,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   end
 
   def build_sale(**attrs)
-    order = B2bOrder.new({ kind: :sale, user: @admin, client: @client }.merge(attrs))
+    order = B2bOrder.new({ kind: :sale, user: @admin, client: @client, payment_method: 'boleto' }.merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order
@@ -86,7 +86,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'creating through b2b_orders ignores a submitted stock_transfer kind' do
     stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '1', numero: '2' } } } }.to_json)
     post b2b_orders_path, params: { b2b_order: {
-      kind: 'stock_transfer', client_id: @client.id,
+      kind: 'stock_transfer', client_id: @client.id, payment_method: 'boleto',
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
     } }
 
@@ -169,7 +169,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'a wholesale order is created with the standard price list even if transfer is submitted' do
     stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '1', numero: '2' } } } }.to_json)
     post b2b_orders_path, params: { b2b_order: {
-      client_id: @client.id, price_list: 'transfer',
+      client_id: @client.id, price_list: 'transfer', payment_method: 'boleto',
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
     } }
 
@@ -209,8 +209,8 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'the wholesale form has the freight service select for Correios Log and the transfer form does not need it' do
     get new_b2b_order_path
 
-    assert_select 'select#freightServiceSelect[name="b2b_order[freight_service]"] option', count: 4 # em branco + 3 serviços
-    assert_select 'select#freightServiceSelect option', text: 'PAC CORREIOS LOG+'
+    assert_select 'select#freightServiceSelect[name="b2b_order[freight_service]"] option', count: 2 # em branco + SEDEX (atacado só SEDEX)
+    assert_select 'select#freightServiceSelect option', text: 'SEDEX CORREIOS LOG+'
     assert_select '#freightServiceSection'
     assert_match(/logistics_type|logistics/, response.body)
   end
@@ -221,7 +221,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
       .to_return(body: { retorno: { status: 'OK', registros: [{ id: '898469144', nome: 'Correios Log', situacao: '1', tipo_logistica: '5' }] } }.to_json)
 
     post b2b_orders_path, params: { b2b_order: {
-      client_id: @client.id, carrier_shipping_method: '898469144', freight_service: 'SEDEX CORREIOS LOG+',
+      client_id: @client.id, carrier_shipping_method: '898469144', freight_service: 'SEDEX CORREIOS LOG+', payment_method: 'boleto',
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
     } }
 

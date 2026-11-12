@@ -178,6 +178,7 @@ Rails.application.routes.draw do
   end
   
   resource :internal_transfer_config, only: [:edit, :update]
+  resource :b2b_setting, only: [:edit, :update]
   resources :internal_transfers do
     member do
       post :approve

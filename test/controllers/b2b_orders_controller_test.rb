@@ -61,7 +61,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
   def create_sale_order
     post b2b_orders_path, params: { b2b_order: {
-      kind: 'sale', client_id: @client.id,
+      kind: 'sale', payment_method: 'boleto', client_id: @client.id,
       b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }]
     } }
     B2bOrder.last
@@ -147,7 +147,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference 'B2bOrder.count', 1 do
       post b2b_orders_path, params: { b2b_order: {
-        kind: 'sale', client_id: @client.id, salesperson_name: 'Fulano',
+        kind: 'sale', payment_method: 'boleto', client_id: @client.id, salesperson_name: 'Fulano',
         b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10, discount: 1 }]
       } }
     end
@@ -161,14 +161,14 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
 
     assert_no_difference 'B2bOrder.count' do
-      post b2b_orders_path, params: { b2b_order: { kind: 'sale', client_id: @client.id } }
+      post b2b_orders_path, params: { b2b_order: { kind: 'sale', payment_method: 'boleto', client_id: @client.id } }
     end
     assert_response :unprocessable_entity
   end
 
   test 'transmit resends only when the order is resendable' do
     sign_in @admin
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :aberto, tiny_reference_id: '123')
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :aberto, tiny_reference_id: '123')
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
 
@@ -206,7 +206,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
   end
 
   def build_order(**attrs)
-    order = B2bOrder.new({ kind: :sale, user: @admin, client: @client, status: :aberto }.merge(attrs))
+    order = B2bOrder.new({ kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :aberto }.merge(attrs))
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order

@@ -18,19 +18,22 @@ class B2bOrdersController < ApplicationController
   KIND_LABELS = { 'sale' => 'Pedido', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' }.freeze
 
   def index
-    @scope = B2bOrder.where(kind: order_kind).includes(:client, :transfer_location, :b2b_order_items, :user).recent
+    @scope = B2bOrder.where(kind: order_kind).includes(:client, :transfer_location, :carrier, :b2b_order_items, :user).recent
     @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).pluck(:b2b_order_id).to_set
     @filter_locations = TransferLocation.order(:name) if order_kind == 'stock_transfer'
   end
 
   def new
     @b2b_order = B2bOrder.new(kind: order_kind, price_list: price_list_for(order_kind))
+    # Atacado novo já começa com o frete fixo da configuração (dá para trocar ou ajustar).
+    @b2b_order.assign_attributes(fixed_freight: true, freight_value: B2bSetting.current.fixed_freight_value) if @b2b_order.sale?
     prefill_from_catalog_order(@b2b_order) if order_kind == 'sale' && params[:catalog_order_id].present?
   end
 
   def create
     @b2b_order = B2bOrder.new(b2b_order_params.merge(kind: order_kind, price_list: price_list_for(order_kind)))
     @b2b_order.user = current_user
+    @b2b_order.require_payment = true
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
       link_catalog_order(@b2b_order)
@@ -50,6 +53,7 @@ class B2bOrdersController < ApplicationController
 
   def update
     @b2b_order.assign_attributes(b2b_order_params)
+    @b2b_order.require_payment = true
     push_status = @b2b_order.status_changed? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present?
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
@@ -67,6 +71,11 @@ class B2bOrdersController < ApplicationController
   def transmit
     unless @b2b_order.resendable?
       redirect_to orders_path_for(order_kind), alert: 'Este pedido não pode ser reenviado.'
+      return
+    end
+
+    if @b2b_order.sale? && @b2b_order.payment_method.blank?
+      redirect_to edit_order_path_for(@b2b_order), alert: 'Escolha a forma de pagamento (boleto, pix ou cartão) antes de enviar ao Tiny.'
       return
     end
 
@@ -245,25 +254,12 @@ class B2bOrdersController < ApplicationController
       q: "%#{query.downcase}%"
     ).limit(10)
 
-    local_registrations = local_clients.filter_map { |c| c.registration.to_s.gsub(/\D/, '').presence }
-
-    local_results = local_clients.map do |c|
+    # O pedido do atacado só aceita cliente já cadastrado no Honey (a busca no Tiny saiu).
+    results = local_clients.map do |c|
       { source: 'honey', client_id: c.id, name: c.display_name, registration: c.cnpj_formatted }
     end
 
-    tiny_results = B2bTinyService.new.search_clients(query).filter_map do |c|
-      digits = c[:registration].to_s.gsub(/\D/, '')
-      next if digits.present? && local_registrations.include?(digits)
-
-      {
-        source: 'tiny', tiny_id: c[:tiny_id], name: c[:name], registration: c[:registration],
-        street: c[:street], number: c[:number], complement: c[:complement],
-        neighbourhood: c[:neighbourhood], city: c[:city], state: c[:state], zip: c[:zip],
-        email: c[:email], phone: c[:phone]
-      }
-    end.first(10)
-
-    render json: { success: true, clients: local_results + tiny_results }
+    render json: { success: true, clients: results }
   end
 
   def import_client
@@ -495,15 +491,17 @@ class B2bOrdersController < ApplicationController
   end
 
   # As transferências não aceitam dados de envio: a B2C tem destinatário fixo e vai como transportadora; o
-  # abastecimento vai sempre por SEDEX com mão própria. Só o abastecimento escolhe o local de destino e o
-  # responsável pelo recebimento.
+  # abastecimento vai por SEDEX com mão própria ou, se escolher uma, pela transportadora (carrier_id). Só o
+  # abastecimento escolhe o local de destino e o responsável pelo recebimento.
   SHIPPING_PARAMS = %i[client_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
+  # Só o atacado tem forma de pagamento e desconto livre no total.
+  SALE_ONLY_PARAMS = %i[payment_method order_discount order_discount_type fixed_freight].freeze
 
   def b2b_order_params
     permitted = b2b_order_permitted_params
     case order_kind
-    when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, :transfer_location_id, :receiver_name)
-    when 'stock_transfer' then permitted.except(*SHIPPING_PARAMS)
+    when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, *SALE_ONLY_PARAMS, :transfer_location_id, :receiver_name)
+    when 'stock_transfer' then permitted.except(*(SHIPPING_PARAMS - [:carrier_id]), *SALE_ONLY_PARAMS)
     else permitted.except(:receiver_name)
     end
   end
@@ -513,6 +511,7 @@ class B2bOrdersController < ApplicationController
       :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,
       :salesperson_name, :receiver_name, :status, :different_shipping_address,
+      :payment_method, :order_discount, :order_discount_type, :fixed_freight,
       :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
       :shipping_city, :shipping_state, :shipping_zip,
       b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]

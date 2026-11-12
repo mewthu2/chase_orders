@@ -75,6 +75,18 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal '25405327000174', xml.at_xpath('//n:dest/n:CNPJ', NS).text
   end
 
+  test 'the wholesale order discount is prorated over the items (vDesc) and lowers the note total' do
+    order = build_order(order_discount: 10, order_discount_type: 'percent') # itens 25,50 -> desconto 2,55
+
+    note = generate(order, @company)
+
+    xml = Nokogiri::XML(note.xml.download)
+    item_discounts = xml.xpath('//n:det/n:prod/n:vDesc', NS).map { |n| BigDecimal(n.text) }
+    assert_equal BigDecimal('2.55'), item_discounts.sum
+    assert_equal BigDecimal('2.55'), BigDecimal(xml.at_xpath('//n:ICMSTot/n:vDesc', NS).text)
+    assert_equal BigDecimal('22.95'), note.total_value
+  end
+
   test 'uses the interstate CFOP when the recipient is in another state' do
     @client.update!(state: 'SP', city_ibge_code: '3550308')
 

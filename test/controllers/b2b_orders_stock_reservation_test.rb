@@ -19,7 +19,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   def order_params(quantity)
-    { b2b_order: { client_id: @client.id, b2b_order_items_attributes: { '0' => { sku: 'LEG-A', name: 'Legging A', quantity: quantity, price: 10 } } } }
+    { b2b_order: { client_id: @client.id, payment_method: 'boleto', b2b_order_items_attributes: { '0' => { sku: 'LEG-A', name: 'Legging A', quantity: quantity, price: 10 } } } }
   end
 
   test 'product_stock returns stock, reserved and available' do
@@ -38,7 +38,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   test 'update of an order not yet in Tiny is blocked too' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :aberto)
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :aberto)
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 1, price: 10)
     order.save!
     item = order.b2b_order_items.first
@@ -50,7 +50,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   test 'orders already in Tiny are not blocked by their own reservation' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 5, price: 10)
     order.save!
 
@@ -60,7 +60,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   test 'transmit is blocked when an item exceeds the available stock' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :dados_incompletos)
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :dados_incompletos)
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 3, price: 10)
     order.save!
 
@@ -93,7 +93,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
     get new_b2b_order_path
     assert_select "#itemsTable[data-enforce-stock='true']"
 
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 5, price: 10)
     order.save!
     get edit_b2b_order_path(order)
@@ -101,7 +101,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   test 'product_stock does not count the reservation of the order being edited' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 2, price: 10)
     order.save!
 
@@ -112,7 +112,7 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
   end
 
   test 'the edit form asks the stock of its own order' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :preparando_envio, tiny_reference_id: '77')
     order.b2b_order_items.build(sku: 'LEG-A', quantity: 2, price: 10)
     order.save!
 

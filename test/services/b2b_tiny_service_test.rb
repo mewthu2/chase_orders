@@ -339,11 +339,11 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
 
   test 'Correios Log is sent as forma_envio E with the chosen freight service and the Correios carrier' do
     stub_formas
-    result, sent, = send_sale(carrier_shipping_method: '898469144', freight_service: 'PAC CORREIOS LOG+')
+    result, sent, = send_sale(carrier_shipping_method: '898469144', freight_service: 'SEDEX CORREIOS LOG+')
 
     assert result[:success]
     assert_equal 'E', sent['forma_envio']
-    assert_equal 'PAC CORREIOS LOG+', sent['forma_frete']
+    assert_equal 'SEDEX CORREIOS LOG+', sent['forma_frete']
     assert_equal CORREIOS_NAME, sent['nome_transportador']
     assert_equal 'D', sent['frete_por_conta']
     refute_includes sent.keys, 'id_forma_envio'
@@ -420,7 +420,7 @@ class B2bTinyServiceTest < ActiveSupport::TestCase
 
   test 'if the shipping methods cannot be read from Tiny the order is not sent' do
     stub_request(:get, FORMAS_URL).with(query: hash_including('formato' => 'json')).to_return(body: 'gateway', status: 502)
-    result, _, stub = send_sale(carrier_shipping_method: '898469144', freight_service: 'PAC CORREIOS LOG+')
+    result, _, stub = send_sale(carrier_shipping_method: '898469144', freight_service: 'SEDEX CORREIOS LOG+')
 
     refute result[:success]
     assert_match(/formas de envio/i, result[:error])

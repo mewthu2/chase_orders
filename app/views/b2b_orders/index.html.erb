@@ -20,9 +20,9 @@
                           banner: ['Salvar não envia ao Tiny', 'O pedido salvo fica só no Honey, como Aberto. Ele entra no Tiny, como Preparando envio, quando você clica em Enviar ao Tiny. Antes disso o sistema confere se há estoque disponível no Log02.'] },
               'stock_transfer' => { title: 'Abastecimento Lojas', subtitle: 'Reposição das lojas com o estoque do Log02.', icon: 'fas fa-dolly', perm: :store_supply,
                                     unit: %w[abastecimentos abastecimento], list: 'Lista de abastecimentos', list_icon: 'fas fa-dolly', new_label: 'Novo abastecimento',
-                                    meta: 'Embaixo de cada loja aparece quem recebe a mercadoria. Com mão própria, só essa pessoa pode receber.',
+                                    meta: 'Embaixo de cada loja aparece quem recebe a mercadoria. Com mão própria, só essa pessoa pode receber; com transportadora, aparece o nome dela.',
                                     empty: ['Nenhum abastecimento encontrado', 'Quando uma loja precisar de reposição, crie um abastecimento: os produtos saem do estoque do Log02.'],
-                                    banner: ['O estoque sai do Log02', 'Os produtos saem do estoque do Log02 (antes Correios B2B) e seguem por SEDEX mão própria. Ao salvar, o pedido já vai para o Tiny com a nota.'] },
+                                    banner: ['O estoque sai do Log02', 'Os produtos saem do estoque do Log02 (antes Correios B2B) e seguem por SEDEX mão própria ou pela transportadora escolhida. Ao salvar, o pedido já vai para o Tiny com a nota.'] },
               'b2c_transfer' => { title: 'Transferência B2B → B2C', subtitle: 'Peças do estoque de atacado para a filial da loja online.', icon: 'fas fa-random', perm: :b2b_transfers,
                                   unit: %w[transferências transferência], list: 'Lista de transferências', list_icon: 'fas fa-random', new_label: 'Nova transferência',
                                   meta: 'Cada transferência leva peças do estoque de atacado para a filial B2C, com nota e marcador de transferência.',
@@ -36,10 +36,12 @@
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
        tiny: [order.tiny_reference_number.presence || order.tiny_reference_id.presence, (tiny_order_url(order) if order.tiny_reference_id.present?), 'Ver no Tiny'], track: order.tracking_code.presence || '—', st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: order.freight_service.presence || '—',
-       transp: order.carrier_name.presence || '—', fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
+       transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
+       entrega: order.stock_transfer? ? (order.hand_delivery? ? 'SEDEX · Mão Própria' : "Transportadora · #{order.carrier&.name}") : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
        fretev: order.freight_value ? number_to_currency(order.freight_value, unit: 'R$ ', separator: ',', delimiter: '.') : '—', obs: order.notes.presence || '—',
        erro: order.error_message, loc: [[order.transfer_location&.name, order.transfer_location_id]].reject { |n, _| n.blank? }, receb: order.receiver_name.presence || '—',
-       por: order.user&.name, dest: b2b_order_destination(order) }
+       por: order.user&.name, dest: b2b_order_destination(order), pag: order.payment_label || '—',
+       desc: order.discount_amount.positive? ? number_to_currency(order.discount_amount, unit: 'R$ ', separator: ',', delimiter: '.') : '—' }
    } %>
 <% search = ->(scope, text) {
      q = "%#{ActiveRecord::Base.sanitize_sql_like(text.to_s.strip.delete_prefix('#'))}%"
@@ -69,6 +71,8 @@
          { k: :transp, label: 'Transportadora', hide: true },
          { k: :fretepg, label: 'Frete por conta de', hide: true },
          { k: :fretev, label: 'Valor do frete (R$)', hide: true },
+         { k: :pag, label: 'Forma de pagamento', hide: true },
+         { k: :desc, label: 'Desconto do pedido', hide: true },
          { k: :obs, label: 'Observações', hide: true }
        ],
        filters: [{ id: :q, type: :search, label: 'Buscar pedido', ph: 'Pesquise por cliente ou número...', tip: 'Procura pelo nome do cliente, pelo número do pedido no Honey ou pelo número do pedido no Tiny. Pode digitar só um pedaço.' }],
@@ -88,6 +92,7 @@
          { k: :total, label: 'Total', t: :money },
          { k: :tiny, label: 'Nº Tiny', t: :link },
          { k: :st, label: 'Status', t: :status, map: statuses },
+         { k: :entrega, label: 'Entrega', t: :tag },
          { k: :receb, label: 'Quem recebe na loja', hide: true },
          { k: :track, label: 'Rastreamento', t: :mono, hide: true },
          { k: :por, label: 'Criado por', hide: true },
@@ -145,6 +150,9 @@
   <% if screen_can?(perm, :create) %>
     <%= link_to new_order_path_for, class: 'btn btn-export' do %><i class="fas fa-plus"></i><%= screen[:new_label] %><% end %>
   <% end %>
+  <% if sale && screen_can?(:b2b_orders, :edit) %>
+    <%= link_to edit_b2b_setting_path, class: 'btn btn-secondary' do %><i class="fas fa-truck-ramp-box"></i>Frete fixo<% end %>
+  <% end %>
   <% if sale && screen_can?(:clients, :create) %>
     <%= link_to new_client_path, class: 'btn btn-secondary' do %><i class="fas fa-address-book"></i>Cadastrar novo cliente<% end %>
   <% end %>
@@ -159,7 +167,7 @@
                  cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), screen[:new_label]]), new_order_path_for, class: 'btn btn-export') if screen_can?(perm, :create)) },
         detail: { title: ->(r) { "#{sale ? 'Pedido' : (supply ? 'Abastecimento' : 'Transferência')} ##{r[:n]}" },
                   note: (sale ? 'Valores e peças são os do Honey. Depois que o pedido vai para o Tiny, o Honey só acompanha a situação.'
-                              : supply ? 'Sai do estoque do Log02 por SEDEX mão própria: só quem está em "Quem recebe na loja" consegue retirar na entrega.'
+                              : supply ? 'Sai do estoque do Log02. Por SEDEX mão própria, só quem está em "Quem recebe na loja" consegue retirar na entrega; por transportadora, vai pela que está em "Entrega".'
                                        : 'Não usa SEDEX mão própria: o pedido segue como transportadora, dentro do galpão do Log.'),
                   extra: ->(r) { safe_join([(content_tag(:div, content_tag(:i, '', class: 'fas fa-triangle-exclamation') + content_tag(:span, "Mensagem do Tiny: #{r[:erro]}"), class: 'pg-fnote is-warn') if r[:erro].present?), items_section.call(r)].compact) } },
         actions: ->(r) {

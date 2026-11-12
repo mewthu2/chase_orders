@@ -191,10 +191,13 @@ class B2bRomaneioPdf
     quantity = @items.sum { |i| i.quantity.to_i }
     subtotal = @items.sum(&:line_total)
     freight = @order.freight_value.to_f
+    discount = @order.discount_amount.to_f
 
     rows = [['Itens', "#{@items.size} produto(s) · #{quantity} peça(s)"], ['Subtotal', money(subtotal)]]
+    rows << ['Desconto', "- #{money(discount)}"] if discount.positive?
     rows << ['Frete', money(freight)] if freight.positive?
-    total = subtotal + (freight.positive? ? freight : 0)
+    rows << ['Pagamento', @order.payment_label] if @order.payment_label
+    total = subtotal - discount + (freight.positive? ? freight : 0)
 
     box_width = 230
     pdf.bounding_box([pdf.bounds.width - box_width, pdf.cursor], width: box_width) do

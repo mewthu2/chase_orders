@@ -95,3 +95,16 @@
   i { color: $accent-green; }
 }
 @media (prefers-reduced-motion: reduce) { .hand-delivery-badge { animation: none; } }
+
+// Resumo do pedido do atacado (itens, desconto livre, frete e total).
+.order-summary {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: $radius-md;
+  border: 1px solid $border-muted;
+  background: $bg-elevated;
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+  #summaryTotal { font-size: 1.1rem; color: $accent-green; transition: color 0.2s ease; }
+}

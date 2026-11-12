@@ -95,7 +95,9 @@ module Nfe
       products = Product.where(sku: order_items.map(&:sku)).index_by(&:sku)
       cfop = cfop_for(recipient)
 
-      order_items.map do |order_item|
+      discounts = order_discount_shares(order_items)
+
+      order_items.each_with_index.map do |order_item, index|
         product = products[order_item.sku]
         if product.nil?
           missing << "produto do SKU #{order_item.sku} não encontrado"
@@ -107,9 +109,23 @@ module Nfe
           code: order_item.sku, description: product&.shopify_product_name.presence || order_item.name.presence || order_item.sku,
           ncm: product&.ncm, cest: product&.cest, origin: product&.origin || 0,
           unit: product&.commercial_unit.presence || 'UN', quantity: order_item.quantity,
-          unit_price: order_item.price - order_item.discount, cfop: cfop
+          unit_price: order_item.price - order_item.discount, cfop: cfop, discount: discounts[index]
         }
       end
+    end
+
+    # Desconto livre do pedido (atacado) rateado pelos itens, proporcional ao valor de cada um (vDesc);
+    # o último item fica com a sobra do arredondamento para a soma bater com o desconto do pedido.
+    def order_discount_shares(order_items)
+      total_discount = @order.respond_to?(:discount_amount) ? @order.discount_amount.to_d : 0.to_d
+      return Array.new(order_items.size, 0) unless total_discount.positive?
+
+      values = order_items.map { |i| (i.price.to_d - i.discount.to_d) * i.quantity.to_i }
+      sum = values.sum
+      return Array.new(order_items.size, 0) unless sum.positive?
+
+      shares = values[0...-1].map { |v| (total_discount * v / sum).round(2) }
+      shares << (total_discount - shares.sum)
     end
 
     def create_note(recipient, items)
