@@ -142,7 +142,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_select '.flash-messages-container .alert-danger'
   end
 
-  test 'admin can create a sale order with the new form fields and a per-item discount' do
+  test 'admin can create a sale order with the new form fields; a per-item discount sent anyway is ignored' do
     sign_in @admin
 
     assert_difference 'B2bOrder.count', 1 do
@@ -154,7 +154,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     order = B2bOrder.last
     assert_equal 'Fulano', order.salesperson_name
     assert order.standard?
-    assert_equal 1.0, order.b2b_order_items.first.discount
+    assert_equal 0.0, order.b2b_order_items.first.discount.to_f, 'não existe mais desconto manual por item'
   end
 
   test 'creating without items re-renders with errors' do
@@ -210,6 +210,18 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order
+  end
+
+  test 'the romaneio of an order with the order discount renders (no per-item discount column)' do
+    sign_in @admin
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :aberto, order_discount: 5)
+    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 2, price: 10)
+    order.save!
+
+    get romaneio_b2b_order_path(order)
+
+    assert_response :success
+    assert_equal 'application/pdf', response.media_type
   end
 
   test 'romaneio downloads the order items as a PDF' do
@@ -329,7 +341,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
     product_json = json['products'].first
     assert_equal 100.0, product_json['retail_price']
-    assert_equal 40.0, product_json['suggested_price']
+    assert_equal 43.4, product_json['suggested_price'] # 56,60% de desconto (não é Seamless)
   end
 
   test 'search_product and product_picker return the B2C transfer price as 70% of cost' do

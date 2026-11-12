@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_200000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -221,6 +221,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_190000) do
     t.decimal "fixed_freight_value", precision: 12, scale: 2, default: "0.0", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "seamless_discount_percent", precision: 5, scale: 2, default: "60.0", null: false
+    t.decimal "default_discount_percent", precision: 5, scale: 2, default: "56.6", null: false
   end
 
   create_table "campaign_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

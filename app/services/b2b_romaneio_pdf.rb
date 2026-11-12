@@ -164,14 +164,16 @@ class B2bRomaneioPdf
   end
 
   def items_table
-    rows = [['#', 'SKU', 'Produto', 'Qtd.', 'Preço un.', 'Desconto', 'Total']]
+    # Sem desconto por item: o único desconto é o do pedido, no resumo. Itens antigos que tinham desconto
+    # aparecem com o preço já líquido, para a soma bater com o total.
+    rows = [['#', 'SKU', 'Produto', 'Qtd.', 'Preço un.', 'Total']]
     @items.each_with_index do |item, index|
       rows << [index + 1, safe(item.sku), safe(item.name.presence || '-'), item.quantity,
-               money(item.price), item.discount.to_f.positive? ? money(item.discount) : '-', money(item.line_total)]
+               money([item.price.to_f - item.discount.to_f, 0].max), money(item.line_total)]
     end
 
     pdf.table(rows, header: true, width: pdf.bounds.width,
-                    column_widths: { 0 => 24, 1 => 92, 3 => 38, 4 => 66, 5 => 60, 6 => 74 },
+                    column_widths: { 0 => 24, 1 => 92, 3 => 38, 4 => 72, 5 => 80 },
                     cell_style: { size: 8.5, padding: [6, 5], borders: [:bottom], border_color: LINE, text_color: INK }) do |t|
       t.row(0).font_style = :bold
       t.row(0).background_color = NAVY
@@ -180,9 +182,9 @@ class B2bRomaneioPdf
       t.row(0).borders = []
       (1...t.row_length).each { |i| t.row(i).background_color = ZEBRA if i.even? }
       t.column(0).text_color = MUTED
-      t.columns(3..6).align = :right
+      t.columns(3..5).align = :right
       t.column(0).align = :center
-      t.column(6).font_style = :bold
+      t.column(5).font_style = :bold
     end
     pdf.move_down 12
   end

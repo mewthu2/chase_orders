@@ -1,4 +1,4 @@
-# Configuração do atacado: o valor do frete fixo. Quem edita pedidos do atacado pode mudar.
+# Configuração do atacado: frete fixo e os descontos do preço de atacado. Quem edita pedidos do atacado pode mudar.
 class B2bSettingsController < ApplicationController
   guard_screen :b2b_orders
 
@@ -8,8 +8,8 @@ class B2bSettingsController < ApplicationController
 
   def update
     @setting = B2bSetting.current
-    if @setting.update(params.require(:b2b_setting).permit(:fixed_freight_value))
-      redirect_to b2b_orders_path, notice: 'Frete fixo do atacado salvo.'
+    if @setting.update(params.require(:b2b_setting).permit(:fixed_freight_value, :seamless_discount_percent, :default_discount_percent))
+      redirect_to b2b_orders_path, notice: 'Configuração do atacado salva.'
     else
       render :edit, status: :unprocessable_entity
     end

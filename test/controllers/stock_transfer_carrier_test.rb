@@ -55,6 +55,7 @@ class StockTransferCarrierTest < ActionDispatch::IntegrationTest
     assert_select 'input[name=stock_delivery][value=hand][checked]'
     assert_select 'input[name=stock_delivery][value=carrier]'
     assert_select "select#stockCarrierSelect option[value='#{@carrier.id}']", text: 'MIX CARGO TRANSPORTES'
+    assert_select '#itemsTable th', text: 'Desconto', count: 0
 
     post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: @carrier.id, b2b_order_items_attributes: items } }
     get stock_transfers_path

@@ -225,7 +225,7 @@
 
       <table class="orders-table" id="itemsTable" data-enforce-stock="<%= @b2b_order.tiny_reference_id.blank? && !@b2b_order.cancelado? %>">
         <thead>
-          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><% unless @b2b_order.sale? %><th>Desconto</th><% end %><th>Estoque · Reservado · Disponível</th><th></th></tr>
+          <tr><th></th><th>SKU</th><th>Nome</th><th>Qtd</th><th>Preço</th><th>Estoque · Reservado · Disponível</th><th></th></tr>
         </thead>
         <tbody id="itemsTableBody">
           <% @b2b_order.b2b_order_items.each_with_index do |item, index| %>
@@ -244,7 +244,6 @@
               <td><%= text_field_tag "b2b_order[b2b_order_items_attributes][#{index}][name]", item.name, class: 'field-input', readonly: true %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][quantity]", item.quantity, class: 'field-input' %></td>
               <td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][price]", item.price, step: 0.01, class: 'field-input' %></td>
-              <% unless @b2b_order.sale? %><td><%= number_field_tag "b2b_order[b2b_order_items_attributes][#{index}][discount]", item.discount, step: 0.01, min: 0, class: 'field-input' %></td><% end %>
               <td class="item-stock-cell" data-sku="<%= item.sku %>">-</td>
               <td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>
             </tr>
@@ -328,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function currentPriceList() {
     return PRICE_LIST;
   }
-  // Preço inicial do item (editável): atacado = sugerido, abastecimento = 80% do varejo, transferência B2C = 70% do custo.
+  // Preço inicial do item (editável): atacado = varejo com o desconto configurado (Seamless ou demais), abastecimento = 80% do varejo, transferência B2C = 70% do custo.
   var ORDER_KIND = '<%= @b2b_order.kind %>';
   function defaultPrice(product, suggestedPrice) {
     if (ORDER_KIND === 'b2c_transfer') return product.b2c_transfer_price || 0;
@@ -641,7 +640,6 @@ document.addEventListener('DOMContentLoaded', function () {
       '<td><input type="text" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][name]" value="' + (name || '') + '" readonly></td>' +
       '<td><input type="number" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][quantity]" value="' + (quantity || 1) + '"></td>' +
       '<td><input type="number" step="0.01" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][price]" value="' + (price || 0) + '"></td>' +
-      <% unless @b2b_order.sale? %>'<td><input type="number" step="0.01" min="0" class="field-input" name="b2b_order[b2b_order_items_attributes][' + itemIndex + '][discount]" value="0"></td>' +<% end %>
       '<td class="item-stock-cell" data-sku="' + (sku || '') + '" data-new-row="true">-</td>' +
       '<td><button type="button" class="action-btn action-btn--danger remove-item-row"><i class="fas fa-trash"></i></button></td>';
     tbody.appendChild(row);

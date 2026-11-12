@@ -116,7 +116,7 @@ class B2bWholesaleChecklistTest < ActionDispatch::IntegrationTest
 
   test 'the fixed freight value is configured on its own screen' do
     get b2b_orders_path
-    assert_select "a[href='#{edit_b2b_setting_path}']", text: /Frete fixo/
+    assert_select "a[href='#{edit_b2b_setting_path}']", text: /Configuração do atacado/
 
     get edit_b2b_setting_path
     assert_response :success
@@ -126,6 +126,22 @@ class B2bWholesaleChecklistTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal('42.50'), B2bSetting.current.fixed_freight_value
     patch b2b_setting_path, params: { b2b_setting: { fixed_freight_value: '-1' } }
     assert_response :unprocessable_entity
+  end
+
+  test 'the suggested wholesale price is retail minus 60% for Seamless and 56.60% for the rest, both configurable' do
+    Product.create!(sku: 'SEAM-P', shopify_product_name: 'Legging Apex Seamless Ash', price: '100.00', image_url: 'https://img.example/a.jpg')
+    Product.create!(sku: 'TOP-P', shopify_product_name: 'Top Signature Black', price: '100.00', image_url: 'https://img.example/b.jpg')
+
+    get search_product_b2b_orders_path, params: { query: '-p' }
+    prices = JSON.parse(response.body)['products'].to_h { |p| [p['sku'], p['suggested_price']] }
+    assert_equal 40.0, prices['SEAM-P']
+    assert_equal 43.4, prices['TOP-P']
+
+    patch b2b_setting_path, params: { b2b_setting: { fixed_freight_value: 0, seamless_discount_percent: 50, default_discount_percent: 45 } }
+    get search_product_b2b_orders_path, params: { query: '-p' }
+    prices = JSON.parse(response.body)['products'].to_h { |p| [p['sku'], p['suggested_price']] }
+    assert_equal 50.0, prices['SEAM-P']
+    assert_equal 55.0, prices['TOP-P']
   end
 
   test 'the form has payment, freight value and the order discount, and no per-item discount' do

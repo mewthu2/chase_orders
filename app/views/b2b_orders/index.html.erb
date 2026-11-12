@@ -151,7 +151,7 @@
     <%= link_to new_order_path_for, class: 'btn btn-export' do %><i class="fas fa-plus"></i><%= screen[:new_label] %><% end %>
   <% end %>
   <% if sale && screen_can?(:b2b_orders, :edit) %>
-    <%= link_to edit_b2b_setting_path, class: 'btn btn-secondary' do %><i class="fas fa-truck-ramp-box"></i>Frete fixo<% end %>
+    <%= link_to edit_b2b_setting_path, class: 'btn btn-secondary' do %><i class="fas fa-sliders-h"></i>Configuração do atacado<% end %>
   <% end %>
   <% if sale && screen_can?(:clients, :create) %>
     <%= link_to new_client_path, class: 'btn btn-secondary' do %><i class="fas fa-address-book"></i>Cadastrar novo cliente<% end %>

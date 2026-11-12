@@ -305,10 +305,9 @@ class B2bOrdersController < ApplicationController
     end
   end
 
+  # Preço sugerido do atacado: varejo com o desconto configurado (Seamless ou demais), ver B2bSetting.
   def suggested_price_for(product)
-    return nil unless product&.price.present?
-
-    (product.price.to_f * 0.4).round(2)
+    (@b2b_setting ||= B2bSetting.current).wholesale_price_for(product)
   end
 
   # A transferência B2B -> B2C sai por 70% do custo do produto.
@@ -514,7 +513,8 @@ class B2bOrdersController < ApplicationController
       :payment_method, :payment_terms, :order_discount, :order_discount_type, :fixed_freight,
       :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
       :shipping_city, :shipping_state, :shipping_zip,
-      b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]
+      # Sem desconto manual por item: o desconto é só o livre, no total do pedido do atacado.
+      b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :_destroy]
     )
   end
 end

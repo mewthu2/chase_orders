@@ -48,7 +48,7 @@ class B2bCatalogOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name$='[sku]'][value='A-P']"
     assert_select "input[name$='[quantity]'][value='3']"
-    assert_select "input[name$='[price]'][value='40.0']"
+    assert_select "input[name$='[price]'][value='43.4']"
     assert_select "#clientIdField[value='#{@client.id}']"
     assert_select "input[name='catalog_order_id'][value='#{@order.id}']"
   end
