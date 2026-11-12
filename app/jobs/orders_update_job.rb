@@ -1,4 +1,9 @@
 class OrdersUpdateJob < ApplicationJob
+  include SingleRun
+  # Uma rotina de cada ação por vez; o sync_single (um pedido) fica de fora.
+  runs_one_at_a_time key: ->(args) { args.first[:action] },
+                     if: ->(args) { args.first.is_a?(Hash) && args.first[:action].to_s != 'sync_single' }
+
   queue_as :default
 
   def perform(action:, **options)

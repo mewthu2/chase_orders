@@ -1,5 +1,8 @@
 # app/jobs/update_products_cost_job.rb
 class UpdateProductsCostJob < ApplicationJob
+  include SingleRun
+  runs_one_at_a_time
+
   queue_as :default
 
   def perform

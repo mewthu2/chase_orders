@@ -1,4 +1,7 @@
 class SendXmlCorreiosLogJob2 < ActiveJob::Base
+  include SingleRun
+  runs_one_at_a_time if: ->(args) { args.first == 'all' }
+
   def perform(param, att, marker_id = nil)
     case param
     when 'all'

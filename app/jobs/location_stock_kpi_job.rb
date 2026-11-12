@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class LocationStockKpiJob < ApplicationJob
+  include SingleRun
+  runs_one_at_a_time key: ->(args) { args.first }
+
   queue_as :default
 
   def perform(action)

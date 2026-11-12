@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1004,6 +1004,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_190000) do
     t.datetime "last_execution"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "stock_sync_failures", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "attempt_id", null: false
+    t.bigint "product_id"
+    t.string "sku"
+    t.string "stage"
+    t.string "reason", limit: 500
+    t.datetime "created_at", null: false
+    t.index ["attempt_id"], name: "index_stock_sync_failures_on_attempt_id"
   end
 
   create_table "stock_withdrawal_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

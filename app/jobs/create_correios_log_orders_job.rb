@@ -1,4 +1,7 @@
 class CreateCorreiosLogOrdersJob < ActiveJob::Base
+  include SingleRun
+  runs_one_at_a_time if: ->(args) { args.first == 'all' }
+
   queue_as :default
   include ApplicationHelper
 

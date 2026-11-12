@@ -229,7 +229,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :stock_syncs, only: [:index] do
+  resources :stock_syncs, only: [:index, :show] do
     collection do
       post :execute_now
       patch :toggle_status

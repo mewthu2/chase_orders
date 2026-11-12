@@ -1,5 +1,7 @@
 class Attempt < ApplicationRecord
   enum :status, [:fail, :error, :success, :processing]
+  has_many :stock_sync_failures, dependent: :delete_all
+
   enum :kinds, [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order, :sync_correios_stock, :create_correios_order_tiny2, :send_xml_tiny2, :get_tracking_tiny2]
 
   B2C_KINDS = %w[create_correios_order send_xml emission_invoice get_tracking].freeze

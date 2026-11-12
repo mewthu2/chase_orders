@@ -15,7 +15,8 @@
      ]) %>
 <% runs = HoneyTable.new(params, id: 'exec', unit: 'execuções', unit1: 'execução', page_size: 8, sort: { k: :dt, dir: -1 },
      rows: @recent_attempts.map { |a|
-       { id: a.id, st: a.status || 'none', dt: a.created_at, tipo: a.tracking.to_s.start_with?('manual') ? 'Manual' : 'Automático',
+       summary = (JSON.parse(a.params.presence || '{}') rescue {})
+       { id: a.id, falhas: summary['failed'].to_i, st: a.status || 'none', dt: a.created_at, tipo: a.tracking.to_s.start_with?('manual') ? 'Manual' : 'Automático',
          msg: (a.message.presence || a.error.presence || '—').to_s.truncate(160), erros: a.error.presence || '—', dur: (a.updated_at && a.status != 'processing' ? "#{((a.updated_at - a.created_at) / 60).round(1).to_s.tr('.', ',')} min" : '—') }
      },
      cols: [
@@ -24,6 +25,7 @@
        { k: :dt, label: 'Data e hora', t: :dt, sort: true },
        { k: :tipo, label: 'Tipo', t: :tag },
        { k: :msg, label: 'Mensagem' },
+       { k: :falhas, label: 'Falharam', t: :qty, sort: true },
        { k: :dur, label: 'Duração', hide: true },
        { k: :erros, label: 'Erros', hide: true }
      ],
@@ -90,7 +92,8 @@
   <%= hc_pg_kpis(runs) %>
   <%= hc_pg_table(runs, title: 'Execuções recentes', icon: 'fas fa-history', meta: 'As últimas rodadas, da mais nova para a mais antiga.',
         empty: { title: 'Nenhuma execução ainda', text: 'Quando a sincronização rodar, as execuções aparecem aqui.' },
-        detail: { title: ->(r) { "Execução ##{r[:id]}" }, fields: [['Erros', :erros]] }) %>
+        link: ->(r) { stock_sync_path(r[:id]) },
+        actions: ->(r) { r[:falhas].positive? ? link_to(content_tag(:i, '', class: 'fas fa-list'), stock_sync_path(r[:id]), class: 'action-btn', data: { tip: 'Ver os produtos que falharam' }, 'aria-label': 'Ver os produtos que falharam') : ''.html_safe }) %>
 </div>
 
 <% if @current_execution %>

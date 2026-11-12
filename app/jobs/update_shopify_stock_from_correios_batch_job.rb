@@ -38,6 +38,7 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
     puts error_message
 
     record_error(error_message)
+    StockSyncFailure.record!(@attempt, nil, 'lote', "Lote #{@batch_index}/#{@total_batches} parou: #{e.class}: #{e.message}") if @attempt
     finish_batch!
 
     nil
@@ -57,6 +58,7 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
 
         @stats[:failed] += 1
         record_error(error_msg)
+        StockSyncFailure.record!(@attempt, product, 'correios', "Correios respondeu #{correios_response.code}: #{correios_response.body.to_s.squish.truncate(300)}")
 
         return
       end
@@ -77,12 +79,14 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
 
       @stats[:failed] += 1
       record_error(error_msg)
+      StockSyncFailure.record!(@attempt, product, 'correios', "Resposta do Correios ilegível: #{e.message}")
     rescue StandardError => e
       error_msg = "Erro ao processar produto #{product.sku}: #{e.message}"
       puts error_msg
 
       @stats[:failed] += 1
       record_error(error_msg)
+      StockSyncFailure.record!(@attempt, product, 'correios', e.message)
     end
   end
 
@@ -97,12 +101,14 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
       puts error_msg
 
       record_error(error_msg)
+      StockSyncFailure.record!(@attempt, product, 'shopify', e.message)
       false
     rescue StandardError => e
       error_msg = "Erro ao atualizar Shopify para produto #{product.sku}: #{e.message}"
       puts error_msg
 
       record_error(error_msg)
+      StockSyncFailure.record!(@attempt, product, 'shopify', e.message)
       false
     end
   end

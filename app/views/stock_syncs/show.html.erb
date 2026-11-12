@@ -1,0 +1,44 @@
+<% content_for :title, "Sincronização ##{@attempt.id}" %>
+<% s = @summary %>
+<% legacy = @attempt.stock_sync_failures.none? %>
+<% stage_map = { 'correios' => ['Correios', 'orange', 'A consulta do saldo no Correios falhou (ex.: SKU que não existe no armazém).'],
+                 'shopify' => ['Shopify', 'red', 'O Correios respondeu, mas o Shopify recusou a gravação.'],
+                 'lote' => ['Lote inteiro', 'purple', 'O lote parou no meio; os produtos dele que faltavam não foram tentados.'] } %>
+<% table = HoneyTable.new(params, unit: 'produtos', unit1: 'produto', page_size: 25,
+     rows: @failures.each_with_index.map { |f, i|
+       { id: i + 1, sku: f[:sku].presence || '—', nome: f[:nome].presence || '—', st: f[:etapa].to_s, motivo: f[:motivo].presence || '—' }
+     },
+     cols: [
+       { k: :sku, label: 'Produto', t: :mono, main: true, copy: true, sub: :nome },
+       { k: :nome, label: 'Nome', hide: true },
+       { k: :st, label: 'Onde falhou', t: :status, map: stage_map },
+       { k: :motivo, label: 'Motivo' }
+     ],
+     filters: [
+       { id: :q, type: :search, label: 'Buscar', ph: 'SKU, nome ou motivo', cols: %i[sku nome motivo], tip: 'Procura pelo SKU, pelo nome do produto ou pelo texto do erro.' },
+       { id: :st, type: :select, label: 'Onde falhou', col: :st, all: 'Todas', options: stage_map.map { |k, v| [k, v[0]] } }
+     ],
+     kpis: [
+       { label: 'Produtos na rodada', icon: 'fas fa-boxes-stacked', tone: 'blue', help: 'Produtos com SKU e vínculo no Shopify.', text: number_with_delimiter(s['total'].to_i, delimiter: '.') },
+       { label: 'Atualizados', icon: 'fas fa-circle-check', tone: 'green', help: 'Saldo copiado do Correios para o Shopify.', text: number_with_delimiter(s['success'].to_i, delimiter: '.') },
+       { label: 'Falharam', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Ficaram com o saldo antigo no Shopify.', text: number_with_delimiter(s['failed'].to_i, delimiter: '.') },
+       { label: 'Falha no Correios', icon: 'fas fa-warehouse', tone: 'orange', help: 'Clique para ver só estes.', col: :st, vals: ['correios'] }
+     ]) %>
+
+<%= hc_page_header "Sincronização ##{@attempt.id}", "#{l(@attempt.created_at.in_time_zone, format: '%d/%m/%Y %H:%M')} · #{@attempt.tracking.to_s.start_with?('manual') ? 'Manual' : 'Automático'} · #{@attempt.message}", icon: 'fas fa-sync' do %>
+  <%= link_to stock_syncs_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+  <% if @failures.any? && screen_can?(:dashboard_correios, :export) %>
+    <%= link_to stock_sync_path(@attempt, format: :csv), class: 'btn btn-export', data: { turbo: false } do %><i class="fas fa-file-csv"></i>Baixar planilha<% end %>
+  <% end %>
+<% end %>
+
+<% if legacy && s['failed'].to_i > @failures.size %>
+  <div class="callout pg-banner is-warn"><i class="fas fa-circle-info"></i><div><strong>Lista incompleta.</strong> Esta rodada é de antes do registro produto a produto: só os <%= @failures.size %> primeiros erros foram guardados, de <%= s['failed'].to_i %> falhas. As próximas rodadas mostram todos.</div></div>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Produtos que falharam', icon: 'fas fa-triangle-exclamation', meta: 'Estes produtos ficaram com o saldo antigo no Shopify.',
+        empty: { title: 'Nenhuma falha', text: 'Todos os produtos desta rodada foram atualizados.' },
+        detail: { title: ->(r) { "Produto #{r[:sku]}" }, note: 'SKU que o Correios não reconhece costuma ser produto que não está no armazém do Log03 ou SKU diferente entre Shopify e Correios.' }) %>
+</div>

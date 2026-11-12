@@ -1,3 +1,5 @@
+require 'csv'
+
 class StockSyncsController < ApplicationController
   guard_screen :dashboard_correios, actions: { update_config: :edit }
   before_action :set_config, only: [:show, :update_config, :execute_now, :toggle_status]
@@ -9,6 +11,20 @@ class StockSyncsController < ApplicationController
                               .limit(40)
     @stats = calculate_stats
     @current_execution = current_execution
+  end
+
+  # Uma execução e todos os produtos que falharam nela (tela e planilha).
+  def show
+    @attempt = Attempt.sync_correios_stock.find(params[:id])
+    @summary = JSON.parse(@attempt.params.presence || '{}') rescue {}
+    @failures = failure_rows(@attempt, @summary)
+
+    respond_to do |format|
+      format.html
+      format.csv do
+        send_data failures_csv(@failures), filename: "sincronizacao_#{@attempt.id}_falhas.csv", type: 'text/csv; charset=utf-8', disposition: 'attachment'
+      end
+    end
   end
 
   def update_config
@@ -73,6 +89,30 @@ class StockSyncsController < ApplicationController
 
   def config_params
     params.require(:stock_sync_config).permit(days_of_week: [], hours: [])
+  end
+
+  # Falhas gravadas uma a uma. Execuções antigas (antes da tabela) só têm os primeiros erros no params.
+  def failure_rows(attempt, summary)
+    names = ->(skus) { Product.where(sku: skus.compact.uniq).pluck(:sku, :shopify_product_name).to_h }
+    failures = attempt.stock_sync_failures.order(:id).to_a
+    if failures.any?
+      product_names = names.call(failures.map(&:sku))
+      return failures.map { |f| { sku: f.sku, nome: product_names[f.sku], etapa: f.stage, motivo: f.reason } }
+    end
+
+    legacy = Array(summary['errors']).map do |message|
+      sku = message[/produto (\S+?):/, 1]
+      { sku: sku, nome: nil, etapa: message.include?('Shopify') ? 'shopify' : (message.start_with?('Erro fatal') ? 'lote' : 'correios'), motivo: message }
+    end
+    product_names = names.call(legacy.map { |r| r[:sku] })
+    legacy.each { |r| r[:nome] = product_names[r[:sku]] }
+  end
+
+  def failures_csv(rows)
+    "\uFEFF" + CSV.generate(col_sep: ';', force_quotes: true) do |csv|
+      csv << ['SKU', 'Produto', 'Onde falhou', 'Motivo']
+      rows.each { |r| csv << [r[:sku], r[:nome], StockSyncFailure::STAGES.fetch(r[:etapa].to_s, r[:etapa]), r[:motivo]] }
+    end
   end
 
   def current_execution

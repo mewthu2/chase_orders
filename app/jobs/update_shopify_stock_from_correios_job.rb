@@ -1,4 +1,7 @@
 class UpdateShopifyStockFromCorreiosJob < ActiveJob::Base
+  include SingleRun
+  runs_one_at_a_time
+
   BATCH_SIZE = 100
 
   def perform(attempt_id = nil)

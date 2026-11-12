@@ -1,4 +1,7 @@
 class InvoiceEmitionsJob < ActiveJob::Base
+  include SingleRun
+  runs_one_at_a_time if: ->(args) { args.first == 'all' }
+
   include InvoiceEmissionAddressHold
 
   def perform(param, att, marker_id = nil)
