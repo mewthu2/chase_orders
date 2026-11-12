@@ -196,7 +196,7 @@ class B2bRomaneioPdf
     rows = [['Itens', "#{@items.size} produto(s) · #{quantity} peça(s)"], ['Subtotal', money(subtotal)]]
     rows << ['Desconto', "- #{money(discount)}"] if discount.positive?
     rows << ['Frete', money(freight)] if freight.positive?
-    rows << ['Pagamento', @order.payment_label] if @order.payment_label
+    rows << ['Pagamento', @order.payment_description] if @order.payment_label
     total = subtotal - discount + (freight.positive? ? freight : 0)
 
     box_width = 230

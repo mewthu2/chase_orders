@@ -131,7 +131,28 @@
         <div class="form-col-6">
           <label class="field-label">Forma de pagamento</label>
           <%= form.select :payment_method, B2bOrder::PAYMENT_METHODS.map { |key, label| [label, key] }, { include_blank: 'Selecione...' },
-                          { class: 'field-input', required: @b2b_order.tiny_reference_id.blank? } %>
+                          { class: 'field-input', required: @b2b_order.tiny_reference_id.blank?, id: 'paymentMethodSelect' } %>
+        </div>
+
+        <% installments_on = B2bOrder::INSTALLMENT_METHODS.include?(@b2b_order.payment_method) %>
+        <div class="form-col-12" id="installmentsSection" data-methods="<%= B2bOrder::INSTALLMENT_METHODS.join(' ') %>" data-order-date="<%= (@b2b_order.created_at || Time.current).to_date.iso8601 %>" style="<%= 'display: none;' unless installments_on %>">
+          <div class="form-grid">
+            <div class="form-col-6">
+              <label class="field-label">Parcelas</label>
+              <select id="installmentsCountSelect" class="field-input">
+                <% (1..B2bOrder::MAX_INSTALLMENTS).each do |n| %>
+                  <option value="<%= n %>" <%= 'selected' if @b2b_order.installment_days.size == n %>><%= n %>x</option>
+                <% end %>
+              </select>
+              <span class="text-muted-custom d-block mt-1">Preenche a condição com vencimentos de 30 em 30 dias; dá para editar os dias.</span>
+            </div>
+            <div class="form-col-6">
+              <label class="field-label">Condição de pagamento (dias)</label>
+              <%= form.text_field :payment_terms, class: 'field-input', id: 'paymentTermsField', placeholder: '30 60 90', disabled: !installments_on %>
+              <span class="text-muted-custom d-block mt-1">Os dias de cada vencimento, contados da data do pedido, como no Tiny.</span>
+            </div>
+          </div>
+          <div class="installments-preview" id="installmentsPreview" aria-live="polite"></div>
         </div>
         <% end %>
 
@@ -347,6 +368,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  // Parcelamento (boleto e cartão): condição em dias ("30 60 90") e prévia das parcelas com o total do pedido.
+  var installments = document.getElementById('installmentsSection');
+  var installmentsTotal = 0;
+  function renderInstallments() {
+    if (!installments) return;
+    var preview = document.getElementById('installmentsPreview');
+    var days = document.getElementById('paymentTermsField').value.split(/[\s,;\/]+/).filter(Boolean).map(Number).filter(function (d) { return !isNaN(d); });
+    if (!days.length || installments.style.display === 'none') { preview.innerHTML = ''; return; }
+    var base = new Date(installments.dataset.orderDate + 'T12:00:00');
+    var cents = Math.round(installmentsTotal * 100);
+    var each = Math.floor(cents / days.length);
+    preview.innerHTML = days.map(function (d, i) {
+      var date = new Date(base); date.setDate(date.getDate() + d);
+      var value = (i === days.length - 1 ? cents - each * (days.length - 1) : each) / 100;
+      return '<div class="installment-chip" style="--i:' + i + '"><span>' + (i + 1) + 'ª · ' + d + ' dias</span><strong>' +
+        date.toLocaleDateString('pt-BR') + '</strong><span>R$ ' + value.toFixed(2).replace('.', ',') + '</span></div>';
+    }).join('');
+  }
+  if (installments) {
+    var methodSelect = document.getElementById('paymentMethodSelect');
+    var termsField = document.getElementById('paymentTermsField');
+    var countSelect = document.getElementById('installmentsCountSelect');
+    var fillTerms = function (n) {
+      var days = [];
+      for (var i = 1; i <= n; i++) days.push(30 * i);
+      termsField.value = days.join(' ');
+    };
+    var applyMethod = function () {
+      var on = installments.dataset.methods.split(' ').indexOf(methodSelect.value) !== -1;
+      installments.style.display = on ? '' : 'none';
+      termsField.disabled = !on;
+      if (on && !termsField.value.trim()) fillTerms(parseInt(countSelect.value, 10) || 1);
+      renderInstallments();
+    };
+    methodSelect.addEventListener('change', applyMethod);
+    countSelect.addEventListener('change', function () { fillTerms(parseInt(countSelect.value, 10)); renderInstallments(); });
+    termsField.addEventListener('input', renderInstallments);
+    applyMethod();
+  }
+
   // Resumo do atacado: itens, desconto livre (R$ ou %), frete e total, atualizados a cada mudança.
   var summary = document.getElementById('orderSummary');
   if (summary) {
@@ -368,6 +429,8 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('summaryDiscount').textContent = '- ' + brl(discount);
       document.getElementById('summaryFreight').textContent = brl(freight);
       document.getElementById('summaryTotal').textContent = brl(items - discount + freight);
+      installmentsTotal = items - discount + freight;
+      renderInstallments();
     };
     document.getElementById('b2bOrderForm').addEventListener('input', updateSummary);
     document.getElementById('b2bOrderForm').addEventListener('change', updateSummary);

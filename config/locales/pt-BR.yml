@@ -261,6 +261,7 @@ pt-BR:
         freight_value: Valor do frete
         notes: Observações
         payment_method: Forma de pagamento
+        payment_terms: Condição de pagamento
         order_discount: Desconto do pedido
         order_discount_type: Tipo de desconto
         freight_service: Serviço de frete

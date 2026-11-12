@@ -495,7 +495,7 @@ class B2bOrdersController < ApplicationController
   # abastecimento escolhe o local de destino e o responsável pelo recebimento.
   SHIPPING_PARAMS = %i[client_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
   # Só o atacado tem forma de pagamento e desconto livre no total.
-  SALE_ONLY_PARAMS = %i[payment_method order_discount order_discount_type fixed_freight].freeze
+  SALE_ONLY_PARAMS = %i[payment_method payment_terms order_discount order_discount_type fixed_freight].freeze
 
   def b2b_order_params
     permitted = b2b_order_permitted_params
@@ -511,7 +511,7 @@ class B2bOrdersController < ApplicationController
       :client_id, :transfer_location_id, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,
       :salesperson_name, :receiver_name, :status, :different_shipping_address,
-      :payment_method, :order_discount, :order_discount_type, :fixed_freight,
+      :payment_method, :payment_terms, :order_discount, :order_discount_type, :fixed_freight,
       :shipping_street, :shipping_number, :shipping_complement, :shipping_neighbourhood,
       :shipping_city, :shipping_state, :shipping_zip,
       b2b_order_items_attributes: [:id, :sku, :name, :quantity, :price, :discount, :_destroy]

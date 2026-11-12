@@ -108,3 +108,29 @@
   font-variant-numeric: tabular-nums;
   #summaryTotal { font-size: 1.1rem; color: $accent-green; transition: color 0.2s ease; }
 }
+
+// Prévia das parcelas (boleto/cartão): uma ficha por vencimento, entrando em sequência.
+.installments-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.installment-chip {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 120px;
+  padding: 0.5rem 0.75rem;
+  border-radius: $radius-md;
+  border: 1px solid $border-muted;
+  background: $bg-elevated;
+  color: $text-primary;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  animation: installment-in 0.35s ease both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  span { color: $text-muted; }
+  strong { font-size: 0.95rem; }
+}
+@keyframes installment-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .installment-chip { animation: none; } }

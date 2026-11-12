@@ -28,6 +28,9 @@ class B2bOrder < ApplicationRecord
   # Tiny, sem gerar cobrança.
   PAYMENT_METHODS = { 'boleto' => 'Boleto', 'pix' => 'PIX', 'cartao' => 'Cartão' }.freeze
   DISCOUNT_TYPES = { 'amount' => 'R$', 'percent' => '%' }.freeze
+  # Boleto e cartão podem ser parcelados: a condição de pagamento lista os dias de cada vencimento, como no Tiny.
+  INSTALLMENT_METHODS = %w[boleto cartao].freeze
+  MAX_INSTALLMENTS = 12
 
   STATUS_LABELS = {
     'aberto' => 'Aberto', 'aprovado' => 'Aprovado', 'preparando_envio' => 'Preparando Envio',
@@ -55,6 +58,14 @@ class B2bOrder < ApplicationRecord
   validates :order_discount, numericality: { greater_than_or_equal_to: 0 }
   validates :order_discount, numericality: { less_than_or_equal_to: 100, message: 'em porcentagem vai até 100%' }, if: :percent_discount?
   validate :discount_within_items_total
+  validates :payment_terms, format: { with: /\A\d{1,3}(\s+\d{1,3})*\z/, message: 'deve ter só os dias de cada parcela, separados por espaço (ex.: 30 60 90)' },
+                            allow_blank: true
+  validate :payment_terms_fit
+
+  # PIX (ou sem forma) é à vista: sem parcelas. Vírgulas e barras viram espaço ("30/60/90" => "30 60 90").
+  before_validation do
+    self.payment_terms = INSTALLMENT_METHODS.include?(payment_method) ? payment_terms.to_s.tr(',;/', '   ').squish.presence : nil
+  end
   validates :client, presence: true, if: :sale?
   validates :transfer_location, presence: true, if: :stock_transfer?
   # Mão própria: os Correios só entregam para o destinatário nomeado, que é quem recebe na loja.
@@ -116,6 +127,35 @@ class B2bOrder < ApplicationRecord
     PAYMENT_METHODS[payment_method]
   end
 
+  # Total a receber: produtos com o desconto do pedido + frete.
+  def grand_total
+    total + freight_value.to_d
+  end
+
+  def installment_days
+    payment_terms.to_s.split.map(&:to_i)
+  end
+
+  # Parcelas iguais (a última fica com a sobra dos centavos), vencendo a partir da data do pedido.
+  def installments
+    days = installment_days
+    return [] if days.empty?
+
+    base = (created_at || Time.current).to_date
+    value = (grand_total / days.size).floor(2)
+    days.each_with_index.map do |d, i|
+      amount = i == days.size - 1 ? grand_total - value * (days.size - 1) : value
+      { number: i + 1, days: d, date: base + d, value: amount }
+    end
+  end
+
+  # "Boleto 3x (30 60 90)", "Cartão 1x (30)" ou só "PIX".
+  def payment_description
+    return payment_label if payment_label.nil? || installment_days.empty?
+
+    "#{payment_label} #{installment_days.size}x (#{payment_terms})"
+  end
+
   # Abastecimento sem transportadora escolhida vai por SEDEX com mão própria; com transportadora, vai por ela.
   def hand_delivery?
     stock_transfer? && carrier_id.blank?
@@ -129,6 +169,14 @@ class B2bOrder < ApplicationRecord
 
   def must_have_items
     errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.empty?
+  end
+
+  def payment_terms_fit
+    days = installment_days
+    return if days.empty?
+
+    errors.add(:payment_terms, "aceita até #{MAX_INSTALLMENTS} parcelas") if days.size > MAX_INSTALLMENTS
+    errors.add(:payment_terms, 'deve ter os dias em ordem crescente, sem repetir') unless days.each_cons(2).all? { |a, b| b > a }
   end
 
   def discount_within_items_total

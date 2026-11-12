@@ -252,6 +252,15 @@ class B2bTinyService
     }
     # Desconto livre do pedido (R$ ou %), sempre enviado em reais.
     pedido[:valor_desconto] = format('%.2f', b2b_order.discount_amount) if b2b_order.discount_amount.positive?
+    # Boleto/cartão parcelado: as parcelas iguais às do Tiny (dias, vencimento, valor). A forma de pagamento
+    # segue como registro na observação de cada parcela.
+    parcelas = b2b_order.installments
+    if parcelas.any?
+      pedido[:parcelas] = parcelas.map do |p|
+        { parcela: { dias: p[:days], data: p[:date].strftime('%d/%m/%Y'), valor: format('%.2f', p[:value]),
+                     obs: "#{b2b_order.payment_label} #{p[:number]}/#{parcelas.size}" } }
+      end
+    end
 
     pedido[:id_lista_preco] = TRANSFER_PRICE_LIST_ID if b2b_order.transfer?
 
@@ -301,7 +310,7 @@ class B2bTinyService
   # digitado na Honey só fica visível via observações.
   def build_obs(b2b_order)
     base = b2b_order.notes.presence || "Pedido B2B ##{b2b_order.id}"
-    payment = "Pagamento: #{b2b_order.payment_label}" if b2b_order.payment_label
+    payment = "Pagamento: #{b2b_order.payment_description}" if b2b_order.payment_label
     [("Vendedor: #{b2b_order.salesperson_name}" if b2b_order.salesperson_name.present?), payment, base].compact.join(' | ')
   end
 
