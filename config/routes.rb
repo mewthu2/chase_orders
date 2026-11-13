@@ -182,6 +182,7 @@ Rails.application.routes.draw do
   
   resource :internal_transfer_config, only: [:edit, :update]
   resource :b2b_setting, only: [:edit, :update]
+  resources :b2b_freight_rates, path: 'atacado/frete', except: [:show]
   # Aba Nota fiscal da edição dos pedidos B2B (atacado, abastecimento e transferência B2C).
   resources :b2b_order_fiscal_notes, path: 'b2b_orders/:b2b_order_id/notas', only: [:create, :destroy] do
     member { post :transmit }

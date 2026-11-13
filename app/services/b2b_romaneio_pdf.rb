@@ -131,7 +131,7 @@ class B2bRomaneioPdf
 
   def shipping_lines
     [['Endereço', shipping_address],
-     ['Transportadora', [@order.carrier_name, @order.freight_service].compact_blank.uniq.join(' · ')],
+     ['Transportadora', @order.pickup? ? 'Retirada' : [@order.carrier&.name || @order.carrier_name, @order.freight_service].compact_blank.uniq.join(' · ')],
      ['Frete por conta', freight_payer],
      ['Vendedor(a)', @order.salesperson_name]]
   end

@@ -35,7 +35,7 @@
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
        tiny: [order.tiny_reference_number.presence || order.tiny_reference_id.presence, (tiny_order_url(order) if order.tiny_reference_id.present?), 'Ver no Tiny'], track: order.tracking_code.presence || '—', st: order.status,
-       pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: order.freight_service.presence || '—',
+       pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
        entrega: order.stock_transfer? ? (order.hand_delivery? ? 'SEDEX · Mão Própria' : "Transportadora · #{order.carrier&.name}") : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
        fretev: order.freight_value ? number_to_currency(order.freight_value, unit: 'R$ ', separator: ',', delimiter: '.') : '—', obs: order.notes.presence || '—',

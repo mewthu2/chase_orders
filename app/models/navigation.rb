@@ -130,6 +130,8 @@ module Navigation
              path: ->(v) { v.clients_path }, perm: 'clients', active: ctrl('clients')),
         link('atc-pedidos', 'Pedidos de Atacado', 'fas fa-file-invoice-dollar', 'Cadastre vendas para lojistas e envie ao Tiny.',
              path: ->(v) { v.b2b_orders_path }, perm: 'b2b_orders', active: kind('sale')),
+        link('atc-frete', 'Tabela de Frete', 'fas fa-truck-ramp-box', 'Frete do pedido de atacado por faixa de valor do pedido.',
+             path: ->(v) { v.b2b_freight_rates_path }, perm: 'b2b_orders', active: ctrl('b2b_freight_rates')),
         link('atc-catalogos', 'Catálogos', 'fas fa-book-open', 'Monte catálogos e mande o link para lojistas encomendarem.',
              path: ->(v) { v.b2b_catalogs_path }, perm: 'b2b_catalogs', badge: :catalogs, active: ctrl('b2b_catalogs', 'b2b_catalog_orders'))
       ]),

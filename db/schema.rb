@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_210000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -166,6 +166,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_210000) do
     t.index ["user_id"], name: "index_b2b_catalogs_on_user_id"
   end
 
+  create_table "b2b_freight_rates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.decimal "min_value", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "max_value", precision: 12, scale: 2, null: false
+    t.decimal "price", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "b2b_order_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "b2b_order_id", null: false
     t.string "sku", null: false
@@ -216,6 +224,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_210000) do
     t.bigint "correios_order_id"
     t.datetime "xml_sent_at"
     t.boolean "log_ignored", default: false, null: false
+    t.boolean "pickup", default: false, null: false
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"

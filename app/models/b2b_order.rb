@@ -63,6 +63,10 @@ class B2bOrder < ApplicationRecord
                             allow_blank: true
   validate :payment_terms_fit
 
+  # Retirada: o cliente busca no galpão, sem serviço de frete, transportadora nem valor de frete.
+  # Frete da tabela: o valor sai da faixa do valor do pedido (Tabela de frete do atacado).
+  before_validation :apply_shipping_mode, if: :sale?
+
   # PIX (ou sem forma) é à vista: sem parcelas. Vírgulas e barras viram espaço ("30/60/90" => "30 60 90").
   before_validation do
     self.payment_terms = INSTALLMENT_METHODS.include?(payment_method) ? payment_terms.to_s.tr(',;/', '   ').squish.presence : nil
@@ -210,7 +214,26 @@ class B2bOrder < ApplicationRecord
     stock_transfer? && carrier_id.present?
   end
 
+  # "Correios Log", "Transportadora · Nome" ou "Retirada" (atacado).
+  def shipping_label
+    return 'Retirada' if pickup?
+    return "Transportadora · #{carrier&.name}" if carrier_id.present? && freight_service.blank?
+
+    freight_service.present? ? 'Correios Log' : nil
+  end
+
   private
+
+  def apply_shipping_mode
+    if pickup?
+      self.freight_service = nil
+      self.carrier_id = nil
+      self.fixed_freight = false
+      self.freight_value = 0
+    elsif fixed_freight? && correios_order_id.blank?
+      self.freight_value = B2bFreightRate.price_for(total)
+    end
+  end
 
   def must_have_items
     errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.empty?

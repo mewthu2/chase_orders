@@ -1,0 +1,16 @@
+<% content_for :title, 'Editar faixa de frete' %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-truck-ramp-box' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Editar faixa de frete</h1>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= link_to b2b_freight_rates_path, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

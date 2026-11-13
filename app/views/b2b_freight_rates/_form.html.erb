@@ -1,0 +1,38 @@
+<%= form_with model: @rate, local: true do |form| %>
+  <% if @rate.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1">
+        <% @rate.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-truck-ramp-box me-2"></i>Faixa de valor do pedido</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-4">
+          <label class="field-label">Valor do pedido de (R$) <span class="required">*</span></label>
+          <%= form.number_field :min_value, step: 0.01, min: 0, class: 'field-input', required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Até (R$) <span class="required">*</span></label>
+          <%= form.number_field :max_value, step: 0.01, min: 0, class: 'field-input', required: true %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Frete (R$) <span class="required">*</span></label>
+          <%= form.number_field :price, step: 0.01, min: 0, class: 'field-input', required: true %>
+        </div>
+      </div>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>As faixas não podem se sobrepor. Pedidos já salvos mantêm o frete que tinham; os abertos recalculam ao salvar com "Frete da tabela".</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= link_to 'Cancelar', b2b_freight_rates_path, class: 'btn btn-ghost' %>
+    <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk me-1"></i>Salvar</button>
+  </div>
+<% end %>

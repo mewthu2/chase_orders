@@ -1,5 +1,5 @@
 # Configuração do atacado (uma linha só):
-# - fixed_freight_value: frete fixo que o pedido recebe ao escolher "Frete fixo" (ajustável no pedido);
+# - fixed_freight_value: antigo frete fixo, substituído pela Tabela de frete (B2bFreightRate);
 # - seamless_discount_percent / default_discount_percent: desconto sobre o preço de varejo que dá o preço
 #   sugerido do item no pedido do atacado (Seamless = produto com "Seamless" no nome; o resto usa o padrão);
 # - issuer_company / sale_nature / transfer_nature: quem emite a NF-e dos pedidos do Log02 feitos no Honey e

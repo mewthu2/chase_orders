@@ -93,17 +93,20 @@
         <% end %>
 
         <% if @b2b_order.sale? %>
-        <% mode = @b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '') %>
+        <% mode = @b2b_order.pickup? ? 'pickup' : (@b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '')) %>
         <div class="form-col-6" id="saleShippingSection">
           <label class="field-label">Forma de Envio</label>
           <select id="shippingModeSelect" class="field-input" required>
             <option value="" <%= 'selected' if mode.blank? %>>Selecione...</option>
-            <option value="sedex" <%= 'selected' if mode == 'sedex' %>>Correios Log · SEDEX</option>
+            <option value="sedex" <%= 'selected' if mode == 'sedex' %>>Correios Log</option>
             <option value="carrier" <%= 'selected' if mode == 'carrier' %>>Transportadora</option>
+            <option value="pickup" <%= 'selected' if mode == 'pickup' %>>Retirada</option>
           </select>
-          <%# SEDEX vai como serviço de frete; transportadora, pelo cadastro dela (CNPJ no Correios e na NF-e). %>
+          <%# Correios Log vai como SEDEX; transportadora, pelo cadastro dela (CNPJ no Correios e na NF-e); retirada, sem frete. %>
           <%= form.hidden_field :freight_service, id: 'freightServiceField', value: (mode == 'sedex' ? B2bOrder::SALE_FREIGHT_SERVICES.first : '') %>
+          <%= form.hidden_field :pickup, id: 'pickupField', value: mode == 'pickup' %>
           <input type="hidden" name="b2b_order[carrier_id]" value="" id="saleCarrierBlank" <%= 'disabled' if mode == 'carrier' %>>
+          <span class="text-muted-custom d-block mt-1" id="pickupHint" style="<%= 'display: none;' unless mode == 'pickup' %>"><i class="fas fa-info-circle me-1"></i>O cliente busca no galpão do Log: sem frete. No Correios entra como transportadora com o CNPJ do próprio cliente.</span>
         </div>
 
         <div class="form-col-6" id="carrierSection" style="<%= 'display: none;' unless mode == 'carrier' %>">
@@ -112,15 +115,13 @@
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>No Correios entra como transportadora (74926), com o CNPJ do cadastro. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
 
-        <% fixed_value = B2bSetting.current.fixed_freight_value %>
-        <% fixed_label = number_to_currency(fixed_value, unit: 'R$', separator: ',', delimiter: '.') %>
-        <div class="form-col-6" id="freightChoiceSection" data-fixed-value="<%= fixed_value.to_f %>">
+        <div class="form-col-6 freight-field" id="freightChoiceSection" data-rates="<%= B2bFreightRate.table.to_json %>" style="<%= 'display: none;' if mode == 'pickup' %>">
           <label class="field-label">Frete</label>
-          <%= form.select :fixed_freight, [["Frete fixo (#{fixed_label})", true], ['Outro valor', false]], {}, { class: 'field-input', id: 'fixedFreightSelect' } %>
-          <span class="text-muted-custom d-block mt-1">O frete fixo vem da configuração<%= ' (' if screen_can?(:b2b_orders, :edit) %><%= link_to('mudar o valor', edit_b2b_setting_path, target: '_blank') if screen_can?(:b2b_orders, :edit) %><%= ')' if screen_can?(:b2b_orders, :edit) %>; dá para ajustar só neste pedido.</span>
+          <%= form.select :fixed_freight, [['Frete da tabela (pelo valor do pedido)', true], ['Outro valor', false]], {}, { class: 'field-input', id: 'fixedFreightSelect' } %>
+          <span class="text-muted-custom d-block mt-1">O frete da tabela muda sozinho com o valor do pedido<%= ' (' if screen_can?(:b2b_orders, :view) %><%= link_to('ver a tabela', b2b_freight_rates_path, target: '_blank') if screen_can?(:b2b_orders, :view) %><%= ')' if screen_can?(:b2b_orders, :view) %>; em "Outro valor", ajuste só neste pedido.</span>
         </div>
 
-        <div class="form-col-6">
+        <div class="form-col-6 freight-field" style="<%= 'display: none;' if mode == 'pickup' %>">
           <label class="field-label">Valor do frete (R$)</label>
           <%= form.number_field :freight_value, step: 0.01, min: 0, class: 'field-input', id: 'freightValueField', placeholder: '0,00' %>
           <span class="text-muted-custom d-block mt-1">Vai como valor do frete do pedido.</span>
@@ -354,15 +355,35 @@ document.addEventListener('DOMContentLoaded', function () {
     applyStockDelivery();
   }
 
-  // Frete fixo: ao escolher, aplica o valor da configuração (que ainda pode ser ajustado no pedido).
+  // Frete da tabela: o valor sai da faixa do valor do pedido (produtos com o desconto) e acompanha as mudanças.
+  // Em "Outro valor" o campo fica livre para ajustar só neste pedido.
   var fixedSelect = document.getElementById('fixedFreightSelect');
+  var freightRates = fixedSelect ? JSON.parse(document.getElementById('freightChoiceSection').dataset.rates || '[]') : [];
+  var freightForAmount = function (amount) {
+    if (!freightRates.length) return 0;
+    var rate = freightRates[0];
+    freightRates.forEach(function (r) { if (r[0] <= amount + 0.0001) rate = r; });
+    return rate[2];
+  };
+  var orderAmount = 0;
+  var applyTableFreight = function () {
+    if (!fixedSelect || fixedSelect.value !== 'true') return false;
+    var field = document.getElementById('freightValueField');
+    if (document.getElementById('pickupField').value === 'true') return false;
+    var value = freightForAmount(orderAmount).toFixed(2);
+    if (field.value === value) return false;
+    field.value = value;
+    return true;
+  };
   if (fixedSelect) {
-    var fixedValue = parseFloat(document.getElementById('freightChoiceSection').dataset.fixedValue) || 0;
     var freightField = document.getElementById('freightValueField');
+    var syncFreightLock = function () { freightField.readOnly = fixedSelect.value === 'true'; };
     fixedSelect.addEventListener('change', function () {
-      if (fixedSelect.value === 'true') freightField.value = fixedValue.toFixed(2);
+      syncFreightLock();
+      applyTableFreight();
       freightField.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    syncFreightLock();
   }
 
   // Parcelamento (boleto e cartão): condição em dias ("30 60 90") e prévia das parcelas com o total do pedido.
@@ -421,6 +442,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var value = num(document.getElementById('orderDiscountField'));
       var percent = document.getElementById('orderDiscountTypeField').value === 'percent';
       var discount = Math.min(percent ? items * value / 100 : value, items);
+      orderAmount = items - discount;
+      applyTableFreight();
       var freight = num(document.getElementById('freightValueField'));
       document.getElementById('summaryItems').textContent = brl(items);
       document.getElementById('summaryDiscount').textContent = '- ' + brl(discount);
@@ -488,6 +511,15 @@ document.addEventListener('DOMContentLoaded', function () {
       carrierSelect.required = mode === 'carrier';
       document.getElementById('saleCarrierBlank').disabled = mode === 'carrier';
       document.getElementById('freightServiceField').value = mode === 'sedex' ? '<%= B2bOrder::SALE_FREIGHT_SERVICES.first %>' : '';
+      // Retirada: sem frete (some o bloco do frete e o valor vai zerado).
+      var pickup = mode === 'pickup';
+      document.getElementById('pickupField').value = pickup ? 'true' : 'false';
+      document.getElementById('pickupHint').style.display = pickup ? '' : 'none';
+      document.querySelectorAll('.freight-field').forEach(function (el) { el.style.display = pickup ? 'none' : ''; });
+      var freightInput = document.getElementById('freightValueField');
+      if (pickup) freightInput.value = '0.00';
+      else applyTableFreight();
+      freightInput.dispatchEvent(new Event('input', { bubbles: true }));
     };
     shippingMode.addEventListener('change', applyShippingMode);
     applyShippingMode();

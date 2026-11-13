@@ -1,0 +1,41 @@
+<% content_for :title, 'Tabela de frete' %>
+<% brl = ->(v) { number_to_currency(v, unit: 'R$', separator: ',', delimiter: '.') } %>
+<% can_edit = screen_can?(:b2b_orders, :edit) %>
+<% rows = @rates.each_with_index.map do |r, i|
+     { id: r.id, record: r, faixa: i + 1, min: r.min_value.to_f, max: r.max_value.to_f, preco: r.price.to_f,
+       de: brl.(r.min_value), ate: brl.(r.max_value), valor: brl.(r.price) }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'faixas', unit1: 'faixa', page_size: 50, sort: { k: :min, dir: 1 },
+     cols: [
+       { k: :faixa, label: 'Faixa', t: :num, plain: true },
+       { k: :de, label: 'Pedido de' },
+       { k: :ate, label: 'Até' },
+       { k: :valor, label: 'Frete', cls: 'due' },
+       { k: :min, label: 'Mínimo', t: :num, hide: true, nodetail: true, sort: true },
+       { k: :max, label: 'Máximo', t: :num, hide: true, nodetail: true },
+       { k: :preco, label: 'Preço', t: :num, hide: true, nodetail: true }
+     ]) %>
+
+<%= hc_page_header 'Tabela de frete', 'Frete do pedido de atacado pelo valor do pedido', icon: 'fas fa-truck-ramp-box' do %>
+  <% if can_edit %>
+    <%= link_to edit_b2b_setting_path, class: 'btn btn-secondary' do %><i class="fas fa-sliders-h"></i>Configuração do atacado<% end %>
+    <%= link_to new_b2b_freight_rate_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova faixa<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_table(table, title: 'Faixas de frete', icon: 'fas fa-truck-ramp-box',
+        meta: 'O pedido usa a faixa em que o valor dos produtos (com o desconto do pedido) cai. Acima da última faixa vale o frete da última. Retirada não tem frete.',
+        empty: { title: 'Nenhuma faixa cadastrada', text: 'Sem faixas, o frete da tabela fica zerado no pedido.',
+                 cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), 'Nova faixa']), new_b2b_freight_rate_path, class: 'btn btn-export') if can_edit) },
+        detail: { title: ->(r) { "#{r[:de]} a #{r[:ate]}" } },
+        actions: ->(r) {
+          next ''.html_safe unless can_edit
+
+          safe_join([
+            hc_row_action('fas fa-pencil', 'Editar', edit_b2b_freight_rate_path(r[:record])),
+            hc_row_action('fas fa-trash', 'Excluir', b2b_freight_rate_path(r[:record]), danger: true, method: :delete,
+                          confirm: { title: "Excluir a faixa de #{r[:de]} a #{r[:ate]}?", text: 'Pedidos já salvos mantêm o frete que tinham.', ok: 'Excluir faixa' })
+          ])
+        }) %>
+</div>

@@ -81,6 +81,14 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_equal B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME, sent[:recipient_name]
   end
 
+  test 'a pickup order goes to Correios as 74926 with the client as the carrier' do
+    pickup = order(:sale, freight_service: nil, pickup: true)
+    sent = capture_creation { HoneyB2bLog.create_in_correios(pickup) }
+    assert_equal '74926', sent[:params][:forma_envio]
+    assert_equal '45723174000110', sent[:params][:cnpj_transportadora]
+    assert_nil sent[:params][:mao_propria]
+  end
+
   test 'only approved, not ignored orders are created; a wholesale order without shipping fails with the reason' do
     pending = order(:sale, status: :aberto)
     ignored = order(:sale, log_ignored: true)

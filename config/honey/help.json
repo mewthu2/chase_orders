@@ -59,6 +59,26 @@
     ]
    ]
   },
+  "atc-frete": {
+   "title": "Tabela de Frete",
+   "purpose": "Definir o frete do pedido de atacado por faixa de valor do pedido.",
+   "when": "Quando o frete do atacado mudar. O pedido com \"Frete da tabela\" pega a faixa em que o valor dos produtos (com o desconto) cai.",
+   "actions": [
+    "Nova faixa",
+    "Editar",
+    "Excluir"
+   ],
+   "terms": [
+    [
+     "Acima da última faixa",
+     "Vale o frete da última faixa."
+    ],
+    [
+     "Retirada",
+     "O cliente busca no galpão: sem frete."
+    ]
+   ]
+  },
   "atc-catalogos": {
    "title": "Catálogos B2B",
    "subtitle": "Monte catálogos, mande o link para os lojistas e transforme as encomendas em pedidos.",
@@ -1495,6 +1515,7 @@
   "plan-lista": "planilha csv planejamento",
   "inicio": "inicio home meus chamados",
   "log-transf-b2c": "transferencia atacado loja online b2b b2c",
-  "log-locais": "destino cnpj endereco transferencia"
+  "log-locais": "destino cnpj endereco transferencia",
+  "atc-frete": "frete tabela faixa valor pedido atacado"
  }
 }

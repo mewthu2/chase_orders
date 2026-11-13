@@ -183,6 +183,9 @@ class HoneyB2bLog
   def correios_service
     @correios_service ||= if @order.b2c_transfer?
                             [CARRIER_SERVICE, digits(B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]), false]
+                          elsif @order.sale? && @order.pickup?
+                            # Retirada: o próprio cliente leva, então entra como transportadora com o CNPJ dele.
+                            [CARRIER_SERVICE, digits(@order.client&.registration), false]
                           elsif @order.carrier.present? && (@order.stock_transfer? || @order.freight_service.blank?)
                             [CARRIER_SERVICE, digits(@order.carrier.registration), false]
                           elsif @order.sale? && @order.freight_service.blank?
@@ -194,7 +197,7 @@ class HoneyB2bLog
 
   def correios_params
     service, carrier_cnpj, hand_delivery = correios_service
-    return [nil, nil, 'Escolha a forma de envio do pedido (SEDEX ou transportadora).'] unless service
+    return [nil, nil, 'Escolha a forma de envio do pedido (Correios Log, transportadora ou retirada).'] unless service
 
     address = destination_address
     return [nil, nil, 'Pedido sem destinatário (cliente ou loja de destino).'] unless address

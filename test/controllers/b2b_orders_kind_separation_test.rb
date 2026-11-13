@@ -195,7 +195,8 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'the wholesale form has the freight service select for Correios Log and the transfer form does not need it' do
     get new_b2b_order_path
 
-    assert_select '#shippingModeSelect option', text: 'Correios Log · SEDEX'
+    assert_select '#shippingModeSelect option', text: 'Correios Log'
+    assert_select '#shippingModeSelect option', text: 'Retirada'
     assert_select '#shippingModeSelect option', text: 'Transportadora'
     assert_select 'input#freightServiceField[name="b2b_order[freight_service]"]'
     assert_no_match(/shipping_methods/, response.body, 'a forma de envio não vem mais do Tiny')
