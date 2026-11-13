@@ -37,7 +37,7 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
                                    .to_return(body: { retorno: { status: 'OK', status_processamento: '3' } }.to_json)
   end
 
-  test 'cancels the order in Tiny, unlinks it from Honey and leaves it ready to be resent' do
+  test 'cancels the order in Tiny and unlinks it from Honey' do
     order = sent_order
     stub = stub_status_ok
 
@@ -48,7 +48,7 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
     assert_nil order.tiny_reference_id
     assert_nil order.tiny_reference_number
     assert order.aberto?
-    assert order.resendable?
+    assert order.honey_flow?, 'sem o Tiny, o pedido volta a seguir pelo Log02 do Honey'
     assert_redirected_to b2b_orders_path
     follow_redirect!
     assert_select '.flash-messages-container .alert-success', text: /nº 1900.*cancelado no Tiny/
@@ -68,19 +68,6 @@ class B2bOrdersCancelInTinyTest < ActionDispatch::IntegrationTest
     assert_equal @admin, log.user
     assert_equal '555', log.details_parsed['tiny_reference_id']
     assert_equal '1900', log.details_parsed['tiny_reference_number']
-  end
-
-  test 'after the cancellation the order can be sent again as a brand new Tiny order' do
-    order = sent_order
-    stub_status_ok
-    post cancel_in_tiny_b2b_order_path(order)
-    stub_request(:post, PEDIDO_URL).to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '777', numero: '1950' } } } }.to_json)
-
-    post transmit_b2b_order_path(order)
-
-    order.reload
-    assert_equal '777', order.tiny_reference_id
-    assert_equal '1950', order.tiny_reference_number
   end
 
   test 'when Tiny refuses, nothing changes in Honey and the real Tiny message is shown' do

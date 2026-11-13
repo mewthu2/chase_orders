@@ -90,6 +90,9 @@ Rails.application.routes.draw do
       get :order_correios_create_queue_b2b
       post :approve_order_b2b
       post :ignore_order_b2b
+      post :approve_honey_order_b2b
+      post :ignore_honey_order_b2b
+      post :run_honey_b2b_step
       post :run_create_correios_b2b
       post :run_order_correios_create_b2b_now
       get :order_correios_stock_errors
@@ -179,6 +182,10 @@ Rails.application.routes.draw do
   
   resource :internal_transfer_config, only: [:edit, :update]
   resource :b2b_setting, only: [:edit, :update]
+  # Aba Nota fiscal da edição dos pedidos B2B (atacado, abastecimento e transferência B2C).
+  resources :b2b_order_fiscal_notes, path: 'b2b_orders/:b2b_order_id/notas', only: [:create, :destroy] do
+    member { post :transmit }
+  end
   resources :internal_transfers do
     member do
       post :approve

@@ -16,7 +16,7 @@
             <label class="field-label">Status</label>
             <%= form.select :status, B2bOrder::STATUS_LABELS.map { |key, label| [label, key] }, { selected: @b2b_order.status }, { class: 'field-input' } %>
             <% if @b2b_order.tiny_reference_id.blank? %>
-              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Pedido ainda não enviado ao Tiny: a mudança vale só no Honey.</span>
+              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>O pedido anda no Log02 pela aprovação, criação no Correios, NF-e e rastreio.</span>
             <% end %>
           </div>
         <% end %>
@@ -45,7 +45,7 @@
         <div class="form-col-6" id="transferLocationSection">
           <label class="field-label">Local de Destino</label>
           <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com a nota fiscal gerada, e entra na fila dos Correios B2B.</span>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência.</span>
         </div>
         <% by_carrier = @b2b_order.carrier_id.present? %>
         <div class="form-col-6" id="stockDeliverySection">
@@ -75,7 +75,7 @@
             <% end %>
           </div>
           <button type="button" class="btn-back" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão nas observações do pedido no Tiny (separados por vírgula) e como destinatário nos Correios: com mão própria, só essas pessoas podem receber.</span>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão como destinatário nos Correios (separados por vírgula): com mão própria, só essas pessoas podem receber.</span>
         </div>
         <% else %>
         <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
@@ -83,7 +83,7 @@
           <label class="field-label">Destino</label>
           <div class="text-main"><%= recipient[:nome] %></div>
           <span class="text-muted-custom d-block mt-1">CNPJ <%= recipient[:cpf_cnpj] %> · <%= recipient[:endereco] %>, <%= recipient[:numero] %> <%= recipient[:complemento] %> · <%= recipient[:cidade] %>/<%= recipient[:uf] %></span>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vai para o Tiny B2B já em "Preparando Envio", com a nota fiscal gerada e o marcador <%= B2bTinyService::B2C_TRANSFER_TAG %>.</span>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovada no Log02, o Honey cria no Correios (como transportadora, dentro do galpão do Log) e emite a NF-e de transferência.</span>
         </div>
         <div class="form-col-6">
           <label class="field-label">Entrega</label>
@@ -93,25 +93,23 @@
         <% end %>
 
         <% if @b2b_order.sale? %>
-        <div class="form-col-6">
+        <% mode = @b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '') %>
+        <div class="form-col-6" id="saleShippingSection">
           <label class="field-label">Forma de Envio</label>
-          <select id="shippingMethodSelect" class="field-input">
-            <option value="">Carregando...</option>
+          <select id="shippingModeSelect" class="field-input" required>
+            <option value="" <%= 'selected' if mode.blank? %>>Selecione...</option>
+            <option value="sedex" <%= 'selected' if mode == 'sedex' %>>Correios Log · SEDEX</option>
+            <option value="carrier" <%= 'selected' if mode == 'carrier' %>>Transportadora</option>
           </select>
-          <%= form.hidden_field :carrier_shipping_method, id: 'carrierMethodField' %>
+          <%# SEDEX vai como serviço de frete; transportadora, pelo cadastro dela (CNPJ no Correios e na NF-e). %>
+          <%= form.hidden_field :freight_service, id: 'freightServiceField', value: (mode == 'sedex' ? B2bOrder::SALE_FREIGHT_SERVICES.first : '') %>
+          <input type="hidden" name="b2b_order[carrier_id]" value="" id="saleCarrierBlank" <%= 'disabled' if mode == 'carrier' %>>
         </div>
 
-        <%# Correios Log precisa de um serviço (forma_frete no Tiny); o fluxo dos Correios do Honey depende do nome exato. %>
-        <div class="form-col-6" id="freightServiceSection" style="display: none;">
-          <label class="field-label">Serviço de frete (Correios Log)</label>
-          <%= form.select :freight_service, B2bOrder::SALE_FREIGHT_SERVICES, { include_blank: 'Selecione...' }, { id: 'freightServiceSelect', class: 'field-input', disabled: true } %>
-          <span class="text-muted-custom d-block mt-1">No atacado, Correios Log é só SEDEX.</span>
-        </div>
-
-        <div class="form-col-6" id="carrierSection" style="display: none;">
+        <div class="form-col-6" id="carrierSection" style="<%= 'display: none;' unless mode == 'carrier' %>">
           <label class="field-label">Transportadora</label>
-          <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+          <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'saleCarrierSelect', disabled: mode != 'carrier', required: mode == 'carrier' } %>
+          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>No Correios entra como transportadora (74926), com o CNPJ do cadastro. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
         </div>
 
         <% fixed_value = B2bSetting.current.fixed_freight_value %>
@@ -125,7 +123,7 @@
         <div class="form-col-6">
           <label class="field-label">Valor do frete (R$)</label>
           <%= form.number_field :freight_value, step: 0.01, min: 0, class: 'field-input', id: 'freightValueField', placeholder: '0,00' %>
-          <span class="text-muted-custom d-block mt-1">Vai para o pedido no Tiny como valor do frete.</span>
+          <span class="text-muted-custom d-block mt-1">Vai como valor do frete do pedido.</span>
         </div>
 
         <div class="form-col-6">
@@ -149,7 +147,7 @@
             <div class="form-col-6">
               <label class="field-label">Condição de pagamento (dias)</label>
               <%= form.text_field :payment_terms, class: 'field-input', id: 'paymentTermsField', placeholder: '30 60 90', disabled: !installments_on %>
-              <span class="text-muted-custom d-block mt-1">Os dias de cada vencimento, contados da data do pedido, como no Tiny.</span>
+              <span class="text-muted-custom d-block mt-1">Os dias de cada vencimento, contados da data do pedido (ex.: 30 60 90).</span>
             </div>
           </div>
           <div class="installments-preview" id="installmentsPreview" aria-live="polite"></div>
@@ -251,7 +249,7 @@
         </tbody>
       </table>
       <div id="stockEnforcementNotice" class="stock-enforcement-notice d-none" role="status"></div>
-      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque Correios B2B − itens reservados na fila do Tiny. Não dá para adicionar item sem disponível nem pedir acima dele.</span>
+      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque do Log02 − itens reservados (pedidos do Honey e da fila antiga do Tiny). Não dá para adicionar item sem disponível nem pedir acima dele.</span>
     </div>
   </div>
 
@@ -289,7 +287,7 @@
             <%= form.number_field :order_discount, step: 0.01, min: 0, class: 'field-input', id: 'orderDiscountField' %>
             <%= form.select :order_discount_type, B2bOrder::DISCOUNT_TYPES.map { |key, label| [label, key] }, {}, { class: 'field-input', id: 'orderDiscountTypeField', style: 'max-width: 90px' } %>
           </div>
-          <span class="text-muted-custom d-block mt-1">Desconto livre sobre o total dos itens, em reais ou porcentagem. Vai ao Tiny em reais.</span>
+          <span class="text-muted-custom d-block mt-1">Desconto livre sobre o total dos itens, em reais ou porcentagem. Entra na NF-e rateado pelos itens.</span>
         </div>
         <div class="form-col-6">
           <div class="order-summary" id="orderSummary">
@@ -479,58 +477,23 @@ document.addEventListener('DOMContentLoaded', function () {
     addrSection.style.display = addrCheck.checked ? '' : 'none';
   });
 
-  // Transportadora só faz sentido escolher quando a Forma de Envio é "Transportadora"
-  function toggleCarrierSection() {
-    var select = document.getElementById('shippingMethodSelect');
-    var selectedOption = select.options[select.selectedIndex];
-    var isCarrier = !!selectedOption && selectedOption.textContent.trim().toLowerCase() === 'transportadora';
-    document.getElementById('carrierSection').style.display = isCarrier ? '' : 'none';
-    // Transportadora sem transportadora escolhida chega ao Tiny sem frete e trava a criação nos Correios.
-    document.getElementById('b2b_order_carrier_id').required = isCarrier;
+  // Atacado: SEDEX (Correios Log) ou transportadora do cadastro. Sem Tiny: a escolha vai direto no pedido.
+  var shippingMode = document.getElementById('shippingModeSelect');
+  if (shippingMode) {
+    var applyShippingMode = function () {
+      var mode = shippingMode.value;
+      var carrierSelect = document.getElementById('saleCarrierSelect');
+      document.getElementById('carrierSection').style.display = mode === 'carrier' ? '' : 'none';
+      carrierSelect.disabled = mode !== 'carrier';
+      carrierSelect.required = mode === 'carrier';
+      document.getElementById('saleCarrierBlank').disabled = mode === 'carrier';
+      document.getElementById('freightServiceField').value = mode === 'sedex' ? '<%= B2bOrder::SALE_FREIGHT_SERVICES.first %>' : '';
+    };
+    shippingMode.addEventListener('change', applyShippingMode);
+    applyShippingMode();
   }
 
-  // O serviço de frete só existe para Correios Log (tipo de logística 5 no Tiny). Fica desabilitado
-  // (não vai no envio) quando a forma escolhida é outra.
-  function toggleFreightService() {
-    var select = document.getElementById('shippingMethodSelect');
-    var selectedOption = select.options[select.selectedIndex];
-    var isCorreiosLog = !!selectedOption && selectedOption.dataset.logisticsType === '5';
-    var freightSelect = document.getElementById('freightServiceSelect');
-    document.getElementById('freightServiceSection').style.display = isCorreiosLog ? '' : 'none';
-    freightSelect.disabled = !isCorreiosLog;
-    freightSelect.required = isCorreiosLog;
-    if (!isCorreiosLog) freightSelect.value = '';
-    else if (!freightSelect.value) freightSelect.value = '<%= B2bOrder::SALE_FREIGHT_SERVICES.first %>';
-  }
-
-  // Forma de Envio via AJAX (lista vem do Tiny). A transferência B2C vai como transportadora e não tem esse campo.
-  if (document.getElementById('shippingMethodSelect')) {
-  fetch('<%= shipping_methods_b2b_orders_path %>')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      var select = document.getElementById('shippingMethodSelect');
-      select.innerHTML = '<option value="">Selecione...</option>';
-      (data.shipping_methods || []).forEach(function (m) {
-        // Atacado: só Correios Log (SEDEX) e Transportadora.
-        if (['5', '2'].indexOf(String(m.logistics_type)) === -1 && m.method !== '<%= @b2b_order.carrier_shipping_method %>') return;
-        var opt = document.createElement('option');
-        opt.value = m.method;
-        opt.textContent = m.name;
-        opt.dataset.logisticsType = m.logistics_type || '';
-        if (m.method === '<%= @b2b_order.carrier_shipping_method %>') opt.selected = true;
-        select.appendChild(opt);
-      });
-      toggleCarrierSection();
-      toggleFreightService();
-    });
-  document.getElementById('shippingMethodSelect').addEventListener('change', function (e) {
-    document.getElementById('carrierMethodField').value = e.target.value;
-    toggleCarrierSection();
-    toggleFreightService();
-  });
-  }
-
-  // Cliente via AJAX (busca no Honey e no Tiny ao mesmo tempo)
+  // Cliente via AJAX (só clientes do Honey)
   var clientTimeout;
   // Cada busca tem uma "geração": se uma nova busca for feita (ou um cliente
   // for selecionado) antes da resposta chegar, a resposta antiga é descartada
@@ -545,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!q) { box.innerHTML = ''; return; }
 
-    box.innerHTML = '<div class="list-group-item"><i class="fas fa-spinner fa-spin me-2"></i>Buscando no Honey e no Tiny...</div>';
+    box.innerHTML = '<div class="list-group-item"><i class="fas fa-spinner fa-spin me-2"></i>Buscando no Honey...</div>';
 
     clientTimeout = setTimeout(function () {
       fetch('<%= search_client_b2b_orders_path %>?query=' + encodeURIComponent(q))
@@ -608,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (clients.length === 0) {
             var emptyState = document.createElement('div');
             emptyState.className = 'list-group-item';
-            emptyState.innerHTML = 'Nenhum cliente encontrado no Honey ou no Tiny. ' +
+            emptyState.innerHTML = 'Nenhum cliente encontrado no Honey. ' +
               '<a href="<%= new_client_path %>" target="_blank">Cadastrar novo cliente</a>';
             box.appendChild(emptyState);
           }

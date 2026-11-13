@@ -37,13 +37,10 @@ class B2bOrdersController < ApplicationController
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
       link_catalog_order(@b2b_order)
-      # O pedido de venda fica só no Honey até alguém clicar em "Enviar ao Tiny".
-      if @b2b_order.sale?
-        redirect_to orders_path_for(order_kind), notice: "Pedido ##{@b2b_order.id} salvo. Use \"Enviar ao Tiny\" quando estiver pronto."
-      else
-        kind, message = send_to_tiny(@b2b_order, saved: true, generate_invoice: generate_invoice?)
-        redirect_to orders_path_for(order_kind), kind => message
-      end
+      # Não vai mais ao Tiny: o pedido espera a aprovação em Log02 › Pedidos p/ Aprovar e segue pelo Honey.
+      HoneyB2bLog.sync_reservations!
+      redirect_to orders_path_for(order_kind),
+                  notice: "#{KIND_LABELS[order_kind]} ##{@b2b_order.id} salvo. Ele segue no Log02 depois de aprovado em Pedidos p/ Aprovar."
     else
       render :new, status: :unprocessable_entity
     end
@@ -57,6 +54,7 @@ class B2bOrdersController < ApplicationController
     push_status = @b2b_order.status_changed? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present?
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
+      HoneyB2bLog.sync_reservations! if @b2b_order.honey_flow?
       flash_options = { notice: 'Pedido atualizado com sucesso.' }
       if push_status
         result = B2bTinyService.new.update_order_status(@b2b_order.tiny_reference_id, @b2b_order.status)
@@ -110,6 +108,7 @@ class B2bOrdersController < ApplicationController
                  tiny_reference_id: @b2b_order.tiny_reference_id, tiny_reference_number: @b2b_order.tiny_reference_number }.compact
     id = @b2b_order.id
     @b2b_order.destroy!
+    HoneyB2bLog.sync_reservations!
     LogService.create_log(user: current_user, resource_type: 'b2b_order', action_type: 'delete',
                           resource_name: "Pedido B2B ##{id}", resource_id: id, details: snapshot, request: request)
     tiny_note = outcome == :missing ? " (o nº #{number} já não existia no Tiny)" : " (cancelado no Tiny, nº #{number})" if number
@@ -197,7 +196,8 @@ class B2bOrdersController < ApplicationController
       return
     end
 
-    own_tiny_order_id = B2bOrder.find_by(id: params[:b2b_order_id])&.tiny_reference_id
+    own = B2bOrder.find_by(id: params[:b2b_order_id])
+    own_tiny_order_id = own && (own.tiny_reference_id.presence || own.reservation_key)
     result = B2bStockAvailability.for_sku(product.sku, exclude_tiny_order_id: own_tiny_order_id)
     render json: { success: true, quantity: result.available, stock: result.stock, reserved: result.reserved, status: result.status }
   end
@@ -356,9 +356,10 @@ class B2bOrdersController < ApplicationController
   # Bloqueia itens acima do disponível no Correios B2B (estoque − reservas da fila do Tiny2). Só vale
   # enquanto o pedido não chegou ao Tiny: depois disso os itens dele já estão na própria reserva.
   def stock_available?(order)
-    return true if order.tiny_reference_id.present? || order.cancelado?
+    return true if order.tiny_reference_id.present? || order.cancelado? || order.correios_order_id.present?
 
-    shortages = B2bStockAvailability.shortages(order.b2b_order_items)
+    # O próprio pedido do Honey já reserva os itens: não conta contra ele mesmo ao editar.
+    shortages = B2bStockAvailability.shortages(order.b2b_order_items, exclude_tiny_order_id: (order.reservation_key if order.persisted?))
     shortages.each do |s|
       order.errors.add(:base, "#{s[:sku]}: pedido #{s[:requested]}, disponível #{s[:available]} " \
                               "(estoque #{s[:stock]}, #{s[:reserved]} reservados na fila)")
@@ -465,8 +466,8 @@ class B2bOrdersController < ApplicationController
     public_send("#{route_key(order.kind)}_path", order)
   end
 
-  def edit_order_path_for(order)
-    public_send("edit_#{route_key(order.kind)}_path", order)
+  def edit_order_path_for(order, **opts)
+    public_send("edit_#{route_key(order.kind)}_path", order, **opts)
   end
 
   def transmit_order_path_for(order)

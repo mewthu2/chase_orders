@@ -1,6 +1,7 @@
 <% channel = params[:channel].presence_in(%w[b2c b2b]) %>
 <% kind_labels = { 'create_correios_order' => 'Criação no Correios', 'emission_invoice' => 'Emissão de nota', 'send_xml' => 'Envio de XML', 'get_tracking' => 'Rastreamento',
                    'create_correios_order_tiny2' => 'Criação no Correios', 'emission_invoice_tiny2' => 'Emissão de nota', 'send_xml_tiny2' => 'Envio de XML', 'get_tracking_tiny2' => 'Rastreamento',
+                   'create_correios_order_honey' => 'Criação no Correios (Honey)', 'send_xml_honey' => 'NF-e + XML (Honey)', 'get_tracking_honey' => 'Rastreamento (Honey)',
                    'create_note_tiny2' => 'Nota no Tiny 2', 'transfer_tiny_to_shopify_order' => 'Pedido Tiny → Shopify', 'sync_correios_stock' => 'Sincronização de estoque' } %>
 <% kinds = channel == 'b2b' ? Attempt::B2B_KINDS : (channel == 'b2c' ? Attempt::B2C_KINDS : kind_labels.keys) %>
 <% statuses = { 'success' => ['Sucesso', 'green', 'Deu certo.'], 'fail' => ['Falha', 'orange', 'O outro sistema recusou, por exemplo por falta de estoque.'],

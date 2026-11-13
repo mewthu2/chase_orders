@@ -1,3 +1,7 @@
 <% title 'Acompanhamento de Pedidos no Correios (Log02)' %>
 <%= render 'dashboard/tracking', kind: :log02, perm: :dashboard_correios_b2b, title: 'Acompanhamento de Pedidos no Correios (Log02)', attempts_channel: 'b2b',
            order_types: @order_types, transport: true %>
+
+<div class="pg-blocks" style="margin-top: 16px">
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation invoice tracking shipped], title: 'Pedidos do Honey no Log02', meta: 'Em que etapa está cada pedido feito no Honey.', empty_text: 'Nenhum pedido do Honey nos últimos 6 meses.' %>
+</div>

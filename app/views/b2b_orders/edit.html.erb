@@ -12,17 +12,6 @@
     </div>
     <div class="header-actions">
       <%= hc_help_button %>
-      <% if @b2b_order.resendable? %>
-        <%= form_with url: transmit_order_path_for(@b2b_order), method: :post, class: 'send-to-tiny-form',
-                      data: { turbo_confirm: 'Enviar este pedido para o Tiny? Ele entra como Preparando Envio. Salve antes as alterações feitas nesta tela.' } do %>
-          <% if @b2b_order.sale? %>
-            <label class="send-to-tiny-invoice">
-              <%= check_box_tag :generate_invoice, '1', false %> Gerar nota fiscal no Tiny
-            </label>
-          <% end %>
-          <button type="submit" class="btn-export"><i class="fas fa-paper-plane me-1"></i>Enviar ao Tiny</button>
-        <% end %>
-      <% end %>
       <% if @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present? %>
         <%= button_to cancel_in_tiny_order_path_for(@b2b_order), method: :post, class: "btn-back",
                       form: { data: { turbo_confirm: "Cancelar o pedido nº #{@b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
@@ -44,5 +33,50 @@
       <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>
   </div>
-  <%= render 'form' %>
+  <% @tab = params[:tab] == 'nota' ? 'nota' : 'pedido' %>
+  <% authorized_notes = FiscalNote.where(b2b_order_id: @b2b_order.id).autorizada.count %>
+  <div class="scope-tabs it-tabs" role="tablist">
+    <span class="scope-indicator"></span>
+    <%= link_to url_for(tab: 'pedido'), class: "scope-tab#{' is-active' if @tab == 'pedido'}", role: 'tab', 'aria-selected': @tab == 'pedido', data: { it_tab: 'pedido' } do %><i class="fas fa-box-open"></i>Pedido<% end %>
+    <%= link_to url_for(tab: 'nota'), class: "scope-tab#{' is-active' if @tab == 'nota'}", role: 'tab', 'aria-selected': @tab == 'nota', data: { it_tab: 'nota' } do %>
+      <i class="fas fa-file-invoice"></i>Nota fiscal<% if authorized_notes.positive? %><span class="count"><%= authorized_notes %></span><% end %>
+    <% end %>
+  </div>
+
+  <div data-it-panel="pedido" <%= 'hidden' unless @tab == 'pedido' %>>
+    <%= render 'form' %>
+  </div>
+  <div data-it-panel="nota" <%= 'hidden' unless @tab == 'nota' %>>
+    <%= render 'fiscal_tab' %>
+  </div>
 </div>
+
+<% content_for :scripts do %>
+<script>
+// Abas Pedido / Nota fiscal: troca sem recarregar (o formulário não perde o que foi digitado) e guarda a aba na URL.
+document.addEventListener('DOMContentLoaded', function () {
+  var tabs = document.querySelector('.it-tabs');
+  if (!tabs) return;
+  var indicator = tabs.querySelector('.scope-indicator');
+  function place(tab) { indicator.style.left = tab.offsetLeft + 'px'; indicator.style.width = tab.offsetWidth + 'px'; }
+  var active = tabs.querySelector('.scope-tab.is-active');
+  if (active) place(active);
+  tabs.querySelectorAll('[data-it-tab]').forEach(function (tab) {
+    tab.addEventListener('click', function (event) {
+      event.preventDefault();
+      var key = tab.dataset.itTab;
+      tabs.querySelectorAll('[data-it-tab]').forEach(function (other) {
+        var on = other === tab;
+        other.classList.toggle('is-active', on);
+        other.setAttribute('aria-selected', on);
+      });
+      document.querySelectorAll('[data-it-panel]').forEach(function (panel) { panel.hidden = panel.dataset.itPanel !== key; });
+      place(tab);
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', key);
+      window.history.replaceState(null, '', url);
+    });
+  });
+});
+</script>
+<% end %>

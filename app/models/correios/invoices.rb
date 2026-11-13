@@ -2,7 +2,8 @@ module Correios::Invoices
   module_function
 
   def self.send_xml_to_correios(attempt)
-    from_tiny2 = attempt.kinds == 'send_xml_tiny2'
+    # Log02 (conta 2 do Correios): pedidos do Tiny 2 e os feitos no Honey.
+    from_tiny2 = %w[send_xml_tiny2 send_xml_honey].include?(attempt.kinds)
 
     headers = {
       'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),

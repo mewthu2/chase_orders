@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_200000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_12_210000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -87,6 +87,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_200000) do
     t.string "tracking"
     t.integer "id_nota_tiny2"
     t.boolean "is_transportadora", default: false
+    t.bigint "b2b_order_id"
+    t.index ["b2b_order_id"], name: "index_attempts_on_b2b_order_id"
     t.index ["kinds", "status", "created_at"], name: "index_attempts_on_kinds_and_status_and_created_at"
     t.index ["kinds", "status", "order_correios_id"], name: "index_attempts_on_kinds_status_order_correios_id"
     t.index ["kinds"], name: "index_attempts_on_kinds"
@@ -211,6 +213,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_200000) do
     t.string "order_discount_type", default: "amount", null: false
     t.boolean "fixed_freight", default: false, null: false
     t.string "payment_terms"
+    t.bigint "correios_order_id"
+    t.datetime "xml_sent_at"
+    t.boolean "log_ignored", default: false, null: false
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
@@ -223,6 +228,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_200000) do
     t.datetime "updated_at", null: false
     t.decimal "seamless_discount_percent", precision: 5, scale: 2, default: "60.0", null: false
     t.decimal "default_discount_percent", precision: 5, scale: 2, default: "56.6", null: false
+    t.bigint "issuer_company_id"
+    t.bigint "sale_nature_id"
+    t.bigint "transfer_nature_id"
   end
 
   create_table "campaign_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

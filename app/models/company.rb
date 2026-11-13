@@ -52,6 +52,11 @@ class Company < ApplicationRecord
     Nfe::Cnpj.format(cnpj)
   end
 
+  # Nas seleções as filiais têm o mesmo nome: o CNPJ e a cidade/UF é que distinguem.
+  def selection_label
+    "#{trade_name.presence || legal_name} · CNPJ #{cnpj_formatted} · #{city}/#{state}"
+  end
+
   def state_code
     STATES[state]
   end

@@ -26,7 +26,9 @@ class StockReservationRefresher
 
     @refresh.update!(status: 'running', message: nil)
     queue = pending_orders(fetch_queue)
-    StockReservation.where(account: @account).where.not(tiny_order_id: queue.keys).delete_all
+    StockReservation.where(account: @account).where.not(tiny_order_id: queue.keys)
+                    .where.not('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").delete_all
+    HoneyB2bLog.sync_reservations! if @account == 'b2b'
     update_ecommerce_numbers(queue)
     rate_limited = store_new_orders(queue)
     @refresh.update!(status: rate_limited ? 'partial' : 'success', last_refreshed_at: Time.current,

@@ -39,67 +39,6 @@ class B2bWholesaleChecklistTest < ActionDispatch::IntegrationTest
     assert_equal 25, order.freight_value
   end
 
-  test 'sending to Tiny carries the payment, the discount in reais and the typed freight' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, payment_method: 'cartao', order_discount: 15, freight_value: 30)
-    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 2, price: 50)
-    order.save!
-    pedido = nil
-    stub_request(:post, PEDIDO_URL).with { |req| pedido = JSON.parse(URI.decode_www_form(req.body).to_h['pedido'])['pedido'] }
-                                   .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '9', numero: '10' } } } }.to_json)
-
-    post transmit_b2b_order_path(order)
-
-    assert_nil pedido['forma_pagamento'], 'a forma de pagamento é só registro, não cobrança no Tiny'
-    assert_nil pedido['meio_pagamento']
-    assert_equal '15.00', pedido['valor_desconto']
-    assert_equal 30.0, pedido['valor_frete']
-    assert_includes pedido['obs'], 'Pagamento: Cartão'
-  end
-
-  test 'installments go to Tiny like Tiny ones: days, due date and value, adding up to the order total' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, payment_method: 'cartao', payment_terms: '30 60', freight_value: 20,
-                         created_at: Time.zone.local(2026, 11, 12, 10))
-    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 2, price: 50)
-    order.save!
-    pedido = nil
-    stub_request(:post, PEDIDO_URL).with { |req| pedido = JSON.parse(URI.decode_www_form(req.body).to_h['pedido'])['pedido'] }
-                                   .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '9', numero: '10' } } } }.to_json)
-
-    post transmit_b2b_order_path(order)
-
-    parcelas = pedido['parcelas'].map { |p| p['parcela'] }
-    assert_equal [30, 60], parcelas.map { |p| p['dias'] }
-    assert_equal %w[12/12/2026 11/01/2027], parcelas.map { |p| p['data'] }
-    assert_equal %w[60.00 60.00], parcelas.map { |p| p['valor'] }
-    assert_equal 'Cartão 1/2', parcelas.first['obs']
-    assert_nil parcelas.first['forma_pagamento']
-    assert_includes pedido['obs'], 'Pagamento: Cartão 2x (30 60)'
-  end
-
-  test 'a pix order goes without installments' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, payment_method: 'pix')
-    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 1, price: 50)
-    order.save!
-    pedido = nil
-    stub_request(:post, PEDIDO_URL).with { |req| pedido = JSON.parse(URI.decode_www_form(req.body).to_h['pedido'])['pedido'] }
-                                   .to_return(body: { retorno: { status: 'OK', registros: { registro: { id: '9', numero: '10' } } } }.to_json)
-
-    post transmit_b2b_order_path(order)
-
-    assert_nil pedido['parcelas']
-  end
-
-  test 'an old order without payment is not sent until someone picks it' do
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client)
-    order.b2b_order_items.build(sku: 'SKU1', name: 'Produto', quantity: 1, price: 50)
-    order.save!
-
-    post transmit_b2b_order_path(order)
-
-    assert_redirected_to edit_b2b_order_path(order)
-    assert_not_requested :post, PEDIDO_URL
-  end
-
   test 'the fixed freight comes from the setting: a new order starts with it and the value can be adjusted' do
     B2bSetting.current.update!(fixed_freight_value: 35)
 

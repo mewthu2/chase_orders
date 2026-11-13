@@ -16,7 +16,7 @@ class B2bStockAvailability
   end
 
   # Itens acima do disponível. SKUs sem resposta do Correios não entram (não bloqueiam).
-  def self.shortages(items)
+  def self.shortages(items, exclude_tiny_order_id: nil)
     requested = items.reject(&:marked_for_destruction?).each_with_object(Hash.new(0)) do |item, acc|
       sku = normalize(item.sku)
       acc[sku] += item.quantity.to_i if sku.present?
@@ -24,7 +24,7 @@ class B2bStockAvailability
     stocks = correios_stocks(requested.keys)
 
     requested.filter_map do |sku, quantity|
-      result = build(sku, stocks[sku])
+      result = build(sku, stocks[sku], exclude_tiny_order_id:)
       next if result.error? || quantity <= result.available
 
       { sku:, requested: quantity, stock: result.stock, reserved: result.reserved, available: result.available }

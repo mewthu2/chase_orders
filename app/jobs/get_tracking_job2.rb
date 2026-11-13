@@ -29,6 +29,9 @@ class GetTrackingJob2 < ActiveJob::Base
     @get_tracking.each do |att|
       get_one_tracking(att)
     end
+  ensure
+    # Pedidos feitos no Honey: o rastreio fica no próprio pedido.
+    HoneyB2bLog.track_pending!
   end
 
   def get_one_tracking(att)

@@ -53,19 +53,13 @@ class B2bOrderTest < ActiveSupport::TestCase
     assert order.valid?
   end
 
-  test 'resendable? is true for any non-cancelled order without a tiny_reference_id' do
+  test 'nothing is resent to Tiny anymore: orders without a Tiny reference follow the Honey Log02' do
     order = B2bOrder.new(kind: :sale, user: @user, status: :aberto)
-    assert order.resendable?
-
-    order.status = :dados_incompletos
-    assert order.resendable?
-
-    order.status = :cancelado
     refute order.resendable?
+    assert order.honey_flow?
 
-    order.status = :aberto
     order.tiny_reference_id = '123'
-    refute order.resendable?
+    refute order.honey_flow?
   end
 
   test 'total sums the line totals of all items' do

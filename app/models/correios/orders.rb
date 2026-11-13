@@ -34,7 +34,8 @@ module Correios::Orders
   # recipient_name substitui só o nome do destinatário enviado aos Correios (params[:nome] fica intacto).
   def create_orders(params, attempt, recipient_name: nil)
     is_transportadora = params[:cnpj_transportadora].present?
-    from_tiny2 = attempt.kinds == 'create_correios_order_tiny2'
+    # Log02 (conta 2 do Correios): pedidos do Tiny 2 e os feitos no Honey.
+    from_tiny2 = %w[create_correios_order_tiny2 create_correios_order_honey].include?(attempt.kinds)
 
     authentication = {
       'numeroCartaoPostagem' => from_tiny2 ? ENV.fetch('CORREIOS_CARTAO_POSTAGEM_2') : ENV.fetch('CORREIOS_CARTAO_POSTAGEM'),

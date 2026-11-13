@@ -1,0 +1,52 @@
+<%# Aba Nota fiscal da edição do pedido B2B: uma vaga de homologação e uma de produção (como a Transferência Interna). %>
+<% setting = B2bSetting.current %>
+<% company = setting.issuer %>
+<% nature = setting.nature_for(@b2b_order) %>
+<% notes = FiscalNote.where(b2b_order_id: @b2b_order.id).to_a %>
+<% recipient = HoneyB2bLog.destination_name(@b2b_order) %>
+<% recipient_doc = @b2b_order.sale? ? @b2b_order.client&.cnpj_formatted : (@b2b_order.stock_transfer? ? @b2b_order.transfer_location&.registration : B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]) %>
+<% units = @b2b_order.b2b_order_items.sum { |i| i.quantity.to_i } %>
+<%
+  blocker =
+    if company.nil? then 'Escolha a empresa emissora em Configuração do atacado.'
+    elsif nature.nil? then "Escolha a natureza de #{@b2b_order.sale? ? 'venda' : 'transferência'} em Configuração do atacado."
+    elsif !company.ready_to_issue? then "A empresa #{company.selection_label} não está ativa ou está sem certificado digital válido."
+    elsif @b2b_order.b2b_order_items.empty? then 'Salve os itens do pedido na aba Pedido para emitir a nota.'
+    elsif @b2b_order.cancelado? then 'Este pedido foi cancelado.'
+    end
+%>
+<div class="callout it-fiscal-intro">
+  <i class="fas fa-circle-info"></i>
+  <div>
+    O pedido tem a <strong>própria nota</strong>, emitida no Honey direto na SEFAZ (<%= nature ? "natureza #{nature.description}" : 'natureza da Configuração do atacado' %>).
+    Dá para ter uma nota de <strong>homologação</strong> (teste, sem valor fiscal) e uma de <strong>produção</strong>; excluindo a nota, dá para emitir outra.
+    No Log02, a etapa do XML usa a nota de produção autorizada (ou emite uma) e manda o XML ao Correios.
+  </div>
+</div>
+
+<div class="it-fiscal-list stagger">
+  <section class="it-fiscal-card">
+    <header class="it-fiscal-card__head">
+      <span class="transfer-note__route">
+        <span><small>Emitente</small> <strong><%= company ? (company.trade_name.presence || company.legal_name) : '—' %></strong><%= " · #{company.cnpj_formatted}" if company %></span>
+        <i class="fas fa-arrow-right"></i>
+        <span><small>Destinatário</small> <strong><%= recipient.presence || '—' %></strong><%= " · #{recipient_doc}" if recipient_doc.present? %></span>
+      </span>
+      <span class="it-fiscal-card__meta"><i class="fas fa-cubes"></i><%= pluralize(units, 'unidade', plural: 'unidades') %> · <%= B2bOrder::LOG_STAGES.dig(@b2b_order.log_stage, 0).to_s.downcase %></span>
+    </header>
+
+    <% if blocker && notes.empty? %>
+      <div class="callout is-warn mb-0"><i class="fas fa-building-circle-exclamation"></i><div>
+        <%= blocker %>
+        <% if blocker.include?('Configuração do atacado') && screen_can?(:b2b_orders, :edit) %><%= link_to 'Abrir Configuração do atacado', edit_b2b_setting_path %><% end %>
+      </div></div>
+    <% else %>
+      <div class="it-fiscal-slots">
+        <% %w[homologacao producao].each do |env| %>
+          <%= render 'b2b_orders/fiscal_slot', order: @b2b_order, env: env, company: company, blocker: blocker,
+                                              note: notes.select { |n| n.environment == env }.max_by { |n| [n.created_at, n.id] } %>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+</div>

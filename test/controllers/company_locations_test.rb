@@ -18,7 +18,7 @@ class CompanyLocationsTest < ActionDispatch::IntegrationTest
   test 'the form picks one store; choosing a store of another company moves it and frees the previous one' do
     get edit_company_path(@company)
     assert_select '#loja select#company_location_id option[selected]', text: 'BH Shopping'
-    assert_select '#loja option', text: 'Barra Shopping (hoje: Chase Rio Ltda)'
+    assert_select '#loja option', text: /\ABarra Shopping \(hoje: Chase Rio Ltda · CNPJ/
     assert_select '.tiny-import', count: 0
 
     patch company_path(@company), params: { company: { legal_name: @company.legal_name, location_id: @rj.id } }

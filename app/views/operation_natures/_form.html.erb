@@ -19,7 +19,7 @@
         </div>
         <div class="form-col-6">
           <label class="field-label">Empresa <span class="required">*</span></label>
-          <%= form.select :company_id, @companies.map { |c| ["#{c.legal_name} (#{Company::TAX_REGIMES[c.tax_regime]})", c.id] }, {}, class: "field-input" %>
+          <%= form.select :company_id, @companies.map { |c| ["#{c.selection_label} (#{Company::TAX_REGIMES[c.tax_regime]})", c.id] }, {}, class: "field-input" %>
         </div>
         <div class="form-col-3">
           <label class="field-label">Tipo</label>

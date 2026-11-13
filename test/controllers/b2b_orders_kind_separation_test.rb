@@ -77,9 +77,10 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
       end
     end
 
-    assert_requested stub
+    assert_not_requested stub
     assert B2bOrder.last.stock_transfer?
-    assert_equal '777', B2bOrder.last.tiny_reference_number
+    assert_nil B2bOrder.last.tiny_reference_number, 'não vai mais ao Tiny'
+    assert B2bOrder.last.aberto?
     assert_redirected_to stock_transfers_path
   end
 
@@ -130,21 +131,6 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     assert_response :success
     get edit_stock_transfer_path(transfer)
     assert_response :success
-  end
-
-  test 'transmit is scoped to the kind of the screen' do
-    transfer = build_transfer
-
-    nota = stub_tiny_nota_ok
-    post transmit_b2b_order_path(transfer)
-    assert_response :not_found
-    assert_not_requested nota
-
-    sign_in @admin # o 404 reinicia a sessão de teste do Devise
-    post transmit_stock_transfer_path(transfer)
-    assert_requested nota
-    assert_equal '777', transfer.reload.tiny_reference_number
-    assert_redirected_to stock_transfers_path
   end
 
   test 'updating a stock transfer redirects to the transfers list' do
@@ -209,10 +195,10 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
   test 'the wholesale form has the freight service select for Correios Log and the transfer form does not need it' do
     get new_b2b_order_path
 
-    assert_select 'select#freightServiceSelect[name="b2b_order[freight_service]"] option', count: 2 # em branco + SEDEX (atacado só SEDEX)
-    assert_select 'select#freightServiceSelect option', text: 'SEDEX CORREIOS LOG+'
-    assert_select '#freightServiceSection'
-    assert_match(/logistics_type|logistics/, response.body)
+    assert_select '#shippingModeSelect option', text: 'Correios Log · SEDEX'
+    assert_select '#shippingModeSelect option', text: 'Transportadora'
+    assert_select 'input#freightServiceField[name="b2b_order[freight_service]"]'
+    assert_no_match(/shipping_methods/, response.body, 'a forma de envio não vem mais do Tiny')
   end
 
   test 'the freight service is saved with the wholesale order' do
@@ -228,22 +214,6 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     order = B2bOrder.last
     assert_equal 'SEDEX CORREIOS LOG+', order.freight_service
     assert order.aberto?, order.error_message
-  end
-
-  test 'a stock transfer enters Tiny as a pedido in preparando envio, with the nota generated' do
-    stub_tiny_nota_ok(numero: '1900')
-    post stock_transfers_path, params: { b2b_order: {
-      transfer_location_id: @location.id, carrier_shipping_method: '123', freight_service: 'PAC CORREIOS LOG+', receiver_name: 'Maria',
-      b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
-    } }
-
-    order = B2bOrder.last
-    assert order.preparando_envio?
-    assert_equal '90000777', order.tiny_reference_id
-    assert_nil order.freight_service, 'abastecimento é sempre SEDEX, não aceita outro serviço'
-    assert_requested :post, INVOICE_URL
-    follow_redirect!
-    assert_select '.flash-messages-container', text: /Nota fiscal gerada no Tiny/
   end
 
   test 'the stock transfers list has no romaneio and links the Tiny number to the pedido' do

@@ -2,3 +2,7 @@
 <%= render 'dashboard/creation_queue', kind: :log02, action: :order_correios_create_queue_b2b, perm: :dashboard_correios_b2b, account: 'Tiny 2 (atacado)', order_types: @order_types,
            title: 'Criação de Pedidos no Correios (Log02)', subtitle: 'Cria no Correios os pedidos do atacado já aprovados.',
            run_now_path: run_order_correios_create_b2b_now_dashboard_index_path, stock_path: order_correios_stock_errors_b2b_dashboard_index_path, attempts_channel: 'b2b' %>
+
+<div class="pg-blocks" style="margin-top: 16px">
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[creation], title: 'Pedidos do Honey aprovados', meta: 'Entram no Correios na próxima rodada da criação (ou pelo botão de cada um).', empty_text: 'Nenhum pedido do Honey aprovado esperando a criação.' %>
+</div>

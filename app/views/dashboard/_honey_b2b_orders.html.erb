@@ -1,0 +1,50 @@
+<%# Pedidos feitos no Honey no Log02 (sem Tiny), filtrados pelas etapas. Locais: stages (etapas de B2bOrder::LOG_STAGES),
+    title, meta, empty_text e review (true na tela de aprovação: mostra Aprovar/Ignorar). %>
+<% review = local_assigns.fetch(:review, false) %>
+<% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'canceled' => 'red' } %>
+<% stage_map = B2bOrder::LOG_STAGES.to_h { |k, (label, help)| [k, [label, tones[k], help]] } %>
+<% kind_labels = { 'sale' => 'Atacado', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' } %>
+<% edit_path = ->(o) { o.sale? ? edit_b2b_order_path(o) : (o.stock_transfer? ? edit_stock_transfer_path(o) : edit_b2c_transfer_path(o)) } %>
+<% orders = B2bOrder.honey_flow.includes(:client, :transfer_location, :b2b_order_items).where('b2b_orders.created_at > ?', 6.months.ago).to_a
+                    .select { |o| stages.include?(o.log_stage) } %>
+<% last_attempts = Attempt.where(b2b_order_id: orders.map(&:id), kinds: Attempt::HONEY_KINDS).order(:id).group_by(&:b2b_order_id).transform_values(&:last) %>
+<% honey_table = HoneyTable.new(params, id: 'honey', unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dt, dir: 1 },
+     rows: orders.map { |o|
+       last = last_attempts[o.id]
+       { id: o.id, record: o, n: "##{o.id}", tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
+         dt: o.created_at, total: o.total.to_f, st: o.log_stage, correios: o.correios_order_id.presence&.to_s || '—', rastreio: o.tracking_code.presence || '—',
+         ultima: last ? "#{last.success? ? 'OK' : 'Falhou'}: #{(last.error.presence || last.message.presence || '—').to_s.truncate(160)}" : '—' }
+     },
+     cols: [
+       { k: :n, label: 'Pedido', t: :mono, main: true, sub: :tipo },
+       { k: :tipo, label: 'Tipo', hide: true },
+       { k: :destino, label: 'Destino', cls: 'customer-name-cell' },
+       { k: :dt, label: 'Criado', t: :dt, sort: true },
+       { k: :total, label: 'Total', t: :money },
+       { k: :st, label: 'Etapa', t: :status, map: stage_map },
+       { k: :correios, label: 'Nº no Correios', t: :mono, hide: true },
+       { k: :rastreio, label: 'Rastreio', t: :mono, hide: true },
+       { k: :ultima, label: 'Última tentativa', hide: true }
+     ]) %>
+<%= hc_pg_table(honey_table, title: title, icon: 'fas fa-house-flag', meta: meta,
+      empty: { title: 'Nenhum pedido do Honey aqui', text: empty_text },
+      detail: { title: ->(r) { "Pedido #{r[:n]} (Honey)" }, note: 'Pedido feito no Honey: não passa pelo Tiny. A NF-e é emitida no Honey na etapa do XML.' },
+      actions: ->(r) {
+        order = r[:record]
+        stage = r[:st]
+        safe_join([
+          link_to(content_tag(:i, '', class: 'fas fa-eye'), edit_path.call(order), class: 'action-btn', data: { tip: 'Ver o pedido' }, 'aria-label': 'Ver o pedido'),
+          (if review && screen_can?(:dashboard_correios_b2b, :approve)
+             safe_join([
+               (hc_row_action('fas fa-check', 'Aprovar', approve_honey_order_b2b_dashboard_index_path(id: order.id, review: params[:review]), method: :post) unless stage == 'creation'),
+               (hc_row_action('fas fa-ban', 'Ignorar', ignore_honey_order_b2b_dashboard_index_path(id: order.id, review: params[:review]), danger: true, method: :post,
+                              confirm: { title: "Ignorar o pedido ##{order.id}?", text: 'Ele não segue para o Correios e libera a reserva do estoque. Dá para aprovar depois.', ok: 'Ignorar' }) unless stage == 'ignored')
+             ].compact)
+           end),
+          (if %w[creation invoice tracking].include?(stage) && screen_can?(:dashboard_correios_b2b, :execute)
+             step = { 'creation' => 'Criar no Correios agora', 'invoice' => 'Emitir a NF-e e enviar o XML agora', 'tracking' => 'Buscar o rastreio agora' }[stage]
+             hc_row_action('fas fa-play', step, run_honey_b2b_step_dashboard_index_path(id: order.id), method: :post,
+                           confirm: (stage == 'invoice' ? { title: "Emitir a NF-e do pedido ##{order.id}?", text: 'O Honey gera a nota, autoriza na SEFAZ e manda o XML ao Correios.', ok: 'Emitir e enviar' } : nil))
+           end)
+        ].compact)
+      }) %>

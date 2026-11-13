@@ -127,7 +127,7 @@
       <h5 class="form-section-title"><i class="fas fa-store me-2"></i>Loja desta empresa</h5>
     </div>
     <div class="form-section-body">
-      <% company_names = Company.where.not(id: @company.id).to_h { |c| [c.id, c.trade_name.presence || c.legal_name] } %>
+      <% company_names = Company.where.not(id: @company.id).to_h { |c| [c.id, c.selection_label] } %>
       <% options = Location.order(:name).map { |l| [company_names[l.company_id] ? "#{l.name} (hoje: #{company_names[l.company_id]})" : l.name, l.id] } %>
       <div class="field-group" style="max-width: 420px">
         <%= form.label :location_id, 'Loja', class: 'field-label' %>

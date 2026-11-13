@@ -29,6 +29,25 @@
             <%= form.number_field :default_discount_percent, step: 0.01, min: 0, max: 99.99, class: 'field-input', required: true %>
           </div>
           <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Seamless é o produto com "Seamless" no nome. Ao adicionar um item no pedido do atacado, o preço vem do varejo com esse desconto (ex.: varejo R$ 100,00 com 56,60% = R$ 43,40) e ainda pode ser editado.</span></div>
+
+          <div class="pg-fsec">NF-e dos pedidos do Log02 (emitida no Honey)</div>
+          <% natures = OperationNature.where(active: true).includes(:company).order(:description) %>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_issuer_company_id">Empresa emissora</label>
+            <%= form.select :issuer_company_id, Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] },
+                            { selected: @setting.issuer&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_sale_nature_id">Natureza do atacado (venda)</label>
+            <%= form.select :sale_nature_id, natures.select(&:sale?).map { |n| ["#{n.description} · CFOP #{n.cfop}", n.id] },
+                            { selected: @setting.sale_nature_id || @setting.nature_for(B2bOrder.new(kind: :sale))&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_transfer_nature_id">Natureza do abastecimento e da transferência B2C</label>
+            <%= form.select :transfer_nature_id, natures.select(&:transfer?).map { |n| ["#{n.description} · CFOP #{n.cfop}", n.id] },
+                            { selected: @setting.transfer_nature_id || @setting.nature_for(B2bOrder.new(kind: :stock_transfer))&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Na etapa do XML do Log02, o Honey emite a NF-e com esta empresa e natureza, autoriza na SEFAZ e manda o XML ao Correios. Ao salvar, as naturezas ficam vinculadas à empresa.</span></div>
         </div>
         <div class="pg-inline-foot">
           <%= link_to 'Cancelar', b2b_orders_path, class: 'btn btn-ghost' %>

@@ -7,6 +7,7 @@ class B2bOrder < ApplicationRecord
   accepts_nested_attributes_for :b2b_order_items, allow_destroy: true, reject_if: :all_blank
 
   has_many :fiscal_notes, dependent: :nullify
+  has_many :attempts, dependent: :nullify
 
   # b2c_transfer: transferência do estoque B2B para a filial B2C (destinatário fixo, ver B2bTinyService).
   enum :kind, { sale: 0, stock_transfer: 1, b2c_transfer: 2 }
@@ -78,16 +79,60 @@ class B2bOrder < ApplicationRecord
   validate :must_have_items
 
   scope :recent, -> { order(created_at: :desc) }
+  # Pedidos que rodam no Log02 direto do Honey (nunca foram ao Tiny).
+  scope :honey_flow, -> { where(tiny_reference_id: [nil, '']) }
+  # Ainda não viraram pedido no Correios: reservam o estoque do Log02.
+  scope :reserving_stock, -> { honey_flow.where(correios_order_id: nil, log_ignored: false).where.not(status: :cancelado) }
+
+  # Prefixo das reservas e do número no Correios dos pedidos do Honey (os ids do Tiny têm 9 dígitos começando em 9).
+  RESERVATION_PREFIX = 'H'.freeze
+
+  LOG_STAGES = {
+    'review' => ['Para aprovar', 'Esperando alguém aprovar em Log02 › Pedidos p/ Aprovar.'],
+    'ignored' => ['Ignorado', 'Não segue para o Correios. Dá para aprovar depois.'],
+    'creation' => ['Criação no Correios', 'Aprovado: entra no Correios na próxima rodada da criação.'],
+    'invoice' => ['NF-e e XML', 'Criado no Correios: falta emitir a NF-e no Honey e enviar o XML.'],
+    'tracking' => ['Rastreio', 'XML enviado: esperando o Correios liberar o código de rastreio.'],
+    'shipped' => ['Enviado', 'Com código de rastreio.'],
+    'canceled' => ['Cancelado', 'Cancelado.']
+  }.freeze
 
   # Pedido sem nota fiscal ativa pode ser excluído. Se já está no Tiny como pedido, a exclusão cancela o
   # pedido lá antes (a API do Tiny não exclui pedido); o abastecimento antigo, que virou nota fiscal no
   # Tiny, não pode ser excluído por aqui.
+  # Pedido do Honey só sai antes de virar pedido no Correios; os antigos do Tiny seguem a regra de antes.
   def deletable?
+    return false if honey_flow? && correios_order_id.present?
+
     (tiny_reference_id.blank? || tiny_order?) && !FiscalNote.active_for?(self)
   end
 
+  # O envio ao Tiny saiu: os pedidos agora seguem no Log02 pelo Honey.
   def resendable?
-    !cancelado? && tiny_reference_id.blank?
+    false
+  end
+
+  def honey_flow?
+    tiny_reference_id.blank?
+  end
+
+  def reservation_key
+    "#{RESERVATION_PREFIX}#{id}"
+  end
+
+  # Número do pedido no Correios: 9 dígitos, como os ids do Tiny, começando em 1 para não colidir com eles.
+  def correios_number
+    format('1%08d', id)
+  end
+
+  def log_stage
+    return 'canceled' if cancelado?
+    return 'shipped' if tracking_code.present?
+    return 'tracking' if xml_sent_at.present?
+    return 'invoice' if correios_order_id.present?
+    return 'ignored' if log_ignored?
+
+    aprovado? ? 'creation' : 'review'
   end
 
   # Vira pedido de venda no Tiny (pedido.incluir), com situação sincronizada e cancelável por lá.

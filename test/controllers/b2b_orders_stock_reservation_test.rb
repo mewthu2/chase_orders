@@ -59,17 +59,6 @@ class B2bOrdersStockReservationTest < ActionDispatch::IntegrationTest
     refute_equal 422, response.status
   end
 
-  test 'transmit is blocked when an item exceeds the available stock' do
-    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :dados_incompletos)
-    order.b2b_order_items.build(sku: 'LEG-A', quantity: 3, price: 10)
-    order.save!
-
-    post transmit_b2b_order_path(order)
-
-    assert_match(/disponível 1/, flash[:alert])
-    assert_not_requested :post, 'https://api.tiny.com.br/api2/pedido.incluir.php'
-  end
-
   test 'Correios being down does not block the order' do
     stub_request(:get, 'https://correios-log.example.com/estoque/LEG-A/estoque').to_return(status: 503)
     stub_request(:post, 'https://api.tiny.com.br/api2/pedido.incluir.php')

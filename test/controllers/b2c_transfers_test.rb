@@ -38,9 +38,8 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert_select ".sb-section[data-area='atacado'] a[href='#{b2c_transfers_path}']", count: 0
   end
 
-  test 'creating forces the b2c_transfer kind and transfer list, and lands in preparando_envio' do
+  test 'creating forces the b2c_transfer kind and transfer list, stays in Honey and waits for the Log02 approval' do
     stub = stub_pedido_ok
-    stub_invoice_ok
     assert_difference 'B2bOrder.count', 1 do
       post b2c_transfers_path, params: { b2b_order: {
         kind: 'sale', client_id: @client.id, price_list: 'standard',
@@ -49,13 +48,14 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
       } }
     end
 
-    assert_requested stub
+    assert_not_requested stub
     order = B2bOrder.last
     assert order.b2c_transfer?
     assert order.transfer?
     assert_nil order.client
-    assert order.preparando_envio?
-    assert_equal '1859', order.tiny_reference_number
+    assert order.aberto?
+    assert_nil order.tiny_reference_number
+    assert_equal 'review', order.log_stage
     assert_redirected_to b2c_transfers_path
     assert_match(/Transferência B2C/, flash[:notice])
   end
@@ -125,38 +125,7 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert order.b2c_transfer?
     assert_nil order.carrier_shipping_method
     assert_nil order.carrier_name
-    assert order.preparando_envio?
+    assert order.aberto?
   end
 
-  test 'creating always generates the nota fiscal of the transfer in Tiny' do
-    stub_pedido_ok
-    invoice = stub_invoice_ok
-
-    post b2c_transfers_path, params: { b2b_order: { b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }] } }
-
-    assert_requested invoice
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-success', text: /enviado ao Tiny.*Nota fiscal gerada no Tiny \(nº 000321\)/
-  end
-
-  test 'when Tiny does not generate the nota the transfer stays sent and the error is shown' do
-    stub_pedido_ok
-    stub_request(:post, INVOICE_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Sem regra fiscal' }] } }.to_json)
-
-    post b2c_transfers_path, params: { b2b_order: { b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 2, price: 10 }] } }
-
-    assert_equal '902371809', B2bOrder.last.tiny_reference_id
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-danger', text: /não gerou a nota fiscal: Sem regra fiscal/
-  end
-
-  test 'the edit page has no nota checkbox: resending a B2C transfer always generates it' do
-    order = build_b2c
-
-    get edit_b2c_transfer_path(order)
-
-    assert_select "form[action='#{transmit_b2c_transfer_path(order)}']", count: 1
-    assert_select 'input[name=generate_invoice]', count: 0
-    assert_select 'select[name="b2b_order[status]"]'
-  end
 end

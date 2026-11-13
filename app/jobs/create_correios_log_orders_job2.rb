@@ -34,6 +34,9 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     Array(orders&.dig(:pedidos)).each do |order|
       process_order(order)
     end
+  ensure
+    # Pedidos feitos no Honey (sem Tiny) aprovados para o Log02.
+    HoneyB2bLog.create_pending!
   end
 
   def process_order(order)

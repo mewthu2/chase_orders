@@ -4,7 +4,7 @@
 <% pct = ->(v) { "#{number_with_precision(v.to_f, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" } %>
 <% rows = @natures.map do |n|
      excs = n.icms_exceptions.map(&:summary)
-     { id: n.id, record: n, desc: n.description, empresa: n.company.trade_name.presence || n.company.legal_name, tipo: n.kind, padrao: n.default_for_kind,
+     { id: n.id, record: n, desc: n.description, empresa: n.company.selection_label, tipo: n.kind, padrao: n.default_for_kind,
        cfop: n.cfop, cfopInter: n.cfop_interstate_non_contributor.presence || '—', icms: "#{n.icms_situation} · #{pct.call(n.icms_rate)}",
        pis: "#{n.pis_cst} · #{pct.call(n.pis_rate)}", cofins: "#{n.cofins_cst} · #{pct.call(n.cofins_rate)}", difal: n.difal ? 'Sim' : 'Não',
        consumidor: n.final_consumer ? 'Sim' : 'Não', obs: n.notes.presence || '—', excecoes: excs.any? ? excs.join(' | ') : '—', st: n.active, notas: @note_counts[n.id].to_i, padraoTxt: n.default_for_kind ? 'Padrão do tipo' : '' }

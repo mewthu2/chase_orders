@@ -36,6 +36,9 @@ class SendXmlCorreiosLogJob2 < ActiveJob::Base
     @send_xml.each do |att|
       send_one_xml(att)
     end
+  ensure
+    # Pedidos feitos no Honey: emite a NF-e no Honey e manda o XML autorizado ao Correios.
+    HoneyB2bLog.send_pending_xml!
   end
 
   def insist_on_send_xml

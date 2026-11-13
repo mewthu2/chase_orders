@@ -8,25 +8,24 @@
   },
   "atc-pedidos": {
    "title": "Pedidos de Atacado",
-   "purpose": "Cadastrar vendas para lojistas, enviar ao Tiny e acompanhar a situação e o código de rastreio.",
+   "purpose": "Cadastrar vendas para lojistas e acompanhar no Log02 (aprovação, Correios, NF-e emitida no Honey e rastreio), sem o Tiny.",
    "when": "Quando um lojista comprar no atacado ou uma encomenda de catálogo precisar virar pedido.",
    "actions": [
     "Novo Pedido",
     "Buscar",
     "Salvar",
-    "Enviar ao Tiny",
     "Romaneio",
-    "Gerar nota fiscal"
+    "Nota fiscal"
    ],
    "statuses": [
     [
      "Aberto",
-     "Salvo aqui, ainda não foi para o Tiny.",
+     "Salvo no Honey, esperando a aprovação em Log02 › Pedidos p/ Aprovar.",
      "gray"
     ],
     [
      "Preparando Envio",
-     "Já está no Tiny, aguardando separação.",
+     "Já criado no Correios, aguardando a NF-e e o despacho.",
      "yellow"
     ],
     [
@@ -48,7 +47,7 @@
    "terms": [
     [
      "Nº × Nº pedido",
-     "Nº é o número no Honey; Nº pedido é o número no Tiny."
+     "Nº é o número no Honey; Nº pedido só aparece nos pedidos antigos, que foram ao Tiny."
     ],
     [
      "Disponível",
@@ -108,7 +107,7 @@
   },
   "log-transf-b2c": {
    "title": "Transferência B2B → B2C",
-   "purpose": "Mandar mercadoria do estoque de atacado (B2B) para a filial da loja online (B2C), com a nota de transferência gerada no Tiny.",
+   "purpose": "Mandar mercadoria do estoque de atacado (B2B) para a filial da loja online (B2C), com a NF-e de transferência emitida no Honey e o envio pelo Log02, sem o Tiny.",
    "when": "Quando a loja online precisar de peças que estão no estoque do atacado.",
    "actions": [
     "Nova Transferência",
@@ -128,7 +127,7 @@
     ],
     [
      "Atenção",
-     "Aqui o \"Salvar\" já envia ao Tiny e gera a nota."
+     "O pedido salvo espera a aprovação em Log02 › Pedidos p/ Aprovar; a nota sai no Honey, na etapa do XML."
     ]
    ]
   },
@@ -1102,7 +1101,7 @@
   },
   "log-abastecimento": {
    "title": "Abastecimento Lojas",
-   "purpose": "Enviar mercadoria do estoque do Log02 (antes Correios B2B) para repor as lojas físicas, com nota e SEDEX mão própria.",
+   "purpose": "Enviar mercadoria do estoque do Log02 (antes Correios B2B) para repor as lojas físicas, por SEDEX mão própria ou transportadora, com a NF-e emitida no Honey (sem Tiny).",
    "when": "Quando uma loja precisa de reposição vinda do estoque de atacado.",
    "actions": [
     "Novo Abastecimento",
@@ -1117,7 +1116,7 @@
     ],
     [
      "Atenção",
-     "O \"Salvar\" já envia ao Tiny e gera a nota."
+     "O pedido salvo espera a aprovação em Log02 › Pedidos p/ Aprovar; a nota sai no Honey, na etapa do XML."
     ]
    ]
   },

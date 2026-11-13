@@ -15,3 +15,7 @@
            runbox_title: 'Fila de envio de XML', runbox_text: 'Manda ao Correios o XML das notas de atacado já emitidas. O sistema roda sozinho; use Enviar agora se não puder esperar.',
            runbox_btn: 'Enviar fila agora', table_title: 'Fila de Envio de XML', table_meta: 'Pedidos de atacado com nota emitida que ainda não mandaram o XML ao Correios (últimos 30 dias).',
            empty_text: 'Não há XMLs pendentes de envio no momento.' %>
+
+<div class="pg-blocks" style="margin-top: 16px">
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[invoice], title: 'Pedidos do Honey: NF-e e XML', meta: 'O Honey emite a NF-e, autoriza na SEFAZ e manda o XML ao Correios.', empty_text: 'Nenhum pedido do Honey esperando a nota.' %>
+</div>

@@ -1,11 +1,16 @@
 class Attempt < ApplicationRecord
   enum :status, [:fail, :error, :success, :processing]
   has_many :stock_sync_failures, dependent: :delete_all
+  belongs_to :b2b_order, optional: true
 
-  enum :kinds, [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order, :sync_correios_stock, :create_correios_order_tiny2, :send_xml_tiny2, :get_tracking_tiny2]
+  enum :kinds, [:create_correios_order, :send_xml, :emission_invoice, :get_tracking, :create_note_tiny2, :emission_invoice_tiny2, :transfer_tiny_to_shopify_order, :sync_correios_stock, :create_correios_order_tiny2, :send_xml_tiny2, :get_tracking_tiny2,
+                 # Log02 com pedido do Honey (sem Tiny): b2b_order_id no lugar do tiny_order_id.
+                 :create_correios_order_honey, :send_xml_honey, :get_tracking_honey]
 
   B2C_KINDS = %w[create_correios_order send_xml emission_invoice get_tracking].freeze
-  B2B_KINDS = %w[create_correios_order_tiny2 send_xml_tiny2 emission_invoice_tiny2 get_tracking_tiny2].freeze
+  B2B_KINDS = %w[create_correios_order_tiny2 send_xml_tiny2 emission_invoice_tiny2 get_tracking_tiny2
+                 create_correios_order_honey send_xml_honey get_tracking_honey].freeze
+  HONEY_KINDS = %w[create_correios_order_honey send_xml_honey get_tracking_honey].freeze
   # Conta da reserva de estoque de cada tipo de criação de pedido no Correios Log.
   RESERVATION_ACCOUNTS = { 'create_correios_order' => :b2c, 'create_correios_order_tiny2' => :b2b }.freeze
 

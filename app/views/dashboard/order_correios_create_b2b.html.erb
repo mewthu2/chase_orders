@@ -51,10 +51,13 @@
   <% end %>
 <% end %>
 
-<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Nada anda sem a sua aprovação.</strong> Os pedidos do Tiny2 só seguem para criação, nota, XML e rastreio depois de marcados aqui. Os ignorados nunca são processados.</div></div>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Nada anda sem a sua aprovação.</strong> Os pedidos (feitos no Honey ou ainda no Tiny2) só seguem para criação, nota, XML e rastreio depois de aprovados aqui. Os ignorados nunca são processados.</div></div>
 
 <div class="pg-blocks">
   <%= render 'dashboard/flow', kind: :log02, current: :order_correios_create_b2b, counts: { order_correios_create_b2b: @counts[:pending] } %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation], review: true, title: 'Pedidos do Honey para aprovar',
+             meta: 'Atacado, abastecimento e transferência B2C feitos no Honey. Aprovados, entram no Correios na próxima rodada.',
+             empty_text: 'Quando alguém salvar um pedido de atacado, abastecimento ou transferência B2C, ele aparece aqui para você aprovar.' %>
   <%= hc_pg_kpis(table) %>
   <%= hc_pg_table(table, title: 'Pedidos Tiny2 aguardando envio', icon: 'fas fa-list-check', meta: 'Marque os que devem ser enviados. Os pedidos novos aparecem primeiro.',
         empty: { title: 'Nenhum pedido nesta aba', text: 'Quando chegar um pedido do atacado em "preparando envio" no Tiny2, ele aparece aqui para você decidir.' },

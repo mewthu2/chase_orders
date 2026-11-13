@@ -8,7 +8,7 @@ class B2bSettingsController < ApplicationController
 
   def update
     @setting = B2bSetting.current
-    if @setting.update(params.require(:b2b_setting).permit(:fixed_freight_value, :seamless_discount_percent, :default_discount_percent))
+    if @setting.update(params.require(:b2b_setting).permit(:fixed_freight_value, :seamless_discount_percent, :default_discount_percent, :issuer_company_id, :sale_nature_id, :transfer_nature_id))
       redirect_to b2b_orders_path, notice: 'Configuração do atacado salva.'
     else
       render :edit, status: :unprocessable_entity

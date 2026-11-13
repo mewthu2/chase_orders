@@ -43,8 +43,10 @@ module Nfe
     # tax: regras de tributação (OperationNature#tax_rules); sem ela valem as situações cadastradas na empresa.
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
-                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil)
+                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil)
       @company = company
+      # Parcelas a receber (grupo cobr): [{ number:, due: Date, value: }]. Sem elas, a nota não tem cobrança.
+      @duplicates = Array(duplicates)
       # Ambiente da nota; sem ele, o da empresa.
       @environment = (environment || company.environment).to_s
       @ibs_cbs_exempt = ibs_cbs_exempt
@@ -79,6 +81,7 @@ module Nfe
             @items.each_with_index { |item, index| build_det(xml, item, index) }
             build_total(xml, total)
             xml.transp { xml.modFrete @freight_mode }
+            build_cobr(xml, total)
             build_pag(xml)
             build_inf_adic(xml)
             build_resp_tec(xml)
@@ -537,6 +540,29 @@ module Nfe
       xml.infAdic do
         xml.infAdFisco @fisco_info if @fisco_info.present?
         xml.infCpl @additional_info if @additional_info.present?
+      end
+    end
+
+    # Fatura e duplicatas (parcelas do pedido). A soma das duplicatas é o líquido da fatura.
+    def build_cobr(xml, total)
+      return if @duplicates.empty?
+
+      net = @duplicates.sum { |d| money(d[:value]) }
+      xml.cobr do
+        xml.fat do
+          xml.nFat @number.to_s
+          xml.vOrig format('%.2f', net)
+          xml.vDesc format('%.2f', 0)
+          xml.vLiq format('%.2f', net)
+        end
+        @duplicates.each do |dup|
+          # dup_: "dup" sozinho é o Object#dup do Ruby, não a tag.
+          xml.dup_ do
+            xml.nDup format('%03d', dup[:number].to_i)
+            xml.dVenc dup[:due].to_date.iso8601
+            xml.vDup format('%.2f', money(dup[:value]))
+          end
+        end
       end
     end
 

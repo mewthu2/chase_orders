@@ -45,15 +45,18 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     order
   end
 
-  test 'the generate icon shows on the wholesale list and edit page; stock transfers get the nota from Tiny' do
+  test 'every B2B list links to the Nota fiscal tab of the order, with homologação and produção slots' do
+    B2bSetting.current.update!(issuer_company: @company, sale_nature: @sale_nature)
     get b2b_orders_path
-    assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @sale.id)}']"
+    assert_select "a[href='#{edit_b2b_order_path(@sale, tab: 'nota')}']"
 
     get stock_transfers_path
-    assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @transfer.id)}']", count: 0
+    assert_select "a[href='#{edit_stock_transfer_path(@transfer, tab: 'nota')}']"
 
-    get edit_b2b_order_path(@sale)
-    assert_select "a[href='#{new_fiscal_note_path(b2b_order_id: @sale.id)}']", text: /Gerar nota fiscal/
+    get edit_b2b_order_path(@sale, tab: 'nota')
+    assert_select '[data-it-panel=nota]:not([hidden]) .it-fiscal-card'
+    assert_select '.it-slot--homologacao'
+    assert_select '.it-slot--producao'
   end
 
   test 'without fiscal_notes access there is no icon and the page is blocked' do
@@ -70,25 +73,12 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test 'new lists only companies ready to issue' do
-    Company.create!(legal_name: 'Sem Certificado', cnpj: '45723174000110', tax_regime: 1, street: 'R', number: '1',
-                    neighbourhood: 'B', city: 'BH', city_ibge_code: '3106200', state: 'MG', zip: '30000000')
-
+  test 'the old note page now opens the Nota fiscal tab of the order' do
     get new_fiscal_note_path(b2b_order_id: @sale.id)
+    assert_redirected_to edit_b2b_order_path(@sale, tab: 'nota')
 
-    assert_response :success
-    assert_select 'select[name=emission] optgroup', count: 1
-    assert_select 'select[name=emission] optgroup[label*="Empresa Emissora Ltda"] option', count: 2
-    assert_select 'select[name=emission] option[selected]', text: /Venda de mercadoria/
-  end
-
-  test 'new warns when there is no company ready' do
-    @company.update_column(:certificate_expires_at, 1.day.ago)
-
-    get new_fiscal_note_path(b2b_order_id: @sale.id)
-
-    assert_select 'select[name=emission]', count: 0
-    assert_select 'a[href=?]', companies_path
+    get new_fiscal_note_path(b2b_order_id: @transfer.id)
+    assert_redirected_to edit_stock_transfer_path(@transfer, tab: 'nota')
   end
 
   test 'create generates the signed note and redirects to it' do
@@ -142,7 +132,7 @@ class FiscalNotesGenerationTest < ActionDispatch::IntegrationTest
       post fiscal_notes_path, params: { b2b_order_id: @sale.id, emission: "#{@company.id}:#{@sale_nature.id}" }
     end
     assert_response :unprocessable_entity
-    assert_select '.flash-messages-container .alert', text: /nota fiscal ativa/
+    assert_select '.flash-messages-container .alert', text: /nota fiscal de .* ativa/
   end
 
   test 'an unknown order is a 404' do

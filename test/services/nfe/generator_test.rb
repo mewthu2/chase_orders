@@ -28,6 +28,10 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
                                        icms_situation: '102', pis_cst: '49', cofins_cst: '49')]
   end
 
+  def generate_in(order, environment)
+    Nfe::Generator.call(order: order, company: @company, nature: @sale_nature, environment: environment)
+  end
+
   def generate(order, company, nature: nil)
     Nfe::Generator.call(order: order, company: company, nature: nature || (order.sale? ? @sale_nature : @transfer_nature))
   end
@@ -145,17 +149,32 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_match(/NAO-EXISTE/, error.message)
   end
 
-  test 'a second note for the same order is blocked while the first is active, then allowed after an error' do
+  test 'a second note of the same environment is blocked while the first is active; a rejected one gives its number back' do
     order = build_order
     first = generate(order, @company)
 
     error = assert_raises(Nfe::Generator::Error) { generate(order, @company) }
-    assert_match(/nota fiscal ativa/i, error.message)
+    assert_match(/nota fiscal de .* ativa/i, error.message)
     assert_equal 1, FiscalNote.count
 
     first.update!(status: :erro)
+    error = assert_raises(Nfe::Generator::Error) { generate(order, @company.reload) }
+    assert_match(/sem resposta da SEFAZ/, error.message, 'sem resposta: consultar antes de emitir outra')
+
+    first.update!(status: :rejeitada, sefaz_status_code: '225')
     second = generate(order, @company.reload)
-    assert_equal 2, second.number
+    assert_equal first.id, second.id
+    assert_equal 1, second.number
+    assert second.assinada?
+  end
+
+  test 'the same order can have one note in homologação and one in produção' do
+    order = build_order
+    test_note = generate_in(order, 'homologacao')
+    real_note = generate_in(order, 'producao')
+
+    assert test_note.homologacao?
+    assert real_note.producao?
   end
 
   test 'a company without a valid certificate cannot issue' do

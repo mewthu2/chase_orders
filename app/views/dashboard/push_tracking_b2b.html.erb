@@ -8,3 +8,7 @@
            runbox_title: 'Fila de rastreamento', runbox_text: 'Pede ao Correios o código de rastreio dos pedidos de atacado com XML enviado e grava no Tiny 2. O sistema roda sozinho; use Buscar agora se não puder esperar.',
            runbox_btn: 'Buscar fila agora', table_title: 'Fila de Rastreamento', table_meta: 'Pedidos de atacado com XML enviado que ainda não têm código de rastreio.',
            empty_text: 'Não há pedidos esperando código de rastreio no momento.' %>
+
+<div class="pg-blocks" style="margin-top: 16px">
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[tracking], title: 'Pedidos do Honey esperando rastreio', meta: 'O código fica no pedido do Honey.', empty_text: 'Nenhum pedido do Honey esperando rastreio.' %>
+</div>

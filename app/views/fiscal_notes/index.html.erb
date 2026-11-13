@@ -8,7 +8,7 @@
 <% environments = { 'producao' => ['Produção', 'green', 'Notas de verdade, com valor fiscal.'], 'homologacao' => ['Homologação', 'yellow', 'Nota de teste, sem valor fiscal.'] } %>
 <% map = ->(note) {
      { id: note.id, record: note, num: note.number, fin: note.purpose, serieTxt: "Série #{note.series}", serie: note.series, st: note.status,
-       empresa: note.company.trade_name.presence || note.company.legal_name, amb: note.environment, pedido: fiscal_note_order_label(note),
+       empresa: note.company.selection_label, amb: note.environment, pedido: fiscal_note_order_label(note),
        dest: fiscal_note_destination(note).presence || '—', valor: note.total_value.to_f,
        emissao: note.issued_at || note.created_at, natureza: note.operation_nature.presence || '—', cfop: note.cfop_summary.presence || '—',
        chave: note.access_key.to_s.scan(/\d{1,4}/).join(' ').presence || '—', protocolo: note.protocol.presence || '—',
@@ -46,7 +46,7 @@
        { id: :q, type: :search, label: 'Buscar', ph: 'Número, pedido, empresa ou chave…', tip: 'Procura no número da nota, no pedido de origem, na empresa e na chave de acesso.' },
        { id: :fin, type: :select, label: 'Finalidade', col: :fin, all: 'Todas as finalidades', tip: 'Para que a nota foi emitida: pedido do site, atacado, transferência, devolução…' },
        { id: :status, type: :select, label: 'Situação', col: :st, all: 'Todas as situações', tip: 'Em que ponto a nota está.' },
-       { id: :company_id, type: :select, label: 'Empresa', col: :empresa, options: @companies.map { |c| [c.id.to_s, c.trade_name.presence || c.legal_name] }, all: 'Todas as empresas', tip: 'A empresa (CNPJ) que emitiu a nota.' },
+       { id: :company_id, type: :select, label: 'Empresa', col: :empresa, options: @companies.map { |c| [c.id.to_s, c.selection_label] }, all: 'Todas as empresas', tip: 'A empresa (CNPJ) que emitiu a nota.' },
        { id: :per, type: :period, label: 'Período', col: :emissao }
      ],
      kpis: [

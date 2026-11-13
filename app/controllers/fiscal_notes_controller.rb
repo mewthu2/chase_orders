@@ -11,9 +11,10 @@ class FiscalNotesController < ApplicationController
 
   def show; end
 
-  # Escolha da empresa emissora para gerar a nota do pedido.
+  # A nota do pedido B2B agora fica na aba Nota fiscal da edição do pedido (homologação e produção).
   def new
-    load_new_page_data
+    path = { 'sale' => :edit_b2b_order_path, 'stock_transfer' => :edit_stock_transfer_path, 'b2c_transfer' => :edit_b2c_transfer_path }[@order.kind]
+    redirect_to send(path, @order, tab: 'nota')
   end
 
   def create
@@ -114,7 +115,7 @@ class FiscalNotesController < ApplicationController
       natures = c.available_natures.active.ordered.to_a
       pick = natures.select { |n| n.kind == kind.to_s }.max_by { |n| n.default_for_kind? ? 1 : 0 }
       default ||= "#{c.id}:#{pick.id}" if pick
-      label = "#{c.trade_name.presence || c.legal_name} (#{c.environment_label.downcase})"
+      label = "#{c.selection_label} (#{c.environment_label.downcase})"
       [label, natures.map { |n| ["#{n.description} · #{n.kind_label} · CFOP #{n.cfop} · ICMS #{n.icms_situation}", "#{c.id}:#{n.id}"] }]
     end
     [groups.reject { |_, list| list.empty? }, params[:emission].presence || default]

@@ -8,7 +8,7 @@ class DashboardController < ApplicationController
     invoice_emition_b2b run_invoice_emition_b2b run_invoice_emition_b2b_now
     order_correios_create_b2b order_correios_create_queue_b2b
     run_create_correios_b2b run_order_correios_create_b2b_now
-    approve_order_b2b ignore_order_b2b
+    approve_order_b2b ignore_order_b2b approve_honey_order_b2b ignore_honey_order_b2b run_honey_b2b_step
     order_correios_stock_errors_b2b order_correios_tracking_b2b api_correios_b2b
   ].freeze
 
@@ -21,7 +21,8 @@ class DashboardController < ApplicationController
   # Criação e erros de estoque do Log03: pedido travado por falta de estoque pode esperar semanas pela reposição.
   B2C_ORDERS_LOOKBACK = 8.weeks
 
-  DASHBOARD_ACTION_OVERRIDES = { delete_order_from_queue: :destroy, update_invoice_id: :edit }.freeze
+  DASHBOARD_ACTION_OVERRIDES = { delete_order_from_queue: :destroy, update_invoice_id: :edit,
+                                 approve_honey_order_b2b: :approve, ignore_honey_order_b2b: :approve, run_honey_b2b_step: :execute }.freeze
 
   guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
   guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
@@ -600,6 +601,51 @@ class DashboardController < ApplicationController
     render json: attempt_result_json(result)
   rescue StandardError => e
     render json: { success: false, error: e.message }, status: :unprocessable_entity
+  end
+
+  # Pedidos feitos no Honey (sem Tiny): aprovar manda para a criação no Correios; ignorar tira do Log02
+  # (e libera a reserva), e dá para aprovar depois.
+  def approve_honey_order_b2b
+    order = B2bOrder.honey_flow.find(params[:id])
+    if order.correios_order_id.present? || order.cancelado?
+      redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]), alert: "O pedido ##{order.id} já seguiu no Log02."
+      return
+    end
+
+    order.update_columns(status: B2bOrder.statuses[:aprovado], log_ignored: false, updated_at: Time.current)
+    HoneyB2bLog.sync_reservations!
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
+                notice: "Pedido ##{order.id} aprovado: entra no Correios na próxima rodada da criação."
+  end
+
+  def ignore_honey_order_b2b
+    order = B2bOrder.honey_flow.find(params[:id])
+    if order.correios_order_id.present?
+      redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]), alert: "O pedido ##{order.id} já está no Correios."
+      return
+    end
+
+    order.update_columns(status: B2bOrder.statuses[:aberto], log_ignored: true, updated_at: Time.current)
+    HoneyB2bLog.sync_reservations!
+    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]), notice: "Pedido ##{order.id} ignorado."
+  end
+
+  # Roda na hora a etapa atual de um pedido do Honey (criação, NF-e + XML ou rastreio) e mostra o resultado.
+  def run_honey_b2b_step
+    order = B2bOrder.honey_flow.find(params[:id])
+    attempt = case order.log_stage
+              when 'creation' then HoneyB2bLog.create_in_correios(order)
+              when 'invoice' then HoneyB2bLog.send_xml(order)
+              when 'tracking' then HoneyB2bLog.fetch_tracking(order)
+              end
+    back = request.referer.presence || order_correios_tracking_b2b_dashboard_index_path
+    if attempt.nil?
+      redirect_to back, alert: "O pedido ##{order.id} não tem etapa para rodar agora (#{B2bOrder::LOG_STAGES.dig(order.log_stage, 0)})."
+    elsif attempt.success?
+      redirect_to back, notice: "Pedido ##{order.id}: #{B2bOrder::LOG_STAGES.dig(order.reload.log_stage, 0)}."
+    else
+      redirect_to back, alert: "Pedido ##{order.id}: #{(attempt.error.presence || attempt.message.presence || 'não concluiu').to_s.truncate(200)}"
+    end
   end
 
   def approve_order_b2b

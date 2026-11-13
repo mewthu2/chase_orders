@@ -23,33 +23,6 @@ class StockTransferCarrierTest < ActionDispatch::IntegrationTest
 
   def items = [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }]
 
-  test 'by carrier: saved with the carrier, no receiver needed, and sent to Tiny as Transportadora without hand delivery' do
-    post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: @carrier.id, receiver_name: '', b2b_order_items_attributes: items } }
-
-    order = B2bOrder.last
-    assert order.stock_transfer_by_carrier?
-    assert_equal @carrier, order.carrier
-    assert_equal 'T', @pedido['forma_envio']
-    assert_equal 'MIX CARGO TRANSPORTES', @pedido['nome_transportador']
-    assert_equal 'MIX CARGO TRANSPORTES', @pedido['forma_frete']
-    assert_not_includes @pedido['obs'], 'MAO PROPRIA'
-    assert_nil @pedido['obs_interna']
-    assert_includes @pedido['obs'], "Abastecimento Loja ##{order.id}"
-  end
-
-  test 'by hand: still SEDEX with hand delivery and the receiver is required' do
-    assert_no_difference 'B2bOrder.count' do
-      post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: '', receiver_name: '', b2b_order_items_attributes: items } }
-    end
-
-    post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: '', receiver_name: 'Maria', b2b_order_items_attributes: items } }
-
-    assert B2bOrder.last.hand_delivery?
-    assert_equal 'E', @pedido['forma_envio']
-    assert_equal 'SEDEX CORREIOS LOG+', @pedido['forma_frete']
-    assert_equal 'MAO PROPRIA', @pedido['obs_interna']
-  end
-
   test 'the form offers both deliveries and the list shows how each one goes' do
     get new_stock_transfer_path
     assert_select 'input[name=stock_delivery][value=hand][checked]'

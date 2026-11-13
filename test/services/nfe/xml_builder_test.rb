@@ -149,6 +149,20 @@ class Nfe::XmlBuilderTest < ActiveSupport::TestCase
     assert_equal '07', det.at_xpath('n:imposto/n:COFINS/n:COFINSNT/n:CST', NS).text
   end
 
+  test 'a wholesale note with payment, freight and installments (cobr/dup) is valid against the official schema' do
+    with_freight = items.each_with_index.map { |item, i| item.merge(freight: i.zero? ? '10.00' : '5.00') }
+    xml = build(items: with_freight, freight_mode: '0', payments: [{ method: '15', amount: '40.50', installments: 2 }],
+                duplicates: [{ number: 1, due: Date.new(2026, 10, 20), value: '20.25' }, { number: 2, due: Date.new(2026, 11, 19), value: '20.25' }]).xml
+    signed = Nfe::Signer.new(Nfe::Certificate.new(NfeTestCertificate.pfx, 'senha123')).sign(xml)
+    assert_equal [], NfeSchema.errors(signed)
+
+    note = doc(Struct.new(:xml).new(xml))
+    assert_equal %w[001 002], note.xpath('//n:cobr/n:dup/n:nDup', NS).map(&:text)
+    assert_equal '2026-10-20', note.at_xpath('//n:cobr/n:dup/n:dVenc', NS).text
+    assert_equal '40.50', note.at_xpath('//n:cobr/n:fat/n:vLiq', NS).text
+    assert_equal '15.00', note.at_xpath('//n:ICMSTot/n:vFrete', NS).text
+  end
+
   test 'wholesale note is valid against the official schema' do
     signed = Nfe::Signer.new(Nfe::Certificate.new(NfeTestCertificate.pfx, 'senha123')).sign(build.xml)
     assert_equal [], NfeSchema.errors(signed)
