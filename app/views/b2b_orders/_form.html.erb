@@ -262,10 +262,10 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
         </div>
         <div class="modal-body">
-          <input type="text" id="productPickerSearchInput" class="field-input" placeholder="Buscar por nome ou SKU (ex: signature black)..." autocomplete="off">
+          <input type="text" id="productPickerSearchInput" class="field-input" placeholder="Buscar por nome ou SKU e aperte Enter (ex: signature black)..." autocomplete="off">
 
           <div id="productPickerResults" class="mt-3">
-            <div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>
+            <div class="text-muted-custom text-center py-4">Digite algo e aperte Enter pra buscar produtos.</div>
           </div>
         </div>
         <div class="modal-footer" style="border-top: 1px solid #21262d;">
@@ -994,22 +994,21 @@ document.addEventListener('DOMContentLoaded', function () {
     fetchPickerStock(Array.prototype.slice.call(document.querySelectorAll('.item-picker-stock-cell')));
   }
 
-  var pickerSearchTimeout;
-  document.getElementById('productPickerSearchInput').addEventListener('input', function (e) {
-    clearTimeout(pickerSearchTimeout);
+  // A busca só roda no Enter (nada de buscar a cada tecla). O Enter não pode enviar o formulário do pedido.
+  document.getElementById('productPickerSearchInput').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
     pickerStockGeneration++; // invalida qualquer resposta de estoque que ainda esteja a caminho
     var q = e.target.value.trim();
     var box = document.getElementById('productPickerResults');
 
-    if (!q) { box.innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>'; return; }
+    if (!q) { box.innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo e aperte Enter pra buscar produtos.</div>'; return; }
 
     box.innerHTML = '<div class="text-muted-custom text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
 
-    pickerSearchTimeout = setTimeout(function () {
-      fetch('<%= product_picker_b2b_orders_path %>?query=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) { renderPickerResults(data.products || []); });
-    }, 350);
+    fetch('<%= product_picker_b2b_orders_path %>?query=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderPickerResults(data.products || []); });
   });
 
   document.getElementById('productPickerAddButton').addEventListener('click', function () {
@@ -1019,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', function () {
     pickerSelected = {};
     updatePickerFooter();
     document.getElementById('productPickerSearchInput').value = '';
-    document.getElementById('productPickerResults').innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo pra buscar produtos.</div>';
+    document.getElementById('productPickerResults').innerHTML = '<div class="text-muted-custom text-center py-4">Digite algo e aperte Enter pra buscar produtos.</div>';
     var modalEl = document.getElementById('productPickerModal');
     var modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
