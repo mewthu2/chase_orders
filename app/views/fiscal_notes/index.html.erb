@@ -101,7 +101,8 @@
             (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', danfe_fiscal_note_path(note)) if note.xml_available? && screen_can?(:fiscal_notes, :export)),
             (hc_row_action('fas fa-paper-plane', 'Enviar à SEFAZ', transmit_fiscal_note_path(note), method: :post,
                            confirm: { title: "Enviar a nota #{r[:num]} à SEFAZ?", text: 'A SEFAZ confere a nota e responde se ela foi autorizada. Depois de autorizada, só dá para desfazer com um cancelamento.', ok: 'Enviar' }) if note.transmittable? && screen_can?(:fiscal_notes, :execute)),
-            (hc_row_action('fas fa-ban', 'Cancelar na SEFAZ', fiscal_note_path(note, cancelar: 1, anchor: 'cancelar'), danger: true) if note.cancelable? && screen_can?(:fiscal_notes, :destroy))
+            (link_to('Cancelar na SEFAZ', fiscal_note_path(note, cancelar: 1, anchor: 'cancelar'), class: 'btn btn-danger btn-sm nf-cancel-row',
+                     data: { tip: 'Abre a nota para escrever o motivo e confirmar o cancelamento' }) if note.cancelable? && screen_can?(:fiscal_notes, :destroy))
           ].compact)
         }) %>
 </div>

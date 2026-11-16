@@ -2079,7 +2079,8 @@ body.honey .nf-cancel.is-open { display: block; animation: nf-cancel-in .28s eas
 body.honey .nf-cancel textarea { min-height: 84px; resize: vertical; }
 body.honey .nf-cancel__late { color: var(--yellow); }
 body.honey .nf-cancel__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
-body.honey .nf-cancel__btn { background: var(--red) !important; border-color: var(--red) !important; }
+body.honey .nf-cancel-row { --h: 28px; padding: 0 10px; font-size: 12px; font-weight: 600; white-space: nowrap; vertical-align: middle; margin-left: 4px; }
+body.honey .nf-cancel-row, body.honey .nf-cancel-row:hover, body.honey .nf-cancel-open, body.honey .nf-cancel__btn { color: #fff; text-decoration: none; }
 body.honey .nf-cancel__btn[disabled] { opacity: .45; cursor: not-allowed; }
 @keyframes nf-cancel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { body.honey .nf-cancel.is-open { animation: none; } }

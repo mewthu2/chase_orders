@@ -420,11 +420,11 @@ function positionScopeIndicator () {
   ind.style.width = act.offsetWidth + 'px'
 }
 // Janela de confirmação do protótipo (no lugar do confirm() do navegador).
-function confirmBox ({ title, text, ok = 'Confirmar', danger = false, icon = 'fas fa-circle-question' }) {
+function confirmBox ({ title, text, ok = 'Confirmar', no = 'Cancelar', danger = false, icon = 'fas fa-circle-question' }) {
   return new Promise((resolve) => {
     layers().insertAdjacentHTML('beforeend', `<div class="backdrop hc-modal-backdrop" data-modal-bd></div><div class="hc-modal${danger ? ' is-danger' : ''}" role="alertdialog" aria-modal="true" id="modalBox">
       <div class="m-ic"><i class="${esc(icon)}"></i></div><h3>${esc(title)}</h3><p>${esc(text)}</p>
-      <div class="m-row"><button type="button" class="btn btn-secondary" data-m="0">Cancelar</button><button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-m="1">${esc(ok)}</button></div></div>`)
+      <div class="m-row"><button type="button" class="btn btn-secondary" data-m="0">${esc(no)}</button><button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-m="1">${esc(ok)}</button></div></div>`)
     const box = $('#modalBox'); const bd = $('[data-modal-bd]')
     const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); done(false) } }
     const done = (v) => { box.remove(); bd.remove(); document.removeEventListener('keydown', key, true); resolve(v) }

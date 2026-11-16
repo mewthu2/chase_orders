@@ -87,6 +87,9 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     get fiscal_note_path(@signed)
     assert_select 'a.nf-cancel-open', text: /Cancelar na SEFAZ/
     assert_select "form[action='#{cancel_fiscal_note_path(@signed)}'] textarea[name='reason'][minlength='15'][maxlength='255']"
+    confirm = JSON.parse(css_select("form[action='#{cancel_fiscal_note_path(@signed)}']").first['data-hc-confirm'])
+    assert_equal ['Sim, cancelar a nota', 'Voltar', true], confirm.values_at('ok', 'no', 'danger')
+    assert_select 'a.btn.btn-danger.nf-cancel-open', text: 'Cancelar na SEFAZ'
 
     received = nil
     fake = lambda do |note, reason:, user:|
@@ -129,7 +132,7 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_select 'a.nf-cancel-open'
     assert_select '#cancelar .nf-cancel__late', text: /Passou do prazo normal de 24 horas/
     get fiscal_notes_path
-    assert_select "a[data-tip='Cancelar na SEFAZ']", count: 1
+    assert_select 'a.btn-danger.nf-cancel-row', text: 'Cancelar na SEFAZ', count: 1
   end
 
   test 'the list offers Cancelar na SEFAZ only for authorized notes' do
@@ -138,7 +141,7 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
 
     get fiscal_notes_path
 
-    assert_select "a[data-tip='Cancelar na SEFAZ'][href='#{fiscal_note_path(@signed, cancelar: 1, anchor: 'cancelar')}']", count: 1
+    assert_select "a.btn.btn-danger[href='#{fiscal_note_path(@signed, cancelar: 1, anchor: 'cancelar')}']", text: 'Cancelar na SEFAZ', count: 1
   end
 
   test 'a note that is not authorized has no cancel option' do

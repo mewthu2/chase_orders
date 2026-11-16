@@ -24,7 +24,7 @@
         <%= link_to shopify_fiscal_notes_path(order: note.shopify_order_name), class: "btn-export" do %><i class="fas fa-redo me-2"></i>Corrigir e emitir de novo<% end %>
       <% end %>
       <% if note.cancelable? && screen_can?(:fiscal_notes, :destroy) %>
-        <a href="#cancelar" class="btn-back nf-cancel-open"><i class="fas fa-ban me-1"></i>Cancelar na SEFAZ</a>
+        <a href="#cancelar" class="btn btn-danger nf-cancel-open">Cancelar na SEFAZ</a>
       <% end %>
       <% if note.cancel_xml.attached? %>
         <%= link_to cancel_xml_fiscal_note_path(note), class: "btn-export" do %><i class="fas fa-file-circle-xmark me-2"></i>XML do cancelamento<% end %>
@@ -93,14 +93,17 @@
             <% end %>
           <% end %>
         </p>
+        <%# Confirmação do Honey (data-hc-confirm): o turbo_confirm não pergunta nada com o Drive desligado. %>
         <%= form_with url: cancel_fiscal_note_path(note), method: :post, local: true,
-                      data: { turbo_confirm: "Cancelar a NF-e nº #{note.number} (série #{note.series}#{', homologação' if note.homologacao?}) na SEFAZ? Não dá para desfazer." } do %>
+                      data: { hc_confirm: { title: "Cancelar a NF-e nº #{note.number} na SEFAZ?",
+                                            text: "Série #{note.series}#{', homologação' if note.homologacao?}. A nota deixa de valer e não dá para desfazer.",
+                                            ok: 'Sim, cancelar a nota', no: 'Voltar', danger: true, icon: 'fas fa-ban' }.to_json } do %>
           <label class="field-label" for="nfCancelReason">Motivo do cancelamento</label>
           <textarea name="reason" id="nfCancelReason" class="field-input" rows="3" minlength="15" maxlength="255" required
                     placeholder="Ex.: Nota emitida com a natureza de operação errada; será emitida outra no lugar."></textarea>
           <div class="nf-cancel__foot">
             <span class="text-muted-custom" id="nfCancelCount">0 / 255 · mínimo de 15 caracteres</span>
-            <button type="submit" class="btn-sefaz nf-cancel__btn" id="nfCancelSubmit" disabled><i class="fas fa-ban me-2"></i>Cancelar a nota na SEFAZ</button>
+            <button type="submit" class="btn btn-danger nf-cancel__btn" id="nfCancelSubmit" disabled>Cancelar a nota na SEFAZ</button>
           </div>
         <% end %>
       </div>
