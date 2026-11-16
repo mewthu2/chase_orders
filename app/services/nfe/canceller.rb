@@ -45,10 +45,6 @@ module Nfe
     def validate!
       raise Error, 'Só nota autorizada pode ser cancelada na SEFAZ.' unless @note.autorizada?
       raise Error, 'A nota não tem chave de acesso ou protocolo de autorização.' if @note.access_key.blank? || @note.protocol.blank?
-      unless @note.within_cancel_window?
-        raise Error, 'Passaram as 24 horas da autorização: o cancelamento agora é com a contabilidade ' \
-                     '(pedido de cancelamento fora do prazo na SEFAZ ou nota de entrada que anula esta).'
-      end
       return if REASON_RANGE.cover?(@reason.length)
 
       raise Error, "Escreva o motivo do cancelamento com #{REASON_RANGE.min} a #{REASON_RANGE.max} caracteres (tem #{@reason.length})."

@@ -77,22 +77,17 @@ class FiscalNote < ApplicationRecord
     access_key.present? && (erro? || assinada? || rejeitada?)
   end
 
-  # Prazo nacional para cancelar pela SEFAZ. Depois dele o web service recusa (501) e o caminho é pela
-  # contabilidade (pedido de cancelamento extemporâneo ou nota de entrada que anula a saída).
+  # Prazo normal para cancelar pela SEFAZ. O Honey não bloqueia depois dele (homologação e produção): só avisa,
+  # porque a SEFAZ pode recusar (501) ou aceitar como fora do prazo (155).
   CANCEL_WINDOW = 24.hours
 
-  # Cancelamento na SEFAZ (evento 110111): só a nota autorizada, com chave e protocolo, dentro de 24 horas.
+  # Cancelamento na SEFAZ (evento 110111): a nota autorizada, com chave e protocolo, a qualquer tempo.
   def cancelable?
-    autorizada? && access_key.present? && protocol.present? && within_cancel_window?
+    autorizada? && access_key.present? && protocol.present?
   end
 
   def within_cancel_window?
     authorized_at.present? && authorized_at > CANCEL_WINDOW.ago
-  end
-
-  # Autorizada, mas fora do prazo de cancelamento pelo Honey.
-  def cancel_window_expired?
-    autorizada? && !within_cancel_window?
   end
 
   def cancel_deadline

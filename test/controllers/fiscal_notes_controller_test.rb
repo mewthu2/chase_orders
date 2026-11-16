@@ -118,24 +118,18 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_match(/573 Duplicidade/, response.body)
     assert_select '#cancelar[data-open]'
-    assert_match(/Dá para cancelar até/, response.body)
+    assert_match(/Dentro do prazo normal de 24 horas/, response.body)
   end
 
-  test 'after 24 hours the note cannot be canceled in Honey: no button, a warning, and the action refuses' do
-    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 25.hours.ago)
+  test 'after 24 hours the cancellation stays available, in homologation and production, with a warning' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 30.hours.ago, environment: :producao)
     sign_in @admin
 
     get fiscal_note_path(@signed)
-    assert_select 'a.nf-cancel-open', count: 0
-    assert_select '#cancelar', count: 0
-    assert_match(/Fora do prazo de cancelamento/, response.body)
+    assert_select 'a.nf-cancel-open'
+    assert_select '#cancelar .nf-cancel__late', text: /Passou do prazo normal de 24 horas/
     get fiscal_notes_path
-    assert_select "a[data-tip='Cancelar na SEFAZ']", count: 0
-
-    post cancel_fiscal_note_path(@signed), params: { reason: 'Motivo com tamanho suficiente' }
-    follow_redirect!
-    assert_match(/Passaram as 24 horas/, response.body)
-    assert @signed.reload.autorizada?
+    assert_select "a[data-tip='Cancelar na SEFAZ']", count: 1
   end
 
   test 'the list offers Cancelar na SEFAZ only for authorized notes' do

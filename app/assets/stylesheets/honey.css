@@ -2077,6 +2077,7 @@ body.honey .nf-details { margin-top: 14px; }
 body.honey .nf-cancel { display: none; border-color: rgba(248,81,73,.35); }
 body.honey .nf-cancel.is-open { display: block; animation: nf-cancel-in .28s ease-out; }
 body.honey .nf-cancel textarea { min-height: 84px; resize: vertical; }
+body.honey .nf-cancel__late { color: var(--yellow); }
 body.honey .nf-cancel__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
 body.honey .nf-cancel__btn { background: var(--red) !important; border-color: var(--red) !important; }
 body.honey .nf-cancel__btn[disabled] { opacity: .45; cursor: not-allowed; }

@@ -104,14 +104,14 @@ class Nfe::CancellerTest < ActiveSupport::TestCase
     assert_empty client.calls
   end
 
-  test 'after 24 hours of the authorization Honey refuses before calling SEFAZ' do
-    @note.update!(authorized_at: 25.hours.ago)
-    client = FakeClient.new(ret_env_evento('135', 'ok'))
+  test 'after 24 hours the event is still sent to SEFAZ (it decides: 155 out of deadline cancels)' do
+    @note.update!(authorized_at: 3.days.ago)
+    client = FakeClient.new(ret_env_evento('155', 'Cancelamento homologado fora de prazo'))
 
-    error = assert_raises(Nfe::Canceller::Error) { cancel(client) }
+    cancel(client)
 
-    assert_match(/24 horas/, error.message)
-    assert_empty client.calls
+    assert_equal 1, client.calls.size
+    assert @note.reload.cancelada?
   end
 
   test 'a communication failure is reported and nothing changes' do
