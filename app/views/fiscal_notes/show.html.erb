@@ -20,6 +20,18 @@
       <% if note.transmittable? %>
         <%= button_to transmit_fiscal_note_path(note), method: :post, class: "btn-sefaz", form: { class: 'd-inline', data: { turbo_submits_with: 'Enviando…' } } do %><i class="fas fa-paper-plane me-2"></i>Transmitir à SEFAZ<% end %>
       <% end %>
+      <% if note.emittable? && screen_can?(:fiscal_notes, :execute) %>
+        <%= button_to transmit_fiscal_note_path(note), method: :post, class: "btn-sefaz",
+                      form: { class: 'd-inline', data: { hc_confirm: { title: "Emitir a NF-e nº #{note.number} na SEFAZ?",
+                                                                      text: (note.producao? ? 'Ela passa a valer como documento fiscal.' : 'Homologação: sem valor fiscal.'),
+                                                                      ok: 'Emitir', no: 'Voltar', icon: 'fas fa-paper-plane' }.to_json } } do %><i class="fas fa-paper-plane me-2"></i>Emitir na SEFAZ<% end %>
+      <% end %>
+      <% if note.regenerable? && screen_can?(:fiscal_notes, :create) %>
+        <%= button_to regenerate_fiscal_note_path(note), method: :post, class: "btn-export",
+                      form: { class: 'd-inline', data: { hc_confirm: { title: 'Gerar uma nova nota no lugar desta?',
+                                                                      text: 'A nova nota é gerada e assinada, mas não vai à SEFAZ: você confere e emite depois.',
+                                                                      ok: 'Gerar nova nota', no: 'Voltar', icon: 'fas fa-file-circle-plus' }.to_json } } do %><i class="fas fa-file-circle-plus me-2"></i>Gerar nova nota<% end %>
+      <% end %>
       <% if note.rejeitada? && note.shopify_order_name.present? %>
         <%= link_to shopify_fiscal_notes_path(order: note.shopify_order_name), class: "btn-export" do %><i class="fas fa-redo me-2"></i>Corrigir e emitir de novo<% end %>
       <% end %>
@@ -65,6 +77,14 @@
         <div class="sefaz-result__code">
           <%= note.erro? ? 'Sem resposta definitiva da SEFAZ: consulte antes de transmitir de novo.' : "Código #{note.sefaz_status_code}" %>
         </div>
+      </div>
+    </div>
+  <% elsif note.rascunho? %>
+    <div class="sefaz-result sefaz-result--wait">
+      <div class="sefaz-result__icon"><i class="fas fa-file-circle-check"></i></div>
+      <div>
+        <div class="sefaz-result__text">Gerada e não emitida</div>
+        <div class="sefaz-result__code">Confira o DANFE e o XML. Quando estiver certo, use “Emitir na SEFAZ”. Nada é emitido sozinho.</div>
       </div>
     </div>
   <% elsif note.assinada? %>

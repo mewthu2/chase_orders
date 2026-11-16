@@ -346,6 +346,7 @@ Rails.application.routes.draw do
       post :consult
       post :cancel
       get :cancel_xml
+      post :regenerate
     end
   end
 

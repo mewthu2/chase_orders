@@ -32,7 +32,7 @@
 <% perm = screen[:perm] %>
 <%# Transferência B2C: ao lado do número, P abre o pedido e N abre a nota (cor pela situação da nota). %>
 <% note_tones = { 'autorizada' => ['is-ok', 'autorizada'], 'rejeitada' => ['is-err', 'rejeitada'], 'erro' => ['is-wait', 'sem resposta da SEFAZ'],
-                  'assinada' => ['is-wait', 'assinada, falta enviar à SEFAZ'], 'rascunho' => ['is-wait', 'em rascunho'] } %>
+                  'assinada' => ['is-wait', 'assinada, falta enviar à SEFAZ'], 'rascunho' => ['is-wait', 'gerada, falta emitir'] } %>
 <% pn_cell = ->(order) {
      note = @latest_notes&.dig(order.id)
      tone, label = note ? note_tones.fetch(note[:status], ['is-wait', note[:status]]) : ['is-none', nil]

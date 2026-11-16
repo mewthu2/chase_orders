@@ -92,7 +92,7 @@ class InternalTransferFiscalNotesControllerTest < ActionDispatch::IntegrationTes
     delete internal_transfer_shipment_fiscal_note_path(@transfer, @shipment, note)
 
     assert FiscalNote.exists?(note.id)
-    assert_match(/precisa ser cancelada/, flash[:alert])
+    assert_match(/cancele na SEFAZ/, flash[:alert])
   end
 
   test 'deleting a rejected production note gives the number back when it was the last one' do

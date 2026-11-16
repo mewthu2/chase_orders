@@ -15,6 +15,12 @@ class InternalTransferFiscalNotesController < ApplicationController
     return back_to_notes(alert: 'As duas lojas são da mesma empresa: não há nota de transferência.') if origin.id == destination.id
 
     note = Nfe::TransferGenerator.call(shipment: @shipment, company: origin, recipient_company: destination, environment: environment)
+    if params[:draft].present?
+      note.update!(status: :rascunho)
+      log_event('fiscal_note_issued', "NF-e nº #{note.number} (#{note.environment_label.downcase}) da remessa de #{@shipment.origin_location.name}: gerada, falta emitir.")
+      return back_to_notes(notice: "NF-e nº #{note.number} gerada e não emitida. Confira o DANFE e o XML e clique em Emitir na SEFAZ.")
+    end
+
     Nfe::Transmitter.call(note)
     log_event('fiscal_note_issued', "NF-e nº #{note.number} (#{note.environment_label.downcase}) da remessa de #{@shipment.origin_location.name}: #{note.status_label.downcase}.")
     back_to_notes(**result_flash(note))
@@ -24,6 +30,7 @@ class InternalTransferFiscalNotesController < ApplicationController
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.
   def transmit
+    @note.assinada! if @note.emittable?
     Nfe::Transmitter.call(@note, consult: @note.erro?)
     back_to_notes(**result_flash(@note))
   rescue Nfe::Transmitter::Error => e

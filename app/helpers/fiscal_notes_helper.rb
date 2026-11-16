@@ -1,6 +1,6 @@
 module FiscalNotesHelper
   STATUS_PILL_CLASSES = {
-    'assinada' => 'status-pill--preparando', 'autorizada' => 'status-pill--active',
+    'rascunho' => 'status-pill--preparando', 'assinada' => 'status-pill--preparando', 'autorizada' => 'status-pill--active',
     'rejeitada' => 'status-pill--inactive', 'erro' => 'status-pill--inactive', 'cancelada' => 'status-pill--inactive'
   }.freeze
   SHOPIFY_ADMIN_ORDER_URL = 'https://admin.shopify.com/store/chasebrasil/orders/%s'.freeze

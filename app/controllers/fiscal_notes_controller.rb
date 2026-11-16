@@ -1,6 +1,6 @@
 class FiscalNotesController < ApplicationController
-  guard_screen :fiscal_notes, actions: { create_from_shopify: :create, cancel: :destroy }
-  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult, :cancel, :cancel_xml]
+  guard_screen :fiscal_notes, actions: { create_from_shopify: :create, cancel: :destroy, regenerate: :create }
+  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult, :cancel, :cancel_xml, :regenerate]
   before_action :set_order, only: [:new, :create]
 
   def index
@@ -48,13 +48,21 @@ class FiscalNotesController < ApplicationController
 
     note = Nfe::ShopifyGenerator.call(company: company, nature: nature, shopify_order: @shopify_order, recipient: @recipient,
                                       payment: @payment, freight_mode: params[:freight_mode].presence || '0')
+    # "Só gerar": fica em rascunho para conferir o DANFE e o XML; emite depois pela tela da nota.
+    if params[:draft].present?
+      note.update!(status: :rascunho)
+      return redirect_to fiscal_note_path(note), notice: draft_notice(note)
+    end
+
     Nfe::Transmitter.call(note)
     redirect_to fiscal_note_path(note), transmission_flash(note)
   rescue Nfe::ShopifyOrder::NotFound, Nfe::ShopifyGenerator::Error, Nfe::Transmitter::Error => e
     render_shopify_with_alert(e.message)
   end
 
+  # Assinada: envia. Rascunho (gerada para conferir): é o "Emitir na SEFAZ".
   def transmit
+    @fiscal_note.assinada! if @fiscal_note.emittable?
     Nfe::Transmitter.call(@fiscal_note)
     redirect_to fiscal_note_path(@fiscal_note), transmission_flash(@fiscal_note)
   rescue Nfe::Transmitter::Error => e
@@ -78,6 +86,20 @@ class FiscalNotesController < ApplicationController
     redirect_to fiscal_note_path(@fiscal_note), notice: "NF-e nº #{@fiscal_note.number} cancelada na SEFAZ (protocolo #{@fiscal_note.cancel_protocol})."
   rescue Nfe::Canceller::Error => e
     redirect_to fiscal_note_path(@fiscal_note, cancelar: 1), alert: e.message
+  end
+
+  # Depois do cancelamento: gera (sem emitir) a nota que substitui a cancelada. Pedido da Shopify volta para a
+  # tela de emissão dele, que tem o "Só gerar".
+  def regenerate
+    if @fiscal_note.cancelada? && @fiscal_note.order_id.present? && @fiscal_note.shopify_order_name.present?
+      return redirect_to shopify_fiscal_notes_path(order: @fiscal_note.shopify_order_name),
+                         notice: 'Confira os dados do pedido e use "Só gerar" para criar a nota sem emitir.'
+    end
+
+    draft = Nfe::Regenerator.call(@fiscal_note)
+    redirect_to fiscal_note_path(draft), notice: draft_notice(draft)
+  rescue Nfe::Regenerator::Error => e
+    redirect_to fiscal_note_path(@fiscal_note), alert: e.message
   end
 
   def cancel_xml
@@ -112,6 +134,10 @@ class FiscalNotesController < ApplicationController
   end
 
   private
+
+  def draft_notice(note)
+    "NF-e nº #{note.number} gerada e não emitida. Confira o DANFE e o XML e clique em Emitir na SEFAZ."
+  end
 
   def set_note
     @fiscal_note = FiscalNote.find(params[:id])

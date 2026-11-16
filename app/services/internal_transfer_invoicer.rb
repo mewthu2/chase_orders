@@ -29,6 +29,8 @@ class InternalTransferInvoicer
     return note if note&.autorizada?
 
     Nfe::Transmitter.call(note, consult: true) if note&.erro?
+    # Enviar a remessa é a ordem de emitir: a nota gerada para conferência (rascunho) vai à SEFAZ.
+    note.assinada! if note&.emittable?
     Nfe::Transmitter.call(note) if note&.assinada?
     return note if note && (note.autorizada? || note.erro?)
 

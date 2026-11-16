@@ -4,7 +4,7 @@ class FiscalNote < ApplicationRecord
   # Notas que ainda podem ir (ou voltar) para a SEFAZ com o mesmo XML assinado.
   TRANSMITTABLE_STATUSES = %w[assinada erro].freeze
   STATUS_LABELS = {
-    'rascunho' => 'Rascunho', 'assinada' => 'Assinada', 'autorizada' => 'Autorizada',
+    'rascunho' => 'Gerada, falta emitir', 'assinada' => 'Assinada', 'autorizada' => 'Autorizada',
     'rejeitada' => 'Rejeitada', 'cancelada' => 'Cancelada', 'erro' => 'Erro'
   }.freeze
 
@@ -80,6 +80,17 @@ class FiscalNote < ApplicationRecord
   # Prazo normal para cancelar pela SEFAZ. O Honey não bloqueia depois dele (homologação e produção): só avisa,
   # porque a SEFAZ pode recusar (501) ou aceitar como fora do prazo (155).
   CANCEL_WINDOW = 24.hours
+
+  # Rascunho: gerada e assinada para conferir (DANFE/XML), sem ir à SEFAZ. Só sai com "Emitir na SEFAZ";
+  # nenhuma rotina automática (Log02, envio da remessa) emite rascunho por conta própria.
+  def emittable?
+    rascunho? && xml_available?
+  end
+
+  # Gerar uma nota nova no lugar desta: depois do cancelamento, para o mesmo pedido ou remessa.
+  def regenerable?
+    cancelada? && (b2b_order_id.present? || internal_transfer_shipment_id.present? || order_id.present?)
+  end
 
   # Cancelamento na SEFAZ (evento 110111): a nota autorizada, com chave e protocolo, a qualquer tempo.
   def cancelable?

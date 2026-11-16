@@ -142,6 +142,33 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_equal 'tracking', o.log_stage
   end
 
+  test 'after the production note is canceled the Log02 does not generate or emit a new one by itself' do
+    company = create_nfe_company(environment: :producao)
+    B2bSetting.current.update!(issuer_company: company, sale_nature: create_sale_nature(company))
+    o = order(:sale, correios_order_id: 777, status: :preparando_envio)
+    FiscalNote.create!(company:, b2b_order: o, number: 9, series: 1, environment: :producao, status: :cancelada)
+
+    attempt = Nfe::Transmitter.stub(:call, ->(*, **) { flunk 'não pode emitir sozinho' }) do
+      Correios::Invoices.stub(:send_xml_to_correios, ->(*) { flunk 'não pode mandar ao Correios' }) { HoneyB2bLog.send_xml(o) }
+    end
+
+    assert attempt.error?
+    assert_match(/cancelada: gere a nova em Notas fiscais/, attempt.error)
+    assert_equal 1, FiscalNote.where(b2b_order_id: o.id).count
+  end
+
+  test 'a note generated for review (rascunho) waits for the Emitir button' do
+    company = create_nfe_company(environment: :producao)
+    B2bSetting.current.update!(issuer_company: company, sale_nature: create_sale_nature(company))
+    o = order(:sale, correios_order_id: 777, status: :preparando_envio)
+    draft = FiscalNote.create!(company:, b2b_order: o, number: 10, series: 1, environment: :producao, status: :rascunho)
+
+    attempt = Nfe::Transmitter.stub(:call, ->(*, **) { flunk 'não pode emitir o rascunho' }) { HoneyB2bLog.send_xml(o) }
+
+    assert_match(/nº 10 gerada, esperando conferência/, attempt.error)
+    assert draft.reload.rascunho?
+  end
+
   test 'a company still in homologação does not send a test note to Correios' do
     company = create_nfe_company(environment: :homologacao)
     B2bSetting.current.update!(issuer_company: company, sale_nature: create_sale_nature(company))

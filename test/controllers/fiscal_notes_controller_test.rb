@@ -152,4 +152,30 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_select 'a.nf-cancel-open', count: 0
     assert_select '#cancelar', count: 0
   end
+
+  test 'a canceled note offers Gerar nova nota; the draft is shown and only goes to SEFAZ with Emitir' do
+    b2c = B2bOrder.new(kind: :b2c_transfer, user: @admin, price_list: :transfer)
+    b2c.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
+    b2c.save!
+    @signed.update!(status: :cancelada, b2b_order: b2c)
+    sign_in @admin
+
+    get fiscal_note_path(@signed)
+    assert_select "form[action='#{regenerate_fiscal_note_path(@signed)}'][data-hc-confirm]"
+
+    draft = FiscalNote.create!(company: @company, number: 2, series: 1, status: :rascunho, environment: :homologacao, access_key: '4' * 44)
+    draft.xml.attach(io: StringIO.new('<NFe/>'), filename: 'n.xml', content_type: 'application/xml')
+    Nfe::Regenerator.stub(:call, draft) { post regenerate_fiscal_note_path(@signed) }
+    assert_redirected_to fiscal_note_path(draft)
+    follow_redirect!
+    assert_match(/gerada e não emitida/, response.body)
+    assert_select "form[action='#{transmit_fiscal_note_path(draft)}'][data-hc-confirm] button", text: /Emitir na SEFAZ/
+
+    sent = nil
+    Nfe::Transmitter.stub(:call, ->(note, **) { sent = note.status; note.update!(status: :autorizada, protocol: '1'); note }) do
+      post transmit_fiscal_note_path(draft)
+    end
+    assert_equal 'assinada', sent
+    assert draft.reload.autorizada?
+  end
 end

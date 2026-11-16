@@ -4,7 +4,7 @@
 <% can_issue = blocker.nil? && (note.nil? || note.rejeitada? || note.cancelada?) && !note&.denied? %>
 <% tone = if note.nil? then 'idle'
           elsif note.autorizada? then 'ok'
-          elsif note.erro? || note.assinada? then 'wait'
+          elsif note.erro? || note.assinada? || note.rascunho? then 'wait'
           else 'err'
           end %>
 <div class="it-slot it-slot--<%= env %> is-<%= tone %>">
@@ -45,6 +45,13 @@
         <%= button_to transmit_internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :post, class: 'btn-back btn-sm' do %>
           <i class="fas <%= note.erro? ? 'fa-magnifying-glass' : 'fa-paper-plane' %> me-1"></i><%= note.erro? ? 'Consultar na SEFAZ' : 'Enviar para a SEFAZ' %>
         <% end %>
+      <% elsif note.emittable? %>
+        <%# Gerada para conferir: só vai à SEFAZ por aqui ou pela tela da nota. %>
+        <%= button_to transmit_internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :post, class: 'btn-sefaz btn-sm',
+                      form: { data: { hc_confirm: { title: "Emitir a NF-e nº #{note.number} na SEFAZ?", text: (production ? 'Ela passa a valer como documento fiscal.' : 'Homologação: sem valor fiscal.'),
+                                                      ok: 'Emitir', no: 'Voltar', icon: 'fas fa-paper-plane' }.to_json } } do %>
+          <i class="fas fa-paper-plane me-1"></i>Emitir na SEFAZ
+        <% end %>
       <% end %>
       <% if note.deletable? %>
         <%= button_to internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :delete, class: 'it-slot__delete',
@@ -61,11 +68,20 @@
 
   <% if can_issue %>
     <% number = note&.rejeitada? ? note.number : company.current_nfe_number(env) %>
-    <%= button_to internal_transfer_shipment_fiscal_notes_path(transfer, shipment), method: :post, params: { environment: env },
-                  class: production ? 'btn-export it-slot__issue' : 'btn-back it-slot__issue',
-                  form: { data: { turbo_confirm: (production ? "Emitir a NF-e nº #{number} (série #{company.nfe_series}) de PRODUÇÃO? Ela vale como documento fiscal e é autorizada na SEFAZ agora." : nil) } } do %>
-      <i class="fas <%= note ? 'fa-rotate-right' : 'fa-file-circle-plus' %> me-1"></i><%= note ? 'Emitir de novo' : "Emitir nota de #{production ? 'produção' : 'homologação'}" %>
-      <small>nº <%= number %> · série <%= company.nfe_series %></small>
+    <% if note&.cancelada? %>
+      <%# Depois do cancelamento a nova nota só é gerada: confere e emite depois (Emitir na SEFAZ). %>
+      <%= button_to internal_transfer_shipment_fiscal_notes_path(transfer, shipment), method: :post, params: { environment: env, draft: 1 },
+                    class: 'btn-export it-slot__issue' do %>
+        <i class="fas fa-file-circle-plus me-1"></i>Gerar nova nota (sem emitir)
+        <small>nº <%= number %> · série <%= company.nfe_series %> · confira e emita depois</small>
+      <% end %>
+    <% else %>
+      <%= button_to internal_transfer_shipment_fiscal_notes_path(transfer, shipment), method: :post, params: { environment: env },
+                    class: production ? 'btn-export it-slot__issue' : 'btn-back it-slot__issue',
+                    form: { data: { hc_confirm: (production ? { title: "Emitir a NF-e nº #{number} (série #{company.nfe_series}) de PRODUÇÃO?", text: 'Ela vale como documento fiscal e é autorizada na SEFAZ agora.', ok: 'Emitir', no: 'Voltar', icon: 'fas fa-landmark' }.to_json : nil) } } do %>
+        <i class="fas <%= note ? 'fa-rotate-right' : 'fa-file-circle-plus' %> me-1"></i><%= note ? 'Emitir de novo' : "Emitir nota de #{production ? 'produção' : 'homologação'}" %>
+        <small>nº <%= number %> · série <%= company.nfe_series %></small>
+      <% end %>
     <% end %>
   <% elsif note.nil? && blocker %>
     <p class="it-slot__empty"><%= blocker %></p>

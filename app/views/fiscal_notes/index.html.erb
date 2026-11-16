@@ -1,5 +1,5 @@
 <% content_for :title, "Notas Fiscais" %>
-<% statuses = { 'rascunho' => ['Rascunho', 'gray', 'Nota começada, ainda não assinada.'],
+<% statuses = { 'rascunho' => ['Gerada, falta emitir', 'yellow', 'Gerada e assinada para conferir (DANFE e XML). Só vai à SEFAZ quando alguém clicar em Emitir na SEFAZ.'],
                 'assinada' => ['Assinada', 'blue', 'Arquivo pronto e assinado com o certificado. Falta enviar à SEFAZ.'],
                 'autorizada' => ['Autorizada', 'green', 'A SEFAZ aceitou a nota e ela vale.'],
                 'rejeitada' => ['Rejeitada', 'red', 'A SEFAZ recusou a nota. O motivo aparece nos detalhes.'],

@@ -143,6 +143,13 @@ class HoneyB2bLog
     note = FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: :producao).order(:id).last
     note ||= FiscalNote.erro.where(b2b_order_id: @order.id, environment: :producao).order(:id).last&.tap { |n| Nfe::Transmitter.call(n, consult: true) }&.reload
     note = nil unless note.nil? || FiscalNote::ACTIVE_STATUSES.include?(note.status)
+    # Nota gerada para conferir (rascunho) só sai pelo botão Emitir; com a nota cancelada, a nova também é
+    # gerada e conferida por alguém antes de emitir. Nos dois casos o Log02 espera.
+    return note if note&.rascunho?
+    if note.nil? && FiscalNote.cancelada.exists?(b2b_order_id: @order.id, environment: :producao)
+      @note_error = 'a NF-e deste pedido foi cancelada: gere a nova em Notas fiscais e emita depois de conferir'
+      return nil
+    end
     note ||= generate_note
     return note if note.nil? || note.autorizada?
 
@@ -171,6 +178,7 @@ class HoneyB2bLog
   def note_problem(note)
     return @note_error if @note_error
     return 'nota não gerada' unless note
+    return "NF-e nº #{note.number} gerada, esperando conferência e o Emitir em Notas fiscais" if note.rascunho?
 
     note.error_message.presence || note.sefaz_message.presence || "situação #{note.status}"
   end

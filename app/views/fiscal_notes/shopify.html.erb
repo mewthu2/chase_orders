@@ -206,6 +206,10 @@
               <p class="nfe-flag nfe-flag--warn mt-3 mb-0"><i class="fas fa-bolt me-2"></i>Empresas em <strong>produção</strong> emitem nota com valor fiscal.</p>
             <% end %>
             <div class="form-actions">
+              <%= button_tag type: 'submit', name: 'draft', value: '1', class: 'btn-back', disabled: so.blocking_issues.any?,
+                             data: { tip: 'Gera e assina a nota sem mandar à SEFAZ: confira o DANFE e o XML e emita depois.' } do %>
+                <i class="fas fa-file-circle-check me-2"></i>Só gerar (conferir antes)
+              <% end %>
               <%= submit_tag 'Gerar e autorizar na SEFAZ', class: "btn-sefaz", disabled: so.blocking_issues.any?,
                              data: { turbo_submits_with: 'Enviando para a SEFAZ…' } %>
             </div>

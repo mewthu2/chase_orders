@@ -18,6 +18,11 @@ class B2bOrderFiscalNotesController < ApplicationController
 
     CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
     note = Nfe::Generator.call(order:, company:, nature:, environment:)
+    if params[:draft].present?
+      note.update!(status: :rascunho)
+      return back_to_notes(notice: "NF-e nº #{note.number} gerada e não emitida. Confira o DANFE e o XML e clique em Emitir na SEFAZ.")
+    end
+
     Nfe::Transmitter.call(note)
     back_to_notes(**result_flash(note))
   rescue Nfe::Generator::Error, Nfe::Transmitter::Error, ActiveRecord::RecordInvalid => e
@@ -46,6 +51,7 @@ class B2bOrderFiscalNotesController < ApplicationController
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.
   def transmit
+    @note.assinada! if @note.emittable?
     Nfe::Transmitter.call(@note, consult: @note.erro?)
     back_to_notes(**result_flash(@note))
   rescue Nfe::Transmitter::Error => e
