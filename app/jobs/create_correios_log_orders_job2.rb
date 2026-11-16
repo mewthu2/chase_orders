@@ -18,6 +18,8 @@ class CreateCorreiosLogOrdersJob2 < ActiveJob::Base
     case param
     when 'all'
       create_correios_log_orders
+      # Pedidos que pararam por falta de bairro/número: completa pelo CEP para a próxima rodada.
+      FixAddressDataJob.perform_later
     when 'one'
       create_one_log_order(order)
     end
