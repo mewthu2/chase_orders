@@ -30,7 +30,7 @@
                                   banner: ['Destino fixo: filial B2C', "Toda transferência vai para a filial da loja online (CNPJ #{B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]}). Depois de aprovada no Log02, o Honey cria no Correios e emite a NF-e de transferência; nada vai para o Tiny."] } }[kind] %>
 <% content_for :title, screen[:title] %>
 <% perm = screen[:perm] %>
-<%# Transferência B2C: ao lado do número, P abre o pedido e N abre a nota (cor pela situação da nota). %>
+<%# Pedidos de venda e Transferência B2C: ao lado do número, P abre o pedido e N abre a nota (cor pela situação da nota). %>
 <% note_tones = { 'autorizada' => ['is-ok', 'autorizada'], 'rejeitada' => ['is-err', 'rejeitada'], 'erro' => ['is-wait', 'sem resposta da SEFAZ'],
                   'assinada' => ['is-wait', 'assinada, falta enviar à SEFAZ'], 'rascunho' => ['is-wait', 'gerada, falta emitir'] } %>
 <% pn_cell = ->(order) {
@@ -60,7 +60,7 @@
        erro: order.error_message, loc: [[order.transfer_location&.name, order.transfer_location_id]].reject { |n, _| n.blank? }, receb: order.receiver_name.presence || '—',
        por: order.user&.name, dest: b2b_order_destination(order), log: order.honey_flow? ? B2bOrder::LOG_STAGES.dig(order.log_stage, 0) : 'No Tiny (antigo)', pag: order.payment_description || '—',
        desc: order.discount_amount.positive? ? number_to_currency(order.discount_amount, unit: 'R$ ', separator: ',', delimiter: '.') : '—',
-       pn: (pn_cell.call(order) if order.b2c_transfer?) }
+       pn: (pn_cell.call(order) if order.sale? || order.b2c_transfer?) }
    } %>
 <% search = ->(scope, text) {
      q = "%#{ActiveRecord::Base.sanitize_sql_like(text.to_s.strip.delete_prefix('#'))}%"
@@ -74,7 +74,8 @@
      HoneyQueryTable.new(params, **common,
        tabs: { col: :st, param: :status, items: [['', 'Todos']] + statuses.map { |k, v| [k, v[0]] } },
        cols: [
-         { k: :n, label: 'Nº', t: :num, main: true, sort: true, sub: :dia },
+         { k: :pn, label: 'Nº', t: :html, sort: true, nodetail: true, sub: :dia },
+         { k: :n, label: 'Número', t: :num, main: true, hide: true },
          { k: :dia, label: 'Data', t: :d, hide: true, nodetail: true },
          { k: :dt, label: 'Data', t: :dt, hide: true },
          { k: :cliente, label: 'Cliente', sub: :cidade },

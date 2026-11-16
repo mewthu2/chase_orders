@@ -1,5 +1,6 @@
 require 'prawn'
 require 'prawn/table'
+require 'net/http'
 
 Prawn::Fonts::AFM.hide_m17n_warning = true
 
@@ -14,6 +15,12 @@ class B2bRomaneioPdf
   LINE = 'D8DEE4'.freeze
 
   LOGO_WHITE = Rails.root.join('app/assets/images/chase-logo-white.png').to_s.freeze
+
+  # Foto do produto na tabela de itens: miniatura pedida já pequena à CDN da Shopify.
+  PHOTO_SIZE = 34
+  PHOTO_WIDTH_PX = 160
+  PHOTO_TIMEOUT = 5
+  PHOTO_THREADS = 12
 
   TITLES = { 'sale' => 'Pedido', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2B > B2C' }.freeze
 
@@ -166,15 +173,17 @@ class B2bRomaneioPdf
   def items_table
     # Sem desconto por item: o único desconto é o do pedido, no resumo. Itens antigos que tinham desconto
     # aparecem com o preço já líquido, para a soma bater com o total.
-    rows = [['#', 'SKU', 'Produto', 'Qtd.', 'Preço un.', 'Total']]
+    photos = item_photos
+    rows = [['#', 'Foto', 'SKU', 'Produto', 'Qtd.', 'Preço un.', 'Total']]
     @items.each_with_index do |item, index|
-      rows << [index + 1, safe(item.sku), safe(item.name.presence || '-'), item.quantity,
+      rows << [index + 1, photo_cell(photos[item.sku]), safe(item.sku), safe(item.name.presence || '-'), item.quantity,
                money([item.price.to_f - item.discount.to_f, 0].max), money(item.line_total)]
     end
 
     pdf.table(rows, header: true, width: pdf.bounds.width,
-                    column_widths: { 0 => 24, 1 => 92, 3 => 38, 4 => 72, 5 => 80 },
-                    cell_style: { size: 8.5, padding: [6, 5], borders: [:bottom], border_color: LINE, text_color: INK }) do |t|
+                    column_widths: { 0 => 22, 1 => PHOTO_SIZE + 8, 2 => 84, 4 => 34, 5 => 68, 6 => 76 },
+                    cell_style: { size: 8.5, padding: [6, 5], borders: [:bottom], border_color: LINE, text_color: INK,
+                                  valign: :center }) do |t|
       t.row(0).font_style = :bold
       t.row(0).background_color = NAVY
       t.row(0).text_color = 'FFFFFF'
@@ -182,11 +191,71 @@ class B2bRomaneioPdf
       t.row(0).borders = []
       (1...t.row_length).each { |i| t.row(i).background_color = ZEBRA if i.even? }
       t.column(0).text_color = MUTED
-      t.columns(3..5).align = :right
-      t.column(0).align = :center
-      t.column(5).font_style = :bold
+      t.columns(4..6).align = :right
+      t.columns(0..1).align = :center
+      t.column(1).padding = [4, 4]
+      t.column(6).font_style = :bold
     end
     pdf.move_down 12
+  end
+
+  # Célula da foto: a miniatura, ou um quadrado claro quando o produto não tem foto (ou ela não veio).
+  def photo_cell(data)
+    return { content: '', height: PHOTO_SIZE + 8 } unless data
+
+    { image: StringIO.new(data), fit: [PHOTO_SIZE, PHOTO_SIZE], position: :center, vposition: :center }
+  end
+
+  # Baixa as fotos dos produtos em paralelo (por SKU). Foto que falhar ou não for JPEG/PNG fica de fora:
+  # o romaneio sai mesmo assim.
+  def item_photos
+    urls = Product.where(sku: @items.map(&:sku).uniq).where.not(image_url: [nil, ''])
+                  .pluck(:sku, :image_url).to_h
+    return {} if urls.empty?
+
+    queue = Queue.new
+    urls.each { |pair| queue << pair }
+    photos = Concurrent::Map.new
+    Array.new([PHOTO_THREADS, urls.size].min) do
+      Thread.new do
+        loop do
+          sku, url = queue.pop(true)
+          data = fetch_photo(url)
+          photos[sku] = data if data
+        end
+      rescue ThreadError
+        nil
+      end
+    end.each(&:join)
+    # Registra cada foto no PDF aqui (o Prawn reaproveita na tabela); a que ele não souber ler fica de fora.
+    photos.each_pair.to_h.select { |_sku, data| usable_photo?(data) }
+  end
+
+  def usable_photo?(data)
+    pdf.build_image_object(StringIO.new(data))
+    true
+  rescue StandardError => e
+    Rails.logger.warn "B2bRomaneioPdf foto ilegível: #{e.class} #{e.message}"
+    false
+  end
+
+  def fetch_photo(url)
+    uri = URI(url)
+    if uri.host.to_s.end_with?('cdn.shopify.com')
+      uri.query = [uri.query, "width=#{PHOTO_WIDTH_PX}"].compact_blank.join('&')
+    end
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https',
+                                                   open_timeout: PHOTO_TIMEOUT, read_timeout: PHOTO_TIMEOUT) do |http|
+      http.get(uri.request_uri, 'Accept' => 'image/jpeg,image/png')
+    end
+    body = response.body.to_s.b
+    return unless response.is_a?(Net::HTTPSuccess)
+    return unless body.start_with?("\xFF\xD8".b) || body.start_with?("\x89PNG".b)
+
+    body
+  rescue StandardError => e
+    Rails.logger.warn "B2bRomaneioPdf foto #{url}: #{e.class} #{e.message}"
+    nil
   end
 
   def totals

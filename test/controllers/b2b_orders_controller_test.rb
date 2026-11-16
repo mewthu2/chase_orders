@@ -140,6 +140,45 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert response.body.start_with?('%PDF')
   end
 
+  test 'romaneio shows the product photos (thumbnail from the Shopify CDN) and still renders when a photo fails' do
+    sign_in @admin
+    png = Base64.decode64('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+    Product.create!(sku: 'SKU-FOTO', shopify_product_name: 'Com foto', image_url: 'https://cdn.shopify.com/s/files/foto.png?v=1')
+    Product.create!(sku: 'SKU-QUEBRADA', shopify_product_name: 'Foto quebrada', image_url: 'https://img.example.com/quebrada.jpg')
+    photo = stub_request(:get, 'https://cdn.shopify.com/s/files/foto.png?v=1&width=160').to_return(body: png)
+    stub_request(:get, 'https://img.example.com/quebrada.jpg').to_return(status: 404)
+    order = B2bOrder.new(kind: :sale, payment_method: 'boleto', user: @admin, client: @client, status: :aberto)
+    order.b2b_order_items.build(sku: 'SKU-FOTO', name: 'Com foto', quantity: 1, price: 10)
+    order.b2b_order_items.build(sku: 'SKU-QUEBRADA', name: 'Foto quebrada', quantity: 1, price: 10)
+    order.save!
+
+    get romaneio_b2b_order_path(order)
+
+    assert_response :success
+    assert_requested photo
+    with_photo = response.body.scan('/Subtype /Image').size
+    get romaneio_b2b_order_path(build_order)
+    # A foto PNG com transparência vira imagem + máscara (2 objetos); a quebrada fica de fora.
+    assert_equal response.body.scan('/Subtype /Image').size + 2, with_photo
+  end
+
+  test 'the sales list shows P / N next to the number, N colored by the order note' do
+    sign_in @admin
+    order = build_order
+    company = Company.new(legal_name: 'Emissora', cnpj: '11.222.333/0001-81', street: 'R', number: '1', neighbourhood: 'B', city: 'BH',
+                          city_ibge_code: '3106200', state: 'MG', zip: '30000000')
+    company.save!(validate: false)
+    FiscalNote.create!(company:, b2b_order: order, number: 21, series: 3, environment: :producao, status: :autorizada)
+    other = build_order
+
+    get b2b_orders_path
+
+    assert_response :success
+    assert_select "a.pg-pn[href='#{edit_b2b_order_path(order)}']", text: 'P'
+    assert_select "a.pg-pn.is-ok[href='#{edit_b2b_order_path(order, tab: 'nota')}'][data-tip*='nº 21']", text: 'N'
+    assert_select "a.pg-pn.is-none[href='#{edit_b2b_order_path(other, tab: 'nota')}']", text: 'N'
+  end
+
   test 'romaneio is only served on the screen of the order kind' do
     sign_in @admin
     order = build_order

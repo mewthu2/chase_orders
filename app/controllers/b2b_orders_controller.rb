@@ -21,7 +21,7 @@ class B2bOrdersController < ApplicationController
     @scope = B2bOrder.where(kind: order_kind).includes(:client, :transfer_location, :carrier, :b2b_order_items, :user).recent
     @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).pluck(:b2b_order_id).to_set
     @filter_locations = TransferLocation.order(:name) if order_kind == 'stock_transfer'
-    @latest_notes = latest_notes_by_order if order_kind == 'b2c_transfer'
+    @latest_notes = latest_notes_by_order if %w[sale b2c_transfer].include?(order_kind)
   end
 
   def new
