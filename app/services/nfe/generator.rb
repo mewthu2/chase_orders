@@ -71,11 +71,24 @@ module Nfe
                   elsif source == :b2c then b2c_recipient
                   else location_recipient(source)
                   end
+      fill_ibge_from_zip(recipient, source)
       missing << 'CNPJ/CPF do destinatário' unless [11, 14].include?(Cnpj.digits(recipient[:document]).length)
       missing << 'endereço do destinatário' if recipient.values_at(:street, :neighbourhood, :city, :zip).any?(&:blank?)
       missing << 'código IBGE do destinatário' if recipient[:city_ibge_code].blank?
       missing << 'UF do destinatário' unless Company::STATES.key?(recipient[:state])
       recipient
+    end
+
+    # Cadastro sem o código IBGE (comum nas lojas de abastecimento): busca pelo CEP e grava no cadastro,
+    # para a próxima nota já sair com ele.
+    def fill_ibge_from_zip(recipient, source)
+      return if recipient[:city_ibge_code].present?
+
+      ibge = Ibge.lookup(recipient[:zip]).to_h[:ibge]
+      return if ibge.blank?
+
+      recipient[:city_ibge_code] = ibge
+      source.update_columns(city_ibge_code: ibge, updated_at: Time.current) if source.respond_to?(:city_ibge_code) && source.persisted?
     end
 
     def client_recipient(client)

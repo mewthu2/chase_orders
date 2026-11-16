@@ -89,6 +89,10 @@ module Nfe
         end
       end
 
+      # O schema não aceita espaço no começo/fim nem quebra de linha nos campos de texto (rejeição 225);
+      # cadastros vêm com "Barra Shopping " e afins.
+      builder.doc.xpath('//text()').each { |node| node.content = node.content.squish }
+
       Result.new(xml: builder.doc.root.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML),
                  access_key: key, total: total)
     end

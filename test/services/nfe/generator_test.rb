@@ -1,5 +1,6 @@
 require 'test_helper'
 require_relative '../../support/nfe_test_certificate'
+require_relative '../../support/nfe_schema'
 
 class Nfe::GeneratorTest < ActiveSupport::TestCase
   NS = { 'n' => 'http://www.portalfiscal.inf.br/nfe' }.freeze
@@ -133,12 +134,36 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     @client.update!(city_ibge_code: nil)
     order = build_order
 
-    error = assert_raises(Nfe::Generator::Error) { generate(order, @company) }
+    error = Nfe::Ibge.stub(:lookup, nil) { assert_raises(Nfe::Generator::Error) { generate(order, @company) } }
 
     assert_match(/NCM do SKU SKU-2/, error.message)
     assert_match(/código IBGE do destinatário/i, error.message)
     assert_equal 0, FiscalNote.count
     assert_equal 1, @company.reload.next_nfe_number
+  end
+
+  test 'a recipient without the IBGE code gets it from the CEP and the registration keeps it' do
+    @location.update!(city_ibge_code: nil)
+    order = build_order(kind: :stock_transfer)
+    looked_up = []
+    lookup = ->(zip) { looked_up << zip; { ibge: '3118601', city: 'Contagem', state: 'MG' } }
+
+    note = Nfe::Ibge.stub(:lookup, lookup) { generate(order, @company) }
+
+    assert_equal ['32000-000'], looked_up
+    assert_equal '3118601', Nokogiri::XML(note.xml.download).at_xpath('//n:dest/n:enderDest/n:cMun', NS).text
+    assert_equal '3118601', @location.reload.city_ibge_code
+  end
+
+  test 'names with stray spaces (like the store registrations) go trimmed and the note passes the schema' do
+    @location.update!(name: 'Barra Shopping ', street: ' Avenida das Américas ', complement: 'Loja  244 ')
+
+    note = Nfe::Generator.call(order: build_order(kind: :stock_transfer), company: @company, nature: @transfer_nature, environment: 'producao')
+
+    xml = note.xml.download
+    assert_equal 'Barra Shopping', Nokogiri::XML(xml).at_xpath('//n:dest/n:xNome', NS).text
+    assert_equal 'Loja 244', Nokogiri::XML(xml).at_xpath('//n:dest/n:enderDest/n:xCpl', NS).text
+    assert_equal [], NfeSchema.errors(xml)
   end
 
   test 'a SKU that is not a product is reported' do
