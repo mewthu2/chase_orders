@@ -5,7 +5,7 @@
 #
 # Cada passo grava uma tentativa (Attempt create_correios_order_honey / send_xml_honey / get_tracking_honey,
 # com b2b_order_id) e roda no fim do job do Log02 da mesma etapa, então segue o agendador e os botões de
-# hoje. Na etapa do XML a NF-e é emitida no Honey (empresa e natureza da Configuração do atacado),
+# hoje. Na etapa do XML a NF-e é emitida no Honey (empresa e natureza das configurações de cada tela),
 # autorizada na SEFAZ, e o XML autorizado vai para o Correios.
 class HoneyB2bLog
   SEDEX_SERVICE = '39888'.freeze
@@ -154,10 +154,10 @@ class HoneyB2bLog
   end
 
   def generate_note
-    company = setting.issuer
+    company = setting.issuer(@order)
     nature = setting.nature_for(@order)
-    raise Nfe::Generator::Error, 'Escolha a empresa emissora em Configuração do atacado.' unless company
-    raise Nfe::Generator::Error, "Escolha a natureza de #{@order.sale? ? 'venda' : 'transferência'} em Configuração do atacado." unless nature
+    raise Nfe::Generator::Error, "Escolha a empresa emissora em #{B2bSetting.config_name(@order)}." unless company
+    raise Nfe::Generator::Error, "Escolha a natureza de #{@order.sale? ? 'venda' : 'transferência'} em #{B2bSetting.config_name(@order)}." unless nature
     unless company.producao?
       raise Nfe::Generator::Error, "#{company.selection_label} está em homologação: ligue a produção para o Log02 emitir a nota e mandar o XML ao Correios."
     end

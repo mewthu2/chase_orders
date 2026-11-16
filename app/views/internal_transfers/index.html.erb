@@ -14,7 +14,7 @@
 
 <%= hc_page_header 'Transferência de Estoque', 'Transferências de estoque entre lojas, lançadas direto no Shopify (com histórico do inventário)', icon: 'fas fa-exchange-alt' do %>
   <% if current_user.admin? %>
-    <%= link_to edit_internal_transfer_config_path, class: 'btn btn-secondary' do %><i class="fas fa-user-check"></i>Configurar aprovadores<% end %>
+    <%= link_to edit_internal_transfer_config_path, class: 'btn btn-secondary' do %><i class="fas fa-sliders-h"></i>Configurações<% end %>
   <% end %>
   <% if screen_can?(:internal_transfers, :create) %>
     <%= link_to new_internal_transfer_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Nova transferência<% end %>
@@ -91,9 +91,8 @@
                   <%= hc_td 'Nota fiscal' do %><%= render 'note_pills', transfer: transfer, url: (editable ? edit_internal_transfer_path(transfer, tab: 'nota') : internal_transfer_path(transfer)) %><% end %>
                   <%= hc_td 'Status', sub: ('Aguardando sua ação' if transfer.my_action_needed?(current_user, approver_ids: internal_transfer_approver_ids)) do %><%= hc_status(*statuses[status][0, 2], tip: statuses[status][2]) %><% end %>
                   <td class="td-actions" style="text-align: right" data-label="">
-                    <% unless editable %>
-                      <%= hc_row_action 'fas fa-eye', 'Ver transferência', entry %>
-                    <% end %>
+                    <%# Ver (itens, remessas, aprovação e histórico) sempre; enquanto dá para editar, Editar fica ao lado. %>
+                    <%= hc_row_action 'fas fa-eye', 'Ver transferência', internal_transfer_path(transfer) %>
                     <% if status == 'aguardando_aprovacao' && approver %>
                       <%= hc_row_action 'fas fa-circle-check', 'Aprovar', approve_internal_transfer_path(transfer), method: :post,
                                         confirm: "Aprovar a transferência ##{transfer.id}? Aprovar não mexe no estoque: as peças só saem da loja de origem quando ela reservar os itens." %>

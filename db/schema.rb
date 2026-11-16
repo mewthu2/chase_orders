@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_16_152000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -225,8 +225,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
     t.datetime "xml_sent_at"
     t.boolean "log_ignored", default: false, null: false
     t.boolean "pickup", default: false, null: false
+    t.text "nf_additional_info"
+    t.string "nf_freight_mode", limit: 1
+    t.bigint "nf_carrier_id"
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
+    t.index ["nf_carrier_id"], name: "index_b2b_orders_on_nf_carrier_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
     t.index ["user_id"], name: "index_b2b_orders_on_user_id"
   end
@@ -240,6 +244,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
     t.bigint "issuer_company_id"
     t.bigint "sale_nature_id"
     t.bigint "transfer_nature_id"
+    t.bigint "supply_issuer_company_id"
+    t.bigint "b2c_issuer_company_id"
+    t.bigint "supply_nature_id"
+    t.bigint "b2c_nature_id"
+    t.index ["b2c_issuer_company_id"], name: "index_b2b_settings_on_b2c_issuer_company_id"
+    t.index ["b2c_nature_id"], name: "index_b2b_settings_on_b2c_nature_id"
+    t.index ["supply_issuer_company_id"], name: "index_b2b_settings_on_supply_issuer_company_id"
+    t.index ["supply_nature_id"], name: "index_b2b_settings_on_supply_nature_id"
   end
 
   create_table "campaign_users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -367,7 +379,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "next_nfe_number_homologation", default: 1, null: false
+    t.bigint "internal_transfer_nature_id"
     t.index ["cnpj"], name: "index_companies_on_cnpj", unique: true
+    t.index ["internal_transfer_nature_id"], name: "index_companies_on_internal_transfer_nature_id"
   end
 
   create_table "company_operation_natures", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1460,14 +1474,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_220000) do
   add_foreign_key "b2b_catalogs", "users"
   add_foreign_key "b2b_order_items", "b2b_orders"
   add_foreign_key "b2b_orders", "carriers"
+  add_foreign_key "b2b_orders", "carriers", column: "nf_carrier_id", on_delete: :nullify
   add_foreign_key "b2b_orders", "clients"
   add_foreign_key "b2b_orders", "transfer_locations"
   add_foreign_key "b2b_orders", "users"
+  add_foreign_key "b2b_settings", "companies", column: "b2c_issuer_company_id", on_delete: :nullify
+  add_foreign_key "b2b_settings", "companies", column: "supply_issuer_company_id", on_delete: :nullify
+  add_foreign_key "b2b_settings", "operation_natures", column: "b2c_nature_id", on_delete: :nullify
+  add_foreign_key "b2b_settings", "operation_natures", column: "supply_nature_id", on_delete: :nullify
   add_foreign_key "campaign_users", "marketing_campaigns"
   add_foreign_key "campaign_users", "users"
   add_foreign_key "cashback_unification_sources", "cashback_unifications"
   add_foreign_key "cashback_unifications", "customers"
   add_foreign_key "cashback_unifications", "users"
+  add_foreign_key "companies", "operation_natures", column: "internal_transfer_nature_id", on_delete: :nullify
   add_foreign_key "company_operation_natures", "companies"
   add_foreign_key "company_operation_natures", "operation_natures"
   add_foreign_key "fiscal_notes", "b2b_orders"

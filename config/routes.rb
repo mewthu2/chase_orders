@@ -186,6 +186,7 @@ Rails.application.routes.draw do
   # Aba Nota fiscal da edição dos pedidos B2B (atacado, abastecimento e transferência B2C).
   resources :b2b_order_fiscal_notes, path: 'b2b_orders/:b2b_order_id/notas', only: [:create, :destroy] do
     member { post :transmit }
+    collection { patch :details }
   end
   resources :internal_transfers do
     member do
@@ -346,6 +347,12 @@ Rails.application.routes.draw do
     end
   end
 
+  # Configurações da nota de cada tipo de transferência do Log02 (antes dos resources: /configuracoes não é um id).
+  { 'stock_transfer' => 'stock_transfers', 'b2c_transfer' => 'b2c_transfers' }.each do |kind, path|
+    get "#{path}/configuracoes", to: 'b2b_transfer_settings#edit', defaults: { order_kind: kind }, as: "#{kind}_settings"
+    patch "#{path}/configuracoes", to: 'b2b_transfer_settings#update', defaults: { order_kind: kind }
+  end
+
   resources :stock_transfers, controller: 'b2b_orders', defaults: { order_kind: 'stock_transfer' },
                               only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
@@ -354,11 +361,10 @@ Rails.application.routes.draw do
     end
   end
 
+  # A transferência B2C não passa mais pelo Tiny: sem enviar nem cancelar lá.
   resources :b2c_transfers, controller: 'b2b_orders', defaults: { order_kind: 'b2c_transfer' },
                             only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
-      post :transmit
-      post :cancel_in_tiny
       get :romaneio
     end
   end

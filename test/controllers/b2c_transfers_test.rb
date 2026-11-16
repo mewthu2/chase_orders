@@ -101,15 +101,40 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{b2c_transfer_path(order)}']"
   end
 
-  test 'cancel in Tiny works for a sent B2C transfer' do
+  test 'the list has no Tiny: no Nº Tiny column, no cancel in Tiny, and P / N next to the number' do
     order = build_b2c(tiny_reference_id: '902371809', tiny_reference_number: '1859', status: :preparando_envio)
-    stub_request(:post, 'https://api.tiny.com.br/api2/pedido.alterar.situacao.php')
-      .to_return(body: { retorno: { status: 'OK' } }.to_json)
 
-    post cancel_in_tiny_b2c_transfer_path(order)
+    get b2c_transfers_path
 
-    assert_redirected_to b2c_transfers_path
-    assert_nil order.reload.tiny_reference_id
+    assert_response :success
+    assert_select 'th', text: 'Nº Tiny', count: 0
+    assert_select "[data-tip='Cancelar no Tiny']", count: 0
+    assert_select "a.pg-pn[href='#{edit_b2c_transfer_path(order)}']", text: 'P'
+    assert_select "a.pg-pn.is-none[href='#{edit_b2c_transfer_path(order, tab: 'nota')}']", text: 'N'
+    assert_select "a[href='#{b2c_transfer_settings_path}']", text: /Configurações/
+    assert_raises(NameError) { cancel_in_tiny_b2c_transfer_path(order) }
+  end
+
+  test 'the N takes the color of the order note: rejected production note asks for a fix' do
+    order = build_b2c(status: :preparando_envio)
+    company = Company.new(legal_name: 'Emissora', cnpj: '11.222.333/0001-81', street: 'R', number: '1', neighbourhood: 'B', city: 'BH',
+                          city_ibge_code: '3106200', state: 'MG', zip: '30000000')
+    company.save!(validate: false)
+    FiscalNote.create!(company:, b2b_order: order, number: 10, series: 3, environment: :homologacao, status: :autorizada)
+    FiscalNote.create!(company:, b2b_order: order, number: 11, series: 3, environment: :producao, status: :rejeitada)
+
+    get b2c_transfers_path
+
+    assert_select "a.pg-pn.is-err[href='#{edit_b2c_transfer_path(order, tab: 'nota')}'][data-tip*='nº 11']", text: 'N'
+  end
+
+  test 'the edit page of an old B2C transfer sent to Tiny has no Cancelar no Tiny button' do
+    order = build_b2c(tiny_reference_id: '902371809', tiny_reference_number: '1859', status: :preparando_envio)
+
+    get edit_b2c_transfer_path(order)
+
+    assert_response :success
+    assert_no_match(/Cancelar no Tiny/, response.body)
   end
 
   test 'creating ignores shipping data: a B2C transfer is hand delivery' do

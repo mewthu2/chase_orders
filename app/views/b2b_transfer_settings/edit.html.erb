@@ -1,0 +1,58 @@
+<% content_for :title, copy[:title] %>
+<% issuer_col, nature_col = B2bSetting::TRANSFER_KINDS.fetch(order_kind) %>
+<% company = @setting.issuer(order_kind) %>
+<% nature = @setting.nature_for(order_kind) %>
+<% natures = OperationNature.transfer.where(active: true).order(:description).to_a %>
+
+<%= hc_page_header copy[:title], "Como sai a nota fiscal #{copy[:what]}", icon: 'fas fa-sliders-h' do %>
+  <%= link_to send(copy[:back]), class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <div class="pg-split" style="--cols: 1.3fr 1fr">
+    <div class="pg-split-a">
+      <%= form_with model: @setting, url: send("#{order_kind}_settings_path"), method: :patch, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do |form| %>
+        <h3><i class="fas fa-file-invoice"></i>Nota fiscal</h3>
+        <% if @setting.errors.any? %>
+          <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span><%= @setting.errors.full_messages.to_sentence %></span></div>
+        <% end %>
+        <div class="pg-fields">
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_<%= issuer_col %>_id">Empresa emissora</label>
+            <%= form.select :"#{issuer_col}_id", Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] },
+                            { selected: company&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_<%= nature_col %>_id">Natureza da operação</label>
+            <%= form.select :"#{nature_col}_id", natures.map { |n| ["#{n.description} · CFOP #{n.cfop} · #{n.regime_label}", n.id] },
+                            { selected: nature&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>O CFOP, os impostos e as observações da nota vêm da natureza. Ambiente, série, numeração, certificado e naturezas ficam em <%= link_to 'Empresas', companies_path %>. Ao salvar, a natureza fica vinculada à empresa.</span></div>
+        </div>
+        <div class="pg-inline-foot">
+          <%= link_to 'Cancelar', send(copy[:back]), class: 'btn btn-ghost' %>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>
+        </div>
+      <% end %>
+    </div>
+    <div class="pg-split-b">
+      <div class="panel pg-card pg-howto">
+        <h3><i class="fas fa-list-ol"></i>Como a nota sai</h3>
+        <ol>
+          <% ['O pedido é <b>aprovado</b> em Log02 › Pedidos p/ Aprovar e o Honey cria no <b>Correios</b>.',
+              'Na etapa do XML, o Honey <b>emite a NF-e</b> com esta empresa e natureza e autoriza na <b>SEFAZ</b>.',
+              'O XML autorizado vai ao <b>Correios</b>, que libera a etiqueta.',
+              'Se precisar, dá para emitir antes pela letra <b>N</b> da lista (aba Nota fiscal do pedido).'].each_with_index do |text, i| %>
+            <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
+          <% end %>
+        </ol>
+      </div>
+      <% if company %>
+        <div class="callout pg-banner <%= company.producao? ? 'is-info' : 'is-warn' %>"><i class="fas fa-building"></i><div>
+          <strong><%= company.trade_name.presence || company.legal_name %> está em <%= company.environment_label.downcase %>.</strong>
+          <%= company.producao? ? "Próxima nota: nº #{company.current_nfe_number('producao')}, série #{company.nfe_series}." : 'Ligue a produção em Empresas para a nota valer e o Log02 mandar o XML ao Correios.' %>
+        </div></div>
+      <% end %>
+    </div>
+  </div>
+</div>

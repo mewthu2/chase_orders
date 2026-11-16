@@ -36,6 +36,18 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     transfer
   end
 
+  test 'a transfer waiting for approval has Ver (items, approval and history) next to Editar and Aprovar' do
+    transfer = build_transfer
+
+    get internal_transfers_path
+
+    assert_select "a[href='#{internal_transfer_path(transfer)}'][data-tip='Ver transferência']"
+    assert_select "a[href='#{edit_internal_transfer_path(transfer)}'][data-tip='Editar']"
+    get internal_transfer_path(transfer)
+    assert_response :success
+    assert_select 'h5', text: /Histórico/
+  end
+
   test 'user without the internal_transfers permission is redirected' do
     profile = Profile.create!(name: 'Sem Transferencia')
     user = User.create!(name: 'Sem Acesso', email: 'sem_it@example.com', password: 'password123')
@@ -190,7 +202,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{reject_internal_transfer_path(transfer)}']"
   end
 
-  test 'the list links an open transfer only to its edit screen and a moving one only to its page' do
+  test 'the list links an open transfer to its edit screen and to Ver; a moving one only to its page' do
     open_transfer = build_transfer
     moving = build_transfer(items: [[@bh, @b, 1]])
     moving.shipments.first.update!(status: :reservado)
@@ -198,7 +210,7 @@ class InternalTransfersControllerTest < ActionDispatch::IntegrationTest
     get internal_transfers_path
 
     assert_select "a[href='#{edit_internal_transfer_path(open_transfer)}']"
-    assert_select "a[href='#{internal_transfer_path(open_transfer)}']", count: 0
+    assert_select "a[href='#{internal_transfer_path(open_transfer)}'][data-tip='Ver transferência']"
     assert_select "a[href='#{internal_transfer_path(moving)}']"
     assert_select "a[href='#{edit_internal_transfer_path(moving)}']", count: 0
   end

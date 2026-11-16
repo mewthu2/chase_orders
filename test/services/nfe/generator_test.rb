@@ -1,5 +1,6 @@
 require 'test_helper'
 require_relative '../../support/nfe_test_certificate'
+require 'minitest/mock'
 require_relative '../../support/nfe_schema'
 
 class Nfe::GeneratorTest < ActiveSupport::TestCase
@@ -164,6 +165,43 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal 'Barra Shopping', Nokogiri::XML(xml).at_xpath('//n:dest/n:xNome', NS).text
     assert_equal 'Loja 244', Nokogiri::XML(xml).at_xpath('//n:dest/n:enderDest/n:xCpl', NS).text
     assert_equal [], NfeSchema.errors(xml)
+  end
+
+  test 'the note details of the order go into the note: carrier (transporta), freight mode and additional info' do
+    carrier = Carrier.create!(name: 'Mix Cargo', registration: '13.642.117/0001-10', state_registration: '062.123.456/0001',
+                              street: 'Rua Noraldino Lima', number: '580', neighbourhood: 'Centro', city: 'Belo Horizonte', state: 'MG', zip: '30000-000')
+    order = build_order(kind: :stock_transfer)
+    order.update_columns(nf_carrier_id: carrier.id, nf_additional_info: 'Pedido 89 - conferir volumes na entrega')
+
+    note = Nfe::Generator.call(order: order, company: @company, nature: @transfer_nature, environment: 'producao')
+
+    xml = Nokogiri::XML(note.xml.download)
+    assert_equal '0', xml.at_xpath('//n:transp/n:modFrete', NS).text
+    assert_equal '13642117000110', xml.at_xpath('//n:transp/n:transporta/n:CNPJ', NS).text
+    assert_equal 'Mix Cargo', xml.at_xpath('//n:transp/n:transporta/n:xNome', NS).text
+    assert_equal '0621234560001', xml.at_xpath('//n:transp/n:transporta/n:IE', NS).text
+    assert_equal 'Rua Noraldino Lima, 580', xml.at_xpath('//n:transp/n:transporta/n:xEnder', NS).text
+    assert_equal 'Pedido 89 - conferir volumes na entrega', xml.at_xpath('//n:infAdic/n:infCpl', NS).text
+    assert_equal [], NfeSchema.errors(note.xml.download)
+  end
+
+  test 'without note details the note has no carrier and no freight; with no-freight mode the carrier is left out' do
+    order = build_order(kind: :stock_transfer)
+    xml = Nokogiri::XML(generate(order, @company).xml.download)
+    assert_equal '9', xml.at_xpath('//n:transp/n:modFrete', NS).text
+    assert_nil xml.at_xpath('//n:transp/n:transporta', NS)
+  end
+
+  test 'a stock transfer note carries the IBS/CBS group of non-incidence (SEFAZ rejects 1115 without it)' do
+    @company.update!(tax_regime: 3)
+    nature = @company.operation_natures.create!(description: 'Transferência entre Filiais - MG', kind: :transfer, cfop: '?152', final_consumer: false,
+                                                icms_situation: '00', icms_rate: 18, pis_cst: '01', pis_rate: 1.65, cofins_cst: '01', cofins_rate: 7.6)
+    note = Nfe::Generator.call(order: build_order(kind: :stock_transfer), company: @company, nature: nature, environment: 'producao')
+
+    xml = Nokogiri::XML(note.xml.download)
+    assert_equal 2, xml.xpath('//n:det/n:imposto/n:IBSCBS', NS).size
+    assert xml.at_xpath('//n:det/n:imposto/n:IBSCBS/n:CST', NS).text.present?
+    assert_equal [], NfeSchema.errors(note.xml.download)
   end
 
   test 'a SKU that is not a product is reported' do

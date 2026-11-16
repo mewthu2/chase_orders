@@ -21,6 +21,7 @@ class B2bOrdersController < ApplicationController
     @scope = B2bOrder.where(kind: order_kind).includes(:client, :transfer_location, :carrier, :b2b_order_items, :user).recent
     @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).pluck(:b2b_order_id).to_set
     @filter_locations = TransferLocation.order(:name) if order_kind == 'stock_transfer'
+    @latest_notes = latest_notes_by_order if order_kind == 'b2c_transfer'
   end
 
   def new
@@ -292,6 +293,16 @@ class B2bOrdersController < ApplicationController
   end
 
   private
+
+  # Situação da nota de cada pedido para a letra N da lista: a última de produção ou, sem ela, a de homologação.
+  def latest_notes_by_order
+    rows = FiscalNote.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).where.not(status: :cancelada)
+                     .order(:id).pluck(:b2b_order_id, :environment, :status, :number)
+    rows.group_by(&:first).transform_values do |list|
+      _, env, status, number = list.select { |r| r[1] == 'producao' }.last || list.last
+      { environment: env, status: status, number: number }
+    end
+  end
 
   # Busca "inteligente": cada palavra da query precisa aparecer em algum lugar
   # do SKU ou do nome, em qualquer ordem — assim "signature black" encontra

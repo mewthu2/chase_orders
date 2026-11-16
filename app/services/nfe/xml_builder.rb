@@ -43,8 +43,10 @@ module Nfe
     # tax: regras de tributação (OperationNature#tax_rules); sem ela valem as situações cadastradas na empresa.
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
-                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil)
+                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil, carrier: nil)
       @company = company
+      # Transportadora (grupo transporta): { document:, name:, state_registration:, address:, city:, state: }.
+      @carrier = carrier
       # Parcelas a receber (grupo cobr): [{ number:, due: Date, value: }]. Sem elas, a nota não tem cobrança.
       @duplicates = Array(duplicates)
       # Ambiente da nota; sem ele, o da empresa.
@@ -80,7 +82,7 @@ module Nfe
             build_dest(xml)
             @items.each_with_index { |item, index| build_det(xml, item, index) }
             build_total(xml, total)
-            xml.transp { xml.modFrete @freight_mode }
+            build_transp(xml)
             build_cobr(xml, total)
             build_pag(xml)
             build_inf_adic(xml)
@@ -534,6 +536,25 @@ module Nfe
         elsif ibs_cbs_exempt?
           xml.IBSCBSTot { xml.vBCIBSCBS '0.00' }
           xml.vNFTot format('%.2f', total)
+        end
+      end
+    end
+
+    # Sem frete (9) não leva transportadora. IE só com dígitos ou ISENTO; textos no tamanho do layout.
+    def build_transp(xml)
+      xml.transp do
+        xml.modFrete @freight_mode
+        if @carrier && @freight_mode != '9'
+          document = Cnpj.digits(@carrier[:document])
+          xml.transporta do
+            document.length == 11 ? xml.CPF(document) : xml.CNPJ(document) if [11, 14].include?(document.length)
+            xml.xNome @carrier[:name].to_s.squish.first(60) if @carrier[:name].present?
+            ie = @carrier[:state_registration].to_s
+            xml.IE(ie.strip.casecmp?('ISENTO') ? 'ISENTO' : Cnpj.digits(ie)) if ie.strip.casecmp?('ISENTO') || Cnpj.digits(ie).present?
+            xml.xEnder @carrier[:address].to_s.squish.first(60) if @carrier[:address].present?
+            xml.xMun @carrier[:city].to_s.squish.first(60) if @carrier[:city].present?
+            xml.UF @carrier[:state] if Company::STATES.key?(@carrier[:state])
+          end
         end
       end
     end

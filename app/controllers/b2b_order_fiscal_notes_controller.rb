@@ -1,10 +1,10 @@
 # Aba "Nota fiscal" da edição dos pedidos B2B (atacado, abastecimento e transferência B2C), no molde da
 # Transferência Interna: emitir, enviar à SEFAZ/consultar e excluir a NF-e do pedido, em homologação ou em
-# produção (no máximo uma ativa por ambiente). Empresa e natureza vêm da Configuração do atacado.
+# produção (no máximo uma ativa por ambiente). Empresa e natureza vêm das configurações de cada tela.
 class B2bOrderFiscalNotesController < ApplicationController
   KIND_SCREENS = B2bOrdersController::KIND_SCREENS
 
-  guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
+  guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit, details: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
   before_action :set_note, only: [:destroy, :transmit]
 
   def create
@@ -12,9 +12,9 @@ class B2bOrderFiscalNotesController < ApplicationController
     return back_to_notes(alert: 'Escolha homologação ou produção.') unless FiscalNote.environments.key?(environment)
 
     setting = B2bSetting.current
-    company = setting.issuer
+    company = setting.issuer(order)
     nature = setting.nature_for(order)
-    return back_to_notes(alert: 'Escolha a empresa emissora e a natureza em Configuração do atacado.') unless company && nature
+    return back_to_notes(alert: "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.") unless company && nature
 
     CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
     note = Nfe::Generator.call(order:, company:, nature:, environment:)
@@ -22,6 +22,26 @@ class B2bOrderFiscalNotesController < ApplicationController
     back_to_notes(**result_flash(note))
   rescue Nfe::Generator::Error, Nfe::Transmitter::Error, ActiveRecord::RecordInvalid => e
     back_to_notes(alert: e.message)
+  end
+
+  # Dados da nota (informações complementares e transportadora): só enquanto não há nota de produção
+  # autorizada, assinada ou sem resposta da SEFAZ. Valem para a próxima emissão (inclusive a do Log02).
+  def details
+    if (lock = order.nf_details_lock)
+      return back_to_notes(alert: "A NF-e nº #{lock.number} está #{lock.status_label.downcase}: os dados da nota não mudam mais.")
+    end
+
+    attrs = params.require(:b2b_order).permit(:nf_additional_info, :nf_carrier_id, :nf_freight_mode).to_h
+                  .transform_values { |v| v.to_s.strip.presence }
+    attrs['nf_carrier_id'] = nil if attrs['nf_carrier_id'] && !Carrier.exists?(attrs['nf_carrier_id'])
+    order.assign_attributes(attrs)
+    order.valid?
+    # Só os campos da nota: um pedido antigo com outro dado incompleto não pode travar a nota.
+    errors = order.errors.select { |e| e.attribute.to_s.start_with?('nf_') }
+    return back_to_notes(alert: errors.map(&:full_message).to_sentence) if errors.any?
+
+    order.update_columns(attrs.merge('updated_at' => Time.current))
+    back_to_notes(notice: 'Dados da nota salvos. Valem para a próxima emissão.')
   end
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.

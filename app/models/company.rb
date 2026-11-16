@@ -18,6 +18,8 @@ class Company < ApplicationRecord
   # A loja da empresa: na Transferência Interna, emite as notas das remessas que saem dela e recebe as que chegam.
   has_one :location, dependent: :nullify
   after_save :apply_location, if: -> { defined?(@location_choice) }
+  # Natureza da NF-e da Transferência Interna (Transferência de Estoque → Configurações); sem ela, a padrão.
+  belongs_to :internal_transfer_nature, class_name: 'OperationNature', optional: true
   has_one_attached :certificate
   encrypts :certificate_password
 
@@ -53,6 +55,15 @@ class Company < ApplicationRecord
   end
 
   # Nas seleções as filiais têm o mesmo nome: o CNPJ e a cidade/UF é que distinguem.
+  # Natureza que a nota da Transferência Interna usa: a escolhida nas Configurações (se ainda servir para a
+  # empresa) ou a de transferência padrão dela.
+  def internal_transfer_nature_for_notes
+    chosen = internal_transfer_nature
+    return chosen if chosen&.active? && chosen.transfer? && chosen.compatible_with?(self) && available_natures.exists?(chosen.id)
+
+    OperationNature.default_for(self, :transfer)
+  end
+
   def selection_label
     "#{trade_name.presence || legal_name} · CNPJ #{cnpj_formatted} · #{city}/#{state}"
   end

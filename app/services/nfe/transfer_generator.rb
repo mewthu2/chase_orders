@@ -1,7 +1,8 @@
 module Nfe
   # Gera e assina a NF-e de transferência de uma remessa da Transferência Interna: a empresa da loja de
   # origem emite para a empresa da loja de destino. A transmissão é do Nfe::Transmitter.
-  # Usa a natureza de transferência vinculada à empresa (a marcada como padrão, se houver mais de uma):
+  # Usa a natureza escolhida em Transferência de Estoque → Configurações ou, sem ela, a de transferência
+  # padrão vinculada à empresa:
   # dela vêm a descrição, o CFOP e a tributação.
   # Se a última nota da remessa foi rejeitada pela SEFAZ, reaproveita o número dela.
   # environment: homologação ou produção (sem ele, o ambiente atual da empresa). Cada remessa tem no
@@ -21,7 +22,7 @@ module Nfe
       @transfer = shipment.internal_transfer
       @company = company
       @recipient_company = recipient_company
-      @nature = OperationNature.default_for(company, :transfer)
+      @nature = company.internal_transfer_nature_for_notes
     end
 
     def call

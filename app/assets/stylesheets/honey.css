@@ -1568,6 +1568,17 @@ tr:hover .pg-copy, .pg-copy:focus-visible { opacity: 1; }
 .pg-d0 { color: var(--text-2); white-space: nowrap; }
 .pg-tag { display: inline-flex; align-items: center; gap: 5px; height: 22px; margin: 2px 5px 2px 0; padding: 0 9px; border-radius: 6px; font-size: 11.5px; font-weight: 600; color: var(--text-2); background: rgba(255,255,255,.06); border: 1px solid var(--border-2); white-space: nowrap; }
 .pg-tag.is-btn { cursor: pointer; transition: all var(--t-fast); }
+/* Letras P (pedido) e N (nota) ao lado do número: atalhos com a cor da situação da nota. */
+.pg-pn-group { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: middle; }
+.pg-pn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font: 700 11px/1 var(--mono); text-decoration: none;
+  color: var(--text-2); background: rgba(255,255,255,.06); border: 1px solid var(--border-2); transition: transform var(--t-fast), background-color var(--t-fast), color var(--t-fast); }
+.pg-pn:hover { transform: translateY(-1px) scale(1.08); color: var(--text); background: rgba(255,255,255,.12); }
+.pg-pn.is-ok { color: var(--green); background: var(--green-bg); border-color: rgba(63,185,80,.35); }
+.pg-pn.is-err { color: var(--red); background: var(--red-bg); border-color: rgba(248,81,73,.35); animation: pg-pn-pulse 1.8s ease-in-out infinite; }
+.pg-pn.is-wait { color: var(--yellow); background: var(--yellow-bg); border-color: rgba(227,179,65,.35); }
+.pg-pn.is-none { border-style: dashed; color: var(--text-3); }
+@keyframes pg-pn-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(248,81,73,.35); } 50% { box-shadow: 0 0 0 4px rgba(248,81,73,0); } }
+@media (prefers-reduced-motion: reduce) { .pg-pn, .pg-pn.is-err { transition: none; animation: none; } }
 .pg-tag.is-btn:hover { color: #fff; border-color: var(--brand-400); background: rgba(18,135,214,.14); }
 .pg-yes { color: var(--green); }
 .pg-ext { display: inline-flex; align-items: center; gap: 7px; color: var(--brand-300); font-weight: 600; font-size: 13px; }
@@ -2061,6 +2072,10 @@ body.honey .transfer-note__route > i { animation: transferRouteNudge 1.4s ease-i
 body.honey .it-tabs { margin-bottom: 18px; }
 body.honey .it-fiscal-list { display: grid; gap: 16px; }
 body.honey .it-fiscal-card { padding: 16px 18px 18px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); }
+body.honey .nf-details { margin-top: 14px; }
+body.honey .nf-details fieldset { border: 0; margin: 0; padding: 12px 0 0; min-width: 0; }
+body.honey .nf-details fieldset[disabled] .field-input { opacity: .6; cursor: not-allowed; }
+body.honey .nf-details textarea.field-input { min-height: 96px; resize: vertical; }
 body.honey .it-fiscal-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 14px; }
 body.honey .it-fiscal-card__head .transfer-note__route { margin: 0; }
 body.honey .it-fiscal-card__head .transfer-note__route > span { background: var(--surface-3); }

@@ -2,6 +2,12 @@ class B2bOrder < ApplicationRecord
   belongs_to :client, optional: true
   belongs_to :transfer_location, optional: true
   belongs_to :carrier, optional: true
+  # Dados da NF-e editáveis na aba Nota fiscal antes da autorização (Nfe::Generator usa na emissão).
+  belongs_to :nf_carrier, class_name: 'Carrier', optional: true
+  NF_FREIGHT_MODES = { '0' => 'Por conta do remetente (CIF)', '1' => 'Por conta do destinatário (FOB)', '2' => 'Por conta de terceiros',
+                       '3' => 'Transporte próprio do remetente', '4' => 'Transporte próprio do destinatário', '9' => 'Sem frete' }.freeze
+  validates :nf_freight_mode, inclusion: { in: NF_FREIGHT_MODES.keys }, allow_blank: true
+  validates :nf_additional_info, length: { maximum: 4000 }
   belongs_to :user
   has_many :b2b_order_items, dependent: :destroy
   accepts_nested_attributes_for :b2b_order_items, allow_destroy: true, reject_if: :all_blank
@@ -220,6 +226,12 @@ class B2bOrder < ApplicationRecord
     return "Transportadora · #{carrier&.name}" if carrier_id.present? && freight_service.blank?
 
     freight_service.present? ? 'Correios Log' : nil
+  end
+
+  # A nota de produção que impede mudar os dados da NF-e: autorizada, assinada (indo à SEFAZ) ou sem resposta
+  # (precisa ser consultada com o mesmo XML). Rejeitada ou excluída libera para corrigir e emitir de novo.
+  def nf_details_lock
+    fiscal_notes.where(environment: :producao, status: %i[rascunho assinada autorizada erro]).order(:id).last
   end
 
   private

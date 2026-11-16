@@ -199,9 +199,12 @@ module Nfe
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature.purpose,
         final_consumer: @nature.final_consumer?,
         tax: @nature.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
-        additional_info: @nature.notes_for(**note_context(recipient)),
+        additional_info: @order.nf_additional_info.presence || @nature.notes_for(**note_context(recipient)),
         fisco_info: @nature.fisco_notes_for(**note_context(recipient)), environment: @environment,
-        freight_mode: @order.freight_value.to_d.positive? ? '0' : '9', payments: payments, duplicates: duplicates
+        freight_mode: freight_mode, carrier: carrier_data, payments: payments, duplicates: duplicates,
+        # Transferência (abastecimento e B2C) leva o IBS/CBS de não incidência, como a Transferência Interna:
+        # sem o grupo, a SEFAZ rejeita (1115 "IBS/CBS não informado").
+        ibs_cbs_exempt: (XmlBuilder::IBS_CBS_TRANSFER unless sale?)
       ).call
       signed_xml = Signer.new(@company.nfe_certificate).sign(result.xml)
 
@@ -223,6 +226,28 @@ module Nfe
 
       source = sale? ? @order.client : @order.transfer_location
       sale? ? (source&.business_name.presence || source&.responsible_name) : source&.name
+    end
+
+    # Transportadora da nota: a escolhida na aba Nota fiscal ou, sem ela, a do pedido (abastecimento por transportadora).
+    def note_carrier
+      @order.nf_carrier || @order.carrier
+    end
+
+    # Modalidade do frete: a escolhida na aba Nota fiscal; sem ela, por conta do remetente quando há frete ou
+    # transportadora, e sem frete no resto.
+    def freight_mode
+      return @order.nf_freight_mode if @order.nf_freight_mode.present?
+
+      @order.freight_value.to_d.positive? || note_carrier ? '0' : '9'
+    end
+
+    def carrier_data
+      carrier = note_carrier
+      return nil unless carrier
+
+      address = [carrier.street, carrier.number, carrier.complement.presence].compact.join(', ')
+      { document: carrier.registration, name: carrier.name, state_registration: carrier.state_registration,
+        address: address, city: carrier.city, state: carrier.state }
     end
 
     def note_context(recipient)
