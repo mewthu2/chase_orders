@@ -41,9 +41,6 @@
       <% if screen_can?(:fiscal_notes) %>
         <%= link_to fiscal_note_path(note), class: 'it-slot__link' do %><i class="fas fa-up-right-from-square"></i>Abrir nota<% end %>
       <% end %>
-      <% if note.cancelable? && screen_can?(:fiscal_notes, :destroy) %>
-        <%= link_to fiscal_note_path(note, anchor: 'cancelar'), class: 'it-slot__link' do %><i class="fas fa-ban"></i>Cancelar na SEFAZ<% end %>
-      <% end %>
       <% if note.assinada? || note.erro? %>
         <%= button_to transmit_b2b_order_fiscal_note_path(order, note), method: :post, class: 'btn-back btn-sm' do %>
           <i class="fas <%= note.erro? ? 'fa-magnifying-glass' : 'fa-paper-plane' %> me-1"></i><%= note.erro? ? 'Consultar na SEFAZ' : 'Enviar para a SEFAZ' %>

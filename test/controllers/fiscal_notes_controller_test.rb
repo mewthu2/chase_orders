@@ -121,6 +121,15 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Já passou o prazo normal de 24 horas/, response.body)
   end
 
+  test 'the list offers Cancelar na SEFAZ only for authorized notes' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 1.hour.ago)
+    sign_in @admin
+
+    get fiscal_notes_path
+
+    assert_select "a[data-tip='Cancelar na SEFAZ'][href='#{fiscal_note_path(@signed, cancelar: 1, anchor: 'cancelar')}']", count: 1
+  end
+
   test 'a note that is not authorized has no cancel option' do
     sign_in @admin
 
