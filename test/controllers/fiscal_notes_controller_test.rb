@@ -107,18 +107,35 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test 'a refused cancellation comes back to the form with the SEFAZ message' do
-    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 2.days.ago)
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 3.hours.ago)
     sign_in @admin
 
-    Nfe::Canceller.stub(:call, ->(*, **) { raise Nfe::Canceller::Error, 'A SEFAZ recusou o cancelamento: 501 Prazo' }) do
+    Nfe::Canceller.stub(:call, ->(*, **) { raise Nfe::Canceller::Error, 'A SEFAZ recusou o cancelamento: 573 Duplicidade' }) do
       post cancel_fiscal_note_path(@signed), params: { reason: 'Motivo com tamanho suficiente' }
     end
 
     assert_redirected_to fiscal_note_path(@signed, cancelar: 1)
     follow_redirect!
-    assert_match(/501 Prazo/, response.body)
+    assert_match(/573 Duplicidade/, response.body)
     assert_select '#cancelar[data-open]'
-    assert_match(/Já passou o prazo normal de 24 horas/, response.body)
+    assert_match(/Dá para cancelar até/, response.body)
+  end
+
+  test 'after 24 hours the note cannot be canceled in Honey: no button, a warning, and the action refuses' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 25.hours.ago)
+    sign_in @admin
+
+    get fiscal_note_path(@signed)
+    assert_select 'a.nf-cancel-open', count: 0
+    assert_select '#cancelar', count: 0
+    assert_match(/Fora do prazo de cancelamento/, response.body)
+    get fiscal_notes_path
+    assert_select "a[data-tip='Cancelar na SEFAZ']", count: 0
+
+    post cancel_fiscal_note_path(@signed), params: { reason: 'Motivo com tamanho suficiente' }
+    follow_redirect!
+    assert_match(/Passaram as 24 horas/, response.body)
+    assert @signed.reload.autorizada?
   end
 
   test 'the list offers Cancelar na SEFAZ only for authorized notes' do

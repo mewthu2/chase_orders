@@ -84,10 +84,9 @@
       <div class="form-section-body">
         <p class="text-muted-custom mb-2">
           O cancelamento vai direto para a SEFAZ e não tem volta: a nota deixa de valer, e o número não é reaproveitado.
-          <% if hours %>
-            Autorizada há <strong><%= hours < 1 ? 'menos de 1 hora' : pluralize(hours, 'hora', plural: 'horas') %></strong>.
-            <%= hours >= 24 ? 'Já passou o prazo normal de 24 horas: a SEFAZ pode recusar ou aceitar como fora do prazo (com multa, conforme o estado).' : 'O prazo normal é de 24 horas depois da autorização.' %>
-          <% end %>
+          Dá para cancelar até <strong><%= note.cancel_deadline.in_time_zone.strftime('%d/%m/%Y às %H:%M') %></strong>
+          (24 horas depois da autorização; autorizada há <%= hours < 1 ? 'menos de 1 hora' : pluralize(hours, 'hora', plural: 'horas') %>).
+          Depois disso, só com a contabilidade.
         </p>
         <%= form_with url: cancel_fiscal_note_path(note), method: :post, local: true,
                       data: { turbo_confirm: "Cancelar a NF-e nº #{note.number} (série #{note.series}#{', homologação' if note.homologacao?}) na SEFAZ? Não dá para desfazer." } do %>
@@ -101,6 +100,14 @@
         <% end %>
       </div>
     </div>
+  <% end %>
+
+  <% if note.cancel_window_expired? %>
+    <div class="callout is-warn mb-3"><i class="fas fa-clock"></i><div>
+      <strong>Fora do prazo de cancelamento.</strong>
+      <%= note.cancel_deadline ? "O prazo de 24 horas acabou em #{note.cancel_deadline.in_time_zone.strftime('%d/%m/%Y às %H:%M')}." : 'Sem a data de autorização, o Honey não cancela esta nota.' %>
+      Para anular, fale com a contabilidade: pedido de cancelamento fora do prazo na SEFAZ ou nota de entrada que anula esta.
+    </div></div>
   <% end %>
 
   <div class="form-section">
