@@ -4,7 +4,7 @@ require 'nokogiri'
 module Nfe
   module Sefaz
     # Chamadas SOAP 1.2 aos web services da SEFAZ, autenticadas com o certificado A1 da empresa (TLS mútuo).
-    # Devolve o XML de retorno (retEnviNFe, retConsReciNFe ou retConsSitNFe) sem o envelope SOAP.
+    # Devolve o XML de retorno (retEnviNFe, retConsReciNFe, retConsSitNFe ou retEnvEvento) sem o envelope SOAP.
     class Client
       class Error < StandardError; end
 
@@ -13,7 +13,8 @@ module Nfe
       OPERATIONS = {
         autorizacao: %w[NFeAutorizacao4 nfeAutorizacaoLote],
         ret_autorizacao: %w[NFeRetAutorizacao4 nfeRetAutorizacaoLote],
-        consulta_protocolo: %w[NFeConsultaProtocolo4 nfeConsultaNF]
+        consulta_protocolo: %w[NFeConsultaProtocolo4 nfeConsultaNF],
+        evento: %w[NFeRecepcaoEvento4 nfeRecepcaoEvento]
       }.freeze
       # Os servidores da SEFAZ usam certificados da ICP-Brasil, que não vêm no repositório padrão de CAs.
       ICP_BRASIL_ROOTS = Rails.root.join('config/certs/icp_brasil_roots.pem').to_s.freeze
@@ -39,6 +40,12 @@ module Nfe
       def consult(access_key)
         call(:consulta_protocolo, "<consSitNFe xmlns=\"#{NFE_NS}\" versao=\"4.00\"><tpAmb>#{tp_amb}</tpAmb>" \
                                   "<xServ>CONSULTAR</xServ><chNFe>#{access_key}</chNFe></consSitNFe>")
+      end
+
+      # signed_event: o <evento> assinado (cancelamento etc.), sem declaração <?xml?>.
+      def event(signed_event, batch_id:)
+        call(:evento, "<envEvento xmlns=\"#{NFE_NS}\" versao=\"1.00\"><idLote>#{batch_id}</idLote>" \
+                      "#{strip_declaration(signed_event)}</envEvento>")
       end
 
       private

@@ -2073,6 +2073,15 @@ body.honey .it-tabs { margin-bottom: 18px; }
 body.honey .it-fiscal-list { display: grid; gap: 16px; }
 body.honey .it-fiscal-card { padding: 16px 18px 18px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); }
 body.honey .nf-details { margin-top: 14px; }
+/* Cancelar NF-e na SEFAZ: escondido até o clique, abre com um leve deslize e borda de alerta. */
+body.honey .nf-cancel { display: none; border-color: rgba(248,81,73,.35); }
+body.honey .nf-cancel.is-open { display: block; animation: nf-cancel-in .28s ease-out; }
+body.honey .nf-cancel textarea { min-height: 84px; resize: vertical; }
+body.honey .nf-cancel__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+body.honey .nf-cancel__btn { background: var(--red) !important; border-color: var(--red) !important; }
+body.honey .nf-cancel__btn[disabled] { opacity: .45; cursor: not-allowed; }
+@keyframes nf-cancel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.honey .nf-cancel.is-open { animation: none; } }
 body.honey .nf-details fieldset { border: 0; margin: 0; padding: 12px 0 0; min-width: 0; }
 body.honey .nf-details fieldset[disabled] .field-input { opacity: .6; cursor: not-allowed; }
 body.honey .nf-details textarea.field-input { min-height: 96px; resize: vertical; }

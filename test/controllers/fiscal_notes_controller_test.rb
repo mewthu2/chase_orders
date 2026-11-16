@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'minitest/mock'
 
 class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
   def setup
@@ -77,5 +78,55 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to fiscal_note_path(@failed)
     follow_redirect!
     assert_select '.flash-messages-container .alert', text: /XML/
+  end
+
+  test 'an authorized note shows Cancelar na SEFAZ with the reason form; canceling records it and shows the event' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 2.hours.ago)
+    sign_in @admin
+
+    get fiscal_note_path(@signed)
+    assert_select 'a.nf-cancel-open', text: /Cancelar na SEFAZ/
+    assert_select "form[action='#{cancel_fiscal_note_path(@signed)}'] textarea[name='reason'][minlength='15'][maxlength='255']"
+
+    received = nil
+    fake = lambda do |note, reason:, user:|
+      received = [reason, user]
+      note.update!(status: :cancelada, cancel_reason: reason, cancel_protocol: '131260000000999', canceled_at: Time.current, canceled_by: user.name)
+      note
+    end
+    Nfe::Canceller.stub(:call, fake) do
+      post cancel_fiscal_note_path(@signed), params: { reason: 'Nota emitida com o destinatario errado' }
+    end
+
+    assert_redirected_to fiscal_note_path(@signed)
+    assert_equal ['Nota emitida com o destinatario errado', @admin], received
+    follow_redirect!
+    assert_select '.nf-canceled', text: /Cancelada na SEFAZ \(homologação\): Nota emitida com o destinatario errado/
+    assert_select 'a.nf-cancel-open', count: 0
+    assert Log.where(resource_type: 'fiscal_note', action_type: 'cancel', resource_id: @signed.id).exists?
+  end
+
+  test 'a refused cancellation comes back to the form with the SEFAZ message' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 2.days.ago)
+    sign_in @admin
+
+    Nfe::Canceller.stub(:call, ->(*, **) { raise Nfe::Canceller::Error, 'A SEFAZ recusou o cancelamento: 501 Prazo' }) do
+      post cancel_fiscal_note_path(@signed), params: { reason: 'Motivo com tamanho suficiente' }
+    end
+
+    assert_redirected_to fiscal_note_path(@signed, cancelar: 1)
+    follow_redirect!
+    assert_match(/501 Prazo/, response.body)
+    assert_select '#cancelar[data-open]'
+    assert_match(/Já passou o prazo normal de 24 horas/, response.body)
+  end
+
+  test 'a note that is not authorized has no cancel option' do
+    sign_in @admin
+
+    get fiscal_note_path(@signed)
+
+    assert_select 'a.nf-cancel-open', count: 0
+    assert_select '#cancelar', count: 0
   end
 end

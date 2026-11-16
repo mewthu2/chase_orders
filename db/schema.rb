@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_16_152000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_16_170000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -491,6 +491,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_16_152000) do
     t.datetime "authorized_at"
     t.bigint "operation_nature_id"
     t.bigint "internal_transfer_shipment_id"
+    t.text "cancel_reason"
+    t.string "cancel_protocol"
+    t.datetime "canceled_at"
+    t.string "canceled_by"
     t.index ["b2b_order_id"], name: "index_fiscal_notes_on_b2b_order_id"
     t.index ["company_id", "environment", "series", "number"], name: "index_fiscal_notes_on_company_env_series_number", unique: true
     t.index ["company_id"], name: "index_fiscal_notes_on_company_id"

@@ -1,6 +1,6 @@
 class FiscalNotesController < ApplicationController
-  guard_screen :fiscal_notes, actions: { create_from_shopify: :create }
-  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult]
+  guard_screen :fiscal_notes, actions: { create_from_shopify: :create, cancel: :destroy }
+  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult, :cancel, :cancel_xml]
   before_action :set_order, only: [:new, :create]
 
   def index
@@ -66,6 +66,27 @@ class FiscalNotesController < ApplicationController
     redirect_to fiscal_note_path(@fiscal_note), transmission_flash(@fiscal_note)
   rescue Nfe::Transmitter::Error => e
     redirect_to fiscal_note_path(@fiscal_note), alert: e.message
+  end
+
+  # Cancela na SEFAZ (evento 110111) com o motivo digitado. A nota de um pedido volta a liberar a emissão
+  # de outra (a cancelada deixa de ser ativa), mas o número dela não é reaproveitado.
+  def cancel
+    Nfe::Canceller.call(@fiscal_note, reason: params[:reason], user: current_user)
+    LogService.create_log(user: current_user, resource_type: 'fiscal_note', action_type: 'cancel',
+                          resource_name: "NF-e #{@fiscal_note.number}/#{@fiscal_note.series}", resource_id: @fiscal_note.id,
+                          details: { reason: @fiscal_note.cancel_reason, protocol: @fiscal_note.cancel_protocol }, request: request)
+    redirect_to fiscal_note_path(@fiscal_note), notice: "NF-e nº #{@fiscal_note.number} cancelada na SEFAZ (protocolo #{@fiscal_note.cancel_protocol})."
+  rescue Nfe::Canceller::Error => e
+    redirect_to fiscal_note_path(@fiscal_note, cancelar: 1), alert: e.message
+  end
+
+  def cancel_xml
+    unless @fiscal_note.cancel_xml.attached?
+      redirect_to fiscal_note_path(@fiscal_note), alert: 'Esta nota não tem evento de cancelamento.'
+      return
+    end
+
+    send_data @fiscal_note.cancel_xml.download, filename: @fiscal_note.cancel_xml.filename.to_s, type: 'application/xml', disposition: 'attachment'
   end
 
   def xml

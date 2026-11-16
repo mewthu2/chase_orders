@@ -3,7 +3,7 @@ require 'openssl'
 require 'base64'
 
 module Nfe
-  # Assina o XML da NF-e (XMLDSig enveloped) com o certificado A1 da empresa.
+  # Assina o XML da NF-e ou de um evento dela (XMLDSig enveloped) com o certificado A1 da empresa.
   # O layout da NF-e exige C14N inclusiva e SHA-1/RSA-SHA1; por isso não usamos algoritmos mais fortes.
   class Signer
     class Error < StandardError; end
@@ -16,10 +16,11 @@ module Nfe
       @certificate = certificate
     end
 
-    def sign(xml)
+    # tag: o elemento assinado (infNFe na nota, infEvento nos eventos como o cancelamento).
+    def sign(xml, tag: 'infNFe')
       doc = Nokogiri::XML(xml) { |config| config.noblanks }
-      inf = doc.at_xpath('//n:infNFe[@Id]', 'n' => NFE_NS)
-      raise Error, 'XML sem infNFe com atributo Id.' unless inf
+      inf = doc.at_xpath("//n:#{tag}[@Id]", 'n' => NFE_NS)
+      raise Error, "XML sem #{tag} com atributo Id." unless inf
 
       digest = Base64.strict_encode64(OpenSSL::Digest::SHA1.digest(inf.canonicalize(Nokogiri::XML::XML_C14N_1_0)))
       signature = build_signature(doc, inf['Id'], digest)

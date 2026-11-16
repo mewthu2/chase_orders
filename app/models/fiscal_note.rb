@@ -27,6 +27,8 @@ class FiscalNote < ApplicationRecord
   belongs_to :internal_transfer_shipment, optional: true
   belongs_to :nature, class_name: 'OperationNature', foreign_key: :operation_nature_id, optional: true
   has_one_attached :xml
+  # Evento de cancelamento homologado na SEFAZ (procEventoNFe), gravado pelo Nfe::Canceller.
+  has_one_attached :cancel_xml
 
   enum :status, { rascunho: 0, assinada: 1, autorizada: 2, rejeitada: 3, cancelada: 4, erro: 5 }
   enum :environment, { producao: 1, homologacao: 2 }
@@ -75,6 +77,11 @@ class FiscalNote < ApplicationRecord
     access_key.present? && (erro? || assinada? || rejeitada?)
   end
 
+  # Cancelamento na SEFAZ (evento 110111): só a nota autorizada, com chave e protocolo.
+  def cancelable?
+    autorizada? && access_key.present? && protocol.present?
+  end
+
   def status_label
     STATUS_LABELS[status]
   end
@@ -84,11 +91,11 @@ class FiscalNote < ApplicationRecord
   end
 
   # Por que a nota não pode ser excluída do Honey (nil quando pode). Homologação não tem valor fiscal: sai
-  # sempre. Em produção, a autorizada vale na SEFAZ (precisa de cancelamento, que o Honey ainda não faz), a
+  # sempre. Em produção, a autorizada vale na SEFAZ (precisa ser cancelada lá, pela tela da nota), a
   # sem resposta pode ter sido autorizada e a denegada fica registrada com o número.
   def undeletable_reason
     return nil if homologacao?
-    return 'A nota de produção autorizada vale na SEFAZ: ela precisa ser cancelada, não excluída.' if autorizada? || cancelada?
+    return 'A nota de produção autorizada vale na SEFAZ: cancele na SEFAZ (tela da nota) em vez de excluir.' if autorizada? || cancelada?
     return 'Esta nota ficou sem resposta da SEFAZ e pode ter sido autorizada. Consulte-a antes de excluir.' if erro?
     return 'A SEFAZ denegou esta nota: o número fica registrado e a nota não pode ser excluída.' if denied?
 

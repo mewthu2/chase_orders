@@ -344,6 +344,8 @@ Rails.application.routes.draw do
       get :danfe
       post :transmit
       post :consult
+      post :cancel
+      get :cancel_xml
     end
   end
 

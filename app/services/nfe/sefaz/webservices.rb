@@ -4,17 +4,17 @@ module Nfe
     module Webservices
       class Unsupported < StandardError; end
 
-      SERVICES = %i[autorizacao ret_autorizacao consulta_protocolo].freeze
+      SERVICES = %i[autorizacao ret_autorizacao consulta_protocolo evento].freeze
 
       SP = {
         producao: 'https://nfe.fazenda.sp.gov.br/ws/%s.asmx',
         homologacao: 'https://homologacao.nfe.fazenda.sp.gov.br/ws/%s.asmx',
         paths: { autorizacao: 'nfeautorizacao4', ret_autorizacao: 'nferetautorizacao4',
-                 consulta_protocolo: 'nfeconsultaprotocolo4' }
+                 consulta_protocolo: 'nfeconsultaprotocolo4', evento: 'nferecepcaoevento4' }
       }.freeze
 
       RS_PATHS = { autorizacao: 'NfeAutorizacao/NFeAutorizacao4', ret_autorizacao: 'NfeRetAutorizacao/NFeRetAutorizacao4',
-                   consulta_protocolo: 'NfeConsulta/NfeConsulta4' }.freeze
+                   consulta_protocolo: 'NfeConsulta/NfeConsulta4', evento: 'recepcaoevento/recepcaoevento4' }.freeze
 
       SVRS = {
         producao: 'https://nfe.svrs.rs.gov.br/ws/%s.asmx',
@@ -32,14 +32,14 @@ module Nfe
         producao: 'https://nfe.fazenda.mg.gov.br/nfe2/services/%s',
         homologacao: 'https://hnfe.fazenda.mg.gov.br/nfe2/services/%s',
         paths: { autorizacao: 'NFeAutorizacao4', ret_autorizacao: 'NFeRetAutorizacao4',
-                 consulta_protocolo: 'NFeConsultaProtocolo4' }
+                 consulta_protocolo: 'NFeConsultaProtocolo4', evento: 'NFeRecepcaoEvento4' }
       }.freeze
 
       PR = {
         producao: 'https://nfe.sefa.pr.gov.br/nfe/%s',
         homologacao: 'https://homologacao.nfe.sefa.pr.gov.br/nfe/%s',
         paths: { autorizacao: 'NFeAutorizacao4', ret_autorizacao: 'NFeRetAutorizacao4',
-                 consulta_protocolo: 'NFeConsultaProtocolo4' }
+                 consulta_protocolo: 'NFeConsultaProtocolo4', evento: 'NFeRecepcaoEvento4' }
       }.freeze
 
       SVRS_STATES = %w[AC AL AP CE DF ES PB PI RJ RN RO RR SC SE TO].freeze
