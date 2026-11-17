@@ -228,7 +228,7 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     get edit_stock_transfer_path(transfer)
     assert_select "a[href*='romaneio']", count: 0
     assert_select '#shippingMethodSelect', count: 0
-    assert_match(/SEDEX · Mão Própria/, response.body)
+    assert_match(/SEDEX · Mão própria/, response.body)
   end
 
   test 'an old stock transfer that became a nota fiscal shows its number, without a link to the Tiny' do

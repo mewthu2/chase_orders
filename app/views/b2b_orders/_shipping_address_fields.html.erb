@@ -1,0 +1,39 @@
+<%# Endereço de entrega só deste pedido (atacado e abastecimento). O CEP vem primeiro: ao completar, o
+    Honey busca rua, bairro, cidade e UF (ViaCEP) e o cursor vai para o número. Local: form. %>
+<div id="shippingAddressSection" class="od-address" style="<%= 'display: none;' unless @b2b_order.different_shipping_address? %>">
+  <div class="od-address-head"><i class="fas fa-map-location-dot"></i>Endereço de entrega deste pedido</div>
+  <div class="form-grid">
+    <div class="form-col-3">
+      <label class="field-label" for="shippingZipField">CEP</label>
+      <div class="od-cep">
+        <%= form.text_field :shipping_zip, class: 'field-input', id: 'shippingZipField', placeholder: '00000-000', inputmode: 'numeric', autocomplete: 'postal-code', maxlength: 10 %>
+        <i class="fas fa-magnifying-glass-location" id="shippingZipIcon"></i>
+      </div>
+      <span class="od-cep-status" id="shippingZipStatus">O endereço vem sozinho.</span>
+    </div>
+    <div class="form-col-7">
+      <label class="field-label" for="shippingStreetField">Rua</label>
+      <%= form.text_field :shipping_street, class: 'field-input', id: 'shippingStreetField' %>
+    </div>
+    <div class="form-col-2">
+      <label class="field-label" for="shippingNumberField">Número</label>
+      <%= form.text_field :shipping_number, class: 'field-input', id: 'shippingNumberField' %>
+    </div>
+    <div class="form-col-3">
+      <label class="field-label" for="shippingComplementField">Complemento <span class="text-muted-custom">(opcional)</span></label>
+      <%= form.text_field :shipping_complement, class: 'field-input', id: 'shippingComplementField' %>
+    </div>
+    <div class="form-col-4">
+      <label class="field-label" for="shippingNeighbourhoodField">Bairro</label>
+      <%= form.text_field :shipping_neighbourhood, class: 'field-input', id: 'shippingNeighbourhoodField' %>
+    </div>
+    <div class="form-col-3">
+      <label class="field-label" for="shippingCityField">Cidade</label>
+      <%= form.text_field :shipping_city, class: 'field-input', id: 'shippingCityField' %>
+    </div>
+    <div class="form-col-2">
+      <label class="field-label" for="shippingStateField">UF</label>
+      <%= form.text_field :shipping_state, class: 'field-input', id: 'shippingStateField', maxlength: 2 %>
+    </div>
+  </div>
+</div>

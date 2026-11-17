@@ -10,22 +10,18 @@
   <div class="form-section" id="orderDataSection">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do Pedido</h5></div>
     <div class="form-section-body">
-      <div class="form-grid mb-3">
+      <div class="od-head">
+        <div class="od-head-num"><small>Número</small><b><%= @b2b_order.persisted? ? "##{@b2b_order.id}" : 'Novo' %></b></div>
         <% if @b2b_order.persisted? && @b2b_order.tiny_order? %>
-          <div class="form-col-6">
-            <label class="field-label">Status</label>
+          <div class="od-head-status">
+            <label class="field-label" for="b2b_order_status">Status</label>
             <%= form.select :status, B2bOrder::STATUS_LABELS.map { |key, label| [label, key] }, { selected: @b2b_order.status }, { class: 'field-input' } %>
-            <% if @b2b_order.tiny_reference_id.blank? %>
-              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>O pedido anda no Log02 pela aprovação, criação no Correios, NF-e e rastreio.</span>
-            <% end %>
           </div>
         <% end %>
-        <div class="form-col-6">
-          <label class="field-label">Número</label>
-          <%= text_field_tag :number, (@b2b_order.persisted? ? @b2b_order.id : 'Gerado automaticamente'), class: 'field-input', readonly: true, disabled: true %>
-        </div>
+        <% if @b2b_order.tiny_reference_id.blank? %>
+          <span class="od-head-hint"><i class="fas fa-route"></i>Anda no Log02: aprovação, criação no Correios, NF-e e rastreio.</span>
+        <% end %>
       </div>
-
 
       <% if @b2b_order.sale? %>
       <%# Abas do pedido: os campos ficam todos no formulário (só escondidos), então nada se perde ao trocar de aba. %>
@@ -37,57 +33,25 @@
       </div>
       <div class="od-panel" data-od-panel="cliente">
         <div class="form-grid">
-          <div class="form-col-6" id="clientSection">
-            <label class="field-label">Cliente</label>
+          <div class="form-col-7" id="clientSection">
+            <label class="field-label" for="clientSearchInput">Cliente</label>
             <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente do Honey por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
             <div id="clientSearchResults" class="list-group mt-2"></div>
-            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Só clientes cadastrados no Honey. <%= link_to 'Cadastrar cliente', new_client_path, target: '_blank' %></span>
+            <span class="text-muted-custom d-block mt-1">Só clientes cadastrados no Honey. <%= link_to 'Cadastrar cliente', new_client_path, target: '_blank' %></span>
             <%= form.hidden_field :client_id, id: 'clientIdField' %>
           </div>
-
-          <div class="form-col-6">
-            <label class="field-label">Vendedor</label>
+          <div class="form-col-5">
+            <label class="field-label" for="b2b_order_salesperson_name">Vendedor</label>
             <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
           </div>
+        </div>
+        <label class="od-toggle">
+          <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
+          <span><b>Entregar em outro endereço</b><small>O endereço de entrega do cliente é diferente do de cobrança.</small></span>
+        </label>
+        <%= render 'shipping_address_fields', form: form %>
+      </div>
 
-          <div class="form-col-12 form-check">
-            <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
-            <label class="form-check-label text-main" for="differentShippingAddressCheck">O endereço de entrega do cliente é diferente do endereço de cobrança</label>
-          </div>
-        </div>
-      </div>
-      <div class="od-panel" data-od-panel="cliente">
-        <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
-          <div class="form-col-6">
-            <label class="field-label">Rua</label>
-            <%= form.text_field :shipping_street, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Número</label>
-            <%= form.text_field :shipping_number, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Complemento</label>
-            <%= form.text_field :shipping_complement, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Bairro</label>
-            <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Cidade</label>
-            <%= form.text_field :shipping_city, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">UF</label>
-            <%= form.text_field :shipping_state, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">CEP</label>
-            <%= form.text_field :shipping_zip, class: 'field-input' %>
-          </div>
-        </div>
-      </div>
       <div class="od-panel" data-od-panel="envio" hidden>
         <div class="form-grid">
           <% mode = @b2b_order.pickup? ? 'pickup' : (@b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '')) %>
@@ -166,87 +130,70 @@
       <div class="od-panel" data-od-panel="destino">
         <div class="form-grid">
           <div class="form-col-6" id="transferLocationSection">
-            <label class="field-label">Local de Destino</label>
+            <label class="field-label" for="transferLocationSelect">Local de destino</label>
             <% locations = TransferLocation.active.order(:name).to_a %>
             <% location_addresses = locations.to_h { |l| [l.id, [[l.street, l.number].compact_blank.join(', '), l.complement, l.neighbourhood, "#{l.city}/#{l.state}", ("CEP #{l.zip}" if l.zip.present?)].compact_blank.join(' · ')] } %>
             <%= form.collection_select :transfer_location_id, locations, :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'transferLocationSelect', data: { addresses: location_addresses.to_json } } %>
-            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência.</span>
-          </div>
-          <div class="form-col-6" id="stockAddressChoice">
-            <label class="field-label">Endereço de entrega</label>
-            <div class="d-flex gap-3 flex-wrap">
-              <label class="form-check"><%= form.radio_button :different_shipping_address, false, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-store me-1"></i>Endereço cadastrado</span></label>
-              <label class="form-check"><%= form.radio_button :different_shipping_address, true, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-map-location-dot me-1"></i>Outro endereço</span></label>
-            </div>
-            <span class="text-muted-custom d-block mt-1" id="stockRegisteredAddress"></span>
-            <span class="text-muted-custom d-block mt-1" id="stockNewAddressHint" style="<%= 'display: none;' unless @b2b_order.different_shipping_address? %>"><i class="fas fa-info-circle me-1"></i>Vale só para este pedido: o cadastro do local não muda.</span>
           </div>
         </div>
-      </div>
-      <div class="od-panel" data-od-panel="destino">
-        <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
-          <div class="form-col-6">
-            <label class="field-label">Rua</label>
-            <%= form.text_field :shipping_street, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Número</label>
-            <%= form.text_field :shipping_number, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Complemento</label>
-            <%= form.text_field :shipping_complement, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Bairro</label>
-            <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">Cidade</label>
-            <%= form.text_field :shipping_city, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">UF</label>
-            <%= form.text_field :shipping_state, class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label">CEP</label>
-            <%= form.text_field :shipping_zip, class: 'field-input' %>
+        <div class="od-block" id="stockAddressChoice">
+          <span class="field-label">Endereço de entrega</span>
+          <div class="pg-radios od-choices">
+            <label class="pg-radio od-choice">
+              <%= form.radio_button :different_shipping_address, false, class: 'stock-address-mode' %>
+              <b><i class="fas fa-store"></i>Endereço cadastrado</b>
+              <small id="stockRegisteredAddress">Selecione o local de destino para ver o endereço.</small>
+            </label>
+            <label class="pg-radio od-choice">
+              <%= form.radio_button :different_shipping_address, true, class: 'stock-address-mode' %>
+              <b><i class="fas fa-map-location-dot"></i>Outro endereço</b>
+              <small>Só neste pedido: o cadastro do local não muda.</small>
+            </label>
           </div>
         </div>
+        <%= render 'shipping_address_fields', form: form %>
+        <div class="pg-fnote od-note"><i class="fas fa-circle-info"></i><span>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência para a loja.</span></div>
       </div>
       <div class="od-panel" data-od-panel="entrega" hidden>
-        <div class="form-grid">
-          <% by_carrier = @b2b_order.carrier_id.present? %>
-          <div class="form-col-6" id="stockDeliverySection">
-            <label class="field-label">Entrega</label>
-            <div class="d-flex gap-3 flex-wrap">
-              <label class="form-check"><input type="radio" name="stock_delivery" value="hand" class="form-check-input" <%= 'checked' unless by_carrier %>><span><i class="fas fa-hand-holding me-1"></i>SEDEX · Mão Própria</span></label>
-              <label class="form-check"><input type="radio" name="stock_delivery" value="carrier" class="form-check-input" <%= 'checked' if by_carrier %>><span><i class="fas fa-truck-moving me-1"></i>Transportadora</span></label>
-            </div>
-            <span class="text-muted-custom d-block mt-1" id="stockDeliveryHandHint" style="<%= 'display: none;' if by_carrier %>">SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
-            <div id="stockCarrierSection" class="mt-2" style="<%= 'display: none;' unless by_carrier %>">
+        <% by_carrier = @b2b_order.carrier_id.present? %>
+        <div class="od-block" id="stockDeliverySection">
+          <span class="field-label">Como vai</span>
+          <div class="pg-radios od-choices">
+            <label class="pg-radio od-choice">
+              <input type="radio" name="stock_delivery" value="hand" <%= 'checked' unless by_carrier %>>
+              <b><i class="fas fa-hand-holding"></i>SEDEX · Mão própria</b>
+              <small id="stockDeliveryHandHint">Serviço adicional 002: só os responsáveis abaixo podem receber.</small>
+            </label>
+            <label class="pg-radio od-choice">
+              <input type="radio" name="stock_delivery" value="carrier" <%= 'checked' if by_carrier %>>
+              <b><i class="fas fa-truck-moving"></i>Transportadora</b>
+              <small>Entra no Correios como 74926, com o CNPJ dela na nota.</small>
+            </label>
+          </div>
+          <div id="stockCarrierSection" class="form-grid mt-3" style="<%= 'display: none;' unless by_carrier %>">
+            <div class="form-col-6">
+              <label class="field-label" for="stockCarrierSelect">Transportadora</label>
               <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione a transportadora...' }, { class: 'field-input', id: 'stockCarrierSelect', required: by_carrier, disabled: !by_carrier } %>
-              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Nos Correios B2B entra como transportadora (74926), com o CNPJ dela na nota. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+              <span class="text-muted-custom d-block mt-1"><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
             </div>
-            <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
-            <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
           </div>
-          <div class="form-col-6">
-            <label class="field-label">Responsável pelo Recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></label>
-            <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
-            <div id="receiverNamesList">
-              <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
-              <% receiver_names.each_with_index do |name, i| %>
-              <div class="d-flex gap-2 mb-2 receiver-name-row">
-                <input type="text" class="field-input receiver-name-input" value="<%= name %>" placeholder="Nome de quem vai receber na loja" maxlength="60" <%= 'required' if i.zero? && @b2b_order.tiny_reference_id.blank? %>>
-                <button type="button" class="btn-back receiver-name-remove" title="Remover"><i class="fas fa-times"></i></button>
-              </div>
-              <% end %>
+          <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
+          <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
+        </div>
+        <div class="od-block">
+          <span class="field-label">Responsáveis pelo recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></span>
+          <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
+          <div id="receiverNamesList" class="od-receivers">
+            <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
+            <% receiver_names.each_with_index do |name, i| %>
+            <div class="d-flex gap-2 receiver-name-row">
+              <input type="text" class="field-input receiver-name-input" value="<%= name %>" placeholder="Nome de quem vai receber na loja" maxlength="60" <%= 'required' if i.zero? && @b2b_order.tiny_reference_id.blank? %>>
+              <button type="button" class="btn-back receiver-name-remove" title="Remover"><i class="fas fa-times"></i></button>
             </div>
-            <button type="button" class="btn-back" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
-            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão como destinatário nos Correios (separados por vírgula): com mão própria, só essas pessoas podem receber.</span>
+            <% end %>
           </div>
+          <button type="button" class="btn-back btn-sm mt-2" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
+          <span class="text-muted-custom d-block mt-2">Vão como destinatário nos Correios: com mão própria, só essas pessoas podem receber.</span>
         </div>
       </div>
 
@@ -630,23 +577,62 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Abastecimento: entrega no endereço cadastrado do local ou num endereço só deste pedido.
   var locationSelect = document.getElementById('transferLocationSelect');
+  var addressFields = addrSection ? addrSection.querySelectorAll('input') : [];
+  var requireAddress = function (on) {
+    addressFields.forEach(function (el) { el.required = on && el.id !== 'shippingComplementField'; });
+  };
+  if (addrCheck) {
+    addrCheck.addEventListener('change', function () { requireAddress(addrCheck.checked); });
+    requireAddress(addrCheck.checked);
+  }
   if (locationSelect && addrSection) {
     var addresses = JSON.parse(locationSelect.dataset.addresses || '{}');
-    var addressFields = addrSection.querySelectorAll('input');
     var applyStockAddress = function () {
       var checked = document.querySelector('.stock-address-mode:checked');
-      var custom = checked && checked.value === 'true';
-      var registered = addresses[locationSelect.value];
+      var custom = !!checked && checked.value === 'true';
       addrSection.style.display = custom ? '' : 'none';
-      addressFields.forEach(function (el) { el.required = custom && el.name.indexOf('complement') === -1; });
-      document.getElementById('stockNewAddressHint').style.display = custom ? '' : 'none';
-      var info = document.getElementById('stockRegisteredAddress');
-      info.style.display = custom ? 'none' : '';
-      info.textContent = registered ? registered : 'Selecione o local de destino para ver o endereço cadastrado.';
+      requireAddress(custom);
+      document.getElementById('stockRegisteredAddress').textContent =
+        addresses[locationSelect.value] || 'Selecione o local de destino para ver o endereço.';
     };
     locationSelect.addEventListener('change', applyStockAddress);
     document.querySelectorAll('.stock-address-mode').forEach(function (el) { el.addEventListener('change', applyStockAddress); });
     applyStockAddress();
+  }
+
+  // CEP primeiro: com 8 dígitos busca no ViaCEP e preenche rua, bairro, cidade e UF; o cursor vai para o número.
+  var zipField = document.getElementById('shippingZipField');
+  if (zipField) {
+    var zipStatus = document.getElementById('shippingZipStatus');
+    var zipIcon = document.getElementById('shippingZipIcon');
+    var lastZip = null;
+    var setZip = function (text, tone, icon) {
+      zipStatus.textContent = text;
+      zipStatus.className = 'od-cep-status' + (tone ? ' is-' + tone : '');
+      zipIcon.className = 'fas ' + icon + (tone ? ' is-' + tone : '');
+    };
+    zipField.addEventListener('input', function () {
+      var digits = zipField.value.replace(/\D/g, '').slice(0, 8);
+      zipField.value = digits.length > 5 ? digits.slice(0, 5) + '-' + digits.slice(5) : digits;
+      if (digits.length !== 8) { lastZip = null; setZip('O endereço vem sozinho.', null, 'fa-magnifying-glass-location'); return; }
+      if (digits === lastZip) return;
+      lastZip = digits;
+      setZip('Buscando o endereço...', 'wait', 'fa-spinner fa-spin');
+      fetch('https://viacep.com.br/ws/' + digits + '/json/')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (digits !== lastZip) return;
+          if (data.erro) { setZip('CEP não encontrado: preencha o endereço à mão.', 'err', 'fa-triangle-exclamation'); return; }
+          var put = function (id, value) { if (value) document.getElementById(id).value = value; };
+          put('shippingStreetField', data.logradouro);
+          put('shippingNeighbourhoodField', data.bairro);
+          put('shippingCityField', data.localidade);
+          put('shippingStateField', data.uf);
+          setZip('Endereço encontrado. Confira e preencha o número.', 'ok', 'fa-circle-check');
+          document.getElementById('shippingNumberField').focus();
+        })
+        .catch(function () { setZip('Não deu para buscar o CEP agora: preencha o endereço à mão.', 'err', 'fa-triangle-exclamation'); });
+    });
   }
 
   // Atacado: SEDEX (Correios Log) ou transportadora do cadastro. Sem Tiny: a escolha vai direto no pedido.
