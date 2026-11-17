@@ -249,6 +249,7 @@
           <% end %>
         </tbody>
       </table>
+      <div id="removedItemsFields" hidden></div>
       <div id="stockEnforcementNotice" class="stock-enforcement-notice d-none" role="status"></div>
       <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque do Log02 − itens reservados (pedidos do Honey e da fila antiga do Tiny). Não dá para adicionar item sem disponível nem pedir acima dele.</span>
     </div>
@@ -645,7 +646,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('itemsTableBody').addEventListener('click', function (e) {
     var btn = e.target.closest('.remove-item-row');
-    if (btn) btn.closest('tr').remove();
+    if (!btn) return;
+    var row = btn.closest('tr');
+    // Item já salvo: só sumir da tabela não apaga no banco (o nested attributes ignora o que não vem).
+    // Leva o id com _destroy=1 para fora da tabela, assim o resumo não conta a linha e o Salvar exclui.
+    var idInput = row.querySelector('input[name$="[id]"]');
+    if (idInput) {
+      var destroyInput = document.createElement('input');
+      destroyInput.type = 'hidden';
+      destroyInput.name = idInput.name.replace(/\[id\]$/, '[_destroy]');
+      destroyInput.value = '1';
+      idInput.type = 'hidden';
+      var removed = document.getElementById('removedItemsFields');
+      removed.appendChild(idInput);
+      removed.appendChild(destroyInput);
+    }
+    row.remove();
   });
 
   // Fila sequencial: consulta o estoque um item de cada vez, com uma pequena

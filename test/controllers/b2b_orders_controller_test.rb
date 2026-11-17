@@ -233,6 +233,32 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_not_requested :post, 'https://api.tiny.com.br/api2/pedido.alterar.situacao.php'
   end
 
+  test 'update deletes an item removed from the table (sent with _destroy)' do
+    sign_in @admin
+    order = build_order(tiny_reference_id: '111')
+    kept = order.b2b_order_items.first
+    removed = order.b2b_order_items.create!(sku: 'SKU2', quantity: 1, price: 1)
+
+    patch b2b_order_path(order), params: { b2b_order: { b2b_order_items_attributes: {
+      '0' => { id: kept.id, sku: 'SKU1', quantity: 1, price: 1 },
+      '1' => { id: removed.id, _destroy: '1' }
+    } } }
+
+    assert_equal ['SKU1'], order.reload.b2b_order_items.map(&:sku)
+  end
+
+  test 'update does not delete the last item of the order' do
+    sign_in @admin
+    order = build_order(tiny_reference_id: '111')
+
+    patch b2b_order_path(order), params: { b2b_order: { b2b_order_items_attributes: {
+      '0' => { id: order.b2b_order_items.first.id, _destroy: '1' }
+    } } }
+
+    assert_response :unprocessable_entity
+    assert_equal 1, order.reload.b2b_order_items.count
+  end
+
   test 'search_product does not query Correios stock (only filled in once the item is added to the table)' do
     sign_in @admin
     Product.create!(sku: 'SKU-COR', shopify_product_name: 'Produto Correios', image_url: 'https://img.example.com/produto.png')

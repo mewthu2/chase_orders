@@ -248,7 +248,7 @@ class B2bOrder < ApplicationRecord
   end
 
   def must_have_items
-    errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.empty?
+    errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.reject(&:marked_for_destruction?).empty?
   end
 
   def payment_terms_fit
