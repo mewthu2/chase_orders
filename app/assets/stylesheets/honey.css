@@ -1836,6 +1836,14 @@ a.pg-fn-step:hover .go { opacity: 1; transform: none; }
   .od-head-hint { margin-left: 0; }
 }
 
+.hb-err { display: inline-flex; align-items: flex-start; gap: 7px; max-width: 360px; font-size: 12.5px; line-height: 1.4; color: var(--red); }
+.hb-err i { margin-top: 2px; flex: none; }
+
+.it-fiscal-history { margin-top: 14px; padding: 10px 14px; border-radius: var(--r-sm); border: 1px dashed var(--border-2); font-size: 13px; color: var(--text-2); }
+.it-fiscal-history summary { cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-3); }
+.it-fiscal-history ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.it-fiscal-history li { display: flex; gap: 10px; flex-wrap: wrap; }
+
 /* ----- responsivo ----- */
 @media (max-width: 1360px) {
   .pg-run { grid-template-columns: minmax(0, 1fr) auto; }

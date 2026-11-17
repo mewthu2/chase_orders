@@ -65,4 +65,16 @@ class B2bOrderNoteDetailsTest < ActionDispatch::IntegrationTest
     save_details(nf_additional_info: 'novo texto')
     assert_equal 'novo texto', @order.reload.nf_additional_info
   end
+
+  test 'the tab shows the note that is valid, not a canceled one created later; the canceled ones go to the history' do
+    valid = FiscalNote.create!(company: @company, b2b_order: @order, number: 15_790, series: 1, status: :autorizada, environment: :producao)
+    canceled = FiscalNote.create!(company: @company, b2b_order: @order, number: 15_791, series: 1, status: :cancelada, environment: :producao,
+                                  created_at: valid.created_at)
+
+    get edit_b2c_transfer_path(@order, tab: 'nota')
+
+    assert_select '.it-fiscal-slots', text: /15790/
+    assert_select '.it-fiscal-slots', text: /15791/, count: 0
+    assert_select '.it-fiscal-history a[href=?]', fiscal_note_path(canceled), text: /15791/
+  end
 end

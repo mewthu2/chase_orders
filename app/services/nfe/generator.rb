@@ -26,7 +26,12 @@ module Nfe
       raise Error, "Dados fiscais ausentes: #{missing.to_sentence}." if missing.any?
 
       ActiveRecord::Base.transaction do
-        @company.with_lock { create_note(recipient, items) }
+        # A checagem de nota ativa se repete dentro da trava: dois cliques (ou o clique e a rotina do Log02)
+        # ao mesmo tempo geravam duas notas para o mesmo pedido.
+        @company.with_lock do
+          ensure_no_active_note!
+          create_note(recipient, items)
+        end
       end
     rescue XmlBuilder::Error, Signer::Error, Certificate::Error, ActiveRecord::RecordInvalid => e
       raise Error, e.message
@@ -44,12 +49,18 @@ module Nfe
 
     def ensure_can_issue!
       raise Error, 'A empresa não está ativa ou não tem certificado digital válido.' unless @company.ready_to_issue?
-      env = @environment == 'homologacao' ? 'homologação' : 'produção'
-      raise Error, "Já existe nota fiscal de #{env} ativa para este pedido." if FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: @environment).exists?
+      ensure_no_active_note!
       raise Error, 'A última nota deste pedido ficou sem resposta da SEFAZ. Consulte-a antes de emitir outra.' if notes.erro.exists?
       unless @nature&.active? && @company.available_natures.exists?(@nature.id)
         raise Error, 'Escolha uma natureza de operação ativa vinculada a esta empresa.'
       end
+    end
+
+    def ensure_no_active_note!
+      return unless FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: @environment).exists?
+
+      env = @environment == 'homologacao' ? 'homologação' : 'produção'
+      raise Error, "Já existe nota fiscal de #{env} ativa para este pedido."
     end
 
     def sale?

@@ -160,4 +160,14 @@ class FiscalNote < ApplicationRecord
   def environment_label
     producao? ? 'Produção' : 'Homologação'
   end
+
+  # Última nota (não cancelada) de cada pedido B2B, preferindo a de produção: { b2b_order_id => { environment:, status:, number: } }.
+  # order_ids pode ser uma lista ou um select de ids.
+  def self.latest_by_order(order_ids)
+    rows = where(b2b_order_id: order_ids).where.not(status: :cancelada).order(:id).pluck(:b2b_order_id, :environment, :status, :number)
+    rows.group_by(&:first).transform_values do |list|
+      _, env, status, number = list.select { |r| r[1] == 'producao' }.last || list.last
+      { environment: env, status: status, number: number }
+    end
+  end
 end

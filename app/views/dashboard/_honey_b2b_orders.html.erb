@@ -7,20 +7,33 @@
 <% orders = B2bOrder.honey_flow.includes(:client, :transfer_location, :b2b_order_items).where('b2b_orders.created_at > ?', 6.months.ago).to_a
                     .select { |o| stages.include?(o.log_stage) } %>
 <% last_attempts = Attempt.where(b2b_order_id: orders.map(&:id), kinds: Attempt::HONEY_KINDS).order(:id).group_by(&:b2b_order_id).transform_values(&:last) %>
+<% notes = FiscalNote.latest_by_order(orders.map(&:id)) %>
+<%# Etapa de cada tipo de tentativa: o erro só aparece na linha enquanto o pedido está parado naquela etapa. %>
+<% attempt_stage = { 'create_correios_order_honey' => 'creation', 'send_xml_honey' => 'invoice', 'get_tracking_honey' => 'tracking' } %>
 <% honey_table = HoneyTable.new(params, id: 'honey', unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dt, dir: 1 },
      rows: orders.map { |o|
        last = last_attempts[o.id]
-       { id: o.id, record: o, n: "##{o.id}", tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
+       failed = last && !last.success? && attempt_stage[last.kinds] == o.log_stage
+       { id: o.id, record: o, n: "##{o.id}", pn: b2b_pn_cell(o, notes[o.id]), tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
          dt: o.created_at, total: o.total.to_f, st: o.log_stage, correios: o.correios_order_id.presence&.to_s || '—', rastreio: o.tracking_code.presence || '—',
-         ultima: last ? "#{last.success? ? 'OK' : 'Falhou'}: #{(last.error.presence || last.message.presence || '—').to_s.truncate(160)}" : '—' }
+         ultima: last ? "#{last.success? ? 'OK' : 'Falhou'}: #{(last.error.presence || last.message.presence || '—').to_s.truncate(160)}" : '—',
+         erro: (if failed
+                  content_tag(:span, safe_join([content_tag(:i, '', class: 'fas fa-triangle-exclamation'),
+                                                content_tag(:span, (last.error.presence || last.message.presence || 'Falhou sem mensagem').to_s.truncate(140))]),
+                              class: 'hb-err', data: { tip: "Última tentativa: #{l(last.created_at, format: '%d/%m %H:%M')}" })
+                else
+                  content_tag(:span, '—', class: 'pg-dash')
+                end) }
      },
      cols: [
-       { k: :n, label: 'Pedido', t: :mono, main: true, sub: :tipo },
+       { k: :pn, label: 'Pedido', t: :html, nodetail: true, sub: :tipo },
+       { k: :n, label: 'Número', t: :mono, main: true, hide: true },
        { k: :tipo, label: 'Tipo', hide: true },
        { k: :destino, label: 'Destino', cls: 'customer-name-cell' },
        { k: :dt, label: 'Criado', t: :dt, sort: true },
        { k: :total, label: 'Total', t: :money },
        { k: :st, label: 'Etapa', t: :status, map: stage_map },
+       { k: :erro, label: 'Erro da última tentativa', t: :html, nodetail: true },
        { k: :correios, label: 'Nº no Correios', t: :mono, hide: true },
        { k: :rastreio, label: 'Rastreio', t: :mono, hide: true },
        { k: :ultima, label: 'Última tentativa', hide: true }

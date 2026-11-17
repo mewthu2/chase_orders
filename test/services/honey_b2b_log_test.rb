@@ -200,4 +200,19 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert o.enviado?
     assert_equal 'shipped', o.log_stage
   end
+
+  test 'the XML sent to Correios carries its order number in xPed of every product and of compra, keeping the signature' do
+    xml = '<?xml version="1.0" encoding="UTF-8"?><nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><NFe><infNFe>' \
+          '<det nItem="1"><prod><cProd>A</cProd><indTot>1</indTot></prod></det>' \
+          '<det nItem="2"><prod><cProd>B</cProd><indTot>1</indTot><xPed>999</xPed></prod></det>' \
+          '<compra><xCont>x</xCont></compra></infNFe><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignatureValue>abc</SignatureValue></Signature></NFe></nfeProc>'
+
+    out = HoneyB2bLog.with_correios_order_number(xml, 25_370_695)
+
+    assert out.start_with?('<?xml version="1.0" encoding="UTF-8"?><nfeProc')
+    assert_equal 2, out.scan('<indTot>1</indTot><xPed>25370695</xPed></prod>').size
+    assert_includes out, '<compra><xCont>x</xCont><xPed>25370695</xPed></compra>'
+    assert_includes out, '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignatureValue>abc</SignatureValue></Signature>'
+    assert_no_match(/xmlns:/, out)
+  end
 end

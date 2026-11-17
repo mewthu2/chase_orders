@@ -226,12 +226,7 @@ class B2bOrdersController < ApplicationController
 
   # Situação da nota de cada pedido para a letra N da lista: a última de produção ou, sem ela, a de homologação.
   def latest_notes_by_order
-    rows = FiscalNote.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).where.not(status: :cancelada)
-                     .order(:id).pluck(:b2b_order_id, :environment, :status, :number)
-    rows.group_by(&:first).transform_values do |list|
-      _, env, status, number = list.select { |r| r[1] == 'producao' }.last || list.last
-      { environment: env, status: status, number: number }
-    end
+    FiscalNote.latest_by_order(B2bOrder.where(kind: order_kind).select(:id))
   end
 
   # Busca "inteligente": cada palavra da query precisa aparecer em algum lugar

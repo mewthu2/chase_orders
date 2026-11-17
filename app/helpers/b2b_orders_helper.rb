@@ -1,10 +1,30 @@
 module B2bOrdersHelper
   # Tela do pedido no Honey, conforme o tipo (atacado, abastecimento ou transferência B2C).
-  def b2b_order_edit_path(order)
-    if order.sale? then edit_b2b_order_path(order)
-    elsif order.stock_transfer? then edit_stock_transfer_path(order)
-    else edit_b2c_transfer_path(order)
+  def b2b_order_edit_path(order, **opts)
+    if order.sale? then edit_b2b_order_path(order, **opts)
+    elsif order.stock_transfer? then edit_stock_transfer_path(order, **opts)
+    else edit_b2c_transfer_path(order, **opts)
     end
+  end
+
+  B2B_NOTE_TONES = { 'autorizada' => ['is-ok', 'autorizada'], 'rejeitada' => ['is-err', 'rejeitada'], 'erro' => ['is-wait', 'sem resposta da SEFAZ'],
+                     'assinada' => ['is-wait', 'assinada, falta enviar à SEFAZ'], 'rascunho' => ['is-wait', 'gerada, falta emitir'] }.freeze
+
+  # Número do pedido com o P (abre o pedido) e o N (abre a aba da nota, na cor da situação dela).
+  # note: { environment:, status:, number: } de FiscalNote.latest_by_order, ou nil.
+  def b2b_pn_cell(order, note)
+    tone, label = note ? B2B_NOTE_TONES.fetch(note[:status], ['is-wait', note[:status]]) : ['is-none', nil]
+    note_tip = if note
+                 "Nota fiscal: NF-e nº #{note[:number]}#{' (homologação)' if note[:environment] == 'homologacao'}, #{label}." +
+                   (note[:status] == 'autorizada' ? '' : ' Dá para corrigir e emitir de novo.')
+               else
+                 'Nota fiscal: ainda não emitida. Clique para emitir.'
+               end
+    safe_join([content_tag(:span, "##{order.id}", class: 'num'),
+               content_tag(:span, safe_join([
+                 link_to('P', b2b_order_edit_path(order), class: 'pg-pn', data: { tip: 'Pedido: abrir e editar' }, 'aria-label': 'Abrir o pedido'),
+                 link_to('N', b2b_order_edit_path(order, tab: 'nota'), class: "pg-pn #{tone}", data: { tip: note_tip }, 'aria-label': 'Abrir a nota fiscal')
+               ]), class: 'pg-pn-group')])
   end
 
   # Pedidos do Honey das linhas do Log02, pelo id do Tiny 2 (os que foram ao Tiny guardam o id em

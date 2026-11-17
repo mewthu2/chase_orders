@@ -67,6 +67,27 @@ class HoneyB2bLog
     end
   end
 
+  # O Correios só aceita o XML com o número do pedido dele em xPed, em cada produto (depois de indTot) e em
+  # compra, se houver ("tag xPed não localizada no xml da NFe"). Como no fluxo antigo do Tiny, o número entra
+  # só na cópia enviada ao Correios; o XML autorizado guardado na nota não muda.
+  def self.with_correios_order_number(xml, number)
+    doc = Nokogiri::XML(xml)
+    ns = doc.root&.namespace
+    put = lambda do |parent, after|
+      node = parent.at_xpath('./*[local-name()="xPed"]')
+      unless node
+        node = Nokogiri::XML::Node.new('xPed', doc)
+        node.namespace = ns if ns
+        anchor = after && parent.at_xpath("./*[local-name()=\"#{after}\"]")
+        anchor ? anchor.add_next_sibling(node) : parent.add_child(node)
+      end
+      node.content = number.to_s
+    end
+    doc.xpath('//*[local-name()="det"]/*[local-name()="prod"]').each { |prod| put.call(prod, 'indTot') }
+    doc.xpath('//*[local-name()="compra"]').each { |compra| put.call(compra, nil) }
+    doc.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML).sub(/\A<\?xml[^>]*\?>\s*/, %(<?xml version="1.0" encoding="UTF-8"?>))
+  end
+
   def self.create_in_correios(order) = new(order).create_in_correios
   def self.send_xml(order) = new(order).send_xml
   def self.fetch_tracking(order) = new(order).fetch_tracking
@@ -100,7 +121,8 @@ class HoneyB2bLog
       return attempt
     end
 
-    attempt.update!(xml_nota: note.xml.download.delete("\n"), id_nota_fiscal: note.number, is_transportadora: carrier_service?)
+    xml = self.class.with_correios_order_number(note.xml.download, @order.correios_order_id)
+    attempt.update!(xml_nota: xml.delete("\n"), id_nota_fiscal: note.number, is_transportadora: carrier_service?)
     Correios::Invoices.send_xml_to_correios(attempt)
     attempt.reload
     if xml_accepted?(attempt)
