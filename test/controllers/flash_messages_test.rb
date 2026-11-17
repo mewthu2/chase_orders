@@ -8,20 +8,20 @@ class FlashMessagesTest < ActionDispatch::IntegrationTest
     sign_in @admin
   end
 
-  def cancelled_order
-    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, status: :cancelado)
+  def order_in_correios
+    order = B2bOrder.new(kind: :sale, user: @admin, client: @client, correios_order_id: 25_000_001)
     order.b2b_order_items.build(sku: 'SKU1', quantity: 1, price: 1)
     order.save!
     order
   end
 
   test 'flash messages are rendered by the layout on any page, exactly once' do
-    post transmit_b2b_order_path(cancelled_order)
+    post ignore_honey_order_b2b_dashboard_index_path(id: order_in_correios.id)
     follow_redirect!
 
     assert_response :success
     assert_select '.flash-messages-container .alert', count: 1
-    assert_select '.flash-messages-container .alert', text: /não pode ser reenviado/
+    assert_select '.flash-messages-container .alert', text: /já está no Correios/
   end
 
   test 'the flash container is anchored to the bottom right corner' do

@@ -26,7 +26,7 @@ class B2bOrder < ApplicationRecord
   enum :freight_paid_by, { shipper: 0, recipient: 1 }
 
   # Serviços de frete do Correios Log (forma_frete no Tiny). O fluxo dos Correios do Honey
-  # (CreateCorreiosLogOrdersJob2) só aceita exatamente estes nomes.
+  # (HoneyB2bLog) só aceita exatamente estes nomes.
   FREIGHT_SERVICES = ['SEDEX CORREIOS LOG+', 'PAC CORREIOS LOG+', 'SEDEX HOJE LOG+'].freeze
   # Pedido do atacado: Correios Log só por SEDEX (ou transportadora, que não usa serviço).
   SALE_FREIGHT_SERVICES = ['SEDEX CORREIOS LOG+'].freeze
@@ -44,13 +44,6 @@ class B2bOrder < ApplicationRecord
     'faturado' => 'Faturado', 'pronto_para_envio' => 'Pronto para Envio', 'enviado' => 'Enviado',
     'nao_entregue' => 'Não Entregue', 'dados_incompletos' => 'Dados Incompletos',
     'cancelado' => 'Cancelado'
-  }.freeze
-
-  TINY_SITUATION_MAP = {
-    'Aberto' => 'aberto', 'Aprovado' => 'aprovado', 'Preparando Envio' => 'preparando_envio',
-    'Faturado' => 'faturado', 'Pronto para Envio' => 'pronto_para_envio', 'Enviado' => 'enviado',
-    'Não Entregue' => 'nao_entregue', 'Cancelado' => 'cancelado',
-    'Dados Incompletos' => 'dados_incompletos'
   }.freeze
 
   validates :freight_service, inclusion: { in: FREIGHT_SERVICES }, allow_blank: true
@@ -115,11 +108,6 @@ class B2bOrder < ApplicationRecord
     return false if honey_flow? && correios_order_id.present?
 
     (tiny_reference_id.blank? || tiny_order?) && !FiscalNote.active_for?(self)
-  end
-
-  # O envio ao Tiny saiu: os pedidos agora seguem no Log02 pelo Honey.
-  def resendable?
-    false
   end
 
   def honey_flow?

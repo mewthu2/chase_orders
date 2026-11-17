@@ -16,7 +16,6 @@ class DashboardCustomerNameTest < ActionDispatch::IntegrationTest
 
   {
     invoice_emition: [:create_correios_order, :invoice_emition_dashboard_index_path, nil],
-    invoice_emition_b2b: [:create_correios_order_tiny2, :invoice_emition_b2b_dashboard_index_path, nil],
     send_xml: [:create_correios_order, :send_xml_dashboard_index_path, :emission_invoice],
     send_xml_b2b: [:create_correios_order_tiny2, :send_xml_b2b_dashboard_index_path, :emission_invoice_tiny2]
   }.each do |screen, (kind, path, invoiced_kind)|

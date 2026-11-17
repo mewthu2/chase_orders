@@ -1,9 +1,33 @@
 module B2bOrdersHelper
-  def tiny_order_url(order)
-    return nil if order.tiny_reference_id.blank?
+  # Tela do pedido no Honey, conforme o tipo (atacado, abastecimento ou transferência B2C).
+  def b2b_order_edit_path(order)
+    if order.sale? then edit_b2b_order_path(order)
+    elsif order.stock_transfer? then edit_stock_transfer_path(order)
+    else edit_b2c_transfer_path(order)
+    end
+  end
 
-    base = order.tiny_order? ? ENV.fetch('TINY_ORDER_URL', 'https://erp.tiny.com.br/vendas#edit/') : ENV.fetch('TINY_NOTA_FISCAL_URL', 'https://erp.tiny.com.br/notas_fiscais#edit/')
-    "#{base}#{order.tiny_reference_id}"
+  # Pedidos do Honey das linhas do Log02, pelo id do Tiny 2 (os que foram ao Tiny guardam o id em
+  # tiny_reference_id). Devolve { 'id do Tiny' => B2bOrder }.
+  def b2b_honey_orders_by_tiny(tiny_ids)
+    ids = Array(tiny_ids).map(&:to_s).reject(&:blank?).uniq
+    return {} if ids.empty?
+
+    B2bOrder.where(tiny_reference_id: ids).index_by { |o| o.tiny_reference_id.to_s }
+  end
+
+  # Botão da linha nas telas do Log02: o B2B não está mais no Tiny, então abre o pedido no Honey.
+  # Pedido antigo feito direto no Tiny 2 não tem pedido no Honey: o botão aparece apagado e explica.
+  def b2b_honey_order_action(order)
+    if order
+      tip = "Ver o pedido ##{order.id} no Honey"
+      link_to(content_tag(:i, '', class: 'fas fa-eye'), b2b_order_edit_path(order), class: 'action-btn', target: '_blank', rel: 'noopener',
+                                                                                    data: { tip: tip }, 'aria-label': tip)
+    else
+      tip = 'Pedido antigo, feito direto no Tiny 2: não existe no Honey'
+      content_tag(:span, content_tag(:i, '', class: 'fas fa-eye-slash'), class: 'action-btn', style: 'opacity:.4;cursor:default',
+                                                                          data: { tip: tip }, 'aria-label': tip)
+    end
   end
 
   # Textos de cada tela de pedido B2B (atacado, abastecimento das lojas e transferência B2C).
@@ -23,15 +47,9 @@ module B2bOrdersHelper
     B2B_SCREEN_COPY.fetch(kind.to_s)
   end
 
-  # Pedido já no Tiny é cancelado lá antes de sair do Honey (a API do Tiny não exclui pedido).
+  # O Tiny 2 não é mais usado: excluir só tira o pedido do Honey.
   def b2b_delete_confirm(order)
-    if order.tiny_reference_id.present?
-      number = order.tiny_reference_number.presence || order.tiny_reference_id
-      "Excluir o pedido ##{order.id}? Ele será CANCELADO no Tiny (nº #{number}) e removido do Honey com os itens. " \
-        'O cancelado continua no Tiny e pode ser excluído por lá.'
-    else
-      "Excluir o pedido ##{order.id}? Ele não foi enviado ao Tiny. A exclusão remove o pedido e os itens do Honey."
-    end
+    "Excluir o pedido ##{order.id}? A exclusão remove o pedido e os itens do Honey."
   end
 
   B2B_ORDER_TYPE_ICONS = { store_supply: 'dolly', b2c_transfer: 'random', sale: 'handshake' }.freeze

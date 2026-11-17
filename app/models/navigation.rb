@@ -86,7 +86,7 @@ module Navigation
       ]),
 
       area('logistica', [
-        group('log02', 'Log02', 'fas fa-truck', 'Envios do atacado: da aprovação ao rastreio (etapas 1 a 5).', aka: 'Correios B2B', children: [
+        group('log02', 'Log02', 'fas fa-truck', 'Envios do atacado: da aprovação ao rastreio (etapas 1 a 4).', aka: 'Correios B2B', children: [
           sub('Visão geral'),
           link('log02-acomp', 'Acompanhamento', 'fas fa-route', 'Em que etapa está cada pedido do atacado.',
                path: ->(v) { v.order_correios_tracking_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'order_correios_tracking_b2b')),
@@ -95,11 +95,9 @@ module Navigation
                path: ->(v) { v.order_correios_create_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'order_correios_create_b2b')),
           link('log02-criacao', 'Criação de Pedidos', 'fas fa-plus-circle', 'Cria no Correios os pedidos aprovados.', step: 2,
                path: ->(v) { v.order_correios_create_queue_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'order_correios_create_queue_b2b')),
-          link('log02-notas', 'Emissão de Notas', 'fas fa-file-invoice', 'Pede ao Tiny a nota fiscal dos pedidos criados.', step: 3,
-               path: ->(v) { v.invoice_emition_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'invoice_emition_b2b')),
-          link('log02-xml', 'Enviar XML', 'fas fa-file-code', 'Envia ao Correios o arquivo da nota de cada pedido.', step: 4,
+          link('log02-xml', 'NF-e e XML', 'fas fa-file-code', 'Emite a NF-e no Honey e envia o XML ao Correios.', step: 3,
                path: ->(v) { v.send_xml_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'send_xml_b2b')),
-          link('log02-rastreio', 'Rastreamento', 'fas fa-shipping-fast', 'Busca o código de rastreio e grava no Tiny.', step: 5,
+          link('log02-rastreio', 'Rastreamento', 'fas fa-shipping-fast', 'Busca o código de rastreio no Correios e grava no Honey.', step: 4,
                path: ->(v) { v.push_tracking_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'push_tracking_b2b')),
           sub('Consultas e ajustes'),
           link('log02-sem-estoque', 'Produtos Sem Estoque', 'fas fa-box-open', 'O que falta no armazém do atacado e os pedidos presos.',

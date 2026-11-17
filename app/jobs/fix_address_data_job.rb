@@ -9,8 +9,7 @@ class FixAddressDataJob < ActiveJob::Base
   queue_as :default
 
   KINDS = {
-    'create_correios_order' => 'TOKEN_TINY3_PRODUCTION',
-    'create_correios_order_tiny2' => 'TOKEN_TINY2_PRODUCTION'
+    'create_correios_order' => 'TOKEN_TINY3_PRODUCTION'
   }.freeze
   FIXABLE_ERROR = /\b(bairro|numero)\b.*não presente/
   LOOKBACK = 3.days

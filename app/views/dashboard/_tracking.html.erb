@@ -7,6 +7,7 @@
                 'push_tracking' => ['Aguardando rastreio', 'purple', 'XML enviado, falta o código de rastreio.'] } %>
 <% step_map = { 'ok' => ['Feito', 'green', 'Esta etapa já foi concluída.'], 'wait' => ['Esperando', 'yellow', 'É a etapa em que o pedido está agora.'], 'next' => ['Depois', 'gray', 'Vem depois da etapa atual.'] } %>
 <% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<% honey_orders = kind == :log02 ? b2b_honey_orders_by_tiny(@tracking_summary.keys) : {} %>
 <% rows = @tracking_summary.map do |order_id, data|
      etapa = data.find { |k, v| v == true && stages.key?(k.to_s) }&.first.to_s
      at = stages[etapa] || 1
@@ -66,7 +67,7 @@
         actions: ->(r) {
           safe_join([
             link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
-            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny'),
+            (kind == :log02 ? b2b_honey_order_action(honey_orders[r[:tiny].to_s]) : link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')),
             (hc_row_action('fas fa-trash', 'Excluir da fila', delete_order_from_queue_dashboard_index_path, danger: true, method: :post, params: { tiny_order_id: r[:tiny] },
                            confirm: { title: "Excluir o pedido #{r[:tiny]} da fila?", text: 'Apaga todas as tentativas deste pedido no Honey. O pedido sai do acompanhamento e não dá para desfazer. O pedido no Tiny e no Correios não é mexido.', ok: 'Excluir pedido' }) if screen_can?(perm, :destroy))
           ].compact)

@@ -52,7 +52,7 @@
      items = order.b2b_order_items
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
-       tiny: [order.tiny_reference_number.presence || order.tiny_reference_id.presence, (tiny_order_url(order) if order.tiny_reference_id.present?), 'Ver no Tiny'], track: order.tracking_code.presence || '—', st: order.status,
+       tiny: (order.tiny_reference_number.presence || order.tiny_reference_id.presence).to_s, track: order.tracking_code.presence || '—', st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
        entrega: order.stock_transfer? ? (order.hand_delivery? ? 'SEDEX · Mão Própria' : "Transportadora · #{order.carrier&.name}") : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
@@ -82,7 +82,7 @@
          { k: :cidade, label: 'Cidade / UF', hide: true, nodetail: true },
          { k: :cnpj, label: 'CNPJ/CPF', t: :mono, cls: 'due' },
          { k: :total, label: 'Total', t: :money },
-         { k: :tiny, label: 'Nº pedido', t: :link, sub: :track },
+         { k: :tiny, label: 'Nº pedido', t: :mono, sub: :track },
          { k: :track, label: 'Rastreamento', t: :mono, hide: true },
          { k: :st, label: 'Status', t: :status, map: statuses },
          { k: :log, label: 'Etapa no Log02', t: :tag },
@@ -111,7 +111,7 @@
          { k: :loc, label: 'Destino', t: :loc, sub: :receb },
          { k: :pecas, label: 'Peças', t: :qty, unit: 'un' },
          { k: :total, label: 'Total', t: :money },
-         { k: :tiny, label: 'Nº Tiny', t: :link },
+         { k: :tiny, label: 'Nº Tiny', t: :mono },
          { k: :st, label: 'Status', t: :status, map: statuses },
          { k: :log, label: 'Etapa no Log02', t: :tag },
          { k: :entrega, label: 'Entrega', t: :tag },
@@ -203,8 +203,6 @@
             (hc_row_action('fas fa-pencil-alt', sale ? 'Editar' : 'Corrigir itens', edit_order_path_for(order)) if screen_can?(perm, :edit) && !order.b2c_transfer?),
             (hc_row_action('fas fa-file-pdf', sale ? 'Romaneio' : 'Baixar romaneio (PDF)', romaneio_order_path_for(order)) unless order.stock_transfer?),
             (hc_row_action('fas fa-file-invoice', 'Nota fiscal', edit_order_path_for(order, tab: 'nota')) if screen_can?(perm, :edit) && !order.b2c_transfer?),
-            (hc_row_action('fas fa-ban', 'Cancelar no Tiny', cancel_in_tiny_order_path_for(order), danger: true, method: :post,
-                           confirm: { title: "Cancelar o pedido ##{order.id} no Tiny?", text: "O pedido fica liberado para reenvio e volta para Aberto. O pedido continua no Tiny com situação Cancelado (você pode excluí-lo por lá).", ok: 'Cancelar no Tiny' }) if !order.b2c_transfer? && order.tiny_order? && order.tiny_reference_id.present? && screen_can?(perm, :execute)),
             (if order_deletable?(order)
                (hc_row_action('fas fa-trash', 'Excluir', order_path_for(order), danger: true, method: :delete, confirm: { title: "Excluir o pedido ##{order.id}?", text: b2b_delete_confirm(order).sub(/\AExcluir o pedido #\d+\? /, ''), ok: 'Excluir pedido' }) if screen_can?(perm, :destroy))
              elsif @order_ids_with_active_note.include?(order.id)

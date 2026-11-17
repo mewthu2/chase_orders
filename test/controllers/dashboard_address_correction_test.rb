@@ -33,19 +33,6 @@ class DashboardAddressCorrectionTest < ActionDispatch::IntegrationTest
     assert_select '.address-correction-badge', text: /Aguardando correção da nota no Tiny/, count: 1
   end
 
-  test 'the B2B invoice screen marks them too' do
-    created_step(:create_correios_order_tiny2, 100, 1)
-    created_step(:create_correios_order_tiny2, 200, 2)
-    correction(100)
-    correction(200, held: true)
-
-    get invoice_emition_b2b_dashboard_index_path
-
-    assert_response :success
-    assert_select '.address-correction-badge', text: /Endereço corrigido/, count: 1
-    assert_select '.address-correction-badge', text: /Aguardando correção da nota no Tiny/, count: 1
-  end
-
   test 'the invoice screens do not query corrections once per row' do
     6.times { |n| created_step(:create_correios_order, 1000 + n, 10 + n) }
     correction(1000)
@@ -112,16 +99,6 @@ class DashboardAddressCorrectionTest < ActionDispatch::IntegrationTest
     assert_select ".address-hold-actions form[action='#{mark_tiny_fixed_attempts_path}'] input[name=tiny_order_id][value='100']"
     assert_select ".address-hold-actions form input[name=return_to][value=invoice_emition]"
     assert_select ".address-hold-actions form", text: /Já corrigi no Tiny/
-  end
-
-  test 'the B2B emission screen has the same in-place correction' do
-    step = created_step(:create_correios_order_tiny2, 100, 1)
-    correction(100, held: true)
-
-    get invoice_emition_b2b_dashboard_index_path
-
-    assert_select ".address-hold-actions a[href='https://erp.tiny.com.br/notas_fiscais#edit/#{step.id_nota_fiscal}']"
-    assert_select ".address-hold-actions form input[name=return_to][value=invoice_emition_b2b]"
   end
 
   test 'orders that are not waiting have no correction box' do

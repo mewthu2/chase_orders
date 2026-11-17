@@ -1,76 +1,20 @@
 <% title 'Pedidos p/ Aprovar (Log02)' %>
-<% statuses = { 'pending' => ['Pendente', 'yellow', 'Ninguém decidiu ainda. O pedido fica parado até você marcar ou ignorar.'],
-                'approved' => ['Marcado', 'green', 'Aprovado: o pedido segue para a criação no Correios.'],
-                'ignored' => ['Ignorado', 'gray', 'Não será enviado. Dá para voltar atrás e marcar quando quiser.'] } %>
-<% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
-<% parse_date = ->(v) { Date.strptime(v.to_s, '%d/%m/%Y') rescue nil } %>
-<% type_labels = B2bOrderType::LABELS.transform_keys(&:to_s) %>
-<% rows = @orders.map do |data|
-     o = data['pedido']
-     id = o['id'].to_s
-     review = @reviews[id]
-     type = @order_types[id].to_s
-     { id: id, record: o, pedido: o['numero'], idtxt: id, tipo: type, tipoTxt: type_labels[type] || '—', cliente: o['nome'].presence || '—',
-       dt: parse_date.call(o['data_pedido']), total: o['valor'].to_f, st: review&.approved? ? 'approved' : (review&.ignored? ? 'ignored' : 'pending') }
-   end %>
-<% table = HoneyTable.new(params, rows: rows, unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dt, dir: -1 },
-     tabs: { col: :st, param: :review, counts: { 'pending' => @counts[:pending], 'approved' => @counts[:approved], 'ignored' => @counts[:ignored],
-                                                 'all' => @counts.values.sum, '' => @counts[:pending] },
-             items: [['', 'Pendentes de revisão'], ['approved', 'Marcados'], ['ignored', 'Ignorados'], ['all', 'Todos']], filter: ->(scope, _v) { scope } },
-     cols: [
-       { k: :ident, label: 'Pedido', t: :html, main: true, nodetail: true },
-       { k: :pedido, label: 'Número', hide: true },
-       { k: :idtxt, label: 'ID no Tiny', hide: true },
-       { k: :tipo, label: 'Tipo do pedido', hide: true, nodetail: true },
-       { k: :tipoTxt, label: 'Tipo do pedido', hide: true },
-       { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
-       { k: :dt, label: 'Data do pedido', t: :d, sort: true },
-       { k: :total, label: 'Valor total', t: :money, sort: true },
-       { k: :st, label: 'Revisão', t: :status, map: statuses }
-     ],
-     filters: [
-       { id: :q, type: :search, label: 'Buscar', ph: 'Número, ID no Tiny ou cliente', cols: %i[pedido idtxt cliente], tip: 'Procura pelo número do pedido, pelo ID dele no Tiny ou pelo nome do cliente.' },
-       { id: :tipo, type: :select, label: 'Tipo do pedido', col: :tipo, options: type_labels.to_a, all: 'Todos os tipos', tip: 'Venda comum, abastecimento de loja ou transferência para a loja online.' },
-       { id: :per, type: :period, label: 'Pedido feito', col: :dt }
-     ],
-     kpis: [
-       { label: 'Para decidir', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Pedidos esperando você marcar ou ignorar.', count: @counts[:pending] },
-       { label: 'Valor da lista', icon: 'fas fa-sack-dollar', tone: 'blue', help: 'Soma dos pedidos que aparecem nesta aba.', text: number_to_currency(rows.sum { |r| r[:total] }, unit: 'R$ ', separator: ',', delimiter: '.') },
-       { label: 'Pedido mais antigo', icon: 'fas fa-clock', tone: 'orange', help: 'Há quanto tempo o primeiro da lista espera.', text: (rows.filter_map { |r| r[:dt] }.min&.then { |d| hc_ago(d.in_time_zone) } || '—') }
-     ]) %>
-<% rows.each do |r|
-     r[:ident] = content_tag(:span, "##{r[:pedido]}", class: 'num') + content_tag(:span, "ID #{r[:idtxt]}", class: 'cell-sub') + (r[:tipo].present? ? b2b_order_type_badge(r[:tipo]).to_s.html_safe : ''.html_safe)
-   end %>
+<% to_review = B2bOrder.honey_flow.where('created_at > ?', 6.months.ago).where(correios_order_id: nil, log_ignored: false).count { |o| o.log_stage == 'review' } %>
 
 <%= hc_page_header 'Pedidos p/ Aprovar (Log02)', 'Decida quais pedidos do atacado seguem para o Correios.', icon: 'fas fa-clipboard-check' do %>
   <% if screen_can?(:dashboard_correios_b2b, :execute) %>
-    <%= button_to run_create_correios_b2b_dashboard_index_path(review: params[:review]), method: :post, class: 'btn btn-export', disabled: @job_running,
-                  form: { style: 'display: inline', data: { hc_confirm: (@job_running ? nil : { title: 'Rodar a rotina agora?', text: 'O sistema cria no Correios todos os pedidos já marcados.', ok: 'Rodar agora', icon: 'fas fa-play' }.to_json) } } do %>
+    <%= button_to run_create_correios_b2b_dashboard_index_path, method: :post, class: 'btn btn-export', disabled: @job_running,
+                  form: { style: 'display: inline', data: { hc_confirm: (@job_running ? nil : { title: 'Rodar a rotina agora?', text: 'O sistema cria no Correios todos os pedidos já aprovados.', ok: 'Rodar agora', icon: 'fas fa-play' }.to_json) } } do %>
       <% if @job_running %><span class="spinner"></span>Executando…<% else %><i class="fas fa-play"></i>Rodar rotina agora<% end %>
     <% end %>
   <% end %>
 <% end %>
 
-<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Nada anda sem a sua aprovação.</strong> Os pedidos (feitos no Honey ou ainda no Tiny2) só seguem para criação, nota, XML e rastreio depois de aprovados aqui. Os ignorados nunca são processados.</div></div>
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Nada anda sem a sua aprovação.</strong> Os pedidos feitos no Honey só seguem para criação, NF-e, XML e rastreio depois de aprovados aqui. Os ignorados nunca são processados.</div></div>
 
 <div class="pg-blocks">
-  <%= render 'dashboard/flow', kind: :log02, current: :order_correios_create_b2b, counts: { order_correios_create_b2b: @counts[:pending] } %>
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation], review: true, title: 'Pedidos do Honey para aprovar',
+  <%= render 'dashboard/flow', kind: :log02, current: :order_correios_create_b2b, counts: { order_correios_create_b2b: to_review } %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation], review: true, title: 'Pedidos para aprovar',
              meta: 'Atacado, abastecimento e transferência B2C feitos no Honey. Aprovados, entram no Correios na próxima rodada.',
              empty_text: 'Quando alguém salvar um pedido de atacado, abastecimento ou transferência B2C, ele aparece aqui para você aprovar.' %>
-  <%= hc_pg_kpis(table) %>
-  <%= hc_pg_table(table, title: 'Pedidos Tiny2 aguardando envio', icon: 'fas fa-list-check', meta: 'Marque os que devem ser enviados. Os pedidos novos aparecem primeiro.',
-        empty: { title: 'Nenhum pedido nesta aba', text: 'Quando chegar um pedido do atacado em "preparando envio" no Tiny2, ele aparece aqui para você decidir.' },
-        detail: { title: ->(r) { "Pedido ##{r[:pedido]}" }, tip: 'Ver detalhes', note: 'Marcar manda o pedido para a criação no Correios. Ignorar tira o pedido do fluxo, e dá para marcar de novo depois.' },
-        actions: ->(r) {
-          id = r[:idtxt]
-          can = screen_can?(:dashboard_correios_b2b, :approve)
-          safe_join([
-            link_to(content_tag(:i, '', class: 'fas fa-clock-rotate-left'), verify_attempts_attempts_path(tiny_order_id: id), class: 'action-btn', target: '_blank', data: { tip: 'Ver tentativas do pedido' }, 'aria-label': 'Ver tentativas'),
-            (hc_row_action('fas fa-check', 'Marcar para processamento', approve_order_b2b_dashboard_index_path(tiny_order_id: id, review: params[:review]), method: :post) if can && r[:st] != 'approved'),
-            (hc_row_action('fas fa-ban', 'Ignorar', ignore_order_b2b_dashboard_index_path(tiny_order_id: id, review: params[:review]), danger: true, method: :post,
-                           confirm: { title: "Ignorar o pedido ##{r[:pedido]}?", text: 'Ele não será processado. Se mudar de ideia, marque de novo.', ok: 'Ignorar' }) if can && r[:st] != 'ignored'),
-            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
-          ].compact)
-        }) %>
 </div>

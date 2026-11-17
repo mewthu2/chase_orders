@@ -25,6 +25,8 @@ class StockReservationRefresher
     return @refresh if @refresh.running_recently?
 
     @refresh.update!(status: 'running', message: nil)
+    return refresh_honey_only if @account == 'b2b'
+
     queue = pending_orders(fetch_queue)
     StockReservation.where(account: @account).where.not(tiny_order_id: queue.keys)
                     .where.not('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").delete_all
@@ -41,6 +43,14 @@ class StockReservationRefresher
   end
 
   private
+
+  # O Tiny 2 não é mais usado: as reservas do atacado são só as dos pedidos do Honey.
+  def refresh_honey_only
+    StockReservation.where(account: @account).where.not('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").delete_all
+    HoneyB2bLog.sync_reservations!
+    @refresh.update!(status: 'success', last_refreshed_at: Time.current, message: nil)
+    @refresh
+  end
 
   def token = ENV.fetch(@config[:token_env])
 

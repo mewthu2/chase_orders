@@ -42,30 +42,14 @@ class GetTrackingJob2 < ActiveJob::Base
       attempt.update(error: e, status: :error, message: 'Erro na solicitação de rastreio aos Correios')
     end
 
-    begin
-      order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), att.tiny_order_id)
-    rescue StandardError => e
-      attempt.update(error: e, status: :error, message: 'Erro na solicitação de pedido ao Tiny')
-    end
-
     if tracking.present? && tracking['rastreio'].present? && tracking['rastreio'][0].present?
       attempt.update(tracking: tracking['rastreio'][0]['codigoObjeto'],
                      order_correios_id: att.order_correios_id,
                      id_nota_fiscal: att.id_nota_fiscal,
                      tiny_order_id: att.tiny_order_id,
                      status: :success)
-      begin
-        send = Tiny::Orders.send_tracking(att.tiny_order_id, tracking['rastreio'][0]['codigoObjeto'], ENV.fetch('TOKEN_TINY2_PRODUCTION'))
-      rescue StandardError => e
-        attempt.update(error: e, status: :error, message: 'Erro no envio de rastreio ao Tiny')
-      end
-      attempt.update(message: send)
-
-      begin
-        Tiny::Orders.change_situation(att.tiny_order_id, 'Enviado', ENV.fetch('TOKEN_TINY2_PRODUCTION')) if order['pedido']['situacao'] == 'Faturado'
-      rescue StandardError => e
-        attempt.update(error: e, status: :error, message: 'Erro no envio de rastreio ao Tiny')
-      end
+      # O Tiny 2 não é mais usado: o código fica só no Honey.
+      attempt.update(message: 'Rastreio gravado no Honey')
 
       Attempt.where(tiny_order_id: att.tiny_order_id).update_all(xml_nota: nil)
     else

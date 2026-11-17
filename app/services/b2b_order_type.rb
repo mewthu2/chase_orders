@@ -2,8 +2,7 @@
 # transferência B2B -> B2C ou B2B comum (atacado). O Tiny não guarda o tipo, então ele é deduzido, nessa ordem:
 #   1. pedido criado no Honey (B2bOrder com o tiny_reference_id) — o kind dele;
 #   2. dados enviados aos Correios (params da criação): CNPJ do destinatário e mão própria;
-#   3. pedido completo do Tiny (observações e CNPJ do cliente), buscado só quando o destinatário é a própria
-#      Chase (lojas e filial B2C têm o mesmo nome) e guardado em cache;
+#   3. tipo guardado em cache de consultas antigas ao Tiny (o Tiny 2 não é mais consultado);
 #   4. o resto é B2B comum.
 module B2bOrderType
   module_function
@@ -16,8 +15,6 @@ module B2bOrderType
 
   KIND_TYPES = { 'sale' => :sale, 'stock_transfer' => :store_supply, 'b2c_transfer' => :b2c_transfer }.freeze
 
-  # Limite de pedidos buscados no Tiny por tela, para não travar o carregamento.
-  MAX_TINY_LOOKUPS = 15
   CACHE_TTL = 30.days
 
   # tiny_order_ids => { 'id' => :tipo }. names: { 'id' => nome do cliente } (da listagem do Tiny), para decidir
@@ -31,25 +28,13 @@ module B2bOrderType
                     .to_h { |order| [order.tiny_reference_id.to_s, KIND_TYPES[order.kind]] }
 
     stores = store_cnpjs
-    store_names = TransferLocation.pluck(:name).map { |name| name.to_s.downcase.strip }
 
     from_attempts(ids - types.keys, stores:).each { |id, type| types[id] ||= type }
 
-    lookups = 0
+    # O Tiny 2 não é mais usado: só vale o tipo já guardado de consultas antigas.
     (ids - types.keys).each do |id|
-      next unless chase_recipient?(names[id.to_s] || names[id.to_i], store_names)
-
       cached = Rails.cache.read(cache_key(id))
-      if cached
-        types[id] = cached.to_sym
-      elsif lookups < MAX_TINY_LOOKUPS
-        lookups += 1
-        type = from_tiny(id, stores:)
-        if type
-          Rails.cache.write(cache_key(id), type.to_s, expires_in: CACHE_TTL)
-          types[id] = type
-        end
-      end
+      types[id] = cached.to_sym if cached
     end
 
     ids.each { |id| types[id] ||= :sale }
@@ -88,24 +73,6 @@ module B2bOrderType
     classify(cnpj:, hand_delivery:, stores:)
   end
 
-  def from_tiny(id, stores: store_cnpjs)
-    pedido = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), id)&.dig(:pedido)
-    return if pedido.blank?
-
-    notes = [pedido[:obs], pedido[:obs_interna], Array(pedido[:marcadores]).map { |m| m.dig(:marcador, :descricao) }].flatten.compact.join(' ')
-    classify(cnpj: pedido.dig(:cliente, :cpf_cnpj), notes:, stores:)
-  rescue StandardError => e
-    Rails.logger.warn "B2bOrderType.from_tiny(#{id}): #{e.message}"
-    nil
-  end
-
-  # Lojas e filial B2C saem como "CHASE BRASIL ..." (ou com o nome cadastrado da loja).
-  def chase_recipient?(name, store_names)
-    text = name.to_s.downcase.strip
-    return false if text.empty?
-
-    text.include?('chase') || store_names.include?(text)
-  end
 
   def b2c_cnpj
     B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj].gsub(/\D/, '')

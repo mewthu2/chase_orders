@@ -188,30 +188,15 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test 'update changes the status and pushes it to Tiny when the order was already transmitted' do
+  test 'update changes the status only in Honey, even for an old order sent to Tiny (the Tiny 2 is no longer used)' do
     sign_in @admin
     order = build_order(tiny_reference_id: '111')
-    stub = stub_request(:post, 'https://api.tiny.com.br/api2/pedido.alterar.situacao.php')
-           .with(body: hash_including('id' => '111', 'situacao' => 'aprovado'))
-           .to_return(body: { retorno: { status: 'OK' } }.to_json)
 
     patch b2b_order_path(order), params: { b2b_order: { status: 'aprovado' } }
 
-    assert_requested stub
+    assert_not_requested :post, 'https://api.tiny.com.br/api2/pedido.alterar.situacao.php'
     assert_equal 'aprovado', order.reload.status
     assert_nil flash[:alert]
-  end
-
-  test 'update still saves the status but warns when Tiny rejects the change' do
-    sign_in @admin
-    order = build_order(tiny_reference_id: '111')
-    stub_request(:post, 'https://api.tiny.com.br/api2/pedido.alterar.situacao.php')
-      .to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Situação inválida' }] } }.to_json)
-
-    patch b2b_order_path(order), params: { b2b_order: { status: 'cancelado' } }
-
-    assert_equal 'cancelado', order.reload.status
-    assert_match(/Situação inválida/, flash[:alert])
   end
 
   test 'update does not call Tiny when the order was never transmitted' do

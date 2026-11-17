@@ -4,14 +4,14 @@ class B2bOrdersController < ApplicationController
   # Cada tipo de pedido tem a sua permissão; as consultas de apoio dos formulários (produtos,
   # clientes, frete) valem para quem usa qualquer um dos três.
   KIND_SCREENS = { 'sale' => :b2b_orders, 'stock_transfer' => :store_supply, 'b2c_transfer' => :b2b_transfers }.freeze
-  FORM_HELPER_ACTIONS = %i[shipping_methods parse_items_spreadsheet product_stock search_product product_picker search_client import_client].freeze
+  FORM_HELPER_ACTIONS = %i[parse_items_spreadsheet product_stock search_product product_picker search_client import_client].freeze
 
-  guard_screen(except: FORM_HELPER_ACTIONS, actions: { cancel_in_tiny: :destroy }) { KIND_SCREENS.fetch(params[:order_kind].to_s, :b2b_orders) }
+  guard_screen(except: FORM_HELPER_ACTIONS) { KIND_SCREENS.fetch(params[:order_kind].to_s, :b2b_orders) }
   guard_screen(only: FORM_HELPER_ACTIONS, actions: { parse_items_spreadsheet: :view, import_client: :view }) { KIND_SCREENS.values }
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :transmit, :cancel_in_tiny, :destroy, :romaneio]
-  helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for, :transmit_order_path_for,
-                :order_path_for, :cancel_in_tiny_order_path_for, :romaneio_order_path_for, :order_form_url
+  before_action :set_b2b_order, only: [:edit, :update, :destroy, :romaneio]
+  helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for,
+                :order_path_for, :romaneio_order_path_for, :order_form_url
 
   # Cada tipo de pedido tem a sua tela (rota) e o nome usado nas mensagens.
   ROUTE_KEYS = { 'sale' => 'b2b_order', 'stock_transfer' => 'stock_transfer', 'b2c_transfer' => 'b2c_transfer' }.freeze
@@ -52,56 +52,20 @@ class B2bOrdersController < ApplicationController
   def update
     @b2b_order.assign_attributes(b2b_order_params)
     @b2b_order.require_payment = true
-    push_status = @b2b_order.status_changed? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present?
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
       HoneyB2bLog.sync_reservations! if @b2b_order.honey_flow?
-      flash_options = { notice: 'Pedido atualizado com sucesso.' }
-      if push_status
-        result = B2bTinyService.new.update_order_status(@b2b_order.tiny_reference_id, @b2b_order.status)
-        flash_options[:alert] = "Status salvo no Honey, mas o Tiny não aceitou a mudança: #{result[:error]}" unless result[:success]
-      end
-      redirect_to orders_path_for(order_kind), flash_options
+      redirect_to orders_path_for(order_kind), notice: 'Pedido atualizado com sucesso.'
     else
       render :edit, status: :unprocessable_entity
     end
   end
 
-  def transmit
-    unless @b2b_order.resendable?
-      redirect_to orders_path_for(order_kind), alert: 'Este pedido não pode ser reenviado.'
-      return
-    end
-
-    if @b2b_order.sale? && @b2b_order.payment_method.blank?
-      redirect_to edit_order_path_for(@b2b_order), alert: 'Escolha a forma de pagamento (boleto, pix ou cartão) antes de enviar ao Tiny.'
-      return
-    end
-
-    unless stock_available?(@b2b_order)
-      redirect_to orders_path_for(order_kind), alert: @b2b_order.errors.full_messages.to_sentence
-      return
-    end
-
-    kind, message = send_to_tiny(@b2b_order, generate_invoice: generate_invoice?)
-    redirect_to orders_path_for(order_kind), kind => message
-  end
-
-  # Exclui o pedido do Honey. Se ele já está no Tiny, cancela lá primeiro (a API do Tiny não exclui
-  # pedido; o cancelado pode ser excluído manualmente por lá). Pedido com nota fiscal ativa não é excluído.
+  # Exclui o pedido do Honey (o Tiny 2 não é mais usado: nada é cancelado lá). Pedido com nota fiscal ativa não é excluído.
   def destroy
     unless @b2b_order.deletable?
       redirect_to orders_path_for(order_kind), alert: undeletable_message(@b2b_order)
       return
-    end
-
-    if @b2b_order.tiny_reference_id.present?
-      number = @b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id
-      outcome, error = cancel_order_in_tiny(@b2b_order)
-      if outcome == :error
-        redirect_to orders_path_for(order_kind), alert: "O Tiny não cancelou o pedido nº #{number}, então ele não foi excluído: #{error}"
-        return
-      end
     end
 
     snapshot = { kind: @b2b_order.kind, status: @b2b_order.status, total: @b2b_order.total.to_f, items: @b2b_order.b2b_order_items.size,
@@ -112,47 +76,13 @@ class B2bOrdersController < ApplicationController
     HoneyB2bLog.sync_reservations!
     LogService.create_log(user: current_user, resource_type: 'b2b_order', action_type: 'delete',
                           resource_name: "Pedido B2B ##{id}", resource_id: id, details: snapshot, request: request)
-    tiny_note = outcome == :missing ? " (o nº #{number} já não existia no Tiny)" : " (cancelado no Tiny, nº #{number})" if number
-    redirect_to orders_path_for(order_kind), notice: "Pedido ##{id} excluído#{tiny_note}."
-  end
-
-  # A API do Tiny não permite excluir pedido (só alterar a situação). Então cancelamos o pedido lá,
-  # desvinculamos do Honey e deixamos o pedido pronto para ser reenviado como um pedido novo.
-  # O cancelado continua existindo no Tiny e pode ser excluído manualmente por lá.
-  def cancel_in_tiny
-    if @b2b_order.tiny_reference_id.blank?
-      redirect_to orders_path_for(order_kind), alert: 'Este pedido não foi enviado ao Tiny; não há o que cancelar.'
-      return
-    end
-
-    number = @b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id
-    outcome, error = cancel_order_in_tiny(@b2b_order)
-
-    case outcome
-    when :cancelled
-      unlink_from_tiny(@b2b_order, number)
-      redirect_to orders_path_for(order_kind),
-                  notice: "Pedido nº #{number} cancelado no Tiny. Este pedido foi liberado para reenvio (o cancelado continua no Tiny e pode ser excluído por lá)."
-    when :missing
-      unlink_from_tiny(@b2b_order, number, missing: true)
-      redirect_to orders_path_for(order_kind),
-                  notice: "O pedido nº #{number} não existe mais no Tiny. O vínculo foi removido e este pedido foi liberado para reenvio."
-    else
-      redirect_to orders_path_for(order_kind), alert: "O Tiny não cancelou o pedido nº #{number}: #{error}"
-    end
+    redirect_to orders_path_for(order_kind), notice: "Pedido ##{id} excluído."
   end
 
   # Romaneio em PDF (lista de itens) para mandar ao cliente; o navegador já baixa o arquivo.
   def romaneio
     pdf = B2bRomaneioPdf.new(@b2b_order)
     send_data pdf.render, filename: pdf.filename, type: 'application/pdf', disposition: 'attachment'
-  end
-
-  def shipping_methods
-    methods = Rails.cache.fetch('tiny2_shipping_methods', expires_in: 10.minutes) do
-      B2bTinyService.new.shipping_methods
-    end
-    render json: { success: true, shipping_methods: methods }
   end
 
   def parse_items_spreadsheet
@@ -378,39 +308,6 @@ class B2bOrdersController < ApplicationController
     shortages.empty?
   end
 
-  # O envio ao Tiny é SEMPRE síncrono (perform_now): o resultado aparece na hora, sem depender de
-  # fila/worker, e o pedido não fica preso atrás de outros jobs. Devolve [tipo_do_flash, mensagem].
-  def send_to_tiny(order, saved: false, generate_invoice: false)
-    TransmitB2bOrderJob.perform_now(order.id)
-    order.reload
-    label = KIND_LABELS[order.kind]
-
-    if order.tiny_reference_id.present?
-      number = order.tiny_reference_number.presence || order.tiny_reference_id
-      message = "#{label} #{saved ? 'salvo e ' : ''}enviado ao Tiny (nº #{number})."
-      return [:notice, message] unless generate_invoice && order.tiny_order?
-
-      invoice = B2bTinyService.new.generate_invoice(order.tiny_reference_id)
-      if invoice[:success]
-        [:notice, "#{message} Nota fiscal gerada no Tiny#{" (nº #{invoice[:number]})" if invoice[:number]}, falta emitir por lá."]
-      else
-        [:alert, "#{message} Mas o Tiny não gerou a nota fiscal: #{invoice[:error]}. Gere a nota pelo Tiny."]
-      end
-    else
-      [:alert, "#{label} #{saved ? 'salvo, mas o' : 'não enviado: o'} Tiny não aceitou: #{order.error_message.presence || 'motivo não informado'}"]
-    end
-  rescue StandardError => e
-    Rails.logger.error "B2bOrdersController#send_to_tiny (#{order.id}): #{e.class} #{e.message}"
-    order.reload.update_columns(status: B2bOrder.statuses[:dados_incompletos], error_message: e.message.to_s.first(255)) unless order.tiny_reference_id.present?
-    [:alert, "#{KIND_LABELS[order.kind]} #{saved ? 'salvo, mas não' : 'não'} enviado ao Tiny: #{e.message}"]
-  end
-
-  # Checkbox "Gerar nota fiscal no Tiny" do envio do atacado. Abastecimento e transferência B2C sempre vão
-  # com a nota gerada (os Correios B2B precisam dela na fila de preparando envio).
-  def generate_invoice?
-    order_kind != 'sale' || params[:generate_invoice] == '1'
-  end
-
   def undeletable_message(order)
     if order.tiny_reference_id.present? && !order.tiny_order?
       number = order.tiny_reference_number.presence || order.tiny_reference_id
@@ -418,27 +315,6 @@ class B2bOrdersController < ApplicationController
     else
       'Este pedido tem uma nota fiscal ativa e não pode ser excluído.'
     end
-  end
-
-  # Cancela o pedido no Tiny. Se o Tiny recusar, confere se o pedido ainda existe lá: pedido que
-  # foi excluído pelo Tiny não tem o que cancelar, só o vínculo a remover. Devolve [:cancelled | :missing | :error, erro].
-  def cancel_order_in_tiny(order)
-    service = B2bTinyService.new
-    result = service.update_order_status(order.tiny_reference_id, 'cancelado')
-    return [:cancelled, nil] if result[:success]
-    return [:missing, nil] if service.order_missing?(order.tiny_reference_id)
-
-    [:error, result[:error]]
-  end
-
-  def unlink_from_tiny(order, number, missing: false)
-    tiny_id = order.tiny_reference_id
-    order.update!(tiny_reference_id: nil, tiny_reference_number: nil, status: :aberto, error_message: nil)
-    LogService.create_log(
-      user: current_user, resource_type: 'b2b_order', action_type: 'cancel_in_tiny',
-      resource_name: "Pedido B2B ##{order.id}", resource_id: order.id,
-      details: { tiny_reference_id: tiny_id, tiny_reference_number: number, missing_in_tiny: missing || nil }.compact, request: request
-    )
   end
 
   def set_kind
@@ -479,14 +355,6 @@ class B2bOrdersController < ApplicationController
 
   def edit_order_path_for(order, **opts)
     public_send("edit_#{route_key(order.kind)}_path", order, **opts)
-  end
-
-  def transmit_order_path_for(order)
-    public_send("transmit_#{route_key(order.kind)}_path", order)
-  end
-
-  def cancel_in_tiny_order_path_for(order)
-    public_send("cancel_in_tiny_#{route_key(order.kind)}_path", order)
   end
 
   def romaneio_order_path_for(order)

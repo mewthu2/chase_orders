@@ -124,12 +124,11 @@ class AttemptsController < ApplicationController
     end
 
     correction.release!
-    invoice_attempt = Attempt.where(tiny_order_id: tiny_order_id, kinds: %i[emission_invoice emission_invoice_tiny2])
+    invoice_attempt = Attempt.where(tiny_order_id: tiny_order_id, kinds: :emission_invoice)
                              .where.not(id_nota_fiscal: nil).order(:created_at).last
     return redirect_to(back, notice: 'Marcado como corrigido. A emissão automática tentará enviar a nota de novo.') unless invoice_attempt
 
-    job = invoice_attempt.kinds == 'emission_invoice_tiny2' ? InvoiceEmitionsJob2 : InvoiceEmitionsJob
-    result = job.new.one_emission(invoice_attempt)
+    result = InvoiceEmitionsJob.new.one_emission(invoice_attempt)
     redirect_to back, **mark_tiny_fixed_flash(result, correction.reload)
   end
 
@@ -161,13 +160,9 @@ class AttemptsController < ApplicationController
         GetTrackingJob.perform_now('one', attempt)
       when 'transfer_tiny_to_shopify_order'
         TransferTinyToShopifyOrderJob.perform_now('one', attempt.tiny_order_id)
-      when 'create_correios_order_tiny2'
-        order = Tiny::Orders.obtain_order(ENV.fetch('TOKEN_TINY2_PRODUCTION'), attempt.tiny_order_id)
-        CreateCorreiosLogOrdersJob2.perform_now('one', order)
-      when 'send_xml_tiny2'
-        SendXmlCorreiosLogJob2.perform_now('one', attempt)
-      when 'emission_invoice_tiny2'
-        InvoiceEmitionsJob2.perform_now('one', attempt)
+      when 'create_correios_order_tiny2', 'send_xml_tiny2', 'emission_invoice_tiny2'
+        # O Tiny 2 não é mais usado: pedido antigo de lá não é reprocessado.
+        return redirect_to(attempts_path(kinds: attempt.kinds), alert: 'Pedido antigo do Tiny 2: o Tiny 2 não é mais usado, então não dá para reprocessar.')
       when 'get_tracking_tiny2'
         GetTrackingJob2.perform_now('one', attempt)
       end
@@ -183,7 +178,6 @@ class AttemptsController < ApplicationController
   def mark_tiny_fixed_return_path(tiny_order_id)
     case params[:return_to]
     when 'invoice_emition' then invoice_emition_dashboard_index_path
-    when 'invoice_emition_b2b' then invoice_emition_b2b_dashboard_index_path
     else verify_attempts_attempts_path(tiny_order_id: tiny_order_id)
     end
   end
@@ -210,8 +204,9 @@ class AttemptsController < ApplicationController
     @address_correction_invoice_id = Attempt.where(tiny_order_id: params[:tiny_order_id]).where.not(id_nota_fiscal: nil).order(:created_at).last&.id_nota_fiscal
   end
 
-  def bairro_fix_token(attempt)
-    attempt.kinds == 'create_correios_order_tiny2' ? ENV.fetch('TOKEN_TINY2_PRODUCTION') : ENV.fetch('TOKEN_TINY3_PRODUCTION')
+  # Só o Log03 (Tiny 3): o Tiny 2 não é mais usado.
+  def bairro_fix_token(_attempt)
+    ENV.fetch('TOKEN_TINY3_PRODUCTION')
   end
 
   def load_form_references; end

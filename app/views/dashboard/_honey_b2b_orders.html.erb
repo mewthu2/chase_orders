@@ -4,7 +4,6 @@
 <% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'canceled' => 'red' } %>
 <% stage_map = B2bOrder::LOG_STAGES.to_h { |k, (label, help)| [k, [label, tones[k], help]] } %>
 <% kind_labels = { 'sale' => 'Atacado', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' } %>
-<% edit_path = ->(o) { o.sale? ? edit_b2b_order_path(o) : (o.stock_transfer? ? edit_stock_transfer_path(o) : edit_b2c_transfer_path(o)) } %>
 <% orders = B2bOrder.honey_flow.includes(:client, :transfer_location, :b2b_order_items).where('b2b_orders.created_at > ?', 6.months.ago).to_a
                     .select { |o| stages.include?(o.log_stage) } %>
 <% last_attempts = Attempt.where(b2b_order_id: orders.map(&:id), kinds: Attempt::HONEY_KINDS).order(:id).group_by(&:b2b_order_id).transform_values(&:last) %>
@@ -33,7 +32,7 @@
         order = r[:record]
         stage = r[:st]
         safe_join([
-          link_to(content_tag(:i, '', class: 'fas fa-eye'), edit_path.call(order), class: 'action-btn', data: { tip: 'Ver o pedido' }, 'aria-label': 'Ver o pedido'),
+          link_to(content_tag(:i, '', class: 'fas fa-eye'), b2b_order_edit_path(order), class: 'action-btn', data: { tip: 'Ver o pedido' }, 'aria-label': 'Ver o pedido'),
           (if review && screen_can?(:dashboard_correios_b2b, :approve)
              safe_join([
                (hc_row_action('fas fa-check', 'Aprovar', approve_honey_order_b2b_dashboard_index_path(id: order.id, review: params[:review]), method: :post) unless stage == 'creation'),

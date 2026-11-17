@@ -48,20 +48,14 @@ class B2bOrderTypeTest < ActiveSupport::TestCase
     assert_equal :sale, types['4']
   end
 
-  test 'orders to Chase not yet sent are typed from the full Tiny order' do
-    tiny = {
-      '10' => { pedido: { obs: 'Abastecimento | MAO PROPRIA', cliente: { cpf_cnpj: '00.000.000/0001-00' } } },
-      '11' => { pedido: { obs: '', marcadores: [{ marcador: { descricao: '(Transferencia b2c)' } }], cliente: { cpf_cnpj: '' } } }
-    }
+  test 'the Tiny 2 is no longer asked: untyped orders are plain B2B' do
     lookups = []
-    fake = ->(_token, id) { lookups << id.to_s; tiny[id.to_s]&.with_indifferent_access }
-
-    types = Tiny::Orders.stub(:obtain_order, fake) do
-      B2bOrderType.for_orders(%w[10 11 12], names: { '10' => 'CHASE BRASIL COMERCIO', '11' => 'Chase Brasil', '12' => 'Loja do Zé' })
+    types = Tiny::Orders.stub(:obtain_order, ->(*args) { lookups << args }) do
+      B2bOrderType.for_orders(%w[10 11], names: { '10' => 'CHASE BRASIL COMERCIO' })
     end
 
-    assert_equal({ '10' => :store_supply, '11' => :b2c_transfer, '12' => :sale }, types)
-    assert_equal %w[10 11], lookups, 'clientes que não são a Chase nem buscam o pedido no Tiny'
+    assert_equal({ '10' => :sale, '11' => :sale }, types)
+    assert_empty lookups
   end
 
   test 'labels' do

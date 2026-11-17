@@ -217,24 +217,26 @@ class B2bOrdersKindSeparationTest < ActionDispatch::IntegrationTest
     assert order.aberto?, order.error_message
   end
 
-  test 'the stock transfers list has no romaneio and links the Tiny number to the pedido' do
+  test 'the stock transfers list has no romaneio and shows the old Tiny number without linking to the Tiny' do
     transfer = build_transfer(tiny_reference_id: '90000777', tiny_reference_number: '1900', status: :preparando_envio)
 
     get stock_transfers_path
 
     assert_select "a[href*='romaneio']", count: 0
-    assert_select "a[href='https://erp.tiny.com.br/vendas#edit/90000777']"
+    assert_match(/1900/, response.body)
+    assert_select "a[href*='erp.tiny.com.br']", count: 0
     get edit_stock_transfer_path(transfer)
     assert_select "a[href*='romaneio']", count: 0
     assert_select '#shippingMethodSelect', count: 0
     assert_match(/SEDEX · Mão Própria/, response.body)
   end
 
-  test 'an old stock transfer that became a nota fiscal still links to the nota' do
+  test 'an old stock transfer that became a nota fiscal shows its number, without a link to the Tiny' do
     build_transfer(tiny_reference_id: '777', tiny_reference_number: '777')
 
     get stock_transfers_path
 
-    assert_select "a[href='https://erp.tiny.com.br/notas_fiscais#edit/777']"
+    assert_match(/777/, response.body)
+    assert_select "a[href*='erp.tiny.com.br']", count: 0
   end
 end

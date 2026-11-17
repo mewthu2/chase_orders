@@ -146,18 +146,6 @@ class AttemptsAddressCorrectionTest < ActionDispatch::IntegrationTest
     assert_select '.flash-messages-container .alert-danger', text: /Certificado digital vencido/
   end
 
-  test 'B2B orders are emitted with the Tiny 2 account' do
-    record = correction
-    record.hold!(BAIRRO_ERROR)
-    emission_attempt(kind: :emission_invoice_tiny2)
-    stub = stub_request(:get, EMIT_URL).with(query: hash_including('token' => 'token-tiny2')).to_return(body: '<retorno><status>OK</status></retorno>')
-
-    post mark_tiny_fixed_attempts_path, params: { tiny_order_id: ORDER_ID }
-
-    assert_requested stub
-    assert_equal 1, Attempt.where(kinds: :emission_invoice_tiny2, status: :success).count
-  end
-
   test 'without any emission attempt it just releases the hold and says the automatic run will try again' do
     record = correction
     record.hold!(BAIRRO_ERROR)
@@ -180,16 +168,6 @@ class AttemptsAddressCorrectionTest < ActionDispatch::IntegrationTest
     post mark_tiny_fixed_attempts_path, params: { tiny_order_id: ORDER_ID, return_to: 'invoice_emition' }
 
     assert_redirected_to invoice_emition_dashboard_index_path
-  end
-
-  test 'the B2B emission screen is also a valid place to return to' do
-    correction.hold!(BAIRRO_ERROR)
-    emission_attempt(kind: :emission_invoice_tiny2)
-    stub_emit('<retorno><status>OK</status></retorno>')
-
-    post mark_tiny_fixed_attempts_path, params: { tiny_order_id: ORDER_ID, return_to: 'invoice_emition_b2b' }
-
-    assert_redirected_to invoice_emition_b2b_dashboard_index_path
   end
 
   test 'an unknown return_to is ignored (no open redirect)' do

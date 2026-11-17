@@ -10,6 +10,7 @@
 <% account = channel == 'b2b' ? 'Log02' : (channel == 'b2c' ? 'Log03' : 'Log03 e Log02') %>
 <% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
 <% corrections = {} %>
+<% honey_orders = {} %>
 <% map = ->(a) {
      { id: a.id, record: a, tiny: a.tiny_order_id.to_s.presence, cliente: a.customer_name.presence || '—', kind: kind_labels[a.kinds] || a.kinds.to_s.humanize,
        st: a.status || 'none', code: a.status_code.present? ? "Código #{a.status_code}" : '—', msg: (a.message.presence || a.error.presence || '—').to_s.truncate(140),
@@ -17,7 +18,8 @@
        held: corrections[a.tiny_order_id.to_s] }
    } %>
 <% table = HoneyQueryTable.new(params, scope: @attempts_scope, map: map, page_size: 10, unit: 'tentativas', unit1: 'tentativa',
-     preload: ->(records) { corrections.merge!(AddressCorrection.where(tiny_order_id: records.map { |r| r.tiny_order_id.to_s }.reject(&:blank?).uniq).index_by(&:tiny_order_id)) },
+     preload: ->(records) { honey_orders.merge!(b2b_honey_orders_by_tiny(records.select { |r| Attempt::B2B_KINDS.include?(r.kinds) }.map(&:tiny_order_id)))
+                          corrections.merge!(AddressCorrection.where(tiny_order_id: records.map { |r| r.tiny_order_id.to_s }.reject(&:blank?).uniq).index_by(&:tiny_order_id)) },
      search: ->(scope, text) { scope.search(text.strip) },
      attrs: { kind: :kinds, dt: :created_at },
      filter_sql: { status: ->(scope, v) { v.in?(%w[nil none]) ? scope.where(status: nil) : scope.where(status: v) } },
@@ -81,7 +83,11 @@
             (hc_row_action('fas fa-rotate-right', 'Reprocessar', reprocess_attempts_path(attempt_id: a.id), method: :get,
                            confirm: { title: "Reprocessar a tentativa ##{a.id}?", text: 'O sistema repete agora esta etapa do pedido. Se o motivo já foi resolvido, ela vira Sucesso.', ok: 'Reprocessar' }) if (a.status.nil? || %w[fail error].include?(a.status)) && screen_can?(:dashboard_correios, :execute)),
             (link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: a.tiny_order_id), class: 'action-btn', data: { tip: 'Todas as tentativas do pedido' }, 'aria-label': 'Todas as tentativas do pedido') if a.tiny_order_id.present?),
-            (link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{a.tiny_order_id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny') if a.tiny_order_id.present?)
+            (if Attempt::B2B_KINDS.include?(a.kinds)
+               b2b_honey_order_action(a.b2b_order || honey_orders[a.tiny_order_id.to_s])
+             elsif a.tiny_order_id.present?
+               link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{a.tiny_order_id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+             end)
           ].compact)
         }) %>
 </div>

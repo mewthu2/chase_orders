@@ -12,9 +12,7 @@ class InvoiceNotAuthorizedTest < ActiveSupport::TestCase
 
   FLOWS = {
     b2c: { emit_job: InvoiceEmitionsJob, xml_job: SendXmlCorreiosLogJob, created: :create_correios_order,
-           emitted: :emission_invoice, sent: :send_xml, token: 'token-tiny3' },
-    b2b: { emit_job: InvoiceEmitionsJob2, xml_job: SendXmlCorreiosLogJob2, created: :create_correios_order_tiny2,
-           emitted: :emission_invoice_tiny2, sent: :send_xml_tiny2, token: 'token-tiny2' }
+           emitted: :emission_invoice, sent: :send_xml, token: 'token-tiny3' }
   }.freeze
 
   def setup

@@ -1,21 +1,34 @@
-<% title 'Envio de XML para os Correios (Log02)' %>
+<% title 'NF-e e XML para os Correios (Log02)' %>
+<% waiting = B2bOrder.honey_flow.where.not(correios_order_id: nil).where(xml_sent_at: nil).where.not(status: :cancelado).count %>
 <% complete = ->(att) {
-     next nil unless att.is_transportadora && screen_can?(:dashboard_correios_b2b, :execute)
+     next nil unless screen_can?(:dashboard_correios_b2b, :execute)
 
-     hc_row_action('fas fa-flag-checkered', 'Concluir (transportadora)', complete_send_xml_b2b_dashboard_index_path, method: :post,
+     hc_row_action('fas fa-flag-checkered', 'Concluir e tirar da fila', complete_send_xml_b2b_dashboard_index_path, method: :post,
                    params: { attempt_id: att.id }.merge(request.query_parameters.slice('transportadora', 'order_type').symbolize_keys),
-                   confirm: { title: "Concluir o pedido #{att.tiny_order_id}?", text: 'Ele sai por outra transportadora: o Honey marca como Entregue no Tiny e tira da fila de XML.', ok: 'Concluir' })
+                   confirm: { title: "Concluir o pedido #{att.tiny_order_id}?",
+                              text: 'Pedido antigo do Tiny 2: o Tiny 2 não é mais usado, então o XML dele não sai por aqui. Conclua quando o pedido já tiver saído; ele sai desta fila (e não entra na do rastreio).',
+                              ok: 'Concluir' })
    } %>
-<%= render 'dashboard/attempt_queue', kind: :log02, action: :send_xml_b2b, perm: :dashboard_correios_b2b,
-           title: 'Envio de XML para os Correios (Log02)', subtitle: 'A nota emitida vai para o Correios, que libera a etiqueta.', icon: 'fas fa-file-code',
-           queue: @send_xml, errors: @last_errors, step: 'nota (XML)', order_types: @order_types, transport: true, extra_action: complete,
-           run_path: run_send_xml_b2b_dashboard_index_path, run_now_path: run_send_xml_b2b_now_dashboard_index_path,
-           done_label: 'Enviados hoje', done_help: 'XMLs que o Correios já recebeu hoje.', row_tip: 'Enviar este XML agora', row_icon: 'fas fa-paper-plane',
-           run_msg: 'Enviando XML aos Correios (B2B)...', bulk_label: 'Enviar selecionados',
-           runbox_title: 'Fila de envio de XML', runbox_text: 'Manda ao Correios o XML das notas de atacado já emitidas. O sistema roda sozinho; use Enviar agora se não puder esperar.',
-           runbox_btn: 'Enviar fila agora', table_title: 'Fila de Envio de XML', table_meta: 'Pedidos de atacado com nota emitida que ainda não mandaram o XML ao Correios (últimos 30 dias).',
-           empty_text: 'Não há XMLs pendentes de envio no momento.' %>
 
-<div class="pg-blocks" style="margin-top: 16px">
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[invoice], title: 'Pedidos do Honey: NF-e e XML', meta: 'O Honey emite a NF-e, autoriza na SEFAZ e manda o XML ao Correios.', empty_text: 'Nenhum pedido do Honey esperando a nota.' %>
+<%= hc_page_header 'NF-e e XML para os Correios (Log02)', 'O Honey emite a NF-e, autoriza na SEFAZ e manda o XML ao Correios, que libera a etiqueta.', icon: 'fas fa-file-code' %>
+
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: :log02, current: :send_xml_b2b, counts: { send_xml_b2b: waiting } %>
+  <%= render 'dashboard/runbox', title: 'Fila de NF-e e XML', perm: :dashboard_correios_b2b, run_path: run_send_xml_b2b_dashboard_index_path,
+             running: @job_running, btn: 'Enviar fila agora', last_run: Attempt.where(kinds: :send_xml_honey).maximum(:created_at),
+             confirm: "O sistema emite agora a NF-e e envia o XML dos #{waiting} pedidos da fila.",
+             text: 'Emite a NF-e no Honey e manda o XML ao Correios dos pedidos já criados lá. O sistema roda sozinho; use Enviar fila agora se não puder esperar.' %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[invoice], title: 'Pedidos esperando a NF-e e o XML', meta: 'Criados no Correios: falta a NF-e (emitida no Honey) e o XML.', empty_text: 'Nenhum pedido esperando a nota.' %>
 </div>
+
+<% if @send_xml.any? %>
+  <div style="margin-top: 16px">
+    <%= render 'dashboard/attempt_queue', kind: :log02, action: :send_xml_b2b, perm: :dashboard_correios_b2b, legacy: true,
+               title: nil, subtitle: nil, icon: 'fas fa-box-archive',
+               queue: @send_xml, errors: @last_errors, step: 'nota (XML)', order_types: @order_types, transport: true, extra_action: complete,
+               run_path: nil, run_now_path: nil, done_label: nil, done_help: nil, row_tip: nil, row_icon: nil, run_msg: nil, bulk_label: nil,
+               runbox_title: nil, runbox_text: nil, runbox_btn: nil, table_title: 'Pedidos antigos do Tiny 2',
+               table_meta: 'Feitos no Tiny 2 antes do Honey e parados nesta etapa. O Tiny 2 não é mais usado: conclua os que já saíram.',
+               empty_text: 'Nenhum pedido antigo parado aqui.' %>
+  </div>
+<% end %>

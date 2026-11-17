@@ -211,11 +211,22 @@
                       </button>
                       <%= address_correction_badge(@address_corrections[attempt.tiny_order_id.to_s]) %>
                     </span>
-                    <button class="btn btn-sm btn-outline-primary mt-1"
-                            onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= attempt.tiny_order_id %>', '_blank');"
-                            title="Ver no Tiny">
-                      <i class="fas fa-external-link-alt me-1"></i>Ver no Tiny
-                    </button>
+                    <% if Attempt::B2B_KINDS.include?(attempt.kinds) %>
+                      <% honey_order = attempt.b2b_order || (B2bOrder.find_by(tiny_reference_id: attempt.tiny_order_id.to_s) if attempt.tiny_order_id.present?) %>
+                      <% if honey_order %>
+                        <%= link_to b2b_order_edit_path(honey_order), target: '_blank', rel: 'noopener', class: 'btn btn-sm btn-outline-primary mt-1', title: "Ver o pedido ##{honey_order.id} no Honey" do %>
+                          <i class="fas fa-eye me-1"></i>Ver no Honey
+                        <% end %>
+                      <% else %>
+                        <span class="small text-muted mt-1" title="Pedido antigo, feito direto no Tiny 2">Sem pedido no Honey</span>
+                      <% end %>
+                    <% else %>
+                      <button class="btn btn-sm btn-outline-primary mt-1"
+                              onclick="window.open('<%= ENV.fetch('TINY_SELLS_URL') %>#edit/<%= attempt.tiny_order_id %>', '_blank');"
+                              title="Ver no Tiny">
+                        <i class="fas fa-external-link-alt me-1"></i>Ver no Tiny
+                      </button>
+                    <% end %>
                   </div>
                 </td>
                 <td class="text-center">
@@ -305,7 +316,7 @@
                       <i class="fas fa-copy"></i>
                     </button>
 
-                    <% if attempt.kinds.in?(%w[create_correios_order create_correios_order_tiny2]) && attempt.error.to_s.downcase.include?('bairro') %>
+                    <% if attempt.kinds == 'create_correios_order' && attempt.error.to_s.downcase.include?('bairro') %>
                       <br>
                       <button type="button" class="btn btn-sm btn-outline-warning mt-1"
                               onclick="openBairroFixModal(<%= attempt.id %>, '<%= attempt.tiny_order_id %>', <%= attempt.kinds == 'create_correios_order_tiny2' %>)"
@@ -789,9 +800,7 @@
       if (retryBtn) {
         retryBtn.addEventListener('click', function() {
           var resultEl = document.getElementById('bairroFixResult');
-          var retryUrl = bairroFixState.kinds === 'create_correios_order_tiny2'
-            ? '<%= run_order_correios_create_b2b_now_dashboard_index_path %>'
-            : '<%= run_order_correios_create_now_dashboard_index_path %>';
+          var retryUrl = '<%= run_order_correios_create_now_dashboard_index_path %>';
 
           retryBtn.disabled = true;
           retryBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Recriando...';

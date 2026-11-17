@@ -1,5 +1,7 @@
 <%# Produtos sem estoque (Log03 e Log02): resumo por produto e um item por linha. Locais: kind, perm, title, csv_path, creation_path, attempts_channel, api_path. %>
 <% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
+<%# No Log02 cada item é de um pedido do Honey (b2b_order_id; o Tiny 2 não é mais usado). %>
+<% honey_orders = kind == :log02 ? B2bOrder.where(id: @missing_stock_items.map { |i| i[:b2b_order_id] }.compact).index_by(&:id) : {} %>
 <% codes = @missing_stock_summary.map { |s| s[:product_code] } %>
 <% products = Product.where(sku: codes).index_by(&:sku) %>
 <% qty = ->(v) { v.to_s.tr(',', '.').to_f } %>
@@ -27,7 +29,7 @@
        { k: :sku, label: 'Produto', t: :mono, copy: true, sub: :nome, cls: 'due' },
        { k: :nome, label: 'Nome', hide: true },
        { k: :qtd, label: 'Qtd. necessária', t: :qty, unit: 'un' },
-       { k: :tiny, label: 'Pedido (Tiny)', t: :mono, main: true, copy: true, sub: :n },
+       { k: :tiny, label: (kind == :log02 ? 'Pedido' : 'Pedido (Tiny)'), t: :mono, main: true, copy: true, sub: :n },
        { k: :n, label: 'Número da loja', hide: true },
        { k: :cliente, label: 'Cliente', cls: 'customer-name-cell' },
        { k: :valor, label: 'Valor do pedido', t: :money },
@@ -71,8 +73,8 @@
         detail: { title: ->(r) { "Pedido #{r[:tiny]}" }, fields: [['Mensagem do Correios', :msg]] },
         actions: ->(r) {
           safe_join([
-            link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
-            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
-          ])
+            (link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: r[:tiny]), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas') unless kind == :log02),
+            (kind == :log02 ? b2b_honey_order_action(honey_orders[r[:record][:b2b_order_id]]) : link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{r[:tiny]}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny'))
+          ].compact)
         }) %>
 </div>

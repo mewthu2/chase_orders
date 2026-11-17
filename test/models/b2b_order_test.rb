@@ -55,7 +55,6 @@ class B2bOrderTest < ActiveSupport::TestCase
 
   test 'nothing is resent to Tiny anymore: orders without a Tiny reference follow the Honey Log02' do
     order = B2bOrder.new(kind: :sale, user: @user, status: :aberto)
-    refute order.resendable?
     assert order.honey_flow?
 
     order.tiny_reference_id = '123'

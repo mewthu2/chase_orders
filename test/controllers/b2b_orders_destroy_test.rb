@@ -14,9 +14,6 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
       neighbourhood: 'Bairro', city: 'BH', state: 'MG', zip: '30000-000'
     )
     sign_in @admin
-    # Por padrão o pedido existe no Tiny (consultado quando o cancelamento é recusado).
-    stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php').with(query: hash_including('formato' => 'json'))
-      .to_return(body: { retorno: { status: 'OK', pedido: { id: '555', situacao: 'Faturado' } } }.to_json)
   end
 
   def build_order(kind: :sale, **attrs)
@@ -57,35 +54,20 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
     assert_select '.flash-messages-container .alert-success', text: /Pedido ##{order.id} excluído/
   end
 
-  test 'deleting an order already in Tiny cancels it there first and then removes it from Honey' do
+  test 'an old order sent to Tiny is deleted only in Honey: the Tiny 2 is no longer used' do
     order = sent_order
-    stub = stub_request(:post, STATUS_URL).with(body: hash_including('id' => '555', 'situacao' => 'cancelado'))
-                                          .to_return(body: { retorno: { status: 'OK' } }.to_json)
 
     assert_difference 'B2bOrder.count', -1 do
       delete b2b_order_path(order)
     end
 
-    assert_requested stub
-    assert_redirected_to b2b_orders_path
+    assert_not_requested :post, STATUS_URL
     follow_redirect!
-    assert_select '.flash-messages-container .alert-success', text: /excluído.*cancelado no Tiny, nº 1900/
+    assert_select '.flash-messages-container .alert-success', text: /Pedido ##{order.id} excluído/
     assert_equal '555', Log.last.details_parsed['tiny_reference_id']
   end
 
-  test 'when Tiny does not cancel the order it is kept in Honey' do
-    order = sent_order
-    stub_request(:post, STATUS_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Pedido faturado' }] } }.to_json)
-
-    assert_no_difference 'B2bOrder.count' do
-      delete b2b_order_path(order)
-    end
-
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-danger', text: /nº 1900.*não foi excluído/m
-  end
-
-  test 'a sent order with an active fiscal note is not deleted nor cancelled in Tiny' do
+  test 'a sent order with an active fiscal note is not deleted' do
     order = sent_order
     note_for(order, :autorizada)
 
@@ -154,7 +136,7 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
 
     get b2b_orders_path
     assert_select "form[action='#{b2b_order_path(free)}'] input[name=_method][value=delete]", count: 1
-    assert_select "form[action='#{b2b_order_path(in_tiny)}'][data-hc-confirm*='CANCELADO no Tiny (nº 1900)'] input[name=_method][value=delete]", count: 1
+    assert_select "form[action='#{b2b_order_path(in_tiny)}'][data-hc-confirm*='remove o pedido e os itens do Honey'] input[name=_method][value=delete]", count: 1
     assert_select "form[action='#{b2b_order_path(with_note)}'] input[name=_method][value=delete]", count: 0
 
     get edit_b2b_order_path(free)
@@ -176,7 +158,7 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
 
     get b2b_orders_path
 
-    assert_select "form[action='#{b2b_order_path(order)}'][data-hc-confirm*='não foi enviado ao Tiny']"
+    assert_select "form[action='#{b2b_order_path(order)}'][data-hc-confirm*='remove o pedido e os itens do Honey']"
   end
 
   test 'it requires the b2b_orders permission' do
@@ -212,17 +194,5 @@ class B2bOrdersDestroyTest < ActionDispatch::IntegrationTest
     order.tiny_reference_id = nil
     note_for(order, :assinada)
     refute order.reload.deletable?
-  end
-  test 'deleting an order that no longer exists in Tiny removes it from Honey' do
-    order = sent_order
-    stub_request(:post, STATUS_URL).to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Pedido não encontrado' }] } }.to_json)
-    stub_request(:get, 'https://api.tiny.com.br/api2/pedido.obter.php').with(query: hash_including('id' => '555'))
-      .to_return(body: { retorno: { status: 'Erro', erros: [{ erro: 'Registro não encontrado' }] } }.to_json)
-
-    assert_difference 'B2bOrder.count', -1 do
-      delete b2b_order_path(order)
-    end
-    follow_redirect!
-    assert_select '.flash-messages-container .alert-success', text: /já não existia no Tiny/
   end
 end

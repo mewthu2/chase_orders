@@ -88,13 +88,10 @@ Rails.application.routes.draw do
       post :run_order_correios_create_now
       get :order_correios_create_b2b
       get :order_correios_create_queue_b2b
-      post :approve_order_b2b
-      post :ignore_order_b2b
       post :approve_honey_order_b2b
       post :ignore_honey_order_b2b
       post :run_honey_b2b_step
       post :run_create_correios_b2b
-      post :run_order_correios_create_b2b_now
       get :order_correios_stock_errors
       get :order_correios_stock_errors_b2b
       get :send_xml
@@ -102,7 +99,6 @@ Rails.application.routes.draw do
       post :run_send_xml_now
       get :send_xml_b2b
       post :run_send_xml_b2b
-      post :run_send_xml_b2b_now
       post :complete_send_xml_b2b
       get :push_tracking
       post :run_push_tracking
@@ -114,8 +110,6 @@ Rails.application.routes.draw do
       post :run_invoice_emition
       post :run_invoice_emition_now
       get :invoice_emition_b2b
-      post :run_invoice_emition_b2b
-      post :run_invoice_emition_b2b_now
       get :order_correios_tracking_b2b
       get :api_correios
       get :api_correios_b2b
@@ -309,7 +303,6 @@ Rails.application.routes.draw do
   # controller: o tipo do pedido vem do default da rota (order_kind), não do form.
   resources :b2b_orders, defaults: { order_kind: 'sale' } do
     collection do
-      get :shipping_methods
       post :parse_items_spreadsheet
       get :product_stock
       get :search_product
@@ -318,8 +311,6 @@ Rails.application.routes.draw do
       post :import_client
     end
     member do
-      post :transmit
-      post :cancel_in_tiny
       get :romaneio
     end
   end
@@ -357,12 +348,7 @@ Rails.application.routes.draw do
   end
 
   resources :stock_transfers, controller: 'b2b_orders', defaults: { order_kind: 'stock_transfer' },
-                              only: [:index, :new, :create, :edit, :update, :destroy] do
-    member do
-      post :transmit
-      post :cancel_in_tiny
-    end
-  end
+                              only: [:index, :new, :create, :edit, :update, :destroy]
 
   # A transferência B2C não passa mais pelo Tiny: sem enviar nem cancelar lá.
   resources :b2c_transfers, controller: 'b2b_orders', defaults: { order_kind: 'b2c_transfer' },

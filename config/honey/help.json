@@ -813,28 +813,28 @@
    "title": "Pedidos p/ Aprovar (Log02)",
    "flow": "log02",
    "step": 1,
-   "purpose": "Decidir quais pedidos do atacado seguem para o Correios. Os ignorados nunca são processados.",
+   "purpose": "Decidir quais pedidos do atacado (feitos no Honey) seguem para o Correios. Os ignorados nunca são processados.",
    "when": "Sempre que chegarem pedidos de atacado novos.",
    "actions": [
-    "Marcar para processamento",
+    "Aprovar",
     "Ignorar",
-    "Ver no Tiny",
-    "Rodar Rotina Agora"
+    "Ver o pedido",
+    "Rodar rotina agora"
    ],
    "statuses": [
     [
-     "Pendente",
+     "Para aprovar",
      "Ninguém decidiu ainda.",
      "yellow"
     ],
     [
-     "Marcado",
+     "Criação no Correios",
      "Aprovado: segue para a criação.",
-     "green"
+     "blue"
     ],
     [
      "Ignorado",
-     "Não será enviado (dá para mudar).",
+     "Não será enviado (dá para aprovar depois).",
      "gray"
     ]
    ]
@@ -844,64 +844,40 @@
    "flow": "log02",
    "step": 2,
    "purpose": "Criar no Correios os pedidos do atacado que foram aprovados.",
-   "when": "Quando um pedido aprovado não andou ou aparece com Falha.",
+   "when": "Quando um pedido aprovado não andou (por exemplo, falta de estoque).",
    "actions": [
-    "Criar Selecionados",
-    "Criar este pedido agora",
-    "Verificar tentativas"
-   ],
-   "statuses": [
-    [
-     "Aguardando",
-     "Ainda não foi tentado.",
-     "gray"
-    ],
-    [
-     "Falha",
-     "O Correios recusou.",
-     "red"
-    ]
-   ]
-  },
-  "log02-notas": {
-   "title": "Emissão de Nota Fiscal no Tiny (Log02)",
-   "flow": "log02",
-   "step": 3,
-   "purpose": "Pedir ao Tiny a nota fiscal dos pedidos do atacado já criados no Correios.",
-   "when": "Quando há pedido criado sem nota.",
-   "actions": [
-    "Rodar Rotina Agora",
-    "Emitir Selecionados",
-    "Já corrigi no Tiny"
+    "Criar fila agora",
+    "Criar no Correios agora",
+    "Ver o pedido"
    ]
   },
   "log02-xml": {
-   "title": "Envio de XML para os Correios (Log02)",
+   "title": "NF-e e XML para os Correios (Log02)",
    "flow": "log02",
-   "step": 4,
-   "purpose": "Enviar ao Correios o arquivo da nota. Para outra transportadora, use \"Envio realizado\".",
-   "when": "Depois da emissão da nota.",
+   "step": 3,
+   "purpose": "O Honey emite a NF-e, autoriza na SEFAZ e manda o XML ao Correios, que libera a etiqueta.",
+   "when": "Depois da criação no Correios.",
    "actions": [
-    "Rodar Rotina Agora",
-    "Enviar Selecionados",
-    "Envio realizado"
+    "Enviar fila agora",
+    "Emitir a NF-e e enviar o XML agora",
+    "Concluir e tirar da fila"
    ],
    "terms": [
     [
-     "Envio realizado",
-     "Confirma que outra transportadora levou o pedido. Marca \"Entregue\" no Tiny."
+     "Pedidos antigos do Tiny 2",
+     "Feitos no Tiny 2 antes do Honey. O Tiny 2 não é mais usado: use \"Concluir e tirar da fila\" nos que já saíram."
     ]
    ]
   },
   "log02-rastreio": {
    "title": "Solicitação de Código de Rastreio (Log02)",
    "flow": "log02",
-   "step": 5,
-   "purpose": "Pedir ao Correios o código de rastreio dos pedidos do atacado e gravar no Tiny.",
+   "step": 4,
+   "purpose": "Pedir ao Correios o código de rastreio dos pedidos do atacado e gravar no Honey.",
    "when": "Depois do envio do XML.",
    "actions": [
-    "Rodar Rotina Agora",
-    "Solicitar Selecionados"
+    "Buscar fila agora",
+    "Buscar o rastreio agora"
    ]
   },
   "log02-sem-estoque": {
@@ -911,7 +887,7 @@
    "when": "Quando pedidos do atacado não são criados no Correios.",
    "actions": [
     "Baixar planilha",
-    "Ver pedido no Tiny"
+    "Ver o pedido no Honey"
    ]
   },
   "log02-reservas": {
@@ -932,7 +908,7 @@
   "log02-tentativas": {
    "title": "Tentativas (Log02)",
    "flow": "log02",
-   "purpose": "Histórico de cada tentativa do atacado com Correios e Tiny, com o erro e o botão de tentar de novo.",
+   "purpose": "Histórico de cada tentativa do atacado com o Correios, com o erro e o botão de tentar de novo.",
    "when": "Para descobrir por que um pedido do atacado falhou.",
    "actions": [
     "Reprocessar",
@@ -1414,18 +1390,13 @@
     "log02-criacao"
    ],
    [
-    "Emissão de Notas",
-    "Tiny emite a nota",
-    "log02-notas"
-   ],
-   [
-    "Enviar XML",
-    "Nota vai ao Correios",
+    "NF-e e XML",
+    "Honey emite e envia",
     "log02-xml"
    ],
    [
     "Rastreamento",
-    "Código vai ao Tiny",
+    "Código fica no Honey",
     "log02-rastreio"
    ]
   ]
@@ -1486,7 +1457,6 @@
   "log03-api": "rastreio estoque armazem consulta",
   "log02-api": "rastreio estoque armazem consulta atacado",
   "log03-notas": "nota nf nfe emissao fiscal tiny",
-  "log02-notas": "nota nf nfe emissao fiscal atacado tiny",
   "adm-notas": "nota nf nfe emissao fiscal sefaz",
   "adm-empresas": "cnpj certificado emissora",
   "adm-transportadoras": "frete transportadora",
@@ -1516,6 +1486,7 @@
   "inicio": "inicio home meus chamados",
   "log-transf-b2c": "transferencia atacado loja online b2b b2c",
   "log-locais": "destino cnpj endereco transferencia",
-  "atc-frete": "frete tabela faixa valor pedido atacado"
+  "atc-frete": "frete tabela faixa valor pedido atacado",
+  "log02-xml": "nota nf nfe emissao fiscal sefaz"
  }
 }

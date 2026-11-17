@@ -62,124 +62,135 @@ class StockReservationRefresherTest < ActiveSupport::TestCase
   end
 
   test 'stores the items of new queue orders' do
-    stub_queue('tiny2', [summary(10)])
+    stub_queue('tiny3', [summary(10)])
     stub_order(10, [['leg-a', '2.00'], ['TOP-B', '1.00']])
 
-    refresh = StockReservationRefresher.call(:b2b)
+    refresh = StockReservationRefresher.call(:b2c)
 
     assert_equal 'success', refresh.status
     assert refresh.last_refreshed_at.present?
-    assert_equal 2, StockReservation.reserved_for('LEG-A', account: :b2b)
+    assert_equal 2, StockReservation.reserved_for('LEG-A', account: :b2c)
     row = StockReservation.find_by(sku: 'TOP-B')
     assert_equal ['10', 'N10', 'Cliente 10', Date.new(2026, 10, 7)], [row.tiny_order_id, row.tiny_order_number, row.customer_name, row.order_date]
   end
 
   test 'follows every page of the queue' do
-    stub_queue('tiny2', [summary(1)], pages: 2, page: 1)
-    stub_queue('tiny2', [summary(2)], pages: 2, page: 2)
+    stub_queue('tiny3', [summary(1)], pages: 2, page: 1)
+    stub_queue('tiny3', [summary(2)], pages: 2, page: 2)
     stub_order(1, [['A', '1']])
     stub_order(2, [['A', '3']])
 
-    StockReservationRefresher.call(:b2b)
+    StockReservationRefresher.call(:b2c)
 
-    assert_equal 4, StockReservation.reserved_for('A', account: :b2b)
+    assert_equal 4, StockReservation.reserved_for('A', account: :b2c)
   end
 
   test 'orders already created in Correios are not reserved' do
-    Attempt.create!(kinds: :create_correios_order_tiny2, status: :success, tiny_order_id: '10')
-    stub_queue('tiny2', [summary(10)])
+    Attempt.create!(kinds: :create_correios_order, status: :success, tiny_order_id: '10')
+    stub_queue('tiny3', [summary(10)])
 
-    StockReservationRefresher.call(:b2b)
+    StockReservationRefresher.call(:b2c)
 
     assert_equal 0, StockReservation.count
     assert_not_requested :get, ORDER_URL, query: hash_including(id: '10')
   end
 
   test 'orders with a Correios order number are not reserved even if the attempt is not marked success' do
-    stub_queue('tiny2', [summary(30), summary(31)])
+    stub_queue('tiny3', [summary(30), summary(31)])
     stub_order(31, [['LEG-A', '1']])
-    Attempt.insert_all([{ kinds: Attempt.kinds[:create_correios_order_tiny2], status: Attempt.statuses[:fail], tiny_order_id: 30,
+    Attempt.insert_all([{ kinds: Attempt.kinds[:create_correios_order], status: Attempt.statuses[:fail], tiny_order_id: 30,
                           order_correios_id: 25_135_290, created_at: Time.current, updated_at: Time.current }])
 
-    StockReservationRefresher.call(:b2b)
+    StockReservationRefresher.call(:b2c)
 
     assert_equal %w[31], StockReservation.distinct.pluck(:tiny_order_id)
     assert_not_requested :get, ORDER_URL, query: hash_including(id: '30')
   end
 
   test 'removes orders that left the queue and keeps known ones without refetching' do
-    StockReservation.create!(account: :b2b, tiny_order_id: '10', sku: 'A', quantity: 1)
-    StockReservation.create!(account: :b2b, tiny_order_id: '99', sku: 'A', quantity: 5)
-    StockReservation.create!(account: :b2c, tiny_order_id: '99', sku: 'A', quantity: 7)
-    stub_queue('tiny2', [summary(10)])
+    StockReservation.create!(account: :b2c, tiny_order_id: '10', sku: 'A', quantity: 1)
+    StockReservation.create!(account: :b2c, tiny_order_id: '99', sku: 'A', quantity: 5)
+    StockReservation.create!(account: :b2b, tiny_order_id: '99', sku: 'A', quantity: 7)
+    stub_queue('tiny3', [summary(10)])
 
-    StockReservationRefresher.call(:b2b)
+    StockReservationRefresher.call(:b2c)
 
-    assert_equal ['10'], StockReservation.b2b.pluck(:tiny_order_id)
-    assert_equal 7, StockReservation.reserved_for('A', account: :b2c)
+    assert_equal ['10'], StockReservation.b2c.pluck(:tiny_order_id)
+    assert_equal 7, StockReservation.reserved_for('A', account: :b2b)
     assert_not_requested :get, ORDER_URL
   end
 
   test 'an empty queue clears the account reservations' do
-    StockReservation.create!(account: :b2c, tiny_order_id: '5', sku: 'A', quantity: 1)
+    StockReservation.create!(account: :b2b, tiny_order_id: '5', sku: 'A', quantity: 1)
     stub_empty_queue('tiny3')
-
-    refresh = StockReservationRefresher.call(:b2c)
-
-    assert_equal 'success', refresh.status
-    assert_equal 0, StockReservation.b2c.count
-  end
-
-  test 'a failing queue listing keeps the previous snapshot and records the error' do
-    StockReservation.create!(account: :b2b, tiny_order_id: '10', sku: 'A', quantity: 1)
-    stub_request(:get, /pedidos\.pesquisa/).to_return(body: { retorno: { status: 'Erro', codigo_erro: '1', erros: [{ erro: 'Token inválido' }] } }.to_json)
 
     refresh = StockReservationRefresher.call(:b2b)
 
+    assert_equal 'success', refresh.status
+    assert_equal 0, StockReservation.b2b.count
+  end
+
+  test 'a failing queue listing keeps the previous snapshot and records the error' do
+    StockReservation.create!(account: :b2c, tiny_order_id: '10', sku: 'A', quantity: 1)
+    stub_request(:get, /pedidos\.pesquisa/).to_return(body: { retorno: { status: 'Erro', codigo_erro: '1', erros: [{ erro: 'Token inválido' }] } }.to_json)
+
+    refresh = StockReservationRefresher.call(:b2c)
+
     assert_equal 'error', refresh.status
     assert_match(/Token inválido/, refresh.message)
-    assert_equal 1, StockReservation.b2b.count
+    assert_equal 1, StockReservation.b2c.count
   end
 
   test 'rate limit while fetching items keeps what was stored and marks partial' do
-    stub_queue('tiny2', [summary(1), summary(2)])
+    stub_queue('tiny3', [summary(1), summary(2)])
     stub_order(1, [['A', '1']])
     stub_request(:get, ORDER_URL).with(query: hash_including(id: '2'))
       .to_return(body: { retorno: { status: 'Erro', codigo_erro: '6' } }.to_json)
 
-    refresh = StockReservationRefresher.call(:b2b)
+    refresh = StockReservationRefresher.call(:b2c)
 
     assert_equal 'partial', refresh.status
-    assert_equal ['1'], StockReservation.b2b.distinct.pluck(:tiny_order_id)
+    assert_equal ['1'], StockReservation.b2c.distinct.pluck(:tiny_order_id)
   end
 
   test 'one broken order does not stop the others' do
-    stub_queue('tiny2', [summary(1), summary(2)])
+    stub_queue('tiny3', [summary(1), summary(2)])
     stub_request(:get, ORDER_URL).with(query: hash_including(id: '1')).to_return(body: 'not json')
     stub_order(2, [['A', '1']])
 
-    refresh = StockReservationRefresher.call(:b2b)
+    refresh = StockReservationRefresher.call(:b2c)
 
     assert_equal 'success', refresh.status
-    assert_equal ['2'], StockReservation.b2b.distinct.pluck(:tiny_order_id)
+    assert_equal ['2'], StockReservation.b2c.distinct.pluck(:tiny_order_id)
   end
 
   test 'skips when another run is in progress, but not when that run is stale' do
-    StockReservationRefresh.for(:b2b).update!(status: 'running')
-    StockReservationRefresher.call(:b2b)
+    StockReservationRefresh.for(:b2c).update!(status: 'running')
+    StockReservationRefresher.call(:b2c)
     assert_not_requested :get, SEARCH_URL
 
-    StockReservationRefresh.for(:b2b).update_columns(updated_at: 6.minutes.ago)
-    stub_empty_queue('tiny2')
-    assert_equal 'success', StockReservationRefresher.call(:b2b).status
+    StockReservationRefresh.for(:b2c).update_columns(updated_at: 6.minutes.ago)
+    stub_empty_queue('tiny3')
+    assert_equal 'success', StockReservationRefresher.call(:b2c).status
   end
 
   test 'the job refreshes both accounts when none is given' do
-    stub_empty_queue('tiny2')
+    stub_empty_queue('tiny3')
     stub_empty_queue('tiny3')
 
     StockReservationRefreshJob.perform_now
 
     assert_equal %w[success success], StockReservationRefresh.order(:account).pluck(:status)
+  end
+
+  test 'the B2B account no longer reads the Tiny 2 queue: only the Honey orders reserve stock' do
+    StockReservation.create!(account: :b2b, tiny_order_id: '10', sku: 'A', quantity: 1)
+    StockReservation.create!(account: :b2b, tiny_order_id: 'H7', sku: 'A', quantity: 2)
+    HoneyB2bLog.stub(:sync_reservations!, nil) do
+      assert_equal 'success', StockReservationRefresher.call(:b2b).status
+    end
+
+    assert_equal ['H7'], StockReservation.b2b.pluck(:tiny_order_id)
+    assert_not_requested :get, SEARCH_URL
   end
 end

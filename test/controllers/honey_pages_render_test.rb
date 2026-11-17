@@ -115,11 +115,14 @@ class HoneyPagesRenderTest < ActionDispatch::IntegrationTest
 
   test 'log02 screens' do
     stub_request(:get, /api\.tiny\.com\.br/).to_return(body: { retorno: { status: 'Erro', codigo_erro: '20', erros: [{ erro: 'A consulta não retornou registros' }] } }.to_json)
-    [order_correios_create_b2b_dashboard_index_path, order_correios_create_queue_b2b_dashboard_index_path, invoice_emition_b2b_dashboard_index_path,
+    [order_correios_create_b2b_dashboard_index_path, order_correios_create_queue_b2b_dashboard_index_path,
      send_xml_b2b_dashboard_index_path, push_tracking_b2b_dashboard_index_path, order_correios_stock_errors_b2b_dashboard_index_path,
      order_correios_tracking_b2b_dashboard_index_path, api_correios_b2b_dashboard_index_path].each do |path|
       get path
       assert_response :success, path
     end
+    assert_not_requested :get, /api\.tiny\.com\.br/
+    get invoice_emition_b2b_dashboard_index_path
+    assert_redirected_to send_xml_b2b_dashboard_index_path
   end
 end

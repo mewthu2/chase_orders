@@ -2,18 +2,21 @@
     fila automática, indicadores, filtros, lista com seleção, execução por linha e em lote.
     Locais: kind (:log03/:log02), action, title, subtitle, icon, perm, queue, errors ({ tiny_order_id => { message:, status:, updated_at: } }),
     run_path, run_now_path, extra_action (->(attempt) { html }), step (rótulo curto da etapa: 'nota', 'XML'), done_label, done_help, row_tip, row_icon, run_msg, bulk_label,
-    runbox_title, runbox_text, runbox_btn, table_title, table_meta, empty_text; opcionais: corrections, order_types, transport, return_to, header. %>
+    runbox_title, runbox_text, runbox_btn, table_title, table_meta, empty_text; opcionais: corrections, order_types, transport, return_to, header,
+    legacy (true: só a lista dos pedidos antigos do Tiny 2, sem cabeçalho, fila nem botões de rodar). %>
 <% corrections ||= {} %>
 <% order_types ||= nil %>
 <% transport ||= false %>
 <% return_to ||= nil %>
 <% header ||= nil %>
+<% legacy ||= false %>
 <% statuses = { 'pending' => ['Na fila', 'yellow', "Esperando a #{step} ser feita."],
                 'held' => ['Aguardando correção', 'orange', 'O endereço da nota precisa ser corrigido no Tiny antes de seguir.'],
                 'error' => ['Com erro', 'red', 'A última tentativa falhou. Veja o motivo e tente de novo.'] } %>
 <% type_labels = B2bOrderType::LABELS.transform_keys(&:to_s) %>
 <% tiny_url = ENV.fetch('TINY_SELLS_URL', 'https://erp.tiny.com.br/vendas') %>
 <% extra_action ||= nil %>
+<% honey_orders = kind == :log02 ? b2b_honey_orders_by_tiny(queue.map(&:tiny_order_id)) : {} %>
 <% rows = queue.map do |att|
      err = errors[att.tiny_order_id] || errors[att.tiny_order_id.to_s]
      err = { message: err.error.presence || err.message, status: err.status, updated_at: err.updated_at } if err.is_a?(Attempt)
@@ -56,29 +59,39 @@
      r[:tipo_badge] = r[:tipo].present? ? b2b_order_type_badge(r[:tipo]).to_s.html_safe : content_tag(:span, '—', class: 'pg-dash') if order_types
    end %>
 
+<% unless legacy %>
 <%= hc_page_header title, subtitle, icon: icon do %><%= header %><% end %>
+<% end %>
 
 <div class="pg-blocks">
+  <% unless legacy %>
   <%= render 'dashboard/flow', kind: kind, current: action, counts: { action => rows.size } %>
   <%= render 'dashboard/runbox', title: runbox_title, text: runbox_text, perm: perm, run_path: run_path, running: @job_running, btn: runbox_btn, last_run: @last_run_at,
              confirm: "O sistema processa agora todos os #{rows.size} pedidos da fila." %>
   <%= hc_pg_kpis(table) %>
+  <% end %>
   <%= hc_pg_table(table, title: table_title, icon: icon, meta: table_meta, tools: (render('dashboard/order_type_filter') if order_types),
-        select: (->(r) { { id: r[:id], tiny_order_id: r[:record].tiny_order_id } } if screen_can?(perm, :execute)),
-        bulk: (render('dashboard/bulk_bar', icon: row_icon, label: bulk_label, hint: 'Marque as linhas para processar vários pedidos de uma vez.') if screen_can?(perm, :execute)),
+        select: (->(r) { { id: r[:id], tiny_order_id: r[:record].tiny_order_id } } if !legacy && screen_can?(perm, :execute)),
+        bulk: (render('dashboard/bulk_bar', icon: row_icon, label: bulk_label, hint: 'Marque as linhas para processar vários pedidos de uma vez.') if !legacy && screen_can?(perm, :execute)),
         empty: { title: 'Nenhum item na fila', text: empty_text },
         detail: { title: ->(r) { "Pedido #{r[:record].tiny_order_id}" }, fields: [['Última mensagem', :erro]] },
         actions: ->(r) {
           att = r[:record]
           safe_join([
             (content_tag(:button, content_tag(:i, '', class: row_icon), type: 'button', class: 'action-btn', data: { tip: row_tip }, 'aria-label': row_tip,
-                         onclick: "runQueueItemNow(#{run_now_path.to_json}, #{att.id}, #{run_msg.to_json})") if screen_can?(perm, :execute)),
+                         onclick: "runQueueItemNow(#{run_now_path.to_json}, #{att.id}, #{run_msg.to_json})") if !legacy && screen_can?(perm, :execute)),
             (extra_action.call(att) if extra_action),
             link_to(content_tag(:i, '', class: 'fas fa-paperclip'), verify_attempts_attempts_path(tiny_order_id: att.tiny_order_id), class: 'action-btn', target: '_blank', data: { tip: 'Verificar tentativas' }, 'aria-label': 'Verificar tentativas'),
-            link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{att.tiny_order_id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+            (if kind == :log02
+               b2b_honey_order_action(att.b2b_order || honey_orders[att.tiny_order_id.to_s])
+             else
+               link_to(content_tag(:i, '', class: 'fas fa-arrow-up-right-from-square'), "#{tiny_url}#edit/#{att.tiny_order_id}", class: 'action-btn', target: '_blank', rel: 'noopener', data: { tip: 'Ver no Tiny' }, 'aria-label': 'Ver no Tiny')
+             end)
           ].compact)
         }) %>
 </div>
 
+<% unless legacy %>
 <%= render 'dashboard/run_now_modal' %>
 <%= render 'dashboard/queue_scripts', run_now_path: run_now_path, bulk_message: run_msg %>
+<% end %>

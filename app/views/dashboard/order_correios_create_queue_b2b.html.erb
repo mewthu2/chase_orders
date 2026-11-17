@@ -1,8 +1,18 @@
 <% title 'Criação de Pedidos no Correios (Log02)' %>
-<%= render 'dashboard/creation_queue', kind: :log02, action: :order_correios_create_queue_b2b, perm: :dashboard_correios_b2b, account: 'Tiny 2 (atacado)', order_types: @order_types,
-           title: 'Criação de Pedidos no Correios (Log02)', subtitle: 'Cria no Correios os pedidos do atacado já aprovados.',
-           run_now_path: run_order_correios_create_b2b_now_dashboard_index_path, stock_path: order_correios_stock_errors_b2b_dashboard_index_path, attempts_channel: 'b2b' %>
+<% waiting = B2bOrder.honey_flow.aprovado.where(correios_order_id: nil, log_ignored: false).count %>
 
-<div class="pg-blocks" style="margin-top: 16px">
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[creation], title: 'Pedidos do Honey aprovados', meta: 'Entram no Correios na próxima rodada da criação (ou pelo botão de cada um).', empty_text: 'Nenhum pedido do Honey aprovado esperando a criação.' %>
+<%= hc_page_header 'Criação de Pedidos no Correios (Log02)', 'Cria no Correios os pedidos do atacado já aprovados.', icon: 'fas fa-plus-circle' do %>
+  <%= link_to order_correios_stock_errors_b2b_dashboard_index_path, class: 'btn btn-secondary' do %><i class="fas fa-box-open"></i>Produtos sem estoque<% end %>
+<% end %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Como esta etapa funciona.</strong> Os pedidos do Honey aprovados em Pedidos p/ Aprovar viram pedido no Correios na próxima rodada (ou pelo botão de cada um). Se o Correios recusar, por exemplo por falta de estoque, o pedido fica aqui e o sistema tenta de novo sozinho.</div></div>
+
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: :log02, current: :order_correios_create_queue_b2b, counts: { order_correios_create_queue_b2b: waiting } %>
+  <%= render 'dashboard/runbox', title: 'Fila de criação no Correios', perm: :dashboard_correios_b2b, run_path: run_create_correios_b2b_dashboard_index_path,
+             running: @job_running, btn: 'Criar fila agora', last_run: @last_run_at,
+             confirm: "O sistema cria agora no Correios os #{waiting} pedidos aprovados.",
+             text: 'Cria no Correios os pedidos aprovados. O sistema roda sozinho; use Criar fila agora se não puder esperar.' %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[creation], title: 'Pedidos aprovados', meta: 'Entram no Correios na próxima rodada da criação (ou pelo botão de cada um). Abra o pedido para ver a última tentativa.',
+             empty_text: 'Nenhum pedido aprovado esperando a criação.' %>
 </div>

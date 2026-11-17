@@ -4,10 +4,9 @@ class DashboardController < ApplicationController
   # Actions exclusivas do painel "Correios B2B" (permissão dashboard_correios_b2b).
   B2B_ONLY_ACTIONS = %i[
     push_tracking_b2b run_push_tracking_b2b run_push_tracking_b2b_now
-    send_xml_b2b run_send_xml_b2b run_send_xml_b2b_now complete_send_xml_b2b
-    invoice_emition_b2b run_invoice_emition_b2b run_invoice_emition_b2b_now
-    order_correios_create_b2b order_correios_create_queue_b2b
-    run_create_correios_b2b run_order_correios_create_b2b_now
+    send_xml_b2b run_send_xml_b2b complete_send_xml_b2b
+    invoice_emition_b2b
+    order_correios_create_b2b order_correios_create_queue_b2b run_create_correios_b2b
     approve_order_b2b ignore_order_b2b approve_honey_order_b2b ignore_honey_order_b2b run_honey_b2b_step
     order_correios_stock_errors_b2b order_correios_tracking_b2b api_correios_b2b
   ].freeze
@@ -16,8 +15,6 @@ class DashboardController < ApplicationController
   # tiver a permissão B2C ou a B2B.
   SHARED_CORREIOS_ACTIONS = %i[stockend tracking stuck_orders search_product].freeze
 
-  # Janela de pedidos/tentativas exibidos nas telas Correios B2B.
-  B2B_ORDERS_LOOKBACK = 8.weeks
   # Criação e erros de estoque do Log03: pedido travado por falta de estoque pode esperar semanas pela reposição.
   B2C_ORDERS_LOOKBACK = 8.weeks
 
@@ -200,48 +197,21 @@ class DashboardController < ApplicationController
     redirect_to send_xml_b2b_dashboard_index_path
   end
 
-  def run_send_xml_b2b_now
-    queue_attempt = Attempt.find(params[:attempt_id])
-    result = SendXmlCorreiosLogJob2.new.send_one_xml(queue_attempt)
-    render json: attempt_result_json(result)
-  rescue StandardError => e
-    render json: { success: false, error: e.message }, status: :unprocessable_entity
-  end
-
-  # Pedidos de outra transportadora não passam pelo envio de XML aos Correios:
-  # o usuário confirma o envio, o pedido vai para "Entregue" no Tiny 2 e um
-  # send_xml_tiny2 de sucesso tira o pedido da fila. Transportadora não entra no
-  # rastreamento, então o pedido fica concluído.
+  # Pedido antigo do Tiny 2 na fila do XML: o Tiny 2 não é mais usado (o XML vinha de lá), então o pedido
+  # que já saiu é concluído aqui, só no Honey. Um send_xml_tiny2 de sucesso tira o pedido da fila do XML;
+  # o que ia pelo Correios ganha também um get_tracking_tiny2 de sucesso para não cair na fila do rastreio.
   def complete_send_xml_b2b
     queue_attempt = Attempt.find(params[:attempt_id])
     redirect_path = send_xml_b2b_dashboard_index_path(params.permit(:transportadora, :order_type).to_h)
+    common = { status: :success, is_transportadora: queue_attempt.is_transportadora, tiny_order_id: queue_attempt.tiny_order_id,
+               order_correios_id: queue_attempt.order_correios_id, id_nota_fiscal: queue_attempt.id_nota_fiscal, user: current_user.email }
 
-    unless queue_attempt.is_transportadora
-      redirect_to redirect_path, alert: 'Apenas pedidos de transportadora podem ser concluídos manualmente.'
-      return
+    Attempt.transaction do
+      Attempt.create!(kinds: :send_xml_tiny2, message: 'Concluído à mão no Honey (pedido antigo do Tiny 2)', **common)
+      Attempt.create!(kinds: :get_tracking_tiny2, message: 'Concluído à mão no Honey, sem rastreio (pedido antigo do Tiny 2)', **common) unless queue_attempt.is_transportadora
     end
 
-    tiny_response = Tiny::Orders.change_situation(queue_attempt.tiny_order_id, 'entregue', ENV.fetch('TOKEN_TINY2_PRODUCTION'))
-
-    unless tiny_response&.dig(:status) == 'OK'
-      tiny_error = Array(tiny_response&.dig(:erros)).map { |e| e.is_a?(Hash) ? e.with_indifferent_access[:erro] : e }.compact.join(', ')
-      redirect_to redirect_path,
-                  alert: "Não foi possível concluir o pedido #{queue_attempt.tiny_order_id} no Tiny: #{tiny_error.presence || 'resposta inesperada'}"
-      return
-    end
-
-    Attempt.create!(
-      kinds: :send_xml_tiny2,
-      status: :success,
-      is_transportadora: true,
-      tiny_order_id: queue_attempt.tiny_order_id,
-      order_correios_id: queue_attempt.order_correios_id,
-      id_nota_fiscal: queue_attempt.id_nota_fiscal,
-      user: current_user.email,
-      message: 'Envio realizado manualmente (transportadora) - pedido Entregue no Tiny'
-    )
-
-    redirect_to redirect_path, notice: "Pedido #{queue_attempt.tiny_order_id} concluído e marcado como Entregue no Tiny."
+    redirect_to redirect_path, notice: "Pedido #{queue_attempt.tiny_order_id} concluído e tirado da fila."
   rescue StandardError => e
     redirect_to send_xml_b2b_dashboard_index_path, alert: "Erro ao concluir pedido: #{e.message}"
   end
@@ -279,42 +249,9 @@ class DashboardController < ApplicationController
     render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
+  # A NF-e do Log02 sai no Honey, na etapa do XML: a emissão pelo Tiny 2 não existe mais.
   def invoice_emition_b2b
-    successful_ids = Attempt.where(kinds: :emission_invoice_tiny2, status: :success)
-                            .pluck(:order_correios_id)
-                            .compact
-    @invoice_emition = Attempt.where(kinds: :create_correios_order_tiny2, status: :success)
-                              .where.not(order_correios_id: successful_ids)
-                              .distinct(:order_correios_id)
-
-    @filter_transportadora = params[:transportadora]
-    @invoice_emition = @invoice_emition.where(is_transportadora: @filter_transportadora == 'outra') if @filter_transportadora.present?
-
-    @job_running = b2b_job_running?(:emission_invoice_tiny2)
-    preload_address_corrections(@invoice_emition)
-    @order_types = B2bOrderType.for_orders(@invoice_emition.map(&:tiny_order_id))
-    @invoice_emition = filter_by_order_type(@invoice_emition, @order_types)
-    load_queue_stats(@invoice_emition, :emission_invoice_tiny2)
-  end
-
-  def run_invoice_emition_b2b
-    if b2b_job_running?(:emission_invoice_tiny2)
-      redirect_to invoice_emition_b2b_dashboard_index_path, alert: 'Já existe uma execução dessa rotina em andamento!'
-      return
-    end
-
-    marker = start_b2b_job_marker(:emission_invoice_tiny2)
-    InvoiceEmitionsJob2.perform_later('all', nil, marker.id)
-    flash[:notice] = 'Rotina de emissão de notas fiscais (B2B) iniciada com sucesso!'
-    redirect_to invoice_emition_b2b_dashboard_index_path
-  end
-
-  def run_invoice_emition_b2b_now
-    queue_attempt = Attempt.find(params[:attempt_id])
-    result = InvoiceEmitionsJob2.new.one_emission(queue_attempt)
-    render json: attempt_result_json(result)
-  rescue StandardError => e
-    render json: { success: false, error: e.message }, status: :unprocessable_entity
+    redirect_to send_xml_b2b_dashboard_index_path
   end
 
   def stockend
@@ -449,131 +386,14 @@ class DashboardController < ApplicationController
     render json: { success: false, error: e.message }, status: :unprocessable_entity
   end
 
+  # Só pedidos do Honey: o Tiny 2 não é mais usado.
   def order_correios_create_b2b
-    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
-    orders = @orders_response&.dig('pedidos') || []
-
-    successfully_processed_ids = Attempt.where(
-      kinds: :create_correios_order_tiny2,
-      status: :success,
-      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
-    ).pluck(:tiny_order_id).map(&:to_s)
-
-    orders = orders.reject do |order_data|
-      successfully_processed_ids.include?(order_data['pedido']['id'].to_s)
-    end
-
-    order_ids = orders.map { |order_data| order_data['pedido']['id'].to_s }
-    @reviews = Tiny2OrderReview.where(tiny_order_id: order_ids).index_by(&:tiny_order_id)
-
-    @review_filter = params[:review].presence || 'pending'
-
-    @orders = orders.select do |order_data|
-      review = @reviews[order_data['pedido']['id'].to_s]
-
-      case @review_filter
-      when 'approved' then review&.approved?
-      when 'ignored' then review&.ignored?
-      when 'all' then true
-      else review.nil?
-      end
-    end
-
-    @counts = {
-      pending: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s].nil? },
-      approved: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.approved? },
-      ignored: orders.count { |order_data| @reviews[order_data['pedido']['id'].to_s]&.ignored? }
-    }
-
-    load_b2b_order_types_from_tiny(@orders)
-
     @job_running = b2b_job_running?(:create_correios_order_tiny2)
   end
 
   def order_correios_create_queue_b2b
-    @orders_response = Tiny::Orders.get_all_orders_response('preparando_envio', ENV.fetch('TOKEN_TINY2_PRODUCTION'), B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y'))
-    @orders = @orders_response&.dig('pedidos') || []
-
-    successfully_processed_ids = Attempt.where(
-      kinds: :create_correios_order_tiny2,
-      status: :success,
-      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
-    ).pluck(:tiny_order_id).map(&:to_s)
-
-    order_ids = @orders.map { |order_data| order_data['pedido']['id'].to_s }
-    approved_ids = Tiny2OrderReview.where(tiny_order_id: order_ids, status: :approved).pluck(:tiny_order_id)
-
-    @pending_orders = @orders.select do |order_data|
-      order_id = order_data['pedido']['id'].to_s
-      approved_ids.include?(order_id) && !successfully_processed_ids.include?(order_id)
-    end
-
-    pending_order_ids = @pending_orders.map { |order_data| order_data['pedido']['id'].to_s }
-    load_b2b_order_types_from_tiny(@pending_orders)
-
-    relevant_attempts = Attempt.where(
-      kinds: :create_correios_order_tiny2,
-      tiny_order_id: pending_order_ids,
-      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
-    ).order(:created_at)
-
-    queue_attempts = []
-    failed_attempts = []
-
-    relevant_attempts.each do |attempt|
-      case attempt.status
-      when 'fail', 'processing'
-        queue_attempts << attempt
-      when 'error'
-        failed_attempts << attempt if failed_attempts.size < 10
-      end
-    end
-
-    @queue_positions = queue_attempts.each_with_index.to_h do |attempt, index|
-      [
-        attempt.tiny_order_id.to_s,
-        {
-          position: index + 1,
-          status: attempt.status,
-          created_at: attempt.created_at,
-          updated_at: attempt.updated_at,
-          message: attempt.message.presence || attempt.error
-        }
-      ]
-    end
-
-    @failed_attempts = failed_attempts.sort_by(&:updated_at).reverse
-
-    grouped_status = relevant_attempts.group_by(&:status)
-    @attempts_summary = {
-      total: relevant_attempts.count,
-      fail: grouped_status['fail']&.size || 0,
-      error: grouped_status['error']&.size || 0,
-      success: grouped_status['success']&.size || 0,
-      processing: grouped_status['processing']&.size || 0
-    }
-
-    @last_errors = {}
-    relevant_attempts
-      .select { |a| (a.status.nil? || %w[fail error].include?(a.status)) && (a.message.present? || a.error.present?) }
-      .group_by(&:tiny_order_id).each do |order_id, attempts|
-        last = attempts.max_by(&:updated_at)
-        @last_errors[order_id.to_s] = {
-          message: last.message.presence || last.error,
-          status: last.status || 'error',
-          updated_at: last.updated_at
-        }
-      end
-
-    @stats = {
-      total_orders: @orders.count,
-      pending_orders: @pending_orders.count,
-      in_queue: queue_attempts.count,
-      successful: successfully_processed_ids.count,
-      failed: failed_attempts.count,
-      pending: queue_attempts.count { |a| a.status == 'fail' },
-      processing: queue_attempts.count { |a| a.status == 'processing' }
-    }
+    @job_running = b2b_job_running?(:create_correios_order_tiny2)
+    @last_run_at = Attempt.where(kinds: :create_correios_order_honey).maximum(:created_at)
   end
 
   def run_create_correios_b2b
@@ -585,22 +405,7 @@ class DashboardController < ApplicationController
     marker = start_b2b_job_marker(:create_correios_order_tiny2)
     CreateCorreiosLogOrdersJob2.perform_later('all', nil, marker.id)
     flash[:notice] = 'Rotina de criação de pedidos no Correios (B2B) iniciada com sucesso!'
-    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review])
-  end
-
-  def run_order_correios_create_b2b_now
-    tiny_order_id = params[:attempt_id].to_s
-    order = { pedido: { id: tiny_order_id } }
-    result = CreateCorreiosLogOrdersJob2.new.create_one_log_order(order)
-
-    if result.nil?
-      render json: { success: false, error: 'Pedido não aprovado para processamento.' }, status: :unprocessable_entity
-      return
-    end
-
-    render json: attempt_result_json(result)
-  rescue StandardError => e
-    render json: { success: false, error: e.message }, status: :unprocessable_entity
+    redirect_back fallback_location: order_correios_create_b2b_dashboard_index_path
   end
 
   # Pedidos feitos no Honey (sem Tiny): aprovar manda para a criação no Correios; ignorar tira do Log02
@@ -646,30 +451,6 @@ class DashboardController < ApplicationController
     else
       redirect_to back, alert: "Pedido ##{order.id}: #{(attempt.error.presence || attempt.message.presence || 'não concluiu').to_s.truncate(200)}"
     end
-  end
-
-  def approve_order_b2b
-    review = Tiny2OrderReview.find_or_initialize_by(tiny_order_id: params[:tiny_order_id].to_s)
-    review.status = :approved
-    review.save!
-
-    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
-                notice: "Pedido #{params[:tiny_order_id]} marcado para processamento."
-  rescue StandardError => e
-    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
-                alert: "Erro ao marcar pedido: #{e.message}"
-  end
-
-  def ignore_order_b2b
-    review = Tiny2OrderReview.find_or_initialize_by(tiny_order_id: params[:tiny_order_id].to_s)
-    review.status = :ignored
-    review.save!
-
-    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
-                notice: "Pedido #{params[:tiny_order_id]} ignorado."
-  rescue StandardError => e
-    redirect_to order_correios_create_b2b_dashboard_index_path(review: params[:review]),
-                alert: "Erro ao ignorar pedido: #{e.message}"
   end
 
   def order_correios_stock_errors
@@ -774,97 +555,41 @@ class DashboardController < ApplicationController
     end
   end
 
+  # Pedidos do Honey aprovados que o Correios recusou por falta de estoque (o Tiny 2 não é mais usado).
   def order_correios_stock_errors_b2b
-    @orders_response = Tiny::Orders.get_orders_response(
-      '',
-      'preparando_envio',
-      ENV.fetch('TOKEN_TINY2_PRODUCTION'),
-      '',
-      B2B_ORDERS_LOOKBACK.ago.strftime('%d/%m/%Y')
-    )
+    orders = B2bOrder.honey_flow.aprovado.where(correios_order_id: nil, log_ignored: false)
+                     .includes(:b2b_order_items, :client, :transfer_location).index_by(&:id)
+    latest_ids = Attempt.where(kinds: :create_correios_order_honey, b2b_order_id: orders.keys).group(:b2b_order_id).maximum(:id).values
+    attempts = Attempt.where(id: latest_ids).select { |attempt| extract_missing_stock_product_codes(attempt.message).any? }
 
-    @orders = @orders_response&.dig('pedidos') || []
-
-    successfully_processed_ids = Attempt.where(
-      kinds: :create_correios_order_tiny2,
-      status: :success,
-      created_at: B2B_ORDERS_LOOKBACK.ago..Time.current
-    ).pluck(:tiny_order_id).map(&:to_s)
-
-    @pending_orders = @orders.reject do |order_data|
-      order_id = order_data['pedido']['id'].to_s
-      successfully_processed_ids.include?(order_id)
-    end
-
-    @orders_by_id = @pending_orders.index_by do |order_data|
-      order_data['pedido']['id'].to_s
-    end
-
-    pending_order_ids = @pending_orders.map do |order_data|
-      order_data['pedido']['id'].to_s
-    end
-
-    latest_attempt_by_order = latest_stock_error_attempts_by_order(:create_correios_order_tiny2, pending_order_ids)
-
-    unique_items_by_order_and_product = {}
-
-    latest_attempt_by_order.each do |tiny_order_id, attempt|
-      attempt_params = attempt.params.to_s
-      order_data = @orders_by_id[tiny_order_id]&.dig('pedido')
-
-      missing_product_codes = extract_missing_stock_product_codes(attempt.message)
-
-      missing_product_codes.each do |product_code|
-        quantity = extract_item_quantity_from_attempt_params(
-          attempt_params,
-          product_code
-        )
-
-        unique_key = "#{tiny_order_id}-#{product_code}"
-
-        unique_items_by_order_and_product[unique_key] = {
-          attempt_id: attempt.id,
-          tiny_order_id: tiny_order_id,
-          tiny_order_number: order_data&.dig('numero'),
-          id_nota_fiscal: attempt.id_nota_fiscal.presence || extract_attempt_param(attempt_params, :invoice),
-          numero_ecommerce: extract_attempt_param(attempt_params, :numero_ecommerce),
-          customer_name: extract_attempt_param(attempt_params, :nome) || order_data&.dig('nome'),
-          data_pedido: extract_attempt_param(attempt_params, :data_pedido) || order_data&.dig('data_pedido'),
-          valor: extract_attempt_param(attempt_params, :valor) || order_data&.dig('valor'),
-          product_code: product_code,
-          quantity: quantity,
-          status: attempt.status,
-          message: attempt.message,
-          created_at: attempt.created_at,
-          updated_at: attempt.updated_at
-        }
+    @missing_stock_items = attempts.flat_map do |attempt|
+      order = orders[attempt.b2b_order_id]
+      quantities = order.b2b_order_items.each_with_object(Hash.new(0)) { |i, acc| acc[i.sku.to_s.strip.upcase] += i.quantity.to_i }
+      extract_missing_stock_product_codes(attempt.message).uniq.map do |product_code|
+        { attempt_id: attempt.id, b2b_order_id: order.id, tiny_order_id: "##{order.id}", tiny_order_number: nil,
+          customer_name: HoneyB2bLog.destination_name(order), data_pedido: order.created_at.strftime('%d/%m/%Y'),
+          valor: order.total.to_f.to_s, product_code:, quantity: quantities[product_code.to_s.upcase].to_s,
+          status: attempt.status, message: attempt.message, created_at: attempt.created_at, updated_at: attempt.updated_at }
       end
     end
-
-    @missing_stock_items = unique_items_by_order_and_product.values
 
     @missing_stock_summary = @missing_stock_items
       .group_by { |item| item[:product_code] }
       .map do |product_code, items|
-        {
-          product_code: product_code,
-          orders_count: items.map { |item| item[:tiny_order_id] }.uniq.count,
-          attempts_count: items.count,
-          total_quantity: items.sum { |item| item[:quantity].to_s.tr(',', '.').to_f }
-        }
+        { product_code:, orders_count: items.map { |item| item[:b2b_order_id] }.uniq.count, attempts_count: items.count,
+          total_quantity: items.sum { |item| item[:quantity].to_f } }
       end
       .sort_by { |item| -item[:total_quantity] }
 
     @stats = {
-      total_attempts: latest_attempt_by_order.size,
+      total_attempts: attempts.size,
       total_items: @missing_stock_items.count,
       total_products: @missing_stock_summary.count,
-      total_orders: @missing_stock_items.map { |item| item[:tiny_order_id] }.uniq.count
+      total_orders: @missing_stock_items.map { |item| item[:b2b_order_id] }.uniq.count
     }
 
     respond_to do |format|
-      format.html { @order_types = B2bOrderType.for_orders(@missing_stock_items.map { |item| item[:tiny_order_id] }) }
-
+      format.html
       format.csv do
         send_data(
           generate_order_correios_stock_errors_csv(@missing_stock_items),
@@ -1476,12 +1201,6 @@ class DashboardController < ApplicationController
 
   # Uma consulta só para as correções de endereço dos pedidos listados (evita uma por linha).
   # Tipo de cada pedido B2B da listagem do Tiny (o nome do cliente decide se vale buscar o pedido completo).
-  def load_b2b_order_types_from_tiny(orders)
-    pedidos = orders.map { |order_data| order_data['pedido'] }
-    @order_types = B2bOrderType.for_orders(pedidos.map { |pedido| pedido['id'] },
-                                           names: pedidos.to_h { |pedido| [pedido['id'].to_s, pedido['nome']] })
-  end
-
   def preload_address_corrections(attempts)
     ids = attempts.map { |attempt| attempt.tiny_order_id.to_s }.reject(&:blank?).uniq
     @address_corrections = AddressCorrection.where(tiny_order_id: ids).index_by(&:tiny_order_id)

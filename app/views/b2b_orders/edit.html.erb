@@ -12,12 +12,6 @@
     </div>
     <div class="header-actions">
       <%= hc_help_button %>
-      <% if !@b2b_order.b2c_transfer? && @b2b_order.tiny_order? && @b2b_order.tiny_reference_id.present? %>
-        <%= button_to cancel_in_tiny_order_path_for(@b2b_order), method: :post, class: "btn-back",
-                      form: { data: { turbo_confirm: "Cancelar o pedido nº #{@b2b_order.tiny_reference_number.presence || @b2b_order.tiny_reference_id} no Tiny e liberar este pedido para reenvio? O pedido continuará no Tiny com situação Cancelado (você pode excluí-lo por lá)." } } do %>
-          <i class="fas fa-ban me-1"></i>Cancelar no Tiny
-        <% end %>
-      <% end %>
       <% if order_deletable?(@b2b_order) %>
         <%= button_to order_path_for(@b2b_order), method: :delete, class: "btn-back",
                       form: { data: { turbo_confirm: b2b_delete_confirm(@b2b_order) } } do %>

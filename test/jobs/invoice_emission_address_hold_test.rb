@@ -8,8 +8,7 @@ class InvoiceEmissionAddressHoldTest < ActiveSupport::TestCase
   BAIRRO_ERROR = 'A nota fiscal não foi enviada, pois contêm erros O campo "Bairro" não foi preenchido ou está inválido'.freeze
 
   JOBS = {
-    b2c: { job: InvoiceEmitionsJob, created: :create_correios_order, emitted: :emission_invoice, token: 'TOKEN_TINY3_PRODUCTION' },
-    b2b: { job: InvoiceEmitionsJob2, created: :create_correios_order_tiny2, emitted: :emission_invoice_tiny2, token: 'TOKEN_TINY2_PRODUCTION' }
+    b2c: { job: InvoiceEmitionsJob, created: :create_correios_order, emitted: :emission_invoice, token: 'TOKEN_TINY3_PRODUCTION' }
   }.freeze
 
   def setup
