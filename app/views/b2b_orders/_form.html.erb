@@ -198,7 +198,7 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <div class="form-section" id="itemsSection">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-boxes me-2"></i>Itens</h5></div>
     <div class="form-section-body">
       <% if @b2b_order.stock_transfer? %>
@@ -221,6 +221,12 @@
       </div>
 
       <%= render 'stock_reservations/freshness', refresh: StockReservationRefresh.for(:b2b) %>
+
+      <div class="item-search">
+        <i class="fas fa-search item-search__icon"></i>
+        <input type="search" id="itemSearchInput" class="field-input item-search__input" placeholder="Pesquisar nos itens do pedido por SKU ou nome..." autocomplete="off">
+        <span class="item-search__count" id="itemSearchCount"></span>
+      </div>
 
       <table class="orders-table" id="itemsTable" data-enforce-stock="<%= @b2b_order.tiny_reference_id.blank? && !@b2b_order.cancelado? %>">
         <thead>
@@ -249,6 +255,7 @@
           <% end %>
         </tbody>
       </table>
+      <div class="item-search__empty" id="itemSearchEmpty" hidden><i class="fas fa-search me-2"></i>Nenhum item com esse SKU ou nome.</div>
       <div id="removedItemsFields" hidden></div>
       <div id="stockEnforcementNotice" class="stock-enforcement-notice d-none" role="status"></div>
       <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque do Log02 − itens reservados (pedidos do Honey e da fila antiga do Tiny). Não dá para adicionar item sem disponível nem pedir acima dele.</span>
@@ -304,7 +311,7 @@
   </div>
   <% end %>
 
-  <div class="form-section">
+  <div class="form-section" id="orderNotesSection">
     <div class="form-section-body">
       <label class="field-label">Observações</label>
       <%= form.text_area :notes, class: 'field-input', rows: 3 %>
@@ -313,6 +320,20 @@
 
   <div class="form-actions">
     <button type="submit" class="btn-submit">Salvar</button>
+  </div>
+
+  <%# Barra flutuante: aparece ao chegar nos itens. Subtotal leva ao resumo; Observações, ao campo. %>
+  <div class="order-dock" id="orderDock" aria-hidden="true">
+    <button type="button" class="order-dock__total" id="orderDockTotal" title="Ir para o resumo do pedido">
+      <span class="order-dock__label"><span id="orderDockCount">0 itens</span> · Subtotal</span>
+      <span class="order-dock__value" id="orderDockSubtotal">R$ 0,00</span>
+    </button>
+    <button type="button" class="order-dock__notes" id="orderDockNotes" title="Ir para as observações do pedido">
+      <i class="fas fa-sticky-note"></i><span>Observações</span><span class="order-dock__dot" id="orderDockNotesDot" hidden></span>
+    </button>
+    <button type="button" class="order-dock__save" id="orderDockSave">
+      <i class="fas fa-check"></i><span>Salvar</span>
+    </button>
   </div>
 <% end %>
 
@@ -1039,6 +1060,89 @@ document.addEventListener('DOMContentLoaded', function () {
     var modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
   });
+
+  // Pesquisa nos itens da tabela (SKU ou nome, sem diferenciar acento/maiúscula). Só esconde as linhas:
+  // as escondidas continuam no formulário e são salvas normalmente.
+  var itemsBody = document.getElementById('itemsTableBody');
+  var itemSearch = document.getElementById('itemSearchInput');
+  function fold(text) { return (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+  function applyItemSearch() {
+    var terms = fold(itemSearch.value).split(/\s+/).filter(Boolean);
+    var rows = itemsBody.querySelectorAll('tr');
+    var shown = 0;
+    rows.forEach(function (row) {
+      var sku = row.querySelector('input[name$="[sku]"]');
+      var name = row.querySelector('input[name$="[name]"]');
+      var haystack = fold((sku ? sku.value : '') + ' ' + (name ? name.value : ''));
+      var match = terms.every(function (t) { return haystack.indexOf(t) !== -1; });
+      row.hidden = !match;
+      if (match) shown++;
+    });
+    var counter = document.getElementById('itemSearchCount');
+    counter.textContent = terms.length ? shown + ' de ' + rows.length : '';
+    document.getElementById('itemSearchEmpty').hidden = !(terms.length && rows.length && shown === 0);
+  }
+  itemSearch.addEventListener('input', applyItemSearch);
+  // Enter na busca não envia o formulário.
+  itemSearch.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+  new MutationObserver(applyItemSearch).observe(itemsBody, { childList: true });
+
+  // Barra flutuante do pedido
+  var dock = document.getElementById('orderDock');
+  var form = document.getElementById('b2bOrderForm');
+  var itemsSection = document.getElementById('itemsSection');
+  var notesSection = document.getElementById('orderNotesSection');
+  var notesField = notesSection.querySelector('textarea');
+  var brlFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  var lastSubtotal = null;
+  function updateDock() {
+    var subtotal = 0, count = 0;
+    itemsBody.querySelectorAll('tr').forEach(function (row) {
+      var qty = parseFloat((row.querySelector('input[name$="[quantity]"]') || {}).value) || 0;
+      var price = parseFloat((row.querySelector('input[name$="[price]"]') || {}).value) || 0;
+      subtotal += qty * price;
+      count += 1;
+    });
+    document.getElementById('orderDockCount').textContent = count + (count === 1 ? ' item' : ' itens');
+    var valueEl = document.getElementById('orderDockSubtotal');
+    valueEl.textContent = brlFormat.format(subtotal);
+    if (lastSubtotal !== null && Math.abs(lastSubtotal - subtotal) > 0.001) {
+      valueEl.classList.remove('is-bumped');
+      void valueEl.offsetWidth;
+      valueEl.classList.add('is-bumped');
+    }
+    lastSubtotal = subtotal;
+    document.getElementById('orderDockNotesDot').hidden = !(notesField && notesField.value.trim());
+  }
+  function placeDock() {
+    var visible = itemsSection.getBoundingClientRect().top < window.innerHeight * 0.7;
+    // Centro da área do formulário (sem contar o menu lateral).
+    var rect = form.getBoundingClientRect();
+    if (rect.width) dock.style.left = (rect.left + rect.width / 2) + 'px';
+    dock.classList.toggle('is-visible', visible);
+    dock.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  }
+  function scrollToSection(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('is-spotlit');
+    void el.offsetWidth;
+    el.classList.add('is-spotlit');
+  }
+  document.getElementById('orderDockTotal').addEventListener('click', function () {
+    scrollToSection(document.getElementById('orderSummarySection') || notesSection);
+  });
+  document.getElementById('orderDockNotes').addEventListener('click', function () {
+    scrollToSection(notesSection);
+    if (notesField) setTimeout(function () { notesField.focus({ preventScroll: true }); }, 450);
+  });
+  document.getElementById('orderDockSave').addEventListener('click', function () { form.requestSubmit(); });
+  form.addEventListener('input', updateDock);
+  form.addEventListener('change', updateDock);
+  new MutationObserver(updateDock).observe(itemsBody, { childList: true });
+  window.addEventListener('scroll', placeDock, { passive: true });
+  window.addEventListener('resize', placeDock);
+  updateDock();
+  placeDock();
 });
 </script>
 <% end %>
