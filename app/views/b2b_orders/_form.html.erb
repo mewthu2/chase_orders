@@ -7,7 +7,7 @@
     </div>
   <% end %>
 
-  <div class="form-section">
+  <div class="form-section" id="orderDataSection">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-tag me-2"></i>Dados do Pedido</h5></div>
     <div class="form-section-body">
       <div class="form-grid mb-3">
@@ -26,69 +26,232 @@
         </div>
       </div>
 
-      <div class="form-grid">
-        <% if @b2b_order.sale? %>
-        <div class="form-col-6" id="clientSection">
-          <label class="field-label">Cliente</label>
-          <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente do Honey por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
-          <div id="clientSearchResults" class="list-group mt-2"></div>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Só clientes cadastrados no Honey. <%= link_to 'Cadastrar cliente', new_client_path, target: '_blank' %></span>
-          <%= form.hidden_field :client_id, id: 'clientIdField' %>
-        </div>
 
-        <div class="form-col-6">
-          <label class="field-label">Vendedor</label>
-          <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
-        </div>
+      <% if @b2b_order.sale? %>
+      <%# Abas do pedido: os campos ficam todos no formulário (só escondidos), então nada se perde ao trocar de aba. %>
+      <div class="scope-tabs od-tabs" role="tablist">
+        <span class="scope-indicator"></span>
+        <a href="#" class="scope-tab is-active" role="tab" aria-selected="true" data-od-tab="cliente"><i class="fas fa-user-tie"></i>Cliente</a>
+        <a href="#" class="scope-tab" role="tab" aria-selected="false" data-od-tab="envio"><i class="fas fa-truck-fast"></i>Envio e frete</a>
+        <a href="#" class="scope-tab" role="tab" aria-selected="false" data-od-tab="pagamento"><i class="fas fa-credit-card"></i>Pagamento</a>
+      </div>
+      <div class="od-panel" data-od-panel="cliente">
+        <div class="form-grid">
+          <div class="form-col-6" id="clientSection">
+            <label class="field-label">Cliente</label>
+            <input type="text" id="clientSearchInput" class="field-input" placeholder="Buscar cliente do Honey por nome/CNPJ..." value="<%= @b2b_order.client&.display_name %>">
+            <div id="clientSearchResults" class="list-group mt-2"></div>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Só clientes cadastrados no Honey. <%= link_to 'Cadastrar cliente', new_client_path, target: '_blank' %></span>
+            <%= form.hidden_field :client_id, id: 'clientIdField' %>
+          </div>
 
-        <% elsif @b2b_order.stock_transfer? %>
-        <div class="form-col-6" id="transferLocationSection">
-          <label class="field-label">Local de Destino</label>
-          <% locations = TransferLocation.active.order(:name).to_a %>
-          <% location_addresses = locations.to_h { |l| [l.id, [[l.street, l.number].compact_blank.join(', '), l.complement, l.neighbourhood, "#{l.city}/#{l.state}", ("CEP #{l.zip}" if l.zip.present?)].compact_blank.join(' · ')] } %>
-          <%= form.collection_select :transfer_location_id, locations, :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'transferLocationSelect', data: { addresses: location_addresses.to_json } } %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência.</span>
-        </div>
-        <div class="form-col-6" id="stockAddressChoice">
-          <label class="field-label">Endereço de entrega</label>
-          <div class="d-flex gap-3 flex-wrap">
-            <label class="form-check"><%= form.radio_button :different_shipping_address, false, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-store me-1"></i>Endereço cadastrado</span></label>
-            <label class="form-check"><%= form.radio_button :different_shipping_address, true, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-map-location-dot me-1"></i>Outro endereço</span></label>
+          <div class="form-col-6">
+            <label class="field-label">Vendedor</label>
+            <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Nome do vendedor' %>
           </div>
-          <span class="text-muted-custom d-block mt-1" id="stockRegisteredAddress"></span>
-          <span class="text-muted-custom d-block mt-1" id="stockNewAddressHint" style="<%= 'display: none;' unless @b2b_order.different_shipping_address? %>"><i class="fas fa-info-circle me-1"></i>Vale só para este pedido: o cadastro do local não muda.</span>
-        </div>
-        <% by_carrier = @b2b_order.carrier_id.present? %>
-        <div class="form-col-6" id="stockDeliverySection">
-          <label class="field-label">Entrega</label>
-          <div class="d-flex gap-3 flex-wrap">
-            <label class="form-check"><input type="radio" name="stock_delivery" value="hand" class="form-check-input" <%= 'checked' unless by_carrier %>><span><i class="fas fa-hand-holding me-1"></i>SEDEX · Mão Própria</span></label>
-            <label class="form-check"><input type="radio" name="stock_delivery" value="carrier" class="form-check-input" <%= 'checked' if by_carrier %>><span><i class="fas fa-truck-moving me-1"></i>Transportadora</span></label>
+
+          <div class="form-col-12 form-check">
+            <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
+            <label class="form-check-label text-main" for="differentShippingAddressCheck">O endereço de entrega do cliente é diferente do endereço de cobrança</label>
           </div>
-          <span class="text-muted-custom d-block mt-1" id="stockDeliveryHandHint" style="<%= 'display: none;' if by_carrier %>">SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
-          <div id="stockCarrierSection" class="mt-2" style="<%= 'display: none;' unless by_carrier %>">
-            <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione a transportadora...' }, { class: 'field-input', id: 'stockCarrierSelect', required: by_carrier, disabled: !by_carrier } %>
-            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Nos Correios B2B entra como transportadora (74926), com o CNPJ dela na nota. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
-          </div>
-          <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
-          <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
         </div>
-        <div class="form-col-6">
-          <label class="field-label">Responsável pelo Recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></label>
-          <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
-          <div id="receiverNamesList">
-            <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
-            <% receiver_names.each_with_index do |name, i| %>
-            <div class="d-flex gap-2 mb-2 receiver-name-row">
-              <input type="text" class="field-input receiver-name-input" value="<%= name %>" placeholder="Nome de quem vai receber na loja" maxlength="60" <%= 'required' if i.zero? && @b2b_order.tiny_reference_id.blank? %>>
-              <button type="button" class="btn-back receiver-name-remove" title="Remover"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="od-panel" data-od-panel="cliente">
+        <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
+          <div class="form-col-6">
+            <label class="field-label">Rua</label>
+            <%= form.text_field :shipping_street, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Número</label>
+            <%= form.text_field :shipping_number, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Complemento</label>
+            <%= form.text_field :shipping_complement, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Bairro</label>
+            <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Cidade</label>
+            <%= form.text_field :shipping_city, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">UF</label>
+            <%= form.text_field :shipping_state, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">CEP</label>
+            <%= form.text_field :shipping_zip, class: 'field-input' %>
+          </div>
+        </div>
+      </div>
+      <div class="od-panel" data-od-panel="envio" hidden>
+        <div class="form-grid">
+          <% mode = @b2b_order.pickup? ? 'pickup' : (@b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '')) %>
+          <div class="form-col-6" id="saleShippingSection">
+            <label class="field-label">Forma de Envio</label>
+            <select id="shippingModeSelect" class="field-input" required>
+              <option value="" <%= 'selected' if mode.blank? %>>Selecione...</option>
+              <option value="sedex" <%= 'selected' if mode == 'sedex' %>>Correios Log</option>
+              <option value="carrier" <%= 'selected' if mode == 'carrier' %>>Transportadora</option>
+              <option value="pickup" <%= 'selected' if mode == 'pickup' %>>Retirada</option>
+            </select>
+            <%# Correios Log vai como SEDEX; transportadora, pelo cadastro dela (CNPJ no Correios e na NF-e); retirada, sem frete. %>
+            <%= form.hidden_field :freight_service, id: 'freightServiceField', value: (mode == 'sedex' ? B2bOrder::SALE_FREIGHT_SERVICES.first : '') %>
+            <%= form.hidden_field :pickup, id: 'pickupField', value: mode == 'pickup' %>
+            <input type="hidden" name="b2b_order[carrier_id]" value="" id="saleCarrierBlank" <%= 'disabled' if mode == 'carrier' %>>
+            <span class="text-muted-custom d-block mt-1" id="pickupHint" style="<%= 'display: none;' unless mode == 'pickup' %>"><i class="fas fa-info-circle me-1"></i>O cliente busca no galpão do Log: sem frete. No Correios entra como transportadora com o CNPJ do próprio cliente.</span>
+          </div>
+
+          <div class="form-col-6" id="carrierSection" style="<%= 'display: none;' unless mode == 'carrier' %>">
+            <label class="field-label">Transportadora</label>
+            <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'saleCarrierSelect', disabled: mode != 'carrier', required: mode == 'carrier' } %>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>No Correios entra como transportadora (74926), com o CNPJ do cadastro. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+          </div>
+
+          <div class="form-col-6 freight-field" id="freightChoiceSection" data-rates="<%= B2bFreightRate.table.to_json %>" style="<%= 'display: none;' if mode == 'pickup' %>">
+            <label class="field-label">Frete</label>
+            <%= form.select :fixed_freight, [['Frete da tabela (pelo valor do pedido)', true], ['Outro valor', false]], {}, { class: 'field-input', id: 'fixedFreightSelect' } %>
+            <span class="text-muted-custom d-block mt-1">O frete da tabela muda sozinho com o valor do pedido<%= ' (' if screen_can?(:b2b_orders, :view) %><%= link_to('ver a tabela', b2b_freight_rates_path, target: '_blank') if screen_can?(:b2b_orders, :view) %><%= ')' if screen_can?(:b2b_orders, :view) %>; em "Outro valor", ajuste só neste pedido.</span>
+          </div>
+
+          <div class="form-col-6 freight-field" style="<%= 'display: none;' if mode == 'pickup' %>">
+            <label class="field-label">Valor do frete (R$)</label>
+            <%= form.number_field :freight_value, step: 0.01, min: 0, class: 'field-input', id: 'freightValueField', placeholder: '0,00' %>
+            <span class="text-muted-custom d-block mt-1">Vai como valor do frete do pedido.</span>
+          </div>
+
+        </div>
+      </div>
+      <div class="od-panel" data-od-panel="pagamento" hidden>
+        <div class="form-grid">
+          <div class="form-col-6">
+            <label class="field-label">Forma de pagamento</label>
+            <%= form.select :payment_method, B2bOrder::PAYMENT_METHODS.map { |key, label| [label, key] }, { include_blank: 'Selecione...' },
+                            { class: 'field-input', required: @b2b_order.tiny_reference_id.blank?, id: 'paymentMethodSelect' } %>
+          </div>
+
+          <% installments_on = B2bOrder::INSTALLMENT_METHODS.include?(@b2b_order.payment_method) %>
+          <div class="form-col-12" id="installmentsSection" data-methods="<%= B2bOrder::INSTALLMENT_METHODS.join(' ') %>" data-order-date="<%= (@b2b_order.created_at || Time.current).to_date.iso8601 %>" style="<%= 'display: none;' unless installments_on %>">
+            <div class="form-grid">
+              <div class="form-col-6">
+                <label class="field-label">Parcelas</label>
+                <select id="installmentsCountSelect" class="field-input">
+                  <% (1..B2bOrder::MAX_INSTALLMENTS).each do |n| %>
+                    <option value="<%= n %>" <%= 'selected' if @b2b_order.installment_days.size == n %>><%= n %>x</option>
+                  <% end %>
+                </select>
+                <span class="text-muted-custom d-block mt-1">Preenche a condição com vencimentos de 30 em 30 dias; dá para editar os dias.</span>
+              </div>
+              <div class="form-col-6">
+                <label class="field-label">Condição de pagamento (dias)</label>
+                <%= form.text_field :payment_terms, class: 'field-input', id: 'paymentTermsField', placeholder: '30 60 90', disabled: !installments_on %>
+                <span class="text-muted-custom d-block mt-1">Os dias de cada vencimento, contados da data do pedido (ex.: 30 60 90).</span>
+              </div>
             </div>
-            <% end %>
+            <div class="installments-preview" id="installmentsPreview" aria-live="polite"></div>
           </div>
-          <button type="button" class="btn-back" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão como destinatário nos Correios (separados por vírgula): com mão própria, só essas pessoas podem receber.</span>
         </div>
-        <% else %>
+      </div>
+
+      <% elsif @b2b_order.stock_transfer? %>
+      <div class="scope-tabs od-tabs" role="tablist">
+        <span class="scope-indicator"></span>
+        <a href="#" class="scope-tab is-active" role="tab" aria-selected="true" data-od-tab="destino"><i class="fas fa-store"></i>Destino</a>
+        <a href="#" class="scope-tab" role="tab" aria-selected="false" data-od-tab="entrega"><i class="fas fa-truck-moving"></i>Entrega e recebimento</a>
+      </div>
+      <div class="od-panel" data-od-panel="destino">
+        <div class="form-grid">
+          <div class="form-col-6" id="transferLocationSection">
+            <label class="field-label">Local de Destino</label>
+            <% locations = TransferLocation.active.order(:name).to_a %>
+            <% location_addresses = locations.to_h { |l| [l.id, [[l.street, l.number].compact_blank.join(', '), l.complement, l.neighbourhood, "#{l.city}/#{l.state}", ("CEP #{l.zip}" if l.zip.present?)].compact_blank.join(' · ')] } %>
+            <%= form.collection_select :transfer_location_id, locations, :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'transferLocationSelect', data: { addresses: location_addresses.to_json } } %>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência.</span>
+          </div>
+          <div class="form-col-6" id="stockAddressChoice">
+            <label class="field-label">Endereço de entrega</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <label class="form-check"><%= form.radio_button :different_shipping_address, false, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-store me-1"></i>Endereço cadastrado</span></label>
+              <label class="form-check"><%= form.radio_button :different_shipping_address, true, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-map-location-dot me-1"></i>Outro endereço</span></label>
+            </div>
+            <span class="text-muted-custom d-block mt-1" id="stockRegisteredAddress"></span>
+            <span class="text-muted-custom d-block mt-1" id="stockNewAddressHint" style="<%= 'display: none;' unless @b2b_order.different_shipping_address? %>"><i class="fas fa-info-circle me-1"></i>Vale só para este pedido: o cadastro do local não muda.</span>
+          </div>
+        </div>
+      </div>
+      <div class="od-panel" data-od-panel="destino">
+        <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
+          <div class="form-col-6">
+            <label class="field-label">Rua</label>
+            <%= form.text_field :shipping_street, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Número</label>
+            <%= form.text_field :shipping_number, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Complemento</label>
+            <%= form.text_field :shipping_complement, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Bairro</label>
+            <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Cidade</label>
+            <%= form.text_field :shipping_city, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">UF</label>
+            <%= form.text_field :shipping_state, class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">CEP</label>
+            <%= form.text_field :shipping_zip, class: 'field-input' %>
+          </div>
+        </div>
+      </div>
+      <div class="od-panel" data-od-panel="entrega" hidden>
+        <div class="form-grid">
+          <% by_carrier = @b2b_order.carrier_id.present? %>
+          <div class="form-col-6" id="stockDeliverySection">
+            <label class="field-label">Entrega</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <label class="form-check"><input type="radio" name="stock_delivery" value="hand" class="form-check-input" <%= 'checked' unless by_carrier %>><span><i class="fas fa-hand-holding me-1"></i>SEDEX · Mão Própria</span></label>
+              <label class="form-check"><input type="radio" name="stock_delivery" value="carrier" class="form-check-input" <%= 'checked' if by_carrier %>><span><i class="fas fa-truck-moving me-1"></i>Transportadora</span></label>
+            </div>
+            <span class="text-muted-custom d-block mt-1" id="stockDeliveryHandHint" style="<%= 'display: none;' if by_carrier %>">SEDEX: nos Correios B2B o pedido é criado com o serviço adicional 002 (mão própria).</span>
+            <div id="stockCarrierSection" class="mt-2" style="<%= 'display: none;' unless by_carrier %>">
+              <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione a transportadora...' }, { class: 'field-input', id: 'stockCarrierSelect', required: by_carrier, disabled: !by_carrier } %>
+              <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Nos Correios B2B entra como transportadora (74926), com o CNPJ dela na nota. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
+            </div>
+            <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
+            <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label">Responsável pelo Recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></label>
+            <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
+            <div id="receiverNamesList">
+              <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
+              <% receiver_names.each_with_index do |name, i| %>
+              <div class="d-flex gap-2 mb-2 receiver-name-row">
+                <input type="text" class="field-input receiver-name-input" value="<%= name %>" placeholder="Nome de quem vai receber na loja" maxlength="60" <%= 'required' if i.zero? && @b2b_order.tiny_reference_id.blank? %>>
+                <button type="button" class="btn-back receiver-name-remove" title="Remover"><i class="fas fa-times"></i></button>
+              </div>
+              <% end %>
+            </div>
+            <button type="button" class="btn-back" id="addReceiverNameButton"><i class="fas fa-plus me-1"></i>Adicionar pessoa</button>
+            <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Vão como destinatário nos Correios (separados por vírgula): com mão própria, só essas pessoas podem receber.</span>
+          </div>
+        </div>
+      </div>
+
+      <% else %>
+      <div class="form-grid">
         <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
         <div class="form-col-6" id="b2cDestinationSection">
           <label class="field-label">Destino</label>
@@ -100,109 +263,6 @@
           <label class="field-label">Entrega</label>
           <span class="hand-delivery-badge"><i class="fas fa-truck-moving"></i>Transportadora</span>
           <span class="text-muted-custom d-block mt-1">Sem mão própria: nos Correios B2B o pedido entra como outra transportadora (dentro do galpão do Log).</span>
-        </div>
-        <% end %>
-
-        <% if @b2b_order.sale? %>
-        <% mode = @b2b_order.pickup? ? 'pickup' : (@b2b_order.freight_service.present? ? 'sedex' : (@b2b_order.carrier_id.present? ? 'carrier' : '')) %>
-        <div class="form-col-6" id="saleShippingSection">
-          <label class="field-label">Forma de Envio</label>
-          <select id="shippingModeSelect" class="field-input" required>
-            <option value="" <%= 'selected' if mode.blank? %>>Selecione...</option>
-            <option value="sedex" <%= 'selected' if mode == 'sedex' %>>Correios Log</option>
-            <option value="carrier" <%= 'selected' if mode == 'carrier' %>>Transportadora</option>
-            <option value="pickup" <%= 'selected' if mode == 'pickup' %>>Retirada</option>
-          </select>
-          <%# Correios Log vai como SEDEX; transportadora, pelo cadastro dela (CNPJ no Correios e na NF-e); retirada, sem frete. %>
-          <%= form.hidden_field :freight_service, id: 'freightServiceField', value: (mode == 'sedex' ? B2bOrder::SALE_FREIGHT_SERVICES.first : '') %>
-          <%= form.hidden_field :pickup, id: 'pickupField', value: mode == 'pickup' %>
-          <input type="hidden" name="b2b_order[carrier_id]" value="" id="saleCarrierBlank" <%= 'disabled' if mode == 'carrier' %>>
-          <span class="text-muted-custom d-block mt-1" id="pickupHint" style="<%= 'display: none;' unless mode == 'pickup' %>"><i class="fas fa-info-circle me-1"></i>O cliente busca no galpão do Log: sem frete. No Correios entra como transportadora com o CNPJ do próprio cliente.</span>
-        </div>
-
-        <div class="form-col-6" id="carrierSection" style="<%= 'display: none;' unless mode == 'carrier' %>">
-          <label class="field-label">Transportadora</label>
-          <%= form.collection_select :carrier_id, Carrier.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'saleCarrierSelect', disabled: mode != 'carrier', required: mode == 'carrier' } %>
-          <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>No Correios entra como transportadora (74926), com o CNPJ do cadastro. <%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
-        </div>
-
-        <div class="form-col-6 freight-field" id="freightChoiceSection" data-rates="<%= B2bFreightRate.table.to_json %>" style="<%= 'display: none;' if mode == 'pickup' %>">
-          <label class="field-label">Frete</label>
-          <%= form.select :fixed_freight, [['Frete da tabela (pelo valor do pedido)', true], ['Outro valor', false]], {}, { class: 'field-input', id: 'fixedFreightSelect' } %>
-          <span class="text-muted-custom d-block mt-1">O frete da tabela muda sozinho com o valor do pedido<%= ' (' if screen_can?(:b2b_orders, :view) %><%= link_to('ver a tabela', b2b_freight_rates_path, target: '_blank') if screen_can?(:b2b_orders, :view) %><%= ')' if screen_can?(:b2b_orders, :view) %>; em "Outro valor", ajuste só neste pedido.</span>
-        </div>
-
-        <div class="form-col-6 freight-field" style="<%= 'display: none;' if mode == 'pickup' %>">
-          <label class="field-label">Valor do frete (R$)</label>
-          <%= form.number_field :freight_value, step: 0.01, min: 0, class: 'field-input', id: 'freightValueField', placeholder: '0,00' %>
-          <span class="text-muted-custom d-block mt-1">Vai como valor do frete do pedido.</span>
-        </div>
-
-        <div class="form-col-6">
-          <label class="field-label">Forma de pagamento</label>
-          <%= form.select :payment_method, B2bOrder::PAYMENT_METHODS.map { |key, label| [label, key] }, { include_blank: 'Selecione...' },
-                          { class: 'field-input', required: @b2b_order.tiny_reference_id.blank?, id: 'paymentMethodSelect' } %>
-        </div>
-
-        <% installments_on = B2bOrder::INSTALLMENT_METHODS.include?(@b2b_order.payment_method) %>
-        <div class="form-col-12" id="installmentsSection" data-methods="<%= B2bOrder::INSTALLMENT_METHODS.join(' ') %>" data-order-date="<%= (@b2b_order.created_at || Time.current).to_date.iso8601 %>" style="<%= 'display: none;' unless installments_on %>">
-          <div class="form-grid">
-            <div class="form-col-6">
-              <label class="field-label">Parcelas</label>
-              <select id="installmentsCountSelect" class="field-input">
-                <% (1..B2bOrder::MAX_INSTALLMENTS).each do |n| %>
-                  <option value="<%= n %>" <%= 'selected' if @b2b_order.installment_days.size == n %>><%= n %>x</option>
-                <% end %>
-              </select>
-              <span class="text-muted-custom d-block mt-1">Preenche a condição com vencimentos de 30 em 30 dias; dá para editar os dias.</span>
-            </div>
-            <div class="form-col-6">
-              <label class="field-label">Condição de pagamento (dias)</label>
-              <%= form.text_field :payment_terms, class: 'field-input', id: 'paymentTermsField', placeholder: '30 60 90', disabled: !installments_on %>
-              <span class="text-muted-custom d-block mt-1">Os dias de cada vencimento, contados da data do pedido (ex.: 30 60 90).</span>
-            </div>
-          </div>
-          <div class="installments-preview" id="installmentsPreview" aria-live="polite"></div>
-        </div>
-        <% end %>
-
-        <% if @b2b_order.sale? %>
-        <div class="form-col-12 form-check">
-          <%= form.check_box :different_shipping_address, id: 'differentShippingAddressCheck' %>
-          <label class="form-check-label text-main" for="differentShippingAddressCheck">O endereço de entrega do cliente é diferente do endereço de cobrança</label>
-        </div>
-        <% end %>
-      </div>
-
-      <% if @b2b_order.sale? || @b2b_order.stock_transfer? %>
-      <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
-        <div class="form-col-6">
-          <label class="field-label">Rua</label>
-          <%= form.text_field :shipping_street, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">Número</label>
-          <%= form.text_field :shipping_number, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">Complemento</label>
-          <%= form.text_field :shipping_complement, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">Bairro</label>
-          <%= form.text_field :shipping_neighbourhood, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">Cidade</label>
-          <%= form.text_field :shipping_city, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">UF</label>
-          <%= form.text_field :shipping_state, class: 'field-input' %>
-        </div>
-        <div class="form-col-6">
-          <label class="field-label">CEP</label>
-          <%= form.text_field :shipping_zip, class: 'field-input' %>
         </div>
       </div>
       <% end %>
@@ -525,6 +585,41 @@ document.addEventListener('DOMContentLoaded', function () {
     receiverList.addEventListener('input', syncReceiverNames);
     document.getElementById('b2bOrderForm').addEventListener('submit', syncReceiverNames);
     updateRemoveButtons();
+  }
+
+  // Abas de "Dados do Pedido": só escondem os campos (todos vão no formulário).
+  var odTabs = document.querySelector('.od-tabs');
+  if (odTabs) {
+    var odIndicator = odTabs.querySelector('.scope-indicator');
+    var placeOd = function () {
+      var current = odTabs.querySelector('.scope-tab.is-active');
+      if (current && current.offsetWidth) { odIndicator.style.left = current.offsetLeft + 'px'; odIndicator.style.width = current.offsetWidth + 'px'; }
+    };
+    var showOd = function (key) {
+      odTabs.querySelectorAll('[data-od-tab]').forEach(function (tab) {
+        var on = tab.dataset.odTab === key;
+        tab.classList.toggle('is-active', on);
+        tab.setAttribute('aria-selected', on);
+      });
+      document.querySelectorAll('[data-od-panel]').forEach(function (panel) { panel.hidden = panel.dataset.odPanel !== key; });
+      placeOd();
+    };
+    odTabs.querySelectorAll('[data-od-tab]').forEach(function (tab) {
+      tab.addEventListener('click', function (event) { event.preventDefault(); showOd(tab.dataset.odTab); });
+    });
+    // Campo obrigatório numa aba escondida: abre a aba dele para o navegador mostrar o aviso.
+    var odJumped = false;
+    document.getElementById('b2bOrderForm').addEventListener('invalid', function (event) {
+      if (odJumped) return;
+      odJumped = true;
+      setTimeout(function () { odJumped = false; }, 0);
+      var panel = event.target.closest('[data-od-panel]');
+      if (panel && panel.hidden) showOd(panel.dataset.odPanel);
+    }, true);
+    // O formulário pode abrir escondido (aba Nota fiscal): reposiciona o indicador quando aparecer.
+    document.addEventListener('click', function (event) { if (event.target.closest('[data-it-tab]')) setTimeout(placeOd, 0); });
+    window.addEventListener('resize', placeOd);
+    requestAnimationFrame(placeOd);
   }
 
   var addrCheck = document.getElementById('differentShippingAddressCheck');
