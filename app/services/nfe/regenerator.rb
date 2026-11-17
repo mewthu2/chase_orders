@@ -17,7 +17,8 @@ module Nfe
     def call
       raise Error, 'Só dá para gerar outra nota no lugar de uma cancelada.' unless @note.cancelada?
 
-      draft = if @note.b2b_order then from_b2b_order(@note.b2b_order)
+      draft = if @note.b2b_order && @note.remessa? then from_remessa(@note.b2b_order)
+              elsif @note.b2b_order then from_b2b_order(@note.b2b_order)
               elsif @note.internal_transfer_shipment then from_shipment(@note.internal_transfer_shipment)
               else raise Error, 'Esta nota não tem pedido ou remessa de origem no Honey.'
               end
@@ -41,6 +42,17 @@ module Nfe
 
       CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
       Generator.call(order:, company:, nature:, environment:)
+    end
+
+    # Remessa do abastecimento: com a empresa e a natureza da remessa nas Configurações do Abastecimento.
+    def from_remessa(order)
+      setting = B2bSetting.current
+      company = setting.remessa_issuer
+      nature = setting.remessa_nature
+      raise Error, 'Escolha a empresa e a natureza da nota de remessa em Abastecimento Lojas → Configurações.' unless company && nature
+
+      CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
+      Generator.call(order:, company:, nature:, environment:, role: 'remessa')
     end
 
     def from_shipment(shipment)

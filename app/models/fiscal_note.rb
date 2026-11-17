@@ -39,6 +39,16 @@ class FiscalNote < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
   scope :active_statuses, -> { where(status: ACTIVE_STATUSES) }
+  # Papel da nota no pedido B2B: vazio é a nota do pedido (a que vai ao Correios); 'remessa' é a nota de
+  # remessa do abastecimento (ex.: para o depósito do Correios), uma nota a mais.
+  ROLES = %w[remessa].freeze
+  validates :role, inclusion: { in: ROLES }, allow_nil: true
+  scope :principal, -> { where(role: nil) }
+  scope :remessas, -> { where(role: 'remessa') }
+
+  def remessa?
+    role == 'remessa'
+  end
 
   # Mesma regra de #purpose, em SQL, para o filtro da lista.
   def self.with_purpose(key)
@@ -161,10 +171,10 @@ class FiscalNote < ApplicationRecord
     producao? ? 'Produção' : 'Homologação'
   end
 
-  # Última nota (não cancelada) de cada pedido B2B, preferindo a de produção: { b2b_order_id => { environment:, status:, number: } }.
+  # Última nota do pedido (não cancelada, sem as de remessa) de cada pedido B2B, preferindo a de produção: { b2b_order_id => { environment:, status:, number: } }.
   # order_ids pode ser uma lista ou um select de ids.
   def self.latest_by_order(order_ids)
-    rows = where(b2b_order_id: order_ids).where.not(status: :cancelada).order(:id).pluck(:b2b_order_id, :environment, :status, :number)
+    rows = principal.where(b2b_order_id: order_ids).where.not(status: :cancelada).order(:id).pluck(:b2b_order_id, :environment, :status, :number)
     rows.group_by(&:first).transform_values do |list|
       _, env, status, number = list.select { |r| r[1] == 'producao' }.last || list.last
       { environment: env, status: status, number: number }

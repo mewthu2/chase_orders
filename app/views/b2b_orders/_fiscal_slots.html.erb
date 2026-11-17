@@ -1,0 +1,25 @@
+<%# Vagas de homologação e produção de um tipo de nota do pedido e o histórico das anteriores.
+    Locais: order, notes (as notas deste tipo), company, blocker e role (nil: a nota do pedido; 'remessa'). %>
+<% role = local_assigns[:role] %>
+<%# A que vale em cada ambiente: a não cancelada mais recente; só sem nenhuma, a última cancelada (para emitir de novo). %>
+<% pick = ->(env) { list = notes.select { |n| n.environment == env }; list.reject(&:cancelada?).max_by { |n| [n.created_at, n.id] } || list.max_by { |n| [n.created_at, n.id] } } %>
+<div class="it-fiscal-slots">
+  <% %w[homologacao producao].each do |env| %>
+    <%= render 'b2b_orders/fiscal_slot', order: order, env: env, company: company, blocker: blocker, note: pick.call(env), role: role %>
+  <% end %>
+</div>
+<% shown = %w[homologacao producao].filter_map { |env| pick.call(env) } %>
+<% history = (notes - shown).sort_by { |n| [n.created_at, n.id] }.reverse %>
+<% if history.any? %>
+  <details class="it-fiscal-history">
+    <summary><i class="fas fa-clock-rotate-left"></i>Histórico: <%= pluralize(history.size, 'nota anterior', plural: 'notas anteriores') %></summary>
+    <ul>
+      <% history.each do |n| %>
+        <li>
+          <%= link_to fiscal_note_path(n) do %>NF-e nº <%= n.number %><% end %>
+          <span class="text-muted-custom"><%= n.environment_label.downcase %> · <%= n.status_label.downcase %> · <%= l(n.created_at, format: '%d/%m/%Y %H:%M') %></span>
+        </li>
+      <% end %>
+    </ul>
+  </details>
+<% end %>

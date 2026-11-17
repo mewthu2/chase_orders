@@ -4,7 +4,7 @@
 class B2bOrderFiscalNotesController < ApplicationController
   KIND_SCREENS = B2bOrdersController::KIND_SCREENS
 
-  guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit, details: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
+  guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit, details: :edit, remessa_recipient: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
   before_action :set_note, only: [:destroy, :transmit]
 
   def create
@@ -12,12 +12,17 @@ class B2bOrderFiscalNotesController < ApplicationController
     return back_to_notes(alert: 'Escolha homologação ou produção.') unless FiscalNote.environments.key?(environment)
 
     setting = B2bSetting.current
-    company = setting.issuer(order)
-    nature = setting.nature_for(order)
-    return back_to_notes(alert: "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.") unless company && nature
+    remessa = params[:role] == 'remessa'
+    return back_to_notes(alert: 'Só o abastecimento das lojas tem nota de remessa.') if remessa && !order.stock_transfer?
+
+    company = remessa ? setting.remessa_issuer : setting.issuer(order)
+    nature = remessa ? setting.remessa_nature : setting.nature_for(order)
+    unless company && nature
+      return back_to_notes(alert: remessa ? 'Escolha a empresa e a natureza da nota de remessa em Abastecimento Lojas → Configurações.' : "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.")
+    end
 
     CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
-    note = Nfe::Generator.call(order:, company:, nature:, environment:)
+    note = Nfe::Generator.call(order:, company:, nature:, environment:, role: (remessa ? 'remessa' : nil))
     if params[:draft].present?
       note.update!(status: :rascunho)
       return back_to_notes(notice: "NF-e nº #{note.number} gerada e não emitida. Confira o DANFE e o XML e clique em Emitir na SEFAZ.")
@@ -47,6 +52,21 @@ class B2bOrderFiscalNotesController < ApplicationController
 
     order.update_columns(attrs.merge('updated_at' => Time.current))
     back_to_notes(notice: 'Dados da nota salvos. Valem para a próxima emissão.')
+  end
+
+  # Destinatário da nota de remessa só deste pedido (abastecimento). "Voltar ao padrão" limpa e passa a valer o
+  # das Configurações do Abastecimento. Não mexe no cadastro de ninguém.
+  def remessa_recipient
+    return back_to_notes(alert: 'Só o abastecimento das lojas tem nota de remessa.') unless order.stock_transfer?
+
+    if params[:reset].present?
+      order.update_columns(remessa_recipient: nil, updated_at: Time.current)
+      return back_to_notes(notice: 'Destinatário da remessa voltou ao padrão das configurações.')
+    end
+
+    data = B2bSetting.normalize_recipient(params.require(:remessa_recipient).permit(*B2bSetting::REMESSA_RECIPIENT_FIELDS).to_h)
+    order.update_columns(remessa_recipient: data, updated_at: Time.current)
+    back_to_notes(notice: 'Destinatário da remessa salvo só para este pedido. Vale para a próxima nota de remessa.')
   end
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.

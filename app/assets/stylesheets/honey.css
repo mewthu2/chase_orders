@@ -1844,6 +1844,18 @@ a.pg-fn-step:hover .go { opacity: 1; transform: none; }
 .it-fiscal-history ul { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .it-fiscal-history li { display: flex; gap: 10px; flex-wrap: wrap; }
 
+.rr-section { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.rr-section h3 { margin-bottom: 6px; }
+.rr-intro { margin: 0 0 14px; font-size: 12.5px; line-height: 1.5; color: var(--text-3); }
+.rr-label { display: block; margin: 6px 0 2px; }
+.rr-fields { margin-top: 4px; }
+
+.rr-recipient { margin-top: 14px; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--border-2); background: var(--surface-2); }
+.rr-recipient summary { cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--text); }
+.rr-recipient summary i { color: var(--brand-300); }
+.rr-recipient[open] summary { margin-bottom: 12px; }
+.rr-form .pg-fields { max-width: none; }
+
 /* ----- responsivo ----- */
 @media (max-width: 1360px) {
   .pg-run { grid-template-columns: minmax(0, 1fr) auto; }

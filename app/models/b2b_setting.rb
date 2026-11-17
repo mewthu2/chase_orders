@@ -19,6 +19,24 @@ class B2bSetting < ApplicationRecord
   belongs_to :supply_nature, class_name: 'OperationNature', optional: true
   belongs_to :b2c_issuer_company, class_name: 'Company', optional: true
   belongs_to :b2c_nature, class_name: 'OperationNature', optional: true
+  belongs_to :remessa_issuer_company, class_name: 'Company', optional: true
+  belongs_to :remessa_nature, class_name: 'OperationNature', optional: true
+
+  # Nota de remessa do abastecimento: destinatário padrão, o depósito do Correios Log+ em Contagem (como na
+  # NF-e 15777). Dá para mudar nas configurações e, só num pedido, na aba Nota fiscal dele.
+  REMESSA_RECIPIENT_FIELDS = %w[name document state_registration street number complement neighbourhood city state zip city_ibge_code].freeze
+  REMESSA_DEFAULT_RECIPIENT = {
+    'name' => 'CLI CONTAGEM', 'document' => '34.028.316/9005-20', 'state_registration' => '0620144620013',
+    'street' => 'Avenida Wilson Tavares Ribeiro', 'number' => '1651', 'complement' => 'Docas 20 a 42 - LOG+',
+    'neighbourhood' => 'Chacaras Reunidas Santa Terezinha', 'city' => 'Contagem', 'state' => 'MG', 'zip' => '32.183-680',
+    'city_ibge_code' => '3118601'
+  }.freeze
+
+  # Só os campos conhecidos, como texto sem espaço sobrando (o JSON pode vir com chaves símbolo ou texto).
+  def self.normalize_recipient(data)
+    hash = (data || {}).to_h.transform_keys(&:to_s)
+    REMESSA_RECIPIENT_FIELDS.to_h { |f| [f, hash[f].to_s.strip] }
+  end
 
   # Colunas da empresa e da natureza de cada tipo de transferência.
   TRANSFER_KINDS = { 'stock_transfer' => %i[supply_issuer_company supply_nature], 'b2c_transfer' => %i[b2c_issuer_company b2c_nature] }.freeze
@@ -63,6 +81,15 @@ class B2bSetting < ApplicationRecord
     own || issuer_company || Company.where("REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?", DEFAULT_ISSUER_CNPJ).first
   end
 
+  # Remessa do abastecimento: sem escolha, sai pela empresa do abastecimento.
+  def remessa_issuer
+    remessa_issuer_company || issuer('stock_transfer')
+  end
+
+  def remessa_recipient_data
+    self.class.normalize_recipient(remessa_recipient.presence || REMESSA_DEFAULT_RECIPIENT)
+  end
+
   def nature_for(order)
     kind = kind_of(order)
     if kind == 'sale'
@@ -82,7 +109,7 @@ class B2bSetting < ApplicationRecord
   # [empresa, natureza] de cada tipo, com as escolhas da tela (ou os padrões) para conferir o regime.
   def issuer_nature_pairs
     [[issuer('sale'), sale_nature], [issuer('stock_transfer'), supply_nature || transfer_nature],
-     [issuer('b2c_transfer'), b2c_nature || transfer_nature]]
+     [issuer('b2c_transfer'), b2c_nature || transfer_nature], [remessa_issuer, remessa_nature]]
   end
 
   def natures_match_kind

@@ -162,13 +162,13 @@ class HoneyB2bLog
   # Nota de PRODUÇÃO do pedido (a de homologação é teste e não vai ao Correios): usa a que já existe (por
   # exemplo, emitida na aba Nota fiscal do pedido) ou gera; e autoriza na SEFAZ se ainda não estiver.
   def authorized_note
-    note = FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: :producao).order(:id).last
-    note ||= FiscalNote.erro.where(b2b_order_id: @order.id, environment: :producao).order(:id).last&.tap { |n| Nfe::Transmitter.call(n, consult: true) }&.reload
+    note = FiscalNote.principal.active_statuses.where(b2b_order_id: @order.id, environment: :producao).order(:id).last
+    note ||= FiscalNote.principal.erro.where(b2b_order_id: @order.id, environment: :producao).order(:id).last&.tap { |n| Nfe::Transmitter.call(n, consult: true) }&.reload
     note = nil unless note.nil? || FiscalNote::ACTIVE_STATUSES.include?(note.status)
     # Nota gerada para conferir (rascunho) só sai pelo botão Emitir; com a nota cancelada, a nova também é
     # gerada e conferida por alguém antes de emitir. Nos dois casos o Log02 espera.
     return note if note&.rascunho?
-    if note.nil? && FiscalNote.cancelada.exists?(b2b_order_id: @order.id, environment: :producao)
+    if note.nil? && FiscalNote.principal.cancelada.exists?(b2b_order_id: @order.id, environment: :producao)
       @note_error = 'a NF-e deste pedido foi cancelada: gere a nova em Notas fiscais e emita depois de conferir'
       return nil
     end

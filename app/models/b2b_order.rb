@@ -218,8 +218,13 @@ class B2bOrder < ApplicationRecord
 
   # A nota de produção que impede mudar os dados da NF-e: autorizada, assinada (indo à SEFAZ) ou sem resposta
   # (precisa ser consultada com o mesmo XML). Rejeitada ou excluída libera para corrigir e emitir de novo.
+  # Destinatário da nota de remessa (abastecimento): o deste pedido ou, sem ele, o padrão das configurações.
+  def remessa_recipient_data
+    B2bSetting.normalize_recipient(remessa_recipient.presence || B2bSetting.current.remessa_recipient_data)
+  end
+
   def nf_details_lock
-    fiscal_notes.where(environment: :producao, status: %i[rascunho assinada autorizada erro]).order(:id).last
+    fiscal_notes.principal.where(environment: :producao, status: %i[rascunho assinada autorizada erro]).order(:id).last
   end
 
   private

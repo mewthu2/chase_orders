@@ -29,6 +29,29 @@
           </div>
           <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>O CFOP, os impostos e as observações da nota vêm da natureza. Ambiente, série, numeração, certificado e naturezas ficam em <%= link_to 'Empresas', companies_path %>. Ao salvar, a natureza fica vinculada à empresa.</span></div>
         </div>
+        <% if order_kind == 'stock_transfer' %>
+          <% remessa_company = @setting.remessa_issuer %>
+          <div class="rr-section">
+            <h3><i class="fas fa-warehouse"></i>Nota de remessa</h3>
+            <p class="rr-intro">Uma nota a mais de cada abastecimento (ex.: <b>5905 - Remessa para depósito fechado ou armazém geral</b>, para o depósito do Correios). A nota de transferência para a loja continua sendo a que vai ao Correios.</p>
+            <div class="pg-fields">
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_remessa_issuer_company_id">Empresa emissora</label>
+                <%= form.select :remessa_issuer_company_id, Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] },
+                                { selected: @setting.remessa_issuer_company_id, include_blank: "A do abastecimento#{" (#{company.trade_name.presence || company.legal_name})" if company}" }, class: 'field-input' %>
+              </div>
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_remessa_nature_id">Natureza da operação</label>
+                <%= form.select :remessa_nature_id, OperationNature.where(active: true).order(:description).map { |n| ["#{n.description} · CFOP #{n.cfop} · #{n.regime_label}", n.id] },
+                                { selected: @setting.remessa_nature_id, include_blank: 'Selecione...' }, class: 'field-input' %>
+                <% if @setting.remessa_nature.nil? %><span class="text-muted-custom d-block mt-1">Sem a natureza de remessa? Cadastre em <%= link_to 'Naturezas de operação', operation_natures_path %> (CFOP 5905, ICMS 41).</span><% end %>
+              </div>
+            </div>
+            <span class="field-label rr-label">Destinatário padrão</span>
+            <p class="rr-intro">Já vem em cada pedido. Para um pedido só, dá para trocar na aba Nota fiscal dele.</p>
+            <%= render 'b2b_orders/remessa_recipient_fields', scope: 'b2b_setting[remessa_recipient]', data: @setting.remessa_recipient_data %>
+          </div>
+        <% end %>
         <div class="pg-inline-foot">
           <%= link_to 'Cancelar', send(copy[:back]), class: 'btn btn-ghost' %>
           <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>

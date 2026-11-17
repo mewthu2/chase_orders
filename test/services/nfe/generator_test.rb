@@ -113,6 +113,54 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal '3118601', xml.at_xpath('//n:dest/n:enderDest/n:cMun', NS).text
   end
 
+  test 'the remessa note of a stock transfer goes to CLI CONTAGEM by default, without carrier, apart from the transfer note' do
+    @company.update!(tax_regime: 3)
+    remessa = @company.operation_natures.create!(description: 'Remessa para depósito fechado ou armazém geral', kind: :other, cfop: '?905',
+                                                 final_consumer: false, icms_situation: '41', pis_cst: '08', cofins_cst: '08')
+    transfer = @company.operation_natures.create!(description: 'Transferência entre Filiais - MG', kind: :transfer, cfop: '?152', final_consumer: false,
+                                                  icms_situation: '41', pis_cst: '08', cofins_cst: '08')
+    carrier = Carrier.create!(name: 'Mix Cargo', registration: '13.642.117/0001-10', street: 'Rua A', number: '1', neighbourhood: 'Centro',
+                              city: 'Belo Horizonte', state: 'MG', zip: '30000-000')
+    order = build_order(kind: :stock_transfer)
+    order.update_columns(nf_carrier_id: carrier.id, nf_additional_info: 'Só da nota de transferência')
+
+    principal = Nfe::Generator.call(order: order, company: @company, nature: transfer, environment: 'producao')
+    note = Nfe::Generator.call(order: order, company: @company, nature: remessa, environment: 'producao', role: 'remessa')
+
+    assert_nil principal.role
+    assert note.remessa?
+    assert_equal '5905', note.cfop_summary
+    xml = Nokogiri::XML(note.xml.download)
+    assert_equal 'CLI CONTAGEM', xml.at_xpath('//n:dest/n:xNome', NS).text
+    assert_equal '34028316900520', xml.at_xpath('//n:dest/n:CNPJ', NS).text
+    assert_equal '0620144620013', xml.at_xpath('//n:dest/n:IE', NS).text
+    assert_equal '3118601', xml.at_xpath('//n:dest/n:enderDest/n:cMun', NS).text
+    assert_equal '9', xml.at_xpath('//n:transp/n:modFrete', NS).text
+    assert_nil xml.at_xpath('//n:transp/n:transporta', NS)
+    assert_no_match(/Só da nota de transferência/, xml.at_xpath('//n:infAdic/n:infCpl', NS)&.text.to_s)
+    assert_equal [], NfeSchema.errors(note.xml.download)
+
+    error = assert_raises(Nfe::Generator::Error) { Nfe::Generator.call(order: order, company: @company, nature: remessa, environment: 'producao', role: 'remessa') }
+    assert_match(/nota de remessa de produção ativa/, error.message)
+  end
+
+  test 'the remessa recipient changed only on the order goes into its note' do
+    remessa = @company.operation_natures.create!(description: 'Remessa para depósito', kind: :other, cfop: '?905', final_consumer: false,
+                                                 icms_situation: '102', pis_cst: '49', cofins_cst: '49')
+    order = build_order(kind: :stock_transfer)
+    order.update_columns(remessa_recipient: B2bSetting.normalize_recipient(
+      'name' => 'Armazém SP', 'document' => '45.723.174/0001-10', 'state_registration' => '', 'street' => 'Rua X', 'number' => '5',
+      'neighbourhood' => 'Centro', 'city' => 'São Paulo', 'state' => 'sp', 'zip' => '01001-000', 'city_ibge_code' => '3550308'
+    ))
+
+    xml = Nokogiri::XML(Nfe::Generator.call(order: order, company: @company, nature: remessa, environment: 'producao', role: 'remessa').xml.download)
+
+    assert_equal 'Armazém SP', xml.at_xpath('//n:dest/n:xNome', NS).text
+    assert_equal 'SP', xml.at_xpath('//n:dest/n:enderDest/n:UF', NS).text
+    assert_equal '6905', xml.at_xpath('//n:det/n:prod/n:CFOP', NS).text
+    assert_equal B2bSetting::REMESSA_DEFAULT_RECIPIENT['name'], B2bSetting.current.remessa_recipient_data['name']
+  end
+
   test 'the unit price is the price minus the item discount' do
     order = build_order(items: [['SKU-1', 2, 10, 1.5]])
 

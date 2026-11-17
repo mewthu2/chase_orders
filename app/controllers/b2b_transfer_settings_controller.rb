@@ -16,7 +16,14 @@ class B2bTransferSettingsController < ApplicationController
   def update
     @setting = B2bSetting.current
     issuer_col, nature_col = B2bSetting::TRANSFER_KINDS.fetch(order_kind)
-    attrs = params.require(:b2b_setting).permit(:"#{issuer_col}_id", :"#{nature_col}_id")
+    attrs = params.require(:b2b_setting).permit(:"#{issuer_col}_id", :"#{nature_col}_id").to_h
+    if order_kind == 'stock_transfer'
+      # Nota de remessa (uma nota a mais do abastecimento): empresa, natureza e destinatário padrão.
+      remessa = params.require(:b2b_setting).permit(:remessa_issuer_company_id, :remessa_nature_id,
+                                                    remessa_recipient: B2bSetting::REMESSA_RECIPIENT_FIELDS).to_h
+      attrs.merge!(remessa.slice('remessa_issuer_company_id', 'remessa_nature_id'))
+      attrs['remessa_recipient'] = B2bSetting.normalize_recipient(remessa['remessa_recipient']) if remessa.key?('remessa_recipient')
+    end
     if @setting.update(attrs)
       redirect_to send(copy[:back]), notice: 'Configurações da nota salvas.'
     else

@@ -1,0 +1,68 @@
+<%# Destinatário da nota de remessa (nas Configurações do Abastecimento e na aba Nota fiscal do pedido).
+    Locais: scope (prefixo dos nomes: 'b2b_setting[remessa_recipient]' ou 'remessa_recipient'), data (hash de
+    B2bSetting.normalize_recipient) e disabled (opcional). O CEP busca no ViaCEP rua, bairro, cidade, UF e IBGE. %>
+<% disabled = local_assigns.fetch(:disabled, false) %>
+<% field = ->(key, label, cls, **opts) {
+     content_tag(:div, class: "form-group pg-fg #{cls}") do
+       safe_join([label_tag("rr_#{key}", label, class: 'field-label'),
+                  text_field_tag("#{scope}[#{key}]", data[key], { id: "rr_#{key}", class: 'field-input', disabled: disabled, data: { rr: key } }.merge(opts))])
+     end
+   } %>
+<div class="rr-fields" data-rr-root>
+  <div class="pg-fields">
+    <%= field.call('name', 'Nome / razão social', '', required: true) %>
+    <%= field.call('document', 'CNPJ/CPF', 'pg-w2', required: true) %>
+    <%= field.call('state_registration', 'Inscrição estadual', 'pg-w2', placeholder: 'Vazio: não contribuinte') %>
+    <div class="form-group pg-fg pg-w3">
+      <label class="field-label" for="rr_zip">CEP</label>
+      <div class="od-cep">
+        <%= text_field_tag "#{scope}[zip]", data['zip'], id: 'rr_zip', class: 'field-input', disabled: disabled, required: true,
+                           inputmode: 'numeric', maxlength: 10, placeholder: '00000-000', data: { rr: 'zip' } %>
+        <i class="fas fa-magnifying-glass-location" data-rr-icon></i>
+      </div>
+      <span class="od-cep-status" data-rr-status>O endereço vem sozinho.</span>
+    </div>
+    <%= field.call('street', 'Rua', 'pg-w2', required: true) %>
+    <%= field.call('number', 'Número', 'pg-w3', required: true) %>
+    <%= field.call('complement', 'Complemento', 'pg-w2') %>
+    <%= field.call('neighbourhood', 'Bairro', 'pg-w2', required: true) %>
+    <%= field.call('city', 'Cidade', 'pg-w2', required: true) %>
+    <%= field.call('state', 'UF', 'pg-w3', required: true, maxlength: 2) %>
+    <%= field.call('city_ibge_code', 'Código IBGE da cidade', 'pg-w3', placeholder: 'Vem pelo CEP') %>
+  </div>
+</div>
+<% unless disabled %>
+<script>
+(function () {
+  var roots = document.querySelectorAll('[data-rr-root]');
+  var root = roots[roots.length - 1];
+  var zip = root.querySelector('[data-rr="zip"]');
+  var status = root.querySelector('[data-rr-status]');
+  var icon = root.querySelector('[data-rr-icon]');
+  var last = null;
+  var set = function (text, tone, cls) {
+    status.textContent = text; status.className = 'od-cep-status' + (tone ? ' is-' + tone : '');
+    icon.className = 'fas ' + cls + (tone ? ' is-' + tone : '');
+  };
+  var put = function (key, value) { if (value) root.querySelector('[data-rr="' + key + '"]').value = value; };
+  zip.addEventListener('input', function () {
+    var digits = zip.value.replace(/\D/g, '').slice(0, 8);
+    zip.value = digits.length > 5 ? digits.slice(0, 5) + '-' + digits.slice(5) : digits;
+    if (digits.length !== 8) { last = null; set('O endereço vem sozinho.', null, 'fa-magnifying-glass-location'); return; }
+    if (digits === last) return;
+    last = digits;
+    set('Buscando o endereço...', 'wait', 'fa-spinner fa-spin');
+    fetch('https://viacep.com.br/ws/' + digits + '/json/')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (digits !== last) return;
+        if (d.erro) { set('CEP não encontrado: preencha à mão.', 'err', 'fa-triangle-exclamation'); return; }
+        put('street', d.logradouro); put('neighbourhood', d.bairro); put('city', d.localidade); put('state', d.uf); put('city_ibge_code', d.ibge);
+        set('Endereço encontrado. Confira o número.', 'ok', 'fa-circle-check');
+        root.querySelector('[data-rr="number"]').focus();
+      })
+      .catch(function () { set('Não deu para buscar o CEP agora: preencha à mão.', 'err', 'fa-triangle-exclamation'); });
+  });
+})();
+</script>
+<% end %>

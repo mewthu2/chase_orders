@@ -5,14 +5,18 @@ module Nfe
   class Generator
     class Error < StandardError; end
 
-    def self.call(order:, company:, nature:, environment: nil)
-      new(order: order, company: company, nature: nature, environment: environment).call
+    def self.call(order:, company:, nature:, environment: nil, role: nil)
+      new(order: order, company: company, nature: nature, environment: environment, role: role).call
     end
 
     # environment: homologação ou produção (sem ele, o ambiente atual da empresa). Cada pedido tem no máximo
     # uma nota ativa por ambiente, como as remessas da Transferência Interna.
-    def initialize(order:, company:, nature:, environment: nil)
+    # role 'remessa': a nota de remessa do abastecimento (destinatário da remessa, sem transportadora), contada
+    # à parte da nota do pedido.
+    def initialize(order:, company:, nature:, environment: nil, role: nil)
       @order = order
+      @role = role.presence
+      raise ArgumentError, "papel inválido: #{@role}" if @role && !FiscalNote::ROLES.include?(@role)
       @company = company
       @nature = nature
       @environment = (environment.presence || company.environment).to_s
@@ -44,7 +48,11 @@ module Nfe
     end
 
     def notes
-      FiscalNote.where(b2b_order_id: @order.id, company: @company, environment: @environment)
+      FiscalNote.where(b2b_order_id: @order.id, company: @company, environment: @environment, role: @role)
+    end
+
+    def remessa?
+      @role == 'remessa'
     end
 
     def ensure_can_issue!
@@ -57,10 +65,10 @@ module Nfe
     end
 
     def ensure_no_active_note!
-      return unless FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: @environment).exists?
+      return unless FiscalNote.active_statuses.where(b2b_order_id: @order.id, environment: @environment, role: @role).exists?
 
       env = @environment == 'homologacao' ? 'homologação' : 'produção'
-      raise Error, "Já existe nota fiscal de #{env} ativa para este pedido."
+      raise Error, "Já existe nota #{remessa? ? 'de remessa' : 'fiscal'} de #{env} ativa para este pedido."
     end
 
     def sale?
@@ -72,6 +80,8 @@ module Nfe
     end
 
     def build_recipient
+      return build_remessa_recipient if remessa?
+
       source = sale? ? @order.client : (@order.b2c_transfer? ? :b2c : @order.transfer_location)
       if source.nil?
         missing << 'destinatário do pedido'
@@ -87,6 +97,24 @@ module Nfe
       missing << 'endereço do destinatário' if recipient.values_at(:street, :neighbourhood, :city, :zip).any?(&:blank?)
       missing << 'código IBGE do destinatário' if recipient[:city_ibge_code].blank?
       missing << 'UF do destinatário' unless Company::STATES.key?(recipient[:state])
+      recipient
+    end
+
+    # Remessa: o destinatário digitado (do pedido ou o padrão das configurações), com o IBGE pelo CEP se faltar.
+    def build_remessa_recipient
+      data = @order.remessa_recipient_data
+      recipient = {
+        name: data['name'], document: data['document'], ie_indicator: data['state_registration'].present? ? 1 : 9,
+        state_registration: data['state_registration'].presence, street: data['street'], number: data['number'].presence || 'S/N',
+        complement: data['complement'].presence, neighbourhood: data['neighbourhood'], city: data['city'],
+        city_ibge_code: data['city_ibge_code'].presence, state: data['state'].upcase, zip: data['zip']
+      }
+      recipient[:city_ibge_code] ||= Ibge.lookup(recipient[:zip]).to_h[:ibge].presence
+      missing << 'nome do destinatário da remessa' if recipient[:name].blank?
+      missing << 'CNPJ/CPF do destinatário da remessa' unless [11, 14].include?(Cnpj.digits(recipient[:document]).length)
+      missing << 'endereço do destinatário da remessa' if recipient.values_at(:street, :neighbourhood, :city, :zip).any?(&:blank?)
+      missing << 'código IBGE do destinatário da remessa' if recipient[:city_ibge_code].blank?
+      missing << 'UF do destinatário da remessa' unless Company::STATES.key?(recipient[:state])
       recipient
     end
 
@@ -210,7 +238,7 @@ module Nfe
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature.purpose,
         final_consumer: @nature.final_consumer?,
         tax: @nature.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
-        additional_info: @order.nf_additional_info.presence || @nature.notes_for(**note_context(recipient)),
+        additional_info: (@order.nf_additional_info.presence unless remessa?) || @nature.notes_for(**note_context(recipient)),
         fisco_info: @nature.fisco_notes_for(**note_context(recipient)), environment: @environment,
         freight_mode: freight_mode, carrier: carrier_data, payments: payments, duplicates: duplicates,
         # Transferência (abastecimento e B2C) leva o IBS/CBS de não incidência, como a Transferência Interna:
@@ -221,7 +249,7 @@ module Nfe
 
       note = reused || FiscalNote.new(company: @company, number: number, series: @company.nfe_series)
       note.assign_attributes(
-        b2b_order: @order, access_key: result.access_key, environment: @environment, operation_nature: operation_nature,
+        b2b_order: @order, role: @role, access_key: result.access_key, environment: @environment, operation_nature: operation_nature,
         operation_nature_id: @nature.id, cfop_summary: items.map { |item| item[:cfop] }.uniq.join(', '), status: :assinada,
         total_value: result.total, issued_at: issued_at, protocol: nil, error_message: nil, sefaz_status_code: nil,
         sefaz_message: nil, sefaz_receipt: nil, authorized_at: nil
@@ -233,6 +261,7 @@ module Nfe
     end
 
     def recipient_name
+      return @order.remessa_recipient_data['name'] if remessa?
       return B2bTinyService::B2C_TRANSFER_RECIPIENT[:nome] if @order.b2c_transfer?
 
       source = sale? ? @order.client : @order.transfer_location
@@ -241,12 +270,15 @@ module Nfe
 
     # Transportadora da nota: a escolhida na aba Nota fiscal ou, sem ela, a do pedido (abastecimento por transportadora).
     def note_carrier
+      return nil if remessa?
+
       @order.nf_carrier || @order.carrier
     end
 
     # Modalidade do frete: a escolhida na aba Nota fiscal; sem ela, por conta do remetente quando há frete ou
     # transportadora, e sem frete no resto.
     def freight_mode
+      return '9' if remessa? # remessa para o depósito: sem ocorrência de transporte, como na NF-e 15777
       return @order.nf_freight_mode if @order.nf_freight_mode.present?
 
       @order.freight_value.to_d.positive? || note_carrier ? '0' : '9'

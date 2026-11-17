@@ -180,7 +180,10 @@ Rails.application.routes.draw do
   # Aba Nota fiscal da edição dos pedidos B2B (atacado, abastecimento e transferência B2C).
   resources :b2b_order_fiscal_notes, path: 'b2b_orders/:b2b_order_id/notas', only: [:create, :destroy] do
     member { post :transmit }
-    collection { patch :details }
+    collection do
+      patch :details
+      patch :remessa_recipient
+    end
   end
   resources :internal_transfers do
     member do

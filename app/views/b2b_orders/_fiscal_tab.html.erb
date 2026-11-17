@@ -2,7 +2,8 @@
 <% setting = B2bSetting.current %>
 <% company = setting.issuer(@b2b_order) %>
 <% nature = setting.nature_for(@b2b_order) %>
-<% notes = FiscalNote.where(b2b_order_id: @b2b_order.id).to_a %>
+<% all_notes = FiscalNote.where(b2b_order_id: @b2b_order.id).to_a %>
+<% notes = all_notes.reject(&:remessa?) %>
 <% recipient = HoneyB2bLog.destination_name(@b2b_order) %>
 <% recipient_doc = @b2b_order.sale? ? @b2b_order.client&.cnpj_formatted : (@b2b_order.stock_transfer? ? @b2b_order.transfer_location&.registration : B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]) %>
 <% units = @b2b_order.b2b_order_items.sum { |i| i.quantity.to_i } %>
@@ -45,31 +46,61 @@
         <% if blocker.include?(config_name) && screen_can?(config_perm, :edit) %><%= link_to "Abrir #{config_name}", config_path %><% end %>
       </div></div>
     <% else %>
-      <div class="it-fiscal-slots">
-        <% %w[homologacao producao].each do |env| %>
-          <%# A que vale: a nota não cancelada mais recente; só sem nenhuma, a última cancelada (para emitir de novo). %>
-          <% env_notes = notes.select { |n| n.environment == env } %>
-          <%= render 'b2b_orders/fiscal_slot', order: @b2b_order, env: env, company: company, blocker: blocker,
-                                              note: (env_notes.reject(&:cancelada?).max_by { |n| [n.created_at, n.id] } || env_notes.max_by { |n| [n.created_at, n.id] }) %>
-        <% end %>
-      </div>
-      <% shown = %w[homologacao producao].filter_map { |env| list = notes.select { |n| n.environment == env }; list.reject(&:cancelada?).max_by { |n| [n.created_at, n.id] } || list.max_by { |n| [n.created_at, n.id] } } %>
-      <% history = (notes - shown).sort_by { |n| [n.created_at, n.id] }.reverse %>
-      <% if history.any? %>
-        <details class="it-fiscal-history">
-          <summary><i class="fas fa-clock-rotate-left"></i>Histórico: <%= pluralize(history.size, 'nota anterior', plural: 'notas anteriores') %></summary>
-          <ul>
-            <% history.each do |n| %>
-              <li>
-                <%= link_to fiscal_note_path(n) do %>NF-e nº <%= n.number %><% end %>
-                <span class="text-muted-custom"><%= n.environment_label.downcase %> · <%= n.status_label.downcase %> · <%= l(n.created_at, format: '%d/%m/%Y %H:%M') %></span>
-              </li>
-            <% end %>
-          </ul>
-        </details>
-      <% end %>
+      <%= render 'b2b_orders/fiscal_slots', order: @b2b_order, notes: notes, company: company, blocker: blocker %>
     <% end %>
   </section>
+
+  <% if @b2b_order.stock_transfer? %>
+    <%# Nota de remessa: uma nota a mais do abastecimento (ex.: 5905 para o depósito do Correios). A de cima continua sendo a do Correios. %>
+    <% r_company = setting.remessa_issuer %>
+    <% r_nature = setting.remessa_nature %>
+    <% r_data = @b2b_order.remessa_recipient_data %>
+    <% r_custom = @b2b_order.remessa_recipient.present? %>
+    <% r_blocker = if r_company.nil? then 'Escolha a empresa da nota de remessa em Abastecimento Lojas → Configurações.'
+                   elsif r_nature.nil? then 'Escolha a natureza da nota de remessa em Abastecimento Lojas → Configurações.'
+                   elsif !r_company.ready_to_issue? then "A empresa #{r_company.selection_label} não está ativa ou está sem certificado digital válido."
+                   elsif @b2b_order.b2b_order_items.empty? then 'Salve os itens do pedido na aba Pedido para emitir a nota.'
+                   elsif @b2b_order.cancelado? then 'Este pedido foi cancelado.'
+                   end %>
+    <% r_notes = all_notes.select(&:remessa?) %>
+    <section class="it-fiscal-card rr-card" id="remessaNote">
+      <header class="it-fiscal-card__head">
+        <span class="transfer-note__route">
+          <span><small>Nota de remessa</small> <strong><%= r_company ? (r_company.trade_name.presence || r_company.legal_name) : '—' %></strong></span>
+          <i class="fas fa-arrow-right"></i>
+          <span><small>Destinatário</small> <strong><%= r_data['name'].presence || '—' %></strong><%= " · #{r_data['document']}" if r_data['document'].present? %></span>
+        </span>
+        <span class="it-fiscal-card__meta"><i class="fas fa-warehouse"></i><%= r_nature ? r_nature.description : 'natureza não escolhida' %></span>
+      </header>
+      <% if r_blocker && r_notes.empty? %>
+        <div class="callout is-warn mb-0"><i class="fas fa-building-circle-exclamation"></i><div>
+          <%= r_blocker %>
+          <% if r_blocker.include?('Configurações') && screen_can?(:store_supply, :edit) %><%= link_to 'Abrir Configurações do Abastecimento', stock_transfer_settings_path %><% end %>
+        </div></div>
+      <% else %>
+        <%= render 'b2b_orders/fiscal_slots', order: @b2b_order, notes: r_notes, company: r_company, blocker: r_blocker, role: 'remessa' %>
+      <% end %>
+
+      <% r_editable = screen_can?(:store_supply, :edit) && !@b2b_order.cancelado? %>
+      <details class="rr-recipient" <%= 'open' if r_custom %>>
+        <summary>
+          <i class="fas fa-location-dot"></i><b>Destinatário da remessa</b>
+          <span class="text-muted-custom"><%= r_custom ? 'trocado só neste pedido' : 'o padrão das configurações' %> · <%= [r_data['street'], r_data['number']].compact_blank.join(', ') %> · <%= [r_data['city'], r_data['state']].compact_blank.join('/') %></span>
+        </summary>
+        <%= form_with url: remessa_recipient_b2b_order_fiscal_notes_path(b2b_order_id: @b2b_order.id), method: :patch, local: true, class: 'rr-form' do %>
+          <%= render 'b2b_orders/remessa_recipient_fields', scope: 'remessa_recipient', data: r_data, disabled: !r_editable %>
+          <% if r_editable %>
+            <div class="pg-inline-foot">
+              <% if r_custom %>
+                <button type="submit" name="reset" value="1" class="btn btn-ghost" formnovalidate><i class="fas fa-rotate-left"></i>Voltar ao padrão</button>
+              <% end %>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar só para este pedido</button>
+            </div>
+          <% end %>
+        <% end %>
+      </details>
+    </section>
+  <% end %>
 
   <%# Dados da nota: editáveis até a nota de produção ser autorizada (rejeitada ou excluída libera de novo). %>
   <% lock = @b2b_order.nf_details_lock %>

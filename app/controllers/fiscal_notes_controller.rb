@@ -171,7 +171,7 @@ class FiscalNotesController < ApplicationController
   def load_new_page_data
     @companies = Company.ready_to_issue.order(:legal_name)
     @choices, @choice = emission_choices(@companies, @order.sale? ? :sale : :transfer)
-    @active_note = FiscalNote.active_statuses.find_by(b2b_order_id: @order.id)
+    @active_note = FiscalNote.principal.active_statuses.find_by(b2b_order_id: @order.id)
   end
 
   def load_shopify_page_data
