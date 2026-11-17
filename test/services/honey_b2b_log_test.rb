@@ -81,6 +81,16 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_equal B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME, sent[:recipient_name]
   end
 
+  test 'a supply to another address goes to Correios with that address and the store CNPJ' do
+    supply = order(:stock_transfer, different_shipping_address: true, shipping_street: 'Rua Nova', shipping_number: '99', shipping_complement: 'Loja 2',
+                                    shipping_neighbourhood: 'Funcionários', shipping_city: 'Belo Horizonte', shipping_state: 'MG', shipping_zip: '30.130-000')
+    sent = capture_creation { HoneyB2bLog.create_in_correios(supply) }
+
+    assert_equal ['Rua Nova', '99', 'Loja 2', 'Funcionários', '30130000'],
+                 sent[:params].values_at(:endereco, :numero, :complemento, :bairro, :cep)
+    assert_equal @location.street, @location.reload.street
+  end
+
   test 'a pickup order goes to Correios as 74926 with the client as the carrier' do
     pickup = order(:sale, freight_service: nil, pickup: true)
     sent = capture_creation { HoneyB2bLog.create_in_correios(pickup) }

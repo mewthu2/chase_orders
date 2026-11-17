@@ -82,4 +82,26 @@ class HoneyB2bLogScreensTest < ActionDispatch::IntegrationTest
                                                         b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }] } }
     end
   end
+
+  test 'a supply can go to another address just for this order, without changing the location' do
+    post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: @carrier.id, receiver_name: '',
+                                                      different_shipping_address: 'true', shipping_street: 'Rua Nova', shipping_number: '99',
+                                                      shipping_neighbourhood: 'Funcionários', shipping_city: 'BH', shipping_state: 'MG', shipping_zip: '30130-000',
+                                                      b2b_order_items_attributes: [{ sku: 'SKU1', name: 'Produto', quantity: 1, price: 10 }] } }
+
+    order = B2bOrder.last
+    assert order.different_shipping_address?
+    assert_equal 'Rua Nova', order.shipping_street
+    assert_equal 'Rua A', @location.reload.street
+
+    get edit_stock_transfer_path(order)
+    assert_select '#stockAddressChoice input[type=radio][value=true][checked]'
+    assert_select '#shippingAddressSection input[name=?][value=?]', 'b2b_order[shipping_street]', 'Rua Nova'
+  end
+
+  test 'a supply without a new address uses the registered one' do
+    get new_stock_transfer_path
+    assert_select '#stockAddressChoice input[type=radio][value=false][checked]'
+    assert_select '#transferLocationSelect[data-addresses*=?]', 'Rua A, 10'
+  end
 end

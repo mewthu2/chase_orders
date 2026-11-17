@@ -232,7 +232,8 @@ class HoneyB2bLog
         fone: digits(client.phone) }.merge(street)
     elsif @order.stock_transfer?
       loc = @order.transfer_location or return nil
-      { nome: loc.name, cpf_cnpj: digits(loc.registration), email: FALLBACK_EMAIL, fone: '' }.merge(address_of(loc))
+      street = @order.different_shipping_address? ? shipping_address : address_of(loc)
+      { nome: loc.name, cpf_cnpj: digits(loc.registration), email: FALLBACK_EMAIL, fone: '' }.merge(street)
     else
       r = B2bTinyService::B2C_TRANSFER_RECIPIENT
       { nome: r[:nome], cpf_cnpj: digits(r[:cpf_cnpj]), email: FALLBACK_EMAIL, fone: '', endereco: r[:endereco], numero: r[:numero],

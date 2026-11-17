@@ -44,8 +44,19 @@
         <% elsif @b2b_order.stock_transfer? %>
         <div class="form-col-6" id="transferLocationSection">
           <label class="field-label">Local de Destino</label>
-          <%= form.collection_select :transfer_location_id, TransferLocation.active.order(:name), :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input' } %>
+          <% locations = TransferLocation.active.order(:name).to_a %>
+          <% location_addresses = locations.to_h { |l| [l.id, [[l.street, l.number].compact_blank.join(', '), l.complement, l.neighbourhood, "#{l.city}/#{l.state}", ("CEP #{l.zip}" if l.zip.present?)].compact_blank.join(' · ')] } %>
+          <%= form.collection_select :transfer_location_id, locations, :id, :name, { include_blank: 'Selecione...' }, { class: 'field-input', id: 'transferLocationSelect', data: { addresses: location_addresses.to_json } } %>
           <span class="text-muted-custom d-block mt-1"><i class="fas fa-info-circle me-1"></i>Depois de aprovado no Log02, o Honey cria o pedido no Correios e emite a NF-e de transferência.</span>
+        </div>
+        <div class="form-col-6" id="stockAddressChoice">
+          <label class="field-label">Endereço de entrega</label>
+          <div class="d-flex gap-3 flex-wrap">
+            <label class="form-check"><%= form.radio_button :different_shipping_address, false, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-store me-1"></i>Endereço cadastrado</span></label>
+            <label class="form-check"><%= form.radio_button :different_shipping_address, true, class: 'form-check-input stock-address-mode' %><span><i class="fas fa-map-location-dot me-1"></i>Outro endereço</span></label>
+          </div>
+          <span class="text-muted-custom d-block mt-1" id="stockRegisteredAddress"></span>
+          <span class="text-muted-custom d-block mt-1" id="stockNewAddressHint" style="<%= 'display: none;' unless @b2b_order.different_shipping_address? %>"><i class="fas fa-info-circle me-1"></i>Vale só para este pedido: o cadastro do local não muda.</span>
         </div>
         <% by_carrier = @b2b_order.carrier_id.present? %>
         <div class="form-col-6" id="stockDeliverySection">
@@ -163,7 +174,7 @@
         <% end %>
       </div>
 
-      <% if @b2b_order.sale? %>
+      <% if @b2b_order.sale? || @b2b_order.stock_transfer? %>
       <div id="shippingAddressSection" class="form-grid mt-2" style="<%= @b2b_order.different_shipping_address? ? '' : 'display: none;' %>">
         <div class="form-col-6">
           <label class="field-label">Rua</label>
@@ -521,6 +532,27 @@ document.addEventListener('DOMContentLoaded', function () {
   if (addrCheck) addrCheck.addEventListener('change', function () {
     addrSection.style.display = addrCheck.checked ? '' : 'none';
   });
+
+  // Abastecimento: entrega no endereço cadastrado do local ou num endereço só deste pedido.
+  var locationSelect = document.getElementById('transferLocationSelect');
+  if (locationSelect && addrSection) {
+    var addresses = JSON.parse(locationSelect.dataset.addresses || '{}');
+    var addressFields = addrSection.querySelectorAll('input');
+    var applyStockAddress = function () {
+      var checked = document.querySelector('.stock-address-mode:checked');
+      var custom = checked && checked.value === 'true';
+      var registered = addresses[locationSelect.value];
+      addrSection.style.display = custom ? '' : 'none';
+      addressFields.forEach(function (el) { el.required = custom && el.name.indexOf('complement') === -1; });
+      document.getElementById('stockNewAddressHint').style.display = custom ? '' : 'none';
+      var info = document.getElementById('stockRegisteredAddress');
+      info.style.display = custom ? 'none' : '';
+      info.textContent = registered ? registered : 'Selecione o local de destino para ver o endereço cadastrado.';
+    };
+    locationSelect.addEventListener('change', applyStockAddress);
+    document.querySelectorAll('.stock-address-mode').forEach(function (el) { el.addEventListener('change', applyStockAddress); });
+    applyStockAddress();
+  }
 
   // Atacado: SEDEX (Correios Log) ou transportadora do cadastro. Sem Tiny: a escolha vai direto no pedido.
   var shippingMode = document.getElementById('shippingModeSelect');
