@@ -78,7 +78,9 @@ class Log02WithoutTiny2Test < ActionDispatch::IntegrationTest
     get send_xml_b2b_dashboard_index_path
 
     assert_select 'th', text: 'Nº no Correios'
-    assert_select 'tbody td', text: '25000123'
+    assert_select 'tbody td .correios-number', text: '25000123' do
+      assert_select '.correios-flag .fa-envelope', 1
+    end
     assert_select 'form[action=?]', complete_honey_order_b2b_dashboard_index_path(id: order.id), 1
     assert_select "[data-tip='Ver o pedido']", 0
     assert_select "a.pg-pn[href='#{edit_b2b_order_path(order)}']", text: 'P'

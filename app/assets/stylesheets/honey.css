@@ -2294,3 +2294,10 @@ body.honey .it-pill:hover { color: var(--text); transform: translateY(-1px) scal
 .srp-form .pg-inline-foot { margin-top: 16px; }
 @media (max-width: 560px) { .srp-step { margin-left: calc(var(--step, 0) * 10px); flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .srp-step { animation: none; transition: none; } }
+
+/* Número do pedido no Correios: bandeirinha amarela e azul que tremula ao passar o mouse na linha. */
+.correios-number { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.correios-flag { flex: none; display: inline-grid; place-items: center; width: 24px; height: 17px; padding-right: 5px; font-size: 8.5px; color: #00416b; background: linear-gradient(135deg, #ffd400 62%, #f5b800); box-shadow: inset 3px 0 0 #00416b; clip-path: polygon(0 0, 100% 0, 78% 50%, 100% 100%, 0 100%); transform-origin: left center; }
+tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
+@keyframes correiosWave { 0%, 100% { transform: none; } 30% { transform: skewY(-7deg) scaleX(1.06); } 65% { transform: skewY(5deg) scaleX(.97); } }
+@media (prefers-reduced-motion: reduce) { tr:hover .correios-flag { animation: none; } }

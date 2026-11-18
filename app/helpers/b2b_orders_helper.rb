@@ -27,6 +27,14 @@ module B2bOrdersHelper
                ]), class: 'pg-pn-group')])
   end
 
+  # Número do pedido no Correios com a bandeirinha nas cores do Correios, para identificar de relance.
+  def b2b_correios_number(number)
+    return content_tag(:span, '—', class: 'pg-dash') if number.blank?
+
+    flag = content_tag(:span, content_tag(:i, '', class: 'fas fa-envelope'), class: 'correios-flag', 'aria-hidden': true)
+    content_tag(:span, flag + content_tag(:span, number, class: 'mono pg-mono'), class: 'correios-number', data: { tip: 'Número do pedido no Correios' })
+  end
+
   # Pedidos do Honey das linhas do Log02, pelo id do Tiny 2 (os que foram ao Tiny guardam o id em
   # tiny_reference_id). Devolve { 'id do Tiny' => B2bOrder }.
   def b2b_honey_orders_by_tiny(tiny_ids)
