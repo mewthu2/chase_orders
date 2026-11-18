@@ -34,7 +34,7 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
   test 'the Logística area links to the B2C transfer screen' do
     get b2b_orders_path
 
-    assert_select ".sb-section[data-area='logistica'] a[href='#{b2c_transfers_path}']", text: /Transferência B2B → B2C/
+    assert_select ".sb-section[data-area='logistica'] a[href='#{b2c_transfers_path}']", text: /Transferências B2B ⇄ B2C/
     assert_select ".sb-section[data-area='atacado'] a[href='#{b2c_transfers_path}']", count: 0
   end
 
@@ -69,7 +69,7 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
     get b2c_transfers_path
 
     assert_response :success
-    assert_select 'h1', /Transferência B2B → B2C/
+    assert_select 'h1', /Transferências B2B ⇄ B2C/
     assert_select 'tbody tr', count: 1
     assert_select 'tbody', text: /CHASE BRASIL/
   end

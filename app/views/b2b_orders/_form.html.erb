@@ -1,3 +1,4 @@
+<% stock_account = StockReservationPriority.account_of(@b2b_order.reservation_source) %>
 <%= form_with model: @b2b_order, url: order_form_url(@b2b_order), local: true, id: 'b2bOrderForm' do |form| %>
   <%= hidden_field_tag :catalog_order_id, params[:catalog_order_id] if params[:catalog_order_id].present? %>
   <% if @b2b_order.errors.any? %>
@@ -18,7 +19,9 @@
             <%= form.select :status, B2bOrder::STATUS_LABELS.map { |key, label| [label, key] }, { selected: @b2b_order.status }, { class: 'field-input' } %>
           </div>
         <% end %>
-        <% if @b2b_order.tiny_reference_id.blank? %>
+        <% if @b2b_order.b2c_to_b2b? %>
+          <span class="od-head-hint"><i class="fas fa-file-invoice"></i>Não vai ao Correios: só nota de transferência e nota de remessa.</span>
+        <% elsif @b2b_order.tiny_reference_id.blank? %>
           <span class="od-head-hint"><i class="fas fa-route"></i>Anda no Log02: aprovação, criação no Correios, NF-e e rastreio.</span>
         <% end %>
       </div>
@@ -197,6 +200,25 @@
         </div>
       </div>
 
+      <% elsif @b2b_order.b2c_to_b2b? %>
+      <%= form.hidden_field :transfer_direction if @b2b_order.new_record? %>
+      <% b2b_setting = B2bSetting.current %>
+      <% origin = b2b_setting.issuer(@b2b_order) %>
+      <% destination = b2b_setting.remessa_issuer(@b2b_order) %>
+      <div class="form-grid">
+        <div class="form-col-6" id="b2cOriginSection">
+          <label class="field-label">Origem: filial B2C</label>
+          <div class="text-main"><%= origin&.legal_name || 'Escolha nas Configurações' %></div>
+          <span class="text-muted-custom d-block mt-1"><%= origin ? "CNPJ #{origin.cnpj_formatted} · emite a nota de transferência" : 'Empresa que emite a nota de transferência.' %></span>
+        </div>
+        <div class="form-col-6" id="b2bDestinationSection">
+          <label class="field-label">Destino: filial B2B</label>
+          <div class="text-main"><%= destination&.legal_name || 'Escolha nas Configurações' %></div>
+          <span class="text-muted-custom d-block mt-1"><%= destination ? "CNPJ #{destination.cnpj_formatted} · emite a nota de remessa" : 'Empresa que emite a nota de remessa.' %></span>
+        </div>
+      </div>
+      <div class="pg-fnote od-note"><i class="fas fa-circle-info"></i><span>Não entra no Log02 nem no Correios. Reserva o estoque B2C (Log03) até as duas notas de produção serem autorizadas: emita-as na aba Nota fiscal.<% if @b2b_order.new_record? %> <%= link_to 'Trocar para B2B → B2C', new_b2c_transfer_path %><% end %></span></div>
+
       <% else %>
       <div class="form-grid">
         <% recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT %>
@@ -238,7 +260,7 @@
         </button>
       </div>
 
-      <%= render 'stock_reservations/freshness', refresh: StockReservationRefresh.for(:b2b) %>
+      <%= render 'stock_reservations/freshness', refresh: StockReservationRefresh.for(stock_account) %>
 
       <div class="item-search">
         <i class="fas fa-search item-search__icon"></i>
@@ -276,7 +298,11 @@
       <div class="item-search__empty" id="itemSearchEmpty" hidden><i class="fas fa-search me-2"></i>Nenhum item com esse SKU ou nome.</div>
       <div id="removedItemsFields" hidden></div>
       <div id="stockEnforcementNotice" class="stock-enforcement-notice d-none" role="status"></div>
-      <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque do Log02 − itens reservados (pedidos do Honey e da fila antiga do Tiny). Não dá para adicionar item sem disponível nem pedir acima dele.</span>
+      <% if @b2b_order.b2c_to_b2b? %>
+        <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque B2C (Log03) − reservas que a Priorização de reserva manda respeitar. Não dá para pedir acima dele.</span>
+      <% else %>
+        <span class="text-muted-custom d-block mt-2"><i class="fas fa-info-circle me-1"></i>Disponível = estoque do Log02 − reservas que a Priorização de reserva manda respeitar. Não dá para adicionar item sem disponível nem pedir acima dele.</span>
+      <% end %>
     </div>
   </div>
 
@@ -820,8 +846,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var enforceStock = document.getElementById('itemsTable').dataset.enforceStock === 'true';
   // Na edição, o estoque desconta a reserva dos outros pedidos da fila, não a deste.
-  var stockUrl = '<%= raw "#{product_stock_b2b_orders_path}?#{"b2b_order_id=#{@b2b_order.id}&" if @b2b_order.persisted?}sku=" %>';
-  var reservationsUrl = <%= raw (current_user.can_access_screen?('stock_reservations_b2b') ? b2b_stock_reservations_path.to_json : 'null') %>;
+  var stockUrl = '<%= raw "#{product_stock_b2b_orders_path}?#{@b2b_order.persisted? ? "b2b_order_id=#{@b2b_order.id}" : "source=#{@b2b_order.reservation_source}"}&sku=" %>';
+  var reservationsUrl = <%= raw (current_user.can_access_screen?("stock_reservations_#{stock_account}") ? (stock_account == 'b2c' ? b2c_stock_reservations_path : b2b_stock_reservations_path).to_json : 'null') %>;
 
   function blocksSku(data) {
     return enforceStock && data && data.status !== 'error';

@@ -17,6 +17,10 @@ class B2bOrder < ApplicationRecord
 
   # b2c_transfer: transferência do estoque B2B para a filial B2C (destinatário fixo, ver B2bTinyService).
   enum :kind, { sale: 0, stock_transfer: 1, b2c_transfer: 2 }
+  # Sentido da transferência B2C. b2c_to_b2b não entra no Log02 nem no Correios e não reserva estoque: só gera a
+  # nota de transferência (emitida pela filial B2C) e a de remessa (emitida pela filial B2B).
+  enum :transfer_direction, { b2b_to_b2c: 0, b2c_to_b2b: 1 }, validate: true
+  DIRECTION_LABELS = { 'b2b_to_b2c' => 'B2B → B2C', 'b2c_to_b2b' => 'B2C → B2B' }.freeze
   enum :status, {
     aberto: 0, aprovado: 1, preparando_envio: 2, faturado: 3,
     pronto_para_envio: 4, enviado: 5, nao_entregue: 6,
@@ -83,9 +87,12 @@ class B2bOrder < ApplicationRecord
 
   scope :recent, -> { order(created_at: :desc) }
   # Pedidos que rodam no Log02 direto do Honey (nunca foram ao Tiny).
-  scope :honey_flow, -> { where(tiny_reference_id: [nil, '']) }
+  scope :honey_flow, -> { where(tiny_reference_id: [nil, '']).where.not(transfer_direction: transfer_directions[:b2c_to_b2b]) }
   # Ainda não viraram pedido no Correios: reservam o estoque do Log02.
   scope :reserving_stock, -> { honey_flow.where(correios_order_id: nil, log_ignored: false).where.not(status: :cancelado) }
+
+  # B2C → B2B reserva o estoque B2C até as duas notas de produção saírem (status faturado).
+  scope :reserving_b2c_stock, -> { b2c_to_b2b.where(tiny_reference_id: [nil, '']).where.not(status: %i[cancelado faturado enviado]) }
 
   # Prefixo das reservas e do número no Correios dos pedidos do Honey (os ids do Tiny têm 9 dígitos começando em 9).
   RESERVATION_PREFIX = 'H'.freeze
@@ -97,7 +104,8 @@ class B2bOrder < ApplicationRecord
     'invoice' => ['NF-e e XML', 'Criado no Correios: falta emitir a NF-e no Honey e enviar o XML.'],
     'tracking' => ['Rastreio', 'XML enviado: esperando o Correios liberar o código de rastreio.'],
     'shipped' => ['Enviado', 'Com código de rastreio.'],
-    'canceled' => ['Cancelado', 'Cancelado.']
+    'canceled' => ['Cancelado', 'Cancelado.'],
+    'notes_only' => ['Só notas fiscais', 'B2C → B2B: não vai ao Correios, só precisa da nota de transferência e da de remessa.']
   }.freeze
 
   # Pedido sem nota fiscal ativa pode ser excluído. Se já está no Tiny como pedido, a exclusão cancela o
@@ -111,7 +119,29 @@ class B2bOrder < ApplicationRecord
   end
 
   def honey_flow?
-    tiny_reference_id.blank?
+    tiny_reference_id.blank? && !b2c_to_b2b?
+  end
+
+  # Pedidos com a nota de remessa além da nota principal.
+  def remessa_note?
+    stock_transfer? || b2c_to_b2b?
+  end
+
+  # Origem da reserva deste pedido na escadinha (StockReservationPriority).
+  def reservation_source
+    return 'b2c_to_b2b' if b2c_to_b2b?
+
+    kind
+  end
+
+  # B2C → B2B não tem etapas no Correios: fica faturado com as duas notas de produção autorizadas.
+  def sync_notes_only_status!
+    return if !b2c_to_b2b? || cancelado?
+
+    roles = fiscal_notes.producao.autorizada.distinct.pluck(:role)
+    status = roles.include?(nil) && roles.include?('remessa') ? :faturado : :aberto
+    update_columns(status: self.class.statuses[status], updated_at: Time.current)
+    HoneyB2bLog.sync_reservations!
   end
 
   def reservation_key
@@ -125,6 +155,7 @@ class B2bOrder < ApplicationRecord
 
   def log_stage
     return 'canceled' if cancelado?
+    return 'notes_only' if b2c_to_b2b?
     return 'shipped' if tracking_code.present?
     return 'tracking' if xml_sent_at.present?
     return 'invoice' if correios_order_id.present?
@@ -218,9 +249,9 @@ class B2bOrder < ApplicationRecord
 
   # A nota de produção que impede mudar os dados da NF-e: autorizada, assinada (indo à SEFAZ) ou sem resposta
   # (precisa ser consultada com o mesmo XML). Rejeitada ou excluída libera para corrigir e emitir de novo.
-  # Destinatário da nota de remessa (abastecimento): o deste pedido ou, sem ele, o padrão das configurações.
+  # Destinatário da nota de remessa: o deste pedido ou, sem ele, o padrão das configurações do tipo do pedido.
   def remessa_recipient_data
-    B2bSetting.normalize_recipient(remessa_recipient.presence || B2bSetting.current.remessa_recipient_data)
+    B2bSetting.normalize_recipient(remessa_recipient.presence || B2bSetting.current.remessa_recipient_data(self))
   end
 
   def nf_details_lock

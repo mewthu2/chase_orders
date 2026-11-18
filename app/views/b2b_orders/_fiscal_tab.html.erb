@@ -5,15 +5,21 @@
 <% all_notes = FiscalNote.where(b2b_order_id: @b2b_order.id).to_a %>
 <% notes = all_notes.reject(&:remessa?) %>
 <% recipient = HoneyB2bLog.destination_name(@b2b_order) %>
-<% recipient_doc = @b2b_order.sale? ? @b2b_order.client&.cnpj_formatted : (@b2b_order.stock_transfer? ? @b2b_order.transfer_location&.registration : B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]) %>
+<% b2c_to_b2b = @b2b_order.b2c_to_b2b? %>
+<% recipient_doc = if @b2b_order.sale? then @b2b_order.client&.cnpj_formatted
+                   elsif @b2b_order.stock_transfer? then @b2b_order.transfer_location&.registration
+                   elsif b2c_to_b2b then setting.remessa_issuer(@b2b_order)&.cnpj_formatted
+                   else B2bTinyService::B2C_TRANSFER_RECIPIENT[:cpf_cnpj]
+                   end %>
 <% units = @b2b_order.b2b_order_items.sum { |i| i.quantity.to_i } %>
 <% config_name, config_path, config_perm = if @b2b_order.sale? then ['Configuração do atacado', edit_b2b_setting_path, :b2b_orders]
                                            elsif @b2b_order.stock_transfer? then ['Configurações do Abastecimento', stock_transfer_settings_path, :store_supply]
-                                           else ['Configurações da Transferência B2C', b2c_transfer_settings_path, :b2b_transfers]
+                                           else ['Configurações das Transferências', b2c_transfer_settings_path, :b2b_transfers]
                                            end %>
 <%
   blocker =
     if company.nil? then "Escolha a empresa emissora em #{config_name}."
+    elsif b2c_to_b2b && company == setting.remessa_issuer(@b2b_order) then "A filial B2C e a filial B2B precisam ser empresas diferentes em #{config_name}."
     elsif nature.nil? then "Escolha a natureza de #{@b2b_order.sale? ? 'venda' : 'transferência'} em #{config_name}."
     elsif !company.ready_to_issue? then "A empresa #{company.selection_label} não está ativa ou está sem certificado digital válido."
     elsif @b2b_order.b2b_order_items.empty? then 'Salve os itens do pedido na aba Pedido para emitir a nota.'
@@ -25,7 +31,11 @@
   <div>
     O pedido tem a <strong>própria nota</strong>, emitida no Honey direto na SEFAZ (<%= nature ? "natureza #{nature.description}" : "natureza em #{config_name}" %>; <%= link_to 'trocar', config_path if screen_can?(config_perm, :edit) %>).
     Dá para ter uma nota de <strong>homologação</strong> (teste, sem valor fiscal) e uma de <strong>produção</strong>; excluindo a nota, dá para emitir outra.
-    No Log02, a etapa do XML usa a nota de produção autorizada (ou emite uma) e manda o XML ao Correios.
+    <% if b2c_to_b2b %>
+      Este pedido <strong>não vai ao Correios</strong>: fica faturado quando a nota de transferência e a de remessa de produção estiverem autorizadas.
+    <% else %>
+      No Log02, a etapa do XML usa a nota de produção autorizada (ou emite uma) e manda o XML ao Correios.
+    <% end %>
   </div>
 </div>
 
@@ -50,14 +60,16 @@
     <% end %>
   </section>
 
-  <% if @b2b_order.stock_transfer? %>
-    <%# Nota de remessa: uma nota a mais do abastecimento (ex.: 5905 para o depósito do Correios). A de cima continua sendo a do Correios. %>
-    <% r_company = setting.remessa_issuer %>
-    <% r_nature = setting.remessa_nature %>
+  <% if @b2b_order.remessa_note? %>
+    <%# Nota de remessa: uma nota a mais do abastecimento e do B2C → B2B (ex.: 5905 para o depósito do Correios). %>
+    <% r_company = setting.remessa_issuer(@b2b_order) %>
+    <% r_nature = setting.remessa_nature_for(@b2b_order) %>
+    <% r_config = B2bSetting.remessa_config_name(@b2b_order) %>
+    <% r_perm = B2bOrdersController::KIND_SCREENS.fetch(@b2b_order.kind) %>
     <% r_data = @b2b_order.remessa_recipient_data %>
     <% r_custom = @b2b_order.remessa_recipient.present? %>
-    <% r_blocker = if r_company.nil? then 'Escolha a empresa da nota de remessa em Abastecimento Lojas → Configurações.'
-                   elsif r_nature.nil? then 'Escolha a natureza da nota de remessa em Abastecimento Lojas → Configurações.'
+    <% r_blocker = if r_company.nil? then "Escolha a empresa da nota de remessa em #{r_config}."
+                   elsif r_nature.nil? then "Escolha a natureza da nota de remessa em #{r_config}."
                    elsif !r_company.ready_to_issue? then "A empresa #{r_company.selection_label} não está ativa ou está sem certificado digital válido."
                    elsif @b2b_order.b2b_order_items.empty? then 'Salve os itens do pedido na aba Pedido para emitir a nota.'
                    elsif @b2b_order.cancelado? then 'Este pedido foi cancelado.'
@@ -75,13 +87,13 @@
       <% if r_blocker && r_notes.empty? %>
         <div class="callout is-warn mb-0"><i class="fas fa-building-circle-exclamation"></i><div>
           <%= r_blocker %>
-          <% if r_blocker.include?('Configurações') && screen_can?(:store_supply, :edit) %><%= link_to 'Abrir Configurações do Abastecimento', stock_transfer_settings_path %><% end %>
+          <% if r_blocker.include?('Configurações') && screen_can?(r_perm, :edit) %><%= link_to "Abrir #{config_name}", config_path %><% end %>
         </div></div>
       <% else %>
         <%= render 'b2b_orders/fiscal_slots', order: @b2b_order, notes: r_notes, company: r_company, blocker: r_blocker, role: 'remessa' %>
       <% end %>
 
-      <% r_editable = screen_can?(:store_supply, :edit) && !@b2b_order.cancelado? %>
+      <% r_editable = screen_can?(r_perm, :edit) && !@b2b_order.cancelado? %>
       <details class="rr-recipient" <%= 'open' if r_custom %>>
         <summary>
           <i class="fas fa-location-dot"></i><b>Destinatário da remessa</b>

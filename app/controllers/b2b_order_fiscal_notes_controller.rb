@@ -3,6 +3,7 @@
 # produção (no máximo uma ativa por ambiente). Empresa e natureza vêm das configurações de cada tela.
 class B2bOrderFiscalNotesController < ApplicationController
   KIND_SCREENS = B2bOrdersController::KIND_SCREENS
+  NO_REMESSA = 'Só o abastecimento das lojas e a transferência B2C → B2B têm nota de remessa.'.freeze
 
   guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit, details: :edit, remessa_recipient: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
   before_action :set_note, only: [:destroy, :transmit]
@@ -13,12 +14,12 @@ class B2bOrderFiscalNotesController < ApplicationController
 
     setting = B2bSetting.current
     remessa = params[:role] == 'remessa'
-    return back_to_notes(alert: 'Só o abastecimento das lojas tem nota de remessa.') if remessa && !order.stock_transfer?
+    return back_to_notes(alert: NO_REMESSA) if remessa && !order.remessa_note?
 
-    company = remessa ? setting.remessa_issuer : setting.issuer(order)
-    nature = remessa ? setting.remessa_nature : setting.nature_for(order)
+    company = remessa ? setting.remessa_issuer(order) : setting.issuer(order)
+    nature = remessa ? setting.remessa_nature_for(order) : setting.nature_for(order)
     unless company && nature
-      return back_to_notes(alert: remessa ? 'Escolha a empresa e a natureza da nota de remessa em Abastecimento Lojas → Configurações.' : "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.")
+      return back_to_notes(alert: remessa ? "Escolha a empresa e a natureza da nota de remessa em #{B2bSetting.remessa_config_name(order)}." : "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.")
     end
 
     CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
@@ -54,10 +55,10 @@ class B2bOrderFiscalNotesController < ApplicationController
     back_to_notes(notice: 'Dados da nota salvos. Valem para a próxima emissão.')
   end
 
-  # Destinatário da nota de remessa só deste pedido (abastecimento). "Voltar ao padrão" limpa e passa a valer o
-  # das Configurações do Abastecimento. Não mexe no cadastro de ninguém.
+  # Destinatário da nota de remessa só deste pedido. "Voltar ao padrão" limpa e passa a valer o das
+  # configurações do tipo do pedido. Não mexe no cadastro de ninguém.
   def remessa_recipient
-    return back_to_notes(alert: 'Só o abastecimento das lojas tem nota de remessa.') unless order.stock_transfer?
+    return back_to_notes(alert: NO_REMESSA) unless order.remessa_note?
 
     if params[:reset].present?
       order.update_columns(remessa_recipient: nil, updated_at: Time.current)

@@ -3,7 +3,7 @@
 class B2bTransferSettingsController < ApplicationController
   COPY = {
     'stock_transfer' => { title: 'Configurações do Abastecimento', back: :stock_transfers_path, icon: 'fas fa-dolly', what: 'do abastecimento das lojas' },
-    'b2c_transfer' => { title: 'Configurações da Transferência B2C', back: :b2c_transfers_path, icon: 'fas fa-random', what: 'da transferência para a filial B2C' }
+    'b2c_transfer' => { title: 'Configurações das Transferências B2B ⇄ B2C', back: :b2c_transfers_path, icon: 'fas fa-random', what: 'das transferências entre as filiais B2B e B2C, nos dois sentidos' }
   }.freeze
 
   guard_screen(actions: { edit: :edit, update: :edit }) { B2bOrdersController::KIND_SCREENS.fetch(order_kind) }
@@ -24,6 +24,7 @@ class B2bTransferSettingsController < ApplicationController
       attrs.merge!(remessa.slice('remessa_issuer_company_id', 'remessa_nature_id'))
       attrs['remessa_recipient'] = B2bSetting.normalize_recipient(remessa['remessa_recipient']) if remessa.key?('remessa_recipient')
     end
+    attrs.merge!(b2c_to_b2b_attrs) if order_kind == 'b2c_transfer'
     if @setting.update(attrs)
       redirect_to send(copy[:back]), notice: 'Configurações da nota salvas.'
     else
@@ -33,6 +34,16 @@ class B2bTransferSettingsController < ApplicationController
   end
 
   private
+
+  # B2C → B2B: empresa e natureza da nota de transferência e da nota de remessa, e o destinatário da remessa.
+  def b2c_to_b2b_attrs
+    data = params.require(:b2b_setting).permit(:b2c_to_b2b_issuer_company_id, :b2c_to_b2b_nature_id, :b2c_to_b2b_remessa_issuer_company_id,
+                                               :b2c_to_b2b_remessa_nature_id, b2c_to_b2b_remessa_recipient: B2bSetting::REMESSA_RECIPIENT_FIELDS).to_h
+    if data.key?('b2c_to_b2b_remessa_recipient')
+      data['b2c_to_b2b_remessa_recipient'] = B2bSetting.normalize_recipient(data['b2c_to_b2b_remessa_recipient'])
+    end
+    data
+  end
 
   def order_kind
     kind = params[:order_kind].to_s

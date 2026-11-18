@@ -82,13 +82,19 @@ module Nfe
     def build_recipient
       return build_remessa_recipient if remessa?
 
-      source = sale? ? @order.client : (@order.b2c_transfer? ? :b2c : @order.transfer_location)
+      source = if sale? then @order.client
+               elsif @order.b2c_to_b2b? then b2b_branch
+               elsif @order.b2c_transfer? then :b2c
+               else @order.transfer_location
+               end
       if source.nil?
         missing << 'destinatário do pedido'
         return {}
       end
+      raise Error, 'A filial B2C e a filial B2B precisam ser empresas diferentes nas configurações.' if source == @company
 
       recipient = if sale? then client_recipient(source)
+                  elsif @order.b2c_to_b2b? then company_recipient(source)
                   elsif source == :b2c then b2c_recipient
                   else location_recipient(source)
                   end
@@ -147,6 +153,20 @@ module Nfe
         name: r[:nome], document: r[:cpf_cnpj], ie_indicator: r[:ie].present? ? 1 : 9, state_registration: r[:ie],
         street: r[:endereco], number: r[:numero], complement: r[:complemento], neighbourhood: r[:bairro],
         city: r[:cidade], city_ibge_code: HoneyB2bLog::B2C_RECIPIENT_IBGE, state: r[:uf], zip: r[:cep]
+      }
+    end
+
+    # Transferência B2C -> B2B: o destinatário é a filial B2B, a empresa que emite a remessa.
+    def b2b_branch
+      B2bSetting.current.remessa_issuer(@order)
+    end
+
+    def company_recipient(company)
+      {
+        name: company.legal_name, document: company.cnpj, ie_indicator: company.state_registration.present? ? 1 : 9,
+        state_registration: company.state_registration, street: company.street, number: company.number,
+        complement: company.complement, neighbourhood: company.neighbourhood, city: company.city,
+        city_ibge_code: company.city_ibge_code, state: company.state, zip: company.zip
       }
     end
 
@@ -262,6 +282,7 @@ module Nfe
 
     def recipient_name
       return @order.remessa_recipient_data['name'] if remessa?
+      return b2b_branch&.legal_name if @order.b2c_to_b2b?
       return B2bTinyService::B2C_TRANSFER_RECIPIENT[:nome] if @order.b2c_transfer?
 
       source = sale? ? @order.client : @order.transfer_location

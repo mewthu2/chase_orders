@@ -53,6 +53,7 @@ class Screen
     fiscal_notes:           { label: 'Notas Fiscais',                         area: 'adm',       acts: 'VCEXP' },
     companies:              { label: 'Empresas e Naturezas de Operação',      area: 'adm',       acts: 'VCEXD' },
     carriers:               { label: 'Transportadoras',                       area: 'adm',       acts: 'VCED' },
+    stock_reservation_priority: { label: 'Priorização de reserva de estoque', area: 'adm',       acts: 'VE' },
     logs:                   { label: 'Logs',                                  area: 'adm',       acts: 'V' }
   }.freeze
 

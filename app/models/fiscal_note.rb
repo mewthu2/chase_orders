@@ -33,6 +33,8 @@ class FiscalNote < ApplicationRecord
   enum :status, { rascunho: 0, assinada: 1, autorizada: 2, rejeitada: 3, cancelada: 4, erro: 5 }
   enum :environment, { producao: 1, homologacao: 2 }
 
+  after_update_commit :sync_notes_only_order, if: :saved_change_to_status?
+
   validates :number, :series, presence: true
   validates :number, uniqueness: { scope: [:company_id, :environment, :series] }
   validates :access_key, format: { with: /\A\d{44}\z/, message: 'deve ter 44 dígitos' }, allow_blank: true
@@ -49,6 +51,11 @@ class FiscalNote < ApplicationRecord
   def remessa?
     role == 'remessa'
   end
+
+  def sync_notes_only_order
+    b2b_order&.sync_notes_only_status!
+  end
+  private :sync_notes_only_order
 
   # Mesma regra de #purpose, em SQL, para o filtro da lista.
   def self.with_purpose(key)

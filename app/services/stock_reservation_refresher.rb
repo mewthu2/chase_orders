@@ -30,7 +30,7 @@ class StockReservationRefresher
     queue = pending_orders(fetch_queue)
     StockReservation.where(account: @account).where.not(tiny_order_id: queue.keys)
                     .where.not('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").delete_all
-    HoneyB2bLog.sync_reservations! if @account == 'b2b'
+    HoneyB2bLog.sync_reservations!
     update_ecommerce_numbers(queue)
     rate_limited = store_new_orders(queue)
     @refresh.update!(status: rate_limited ? 'partial' : 'success', last_refreshed_at: Time.current,
@@ -120,7 +120,7 @@ class StockReservationRefresher
 
     now = Time.current
     StockReservation.insert_all(quantities.map do |sku, quantity|
-      { account: StockReservation.accounts[@account], tiny_order_id: summary[:id].to_s,
+      { account: StockReservation.accounts[@account], tiny_order_id: summary[:id].to_s, source: ('b2c_orders' if @account == 'b2c'),
         tiny_order_number: summary[:numero].to_s, customer_name: summary[:nome].to_s.first(255),
         ecommerce_number: (summary[:numero_ecommerce].presence || pedido[:numero_ecommerce]).to_s.presence,
         invoice_id: pedido[:id_nota_fiscal].to_s.presence&.then { |id| id == '0' ? nil : id },

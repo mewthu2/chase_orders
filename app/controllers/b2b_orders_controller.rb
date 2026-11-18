@@ -26,6 +26,7 @@ class B2bOrdersController < ApplicationController
 
   def new
     @b2b_order = B2bOrder.new(kind: order_kind, price_list: price_list_for(order_kind))
+    @b2b_order.transfer_direction = :b2c_to_b2b if order_kind == 'b2c_transfer' && params[:direction] == 'b2c_to_b2b'
     # Atacado novo já começa com o frete da tabela por valor do pedido (dá para trocar ou ajustar).
     @b2b_order.assign_attributes(fixed_freight: true, freight_value: B2bFreightRate.price_for(0)) if @b2b_order.sale?
     prefill_from_catalog_order(@b2b_order) if order_kind == 'sale' && params[:catalog_order_id].present?
@@ -40,8 +41,8 @@ class B2bOrdersController < ApplicationController
       link_catalog_order(@b2b_order)
       # Não vai mais ao Tiny: o pedido espera a aprovação em Log02 › Pedidos p/ Aprovar e segue pelo Honey.
       HoneyB2bLog.sync_reservations!
-      redirect_to orders_path_for(order_kind),
-                  notice: "#{KIND_LABELS[order_kind]} ##{@b2b_order.id} salvo. Ele segue no Log02 depois de aprovado em Pedidos p/ Aprovar."
+      next_step = @b2b_order.b2c_to_b2b? ? 'Ele não vai ao Correios: emita a nota de transferência e a de remessa na aba Nota fiscal.' : 'Ele segue no Log02 depois de aprovado em Pedidos p/ Aprovar.'
+      redirect_to orders_path_for(order_kind), notice: "#{KIND_LABELS[order_kind]} ##{@b2b_order.id} salvo. #{next_step}"
     else
       render :new, status: :unprocessable_entity
     end
@@ -54,7 +55,7 @@ class B2bOrdersController < ApplicationController
     @b2b_order.require_payment = true
 
     if @b2b_order.valid? && stock_available?(@b2b_order) && @b2b_order.save
-      HoneyB2bLog.sync_reservations! if @b2b_order.honey_flow?
+      HoneyB2bLog.sync_reservations! if @b2b_order.tiny_reference_id.blank?
       redirect_to orders_path_for(order_kind), notice: 'Pedido atualizado com sucesso.'
     else
       render :edit, status: :unprocessable_entity
@@ -129,7 +130,8 @@ class B2bOrdersController < ApplicationController
 
     own = B2bOrder.find_by(id: params[:b2b_order_id])
     own_tiny_order_id = own && (own.tiny_reference_id.presence || own.reservation_key)
-    result = B2bStockAvailability.for_sku(product.sku, exclude_tiny_order_id: own_tiny_order_id)
+    source = own&.reservation_source || params[:source].to_s.presence_in(StockReservationPriority::SOURCES.keys)
+    result = B2bStockAvailability.for_sku(product.sku, exclude_tiny_order_id: own_tiny_order_id, source:)
     render json: { success: true, quantity: result.available, stock: result.stock, reserved: result.reserved, status: result.status }
   end
 
@@ -295,7 +297,8 @@ class B2bOrdersController < ApplicationController
     return true if order.tiny_reference_id.present? || order.cancelado? || order.correios_order_id.present?
 
     # O próprio pedido do Honey já reserva os itens: não conta contra ele mesmo ao editar.
-    shortages = B2bStockAvailability.shortages(order.b2b_order_items, exclude_tiny_order_id: (order.reservation_key if order.persisted?))
+    shortages = B2bStockAvailability.shortages(order.b2b_order_items, exclude_tiny_order_id: (order.reservation_key if order.persisted?),
+                                               source: order.reservation_source)
     shortages.each do |s|
       order.errors.add(:base, "#{s[:sku]}: pedido #{s[:requested]}, disponível #{s[:available]} " \
                               "(estoque #{s[:stock]}, #{s[:reserved]} reservados na fila)")
@@ -373,6 +376,8 @@ class B2bOrdersController < ApplicationController
 
   def b2b_order_params
     permitted = b2b_order_permitted_params
+    # O sentido da transferência B2C é escolhido ao criar e não muda depois.
+    permitted = permitted.except(:transfer_direction) unless order_kind == 'b2c_transfer' && action_name == 'create'
     case order_kind
     when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, *SALE_ONLY_PARAMS, :transfer_location_id, :receiver_name)
     when 'stock_transfer' then permitted.except(*(SHIPPING_PARAMS - [:carrier_id]), *SALE_ONLY_PARAMS)
@@ -382,7 +387,7 @@ class B2bOrdersController < ApplicationController
 
   def b2b_order_permitted_params
     params.require(:b2b_order).permit(
-      :client_id, :transfer_location_id, :carrier_id, :carrier_name,
+      :client_id, :transfer_location_id, :transfer_direction, :carrier_id, :carrier_name,
       :carrier_shipping_method, :freight_service, :freight_paid_by, :freight_value, :notes,
       :salesperson_name, :receiver_name, :status, :different_shipping_address,
       :payment_method, :payment_terms, :order_discount, :order_discount_type, :fixed_freight, :pickup,

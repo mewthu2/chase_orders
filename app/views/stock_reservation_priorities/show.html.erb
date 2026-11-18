@@ -1,0 +1,71 @@
+<% content_for :title, 'Priorização de reserva de estoque' %>
+<% sources = StockReservationPriority::SOURCES %>
+<% editable = screen_can?(:stock_reservation_priority, :edit) %>
+<% names = ->(list) { list.map { |s| sources[s][:label] }.to_sentence } %>
+
+<%= hc_page_header 'Priorização de reserva de estoque', 'Quem passa na frente quando o estoque é disputado', icon: 'fas fa-stairs' %>
+
+<div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div>
+  <strong>Como a escadinha funciona.</strong> O degrau 1 é o mais prioritário. Cada origem respeita as reservas do seu degrau e dos de cima, e ignora as de baixo. Origens no mesmo degrau disputam o estoque entre si.
+</div></div>
+
+<%= form_with url: stock_reservation_priority_path, method: :patch, local: true, class: 'srp-form' do %>
+  <div class="srp-ladders">
+    <% StockReservationPriority::ACCOUNTS.each do |account, title| %>
+      <% list = StockReservationPriority.sources_of(account).sort_by { |s| [@levels[s], s] } %>
+      <section class="panel pg-card srp-ladder" data-srp-ladder>
+        <h3><i class="fas fa-warehouse"></i><%= title %></h3>
+        <ol class="srp-steps">
+          <% list.each_with_index do |source, index| %>
+            <% data = sources[source] %>
+            <% others = list - [source] %>
+            <% respected = others.select { |o| @levels[o] <= @levels[source] } %>
+            <% ignored = others - respected %>
+            <li class="srp-step" data-srp-step data-label="<%= data[:label] %>" style="--step: <%= @levels[source] - 1 %>; --i: <%= index %>">
+              <span class="srp-badge" data-srp-badge><%= @levels[source] %></span>
+              <div class="srp-body">
+                <b><i class="<%= data[:icon] %>"></i><%= data[:label] %></b>
+                <small><%= data[:hint] %></small>
+                <small class="srp-rule" data-srp-rule><%= respected.any? ? "Respeita: #{names.call(respected)}." : 'Não respeita nenhuma outra reserva.' %><%= " Ignora: #{names.call(ignored)}." if ignored.any? %></small>
+              </div>
+              <label class="srp-level">
+                <span>Degrau</span>
+                <%= select_tag "levels[#{source}]", options_for_select((1..list.size).to_a, @levels[source]), class: 'field-input', disabled: !editable, data: { srp_level: true }, 'aria-label': "Degrau de #{data[:label]}" %>
+              </label>
+            </li>
+          <% end %>
+        </ol>
+      </section>
+    <% end %>
+  </div>
+  <% if editable %>
+    <div class="pg-inline-foot">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar prioridades</button>
+    </div>
+  <% end %>
+<% end %>
+
+<script>
+(function () {
+  document.querySelectorAll('[data-srp-ladder]').forEach(function (ladder) {
+    var list = ladder.querySelector('.srp-steps');
+    var level = function (step) { return parseInt(step.querySelector('[data-srp-level]').value, 10); };
+    var join = function (names) { return names.length > 1 ? names.slice(0, -1).join(', ') + ' e ' + names[names.length - 1] : names[0]; };
+    var render = function () {
+      var steps = Array.prototype.slice.call(list.children).sort(function (a, b) { return level(a) - level(b); });
+      steps.forEach(function (step) {
+        var mine = level(step);
+        var others = steps.filter(function (other) { return other !== step; });
+        var label = function (other) { return other.dataset.label; };
+        var respected = others.filter(function (other) { return level(other) <= mine; }).map(label);
+        var ignored = others.filter(function (other) { return level(other) > mine; }).map(label);
+        step.style.setProperty('--step', mine - 1);
+        step.querySelector('[data-srp-badge]').textContent = mine;
+        step.querySelector('[data-srp-rule]').textContent = (respected.length ? 'Respeita: ' + join(respected) + '.' : 'Não respeita nenhuma outra reserva.') + (ignored.length ? ' Ignora: ' + join(ignored) + '.' : '');
+        list.appendChild(step);
+      });
+    };
+    ladder.addEventListener('change', function (event) { if (event.target.matches('[data-srp-level]')) render(); });
+  });
+})();
+</script>

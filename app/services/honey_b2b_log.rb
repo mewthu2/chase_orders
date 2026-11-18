@@ -28,34 +28,42 @@ class HoneyB2bLog
       each_safely(B2bOrder.honey_flow.where.not(xml_sent_at: nil).where(tracking_code: [nil, '']).where.not(status: :cancelado)) { |o| fetch_tracking(o) }
     end
 
-    # Reservas do Log02 dos pedidos do Honey ainda fora do Correios (chave "H<id>" na tabela de reservas).
+    # Reservas dos pedidos do Honey (chave "H<id>" na tabela de reservas): no Log02, os que ainda não foram ao
+    # Correios; no Log03, as transferências B2C → B2B ainda sem as duas notas.
     def sync_reservations!
-      orders = B2bOrder.reserving_stock.includes(:b2b_order_items, :client, :transfer_location).to_a
-      keys = orders.map(&:reservation_key)
-      StockReservation.b2b.where('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").where.not(tiny_order_id: keys).delete_all
-
-      now = Time.current
-      orders.each do |order|
-        StockReservation.b2b.where(tiny_order_id: order.reservation_key).delete_all
-        quantities = order.b2b_order_items.each_with_object(Hash.new(0)) { |i, acc| acc[i.sku.to_s.strip.upcase] += i.quantity.to_i if i.sku.present? }
-        next if quantities.empty?
-
-        StockReservation.insert_all(quantities.map do |sku, quantity|
-          { account: StockReservation.accounts[:b2b], tiny_order_id: order.reservation_key, tiny_order_number: order.reservation_key,
-            customer_name: destination_name(order).to_s.first(255), order_date: order.created_at&.to_date, sku:, quantity:,
-            created_at: now, updated_at: now }
-        end)
-      end
+      sync_account_reservations(:b2b, B2bOrder.reserving_stock)
+      sync_account_reservations(:b2c, B2bOrder.reserving_b2c_stock)
     end
 
     def destination_name(order)
       if order.sale? then order.client&.display_name
       elsif order.stock_transfer? then order.transfer_location&.name
+      elsif order.b2c_to_b2b? then B2bSetting.current.remessa_issuer(order)&.legal_name
       else B2bTinyService::B2C_TRANSFER_RECIPIENT[:nome]
       end
     end
 
     private
+
+    def sync_account_reservations(account, scope)
+      orders = scope.includes(:b2b_order_items, :client, :transfer_location).to_a
+      keys = orders.map(&:reservation_key)
+      reservations = StockReservation.public_send(account)
+      reservations.where('tiny_order_id LIKE ?', "#{B2bOrder::RESERVATION_PREFIX}%").where.not(tiny_order_id: keys).delete_all
+
+      now = Time.current
+      orders.each do |order|
+        reservations.where(tiny_order_id: order.reservation_key).delete_all
+        quantities = order.b2b_order_items.each_with_object(Hash.new(0)) { |i, acc| acc[i.sku.to_s.strip.upcase] += i.quantity.to_i if i.sku.present? }
+        next if quantities.empty?
+
+        StockReservation.insert_all(quantities.map do |sku, quantity|
+          { account: StockReservation.accounts[account], tiny_order_id: order.reservation_key, tiny_order_number: order.reservation_key,
+            customer_name: destination_name(order).to_s.first(255), order_date: order.created_at&.to_date, sku:, quantity:,
+            source: order.reservation_source, created_at: now, updated_at: now }
+        end)
+      end
+    end
 
     # Um pedido com problema não pode parar os outros, nem o fluxo do Tiny que roda no mesmo job.
     def each_safely(scope)

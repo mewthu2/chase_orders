@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_17_190000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -229,6 +229,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_190000) do
     t.string "nf_freight_mode", limit: 1
     t.bigint "nf_carrier_id"
     t.json "remessa_recipient"
+    t.integer "transfer_direction", default: 0, null: false
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["nf_carrier_id"], name: "index_b2b_orders_on_nf_carrier_id"
@@ -252,6 +253,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_190000) do
     t.bigint "remessa_issuer_company_id"
     t.bigint "remessa_nature_id"
     t.json "remessa_recipient"
+    t.bigint "b2c_to_b2b_issuer_company_id"
+    t.bigint "b2c_to_b2b_nature_id"
+    t.bigint "b2c_to_b2b_remessa_issuer_company_id"
+    t.bigint "b2c_to_b2b_remessa_nature_id"
+    t.json "b2c_to_b2b_remessa_recipient"
     t.index ["b2c_issuer_company_id"], name: "index_b2b_settings_on_b2c_issuer_company_id"
     t.index ["b2c_nature_id"], name: "index_b2b_settings_on_b2c_nature_id"
     t.index ["supply_issuer_company_id"], name: "index_b2b_settings_on_supply_issuer_company_id"
@@ -1035,6 +1041,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_190000) do
     t.index ["account"], name: "index_stock_reservation_refreshes_on_account", unique: true
   end
 
+  create_table "stock_reservation_priorities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "source", null: false
+    t.integer "level", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source"], name: "index_stock_reservation_priorities_on_source", unique: true
+  end
+
   create_table "stock_reservations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.integer "account", null: false
     t.string "tiny_order_id", null: false
@@ -1047,6 +1061,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_17_190000) do
     t.datetime "updated_at", null: false
     t.string "ecommerce_number"
     t.string "invoice_id"
+    t.string "source"
     t.index ["account", "sku"], name: "index_stock_reservations_on_account_and_sku"
     t.index ["account", "tiny_order_id"], name: "index_stock_reservations_on_account_and_tiny_order_id"
   end

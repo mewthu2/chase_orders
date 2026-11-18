@@ -12,7 +12,7 @@
   <div class="pg-split" style="--cols: 1.3fr 1fr">
     <div class="pg-split-a">
       <%= form_with model: @setting, url: send("#{order_kind}_settings_path"), method: :patch, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do |form| %>
-        <h3><i class="fas fa-file-invoice"></i>Nota fiscal</h3>
+        <h3><i class="fas fa-file-invoice"></i><%= order_kind == 'b2c_transfer' ? 'B2B → B2C: nota de transferência' : 'Nota fiscal' %></h3>
         <% if @setting.errors.any? %>
           <div class="pg-fnote is-warn"><i class="fas fa-triangle-exclamation"></i><span><%= @setting.errors.full_messages.to_sentence %></span></div>
         <% end %>
@@ -52,6 +52,41 @@
             <%= render 'b2b_orders/remessa_recipient_fields', scope: 'b2b_setting[remessa_recipient]', data: @setting.remessa_recipient_data %>
           </div>
         <% end %>
+        <% if order_kind == 'b2c_transfer' %>
+          <% company_options = Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] } %>
+          <% default_label = ->(record, text) { record ? "Padrão: #{record.respond_to?(:legal_name) ? (record.trade_name.presence || record.legal_name) : record.description}" : text } %>
+          <div class="rr-section" id="b2cToB2bSettings">
+            <h3><i class="fas fa-right-left"></i>B2C → B2B: nota de transferência</h3>
+            <p class="rr-intro">Este sentido <b>não entra no Correios</b>. A filial B2C emite esta nota para a filial B2B.</p>
+            <div class="pg-fields">
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2c_to_b2b_issuer_company_id">Filial B2C (emite)</label>
+                <%= form.select :b2c_to_b2b_issuer_company_id, company_options, { include_blank: default_label.call(@setting.b2c_to_b2b_issuer, 'Selecione...') }, class: 'field-input' %>
+              </div>
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2c_to_b2b_nature_id">Natureza da operação</label>
+                <%= form.select :b2c_to_b2b_nature_id, natures.map { |n| ["#{n.description} · CFOP #{n.cfop} · #{n.regime_label}", n.id] },
+                                { include_blank: default_label.call(@setting.nature_for('b2c_to_b2b'), 'Selecione...') }, class: 'field-input' %>
+              </div>
+            </div>
+            <h3><i class="fas fa-warehouse"></i>B2C → B2B: nota de remessa</h3>
+            <p class="rr-intro">A filial B2B recebe a nota de transferência e emite esta nota de remessa.</p>
+            <div class="pg-fields">
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2c_to_b2b_remessa_issuer_company_id">Filial B2B (emite)</label>
+                <%= form.select :b2c_to_b2b_remessa_issuer_company_id, company_options, { include_blank: default_label.call(@setting.remessa_issuer('b2c_to_b2b'), 'Selecione...') }, class: 'field-input' %>
+              </div>
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2c_to_b2b_remessa_nature_id">Natureza da operação</label>
+                <%= form.select :b2c_to_b2b_remessa_nature_id, OperationNature.where(active: true).order(:description).map { |n| ["#{n.description} · CFOP #{n.cfop} · #{n.regime_label}", n.id] },
+                                { include_blank: default_label.call(@setting.remessa_nature_for('b2c_to_b2b'), 'Selecione...') }, class: 'field-input' %>
+              </div>
+            </div>
+            <span class="field-label rr-label">Destinatário padrão da remessa</span>
+            <p class="rr-intro">Já vem em cada transferência. Para uma só, dá para trocar na aba Nota fiscal dela.</p>
+            <%= render 'b2b_orders/remessa_recipient_fields', scope: 'b2b_setting[b2c_to_b2b_remessa_recipient]', data: @setting.remessa_recipient_data('b2c_to_b2b') %>
+          </div>
+        <% end %>
         <div class="pg-inline-foot">
           <%= link_to 'Cancelar', send(copy[:back]), class: 'btn btn-ghost' %>
           <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>
@@ -60,7 +95,7 @@
     </div>
     <div class="pg-split-b">
       <div class="panel pg-card pg-howto">
-        <h3><i class="fas fa-list-ol"></i>Como a nota sai</h3>
+        <h3><i class="fas fa-list-ol"></i><%= order_kind == 'b2c_transfer' ? 'Como a nota sai no B2B → B2C' : 'Como a nota sai' %></h3>
         <ol>
           <% ['O pedido é <b>aprovado</b> em Log02 › Pedidos p/ Aprovar e o Honey cria no <b>Correios</b>.',
               'Na etapa do XML, o Honey <b>emite a NF-e</b> com esta empresa e natureza e autoriza na <b>SEFAZ</b>.',
@@ -70,6 +105,18 @@
           <% end %>
         </ol>
       </div>
+      <% if order_kind == 'b2c_transfer' %>
+        <div class="panel pg-card pg-howto">
+          <h3><i class="fas fa-list-ol"></i>Como as notas saem no B2C → B2B</h3>
+          <ol>
+            <% ['Crie a transferência em <b>Nova B2C → B2B</b>. Ela <b>não</b> passa pelo Log02 nem pelo Correios.',
+                'Na aba <b>Nota fiscal</b>, a filial B2C emite a nota de <b>transferência</b> para a filial B2B.',
+                'Na mesma aba, a filial B2B emite a nota de <b>remessa</b>.'].each_with_index do |text, i| %>
+              <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
+            <% end %>
+          </ol>
+        </div>
+      <% end %>
       <% if company %>
         <div class="callout pg-banner <%= company.producao? ? 'is-info' : 'is-warn' %>"><i class="fas fa-building"></i><div>
           <strong><%= company.trade_name.presence || company.legal_name %> está em <%= company.environment_label.downcase %>.</strong>

@@ -70,7 +70,7 @@ class B2bRomaneioPdf
     end
     pdf.bounding_box([width / 2, top - 14], width: width / 2 - 18) do
       pdf.fill_color 'FFFFFF'
-      pdf.text "#{TITLES[@order.kind]} ##{@order.id}", size: 16, style: :bold, align: :right
+      pdf.text "#{@order.b2c_to_b2b? ? 'Transferência B2C > B2B' : TITLES[@order.kind]} ##{@order.id}", size: 16, style: :bold, align: :right
       pdf.fill_color 'C9D1D9'
       pdf.text "Emitido em #{@order.created_at.strftime('%d/%m/%Y')}", size: 9, align: :right
       if @order.tiny_reference_number.present?
@@ -130,6 +130,8 @@ class B2bRomaneioPdf
     elsif @order.stock_transfer?
       location = @order.transfer_location
       [[nil, location&.name], ['CNPJ', location&.registration]]
+    elsif @order.b2c_to_b2b?
+      [[nil, b2b_branch&.legal_name], ['CNPJ', b2b_branch&.cnpj_formatted]]
     else
       recipient = B2bTinyService::B2C_TRANSFER_RECIPIENT
       [[nil, recipient[:nome]], ['CNPJ', recipient[:cpf_cnpj]]]
@@ -153,11 +155,18 @@ class B2bRomaneioPdf
             elsif @order.stock_transfer? && @order.transfer_location
               l = @order.transfer_location
               [l.street, l.number, l.complement, l.neighbourhood, city_state(l.city, l.state), l.zip]
+            elsif @order.b2c_to_b2b?
+              c = b2b_branch
+              c && [c.street, c.number, c.complement, c.neighbourhood, city_state(c.city, c.state), c.zip]
             elsif @order.b2c_transfer?
               r = B2bTinyService::B2C_TRANSFER_RECIPIENT
               [r[:endereco], r[:numero], r[:complemento], r[:bairro], city_state(r[:cidade], r[:uf]), r[:cep]]
             end
     Array(parts).compact_blank.join(', ')
+  end
+
+  def b2b_branch
+    @b2b_branch ||= B2bSetting.current.remessa_issuer(@order)
   end
 
   def city_state(city, state)
@@ -309,6 +318,8 @@ class B2bRomaneioPdf
   end
 
   def destination_name
+    return b2b_branch&.legal_name if @order.b2c_to_b2b?
+
     @order.sale? ? @order.client&.display_name : @order.transfer_location&.name
   end
 

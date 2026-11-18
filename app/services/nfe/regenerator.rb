@@ -44,12 +44,12 @@ module Nfe
       Generator.call(order:, company:, nature:, environment:)
     end
 
-    # Remessa do abastecimento: com a empresa e a natureza da remessa nas Configurações do Abastecimento.
+    # Remessa: com a empresa e a natureza configuradas para o tipo do pedido.
     def from_remessa(order)
       setting = B2bSetting.current
-      company = setting.remessa_issuer
-      nature = setting.remessa_nature
-      raise Error, 'Escolha a empresa e a natureza da nota de remessa em Abastecimento Lojas → Configurações.' unless company && nature
+      company = setting.remessa_issuer(order)
+      nature = setting.remessa_nature_for(order)
+      raise Error, "Escolha a empresa e a natureza da nota de remessa em #{B2bSetting.remessa_config_name(order)}." unless company && nature
 
       CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
       Generator.call(order:, company:, nature:, environment:, role: 'remessa')

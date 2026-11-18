@@ -23,9 +23,10 @@ module B2bCatalogs
 
     def refresh_stock(skus)
       stocks = B2bStockAvailability.correios_stocks(skus)
+      sources = B2bStockAvailability.counted_sources('sale')
 
       skus.each do |sku|
-        result = B2bStockAvailability.build(sku, stocks[sku])
+        result = B2bStockAvailability.build(sku, stocks[sku], sources:)
         next if result.error?
 
         level = B2bCatalogVariant.availabilities[B2bCatalogVariant.availability_for(result.available)]

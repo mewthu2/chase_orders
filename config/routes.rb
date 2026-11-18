@@ -361,6 +361,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resource :stock_reservation_priority, only: [:show, :update], path: 'priorizacao-reserva-estoque'
+
   resources :ticket_sectors, except: [:show]
   resources :ticket_responsabilities, except: [:show]
   resources :tickets, only: [:new, :create, :show, :destroy] do

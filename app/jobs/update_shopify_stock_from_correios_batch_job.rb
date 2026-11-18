@@ -65,7 +65,8 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
       end
 
       stock_data = JSON.parse(correios_response.body)
-      available_stock = stock_data['disponivel'].to_i
+      available_stock = stock_data['disponivel'].to_i - reserved_ahead_of_b2c_orders(product.sku)
+      available_stock = 0 if available_stock.negative?
 
       puts "Estoque disponível nos Correios para #{product.sku}: #{available_stock}"
 
@@ -89,6 +90,14 @@ class UpdateShopifyStockFromCorreiosBatchJob < ActiveJob::Base
       record_error(error_msg)
       StockSyncFailure.record!(@attempt, product, 'correios', e.message)
     end
+  end
+
+  # Pedido B2C ignora as reservas abaixo dele na escadinha; só desconta o que estiver no mesmo degrau ou acima.
+  def reserved_ahead_of_b2c_orders(sku)
+    @sources_ahead ||= StockReservationPriority.ahead_of('b2c_orders')
+    return 0 if @sources_ahead.empty?
+
+    StockReservation.b2c.where(sku: sku.to_s.strip.upcase, source: @sources_ahead).sum(:quantity).ceil
   end
 
   def update_shopify_inventory(product, quantity)

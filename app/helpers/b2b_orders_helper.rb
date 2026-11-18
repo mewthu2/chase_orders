@@ -58,13 +58,16 @@ module B2bOrdersHelper
     'stock_transfer' => { title: 'Abastecimento Lojas', new_title: 'Novo Abastecimento Lojas', edit_title: 'Editar Abastecimento Lojas',
                           icon: 'dolly', subtitle: 'Transferências de estoque para abastecer as lojas', list_title: 'Lista de Abastecimentos',
                           new_button: 'Novo Abastecimento', empty: 'Nenhum abastecimento cadastrado' },
-    'b2c_transfer' => { title: 'Transferência B2B → B2C', new_title: 'Nova Transferência B2B → B2C', edit_title: 'Editar Transferência B2B → B2C',
+    'b2c_transfer' => { title: 'Transferências B2B ⇄ B2C', new_title: 'Nova Transferência B2B → B2C', edit_title: 'Editar Transferência B2B → B2C',
                         icon: 'random', subtitle: 'Transferências do estoque B2B para a filial B2C (CNPJ 25.405.327/0003-36)',
                         list_title: 'Lista de Transferências', new_button: 'Nova Transferência', empty: 'Nenhuma transferência cadastrada' }
   }.freeze
 
-  def b2b_screen_copy(kind)
-    B2B_SCREEN_COPY.fetch(kind.to_s)
+  B2C_TO_B2B_COPY = { new_title: 'Nova Transferência B2C → B2B', edit_title: 'Editar Transferência B2C → B2B' }.freeze
+
+  def b2b_screen_copy(kind, order = nil)
+    copy = B2B_SCREEN_COPY.fetch(kind.to_s)
+    order&.b2c_to_b2b? ? copy.merge(B2C_TO_B2B_COPY) : copy
   end
 
   # O Tiny 2 não é mais usado: excluir só tira o pedido do Honey.
@@ -88,6 +91,7 @@ module B2bOrdersHelper
   def b2b_order_destination(order)
     if order.sale? then order.client&.display_name
     elsif order.stock_transfer? then order.transfer_location&.name
+    elsif order.b2c_to_b2b? then 'Filial B2B'
     else B2bTinyService::B2C_TRANSFER_RECIPIENT[:nome]
     end
   end

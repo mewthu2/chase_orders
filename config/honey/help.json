@@ -126,9 +126,9 @@
    ]
   },
   "log-transf-b2c": {
-   "title": "Transferência B2B → B2C",
-   "purpose": "Mandar mercadoria do estoque de atacado (B2B) para a filial da loja online (B2C), com a NF-e de transferência emitida no Honey e o envio pelo Log02, sem o Tiny.",
-   "when": "Quando a loja online precisar de peças que estão no estoque do atacado.",
+   "title": "Transferências B2B ⇄ B2C",
+   "purpose": "Mover mercadoria entre o estoque de atacado (B2B) e a filial da loja online (B2C). B2B → B2C sai com NF-e de transferência e envio pelo Log02. B2C → B2B não vai ao Correios: só gera a nota de transferência e a de remessa.",
+   "when": "Quando uma das filiais precisar de peças que estão na outra.",
    "actions": [
     "Nova Transferência",
     "Adicionar Produtos",
@@ -241,6 +241,14 @@
      "CFOP",
      "Código que diz o tipo da operação da nota."
     ]
+   ]
+  },
+  "adm-prioridade-reserva": {
+   "title": "Priorização de reserva de estoque",
+   "purpose": "Definir, em cada estoque, a ordem de prioridade entre tudo que reserva peças no Honey.",
+   "when": "Quando uma origem precisar passar na frente da reserva de outra.",
+   "actions": [
+    "Salvar prioridades"
    ]
   },
   "adm-transportadoras": {
@@ -1460,6 +1468,7 @@
   "adm-notas": "nota nf nfe emissao fiscal sefaz",
   "adm-empresas": "cnpj certificado emissora",
   "adm-transportadoras": "frete transportadora",
+  "adm-prioridade-reserva": "reserva estoque prioridade escadinha degrau",
   "loja-controle": "estoque contagem inventario conferencia",
   "log03-reservas": "estoque reservado disponivel",
   "log02-reservas": "estoque reservado disponivel atacado",
