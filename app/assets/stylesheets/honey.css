@@ -2206,6 +2206,23 @@ body.honey form:has(> .it-slot__issue) { margin: 0; }
 @keyframes itSlotPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--st) 60%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
 @media (prefers-reduced-motion: reduce) { body.honey .it-slot, body.honey .it-slot::before, body.honey .it-slot__dot { animation: none; } }
 
+/* Emissão em produção travada: a empresa está em homologação. */
+body.honey .nf-prod-lock { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 0 0 14px; padding: 12px 14px; border: 1px dashed color-mix(in srgb, var(--yellow) 50%, var(--border)); border-radius: 10px; background: linear-gradient(115deg, color-mix(in srgb, var(--yellow) 13%, transparent), transparent 62%); animation: fadeUp .35s ease both; }
+body.honey .it-slot .nf-prod-lock { margin: 0; }
+body.honey .nf-prod-lock::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 34%; pointer-events: none; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--yellow) 16%, transparent), transparent); animation: sheen 3.6s ease-in-out infinite; }
+body.honey .nf-prod-lock__btn { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-3); background: color-mix(in srgb, var(--text-3) 10%, transparent); cursor: not-allowed; }
+body.honey .nf-prod-lock__btn small { font-weight: 500; opacity: .8; }
+body.honey .nf-prod-lock__msg { display: flex; gap: 8px; margin: 0; font-size: 12.5px; color: var(--text-2); }
+body.honey .nf-prod-lock__msg i { margin-top: 2px; color: var(--yellow); }
+body.honey .nf-prod-lock__msg strong { color: var(--text); }
+body.honey .nf-prod-lock__hint { margin: 0; font-size: 12.5px; color: var(--text-3); }
+body.honey .nf-prod-lock__link { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--yellow); text-decoration: none; }
+body.honey .nf-prod-lock__link:hover { text-decoration: underline; }
+body.honey .nf-prod-lock__arrow { transition: transform .18s ease; }
+body.honey .nf-prod-lock__link:hover .nf-prod-lock__arrow { transform: translateX(4px); }
+body.honey .env-card:target { --ring: color-mix(in srgb, var(--yellow) 60%, transparent); border-color: var(--yellow); animation: pulseRing 1.2s ease-out 3; }
+@media (prefers-reduced-motion: reduce) { body.honey .nf-prod-lock, body.honey .nf-prod-lock::after, body.honey .env-card:target { animation: none; } body.honey .nf-prod-lock::after { display: none; } }
+
 /* Lista de transferências: pílulas das notas fiscais */
 body.honey .it-pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 body.honey .it-pill { --st: var(--green); display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap;

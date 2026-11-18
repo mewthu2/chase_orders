@@ -13,6 +13,7 @@ class InternalTransferFiscalNotesController < ApplicationController
     origin, destination = InternalTransferInvoicer.companies_for(@shipment)
     return back_to_notes(alert: 'Ligue as duas lojas a uma empresa (Empresas → Loja desta empresa) antes de emitir a nota.') if origin.nil? || destination.nil?
     return back_to_notes(alert: 'As duas lojas são da mesma empresa: não há nota de transferência.') if origin.id == destination.id
+    return back_to_notes(alert: origin.production_block_message) if environment == 'producao' && origin.homologacao?
 
     note = Nfe::TransferGenerator.call(shipment: @shipment, company: origin, recipient_company: destination, environment: environment)
     if params[:draft].present?
@@ -30,6 +31,8 @@ class InternalTransferFiscalNotesController < ApplicationController
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.
   def transmit
+    return back_to_notes(alert: @note.company.production_block_message) if @note.production_blocked? && !@note.erro?
+
     @note.assinada! if @note.emittable?
     Nfe::Transmitter.call(@note, consult: @note.erro?)
     back_to_notes(**result_flash(@note))

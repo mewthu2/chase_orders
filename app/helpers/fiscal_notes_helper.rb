@@ -33,6 +33,14 @@ module FiscalNotesHelper
     end
   end
 
+  # Onde a empresa sai de homologação: o interruptor dela em Notas Fiscais ou, sem acesso a ele, o cadastro.
+  # Sem permissão de editar empresas não há link.
+  def production_unlock_path(company)
+    return unless screen_can?(:companies, :edit)
+
+    screen_can?(:fiscal_notes) && company.active? ? fiscal_notes_path(anchor: "empresa-#{company.id}") : edit_company_path(company)
+  end
+
   def environment_switch(company)
     production = company.producao?
     button_to toggle_environment_company_path(company), method: :patch,

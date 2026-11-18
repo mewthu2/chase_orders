@@ -14,7 +14,7 @@ class InternalTransferFiscalNotesControllerTest < ActionDispatch::IntegrationTes
     @lagoa = Location.create!(slug: 'lagoa_seca', name: 'Lagoa Seca', shopify_location_id: '111')
     @bh = Location.create!(slug: 'bh_shopping', name: 'BH Shopping', shopify_location_id: '222')
     @product = Product.create!(sku: 'SKU-A', shopify_product_name: 'Camiseta', shopify_inventory_item_id: '9001', ncm: '61091000', cost: '20.00', price: '99.90')
-    @bh.update!(company: create_nfe_company(environment: :homologacao, next_nfe_number: 500, next_nfe_number_homologation: 7))
+    @bh.update!(company: create_nfe_company(environment: :producao, next_nfe_number: 500, next_nfe_number_homologation: 7))
     @lagoa.update!(company: create_nfe_company(legal_name: 'Chase Lagoa Ltda', cnpj: '45.723.174/0001-10', state_registration: '87654321'))
     [@bh, @lagoa].each do |location|
       location.company.operation_natures.create!(description: 'Transferência de mercadoria', kind: :transfer, cfop: '?152',

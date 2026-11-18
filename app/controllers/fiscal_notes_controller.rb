@@ -62,6 +62,8 @@ class FiscalNotesController < ApplicationController
 
   # Assinada: envia. Rascunho (gerada para conferir): é o "Emitir na SEFAZ".
   def transmit
+    return redirect_to(fiscal_note_path(@fiscal_note), alert: @fiscal_note.company.production_block_message) if @fiscal_note.production_blocked?
+
     @fiscal_note.assinada! if @fiscal_note.emittable?
     Nfe::Transmitter.call(@fiscal_note)
     redirect_to fiscal_note_path(@fiscal_note), transmission_flash(@fiscal_note)

@@ -35,6 +35,15 @@ class Nfe::RegeneratorTest < ActiveSupport::TestCase
     assert_not draft.transmittable?, 'rotinas automáticas (que só transmitem assinada) não emitem o rascunho'
   end
 
+  test 'does not replace a production note while the company is in homologation' do
+    @company.update!(environment: :homologacao)
+
+    error = assert_raises(Nfe::Regenerator::Error) { Nfe::Regenerator.call(@canceled) }
+
+    assert_match(/está em homologação/, error.message)
+    assert_equal 41, @company.reload.next_nfe_number
+  end
+
   test 'only a canceled note can be replaced, and only once while the draft exists' do
     assert_raises(Nfe::Regenerator::Error) { Nfe::Regenerator.call(FiscalNote.new(status: :autorizada)) }
     Nfe::Regenerator.call(@canceled)

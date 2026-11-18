@@ -22,6 +22,8 @@ class B2bOrderFiscalNotesController < ApplicationController
       return back_to_notes(alert: remessa ? "Escolha a empresa e a natureza da nota de remessa em #{B2bSetting.remessa_config_name(order)}." : "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}.")
     end
 
+    return back_to_notes(alert: company.production_block_message) if environment == 'producao' && company.homologacao?
+
     CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
     note = Nfe::Generator.call(order:, company:, nature:, environment:, role: (remessa ? 'remessa' : nil))
     if params[:draft].present?
@@ -72,6 +74,8 @@ class B2bOrderFiscalNotesController < ApplicationController
 
   # Assinada: envia de novo. Sem resposta (erro): consulta pela chave antes de qualquer outra coisa.
   def transmit
+    return back_to_notes(alert: @note.company.production_block_message) if @note.production_blocked? && !@note.erro?
+
     @note.assinada! if @note.emittable?
     Nfe::Transmitter.call(@note, consult: @note.erro?)
     back_to_notes(**result_flash(@note))

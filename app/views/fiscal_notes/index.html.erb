@@ -74,7 +74,7 @@
   </div>
   <div class="env-bar">
     <% @companies.select(&:active?).each do |company| %>
-      <div class="env-card <%= 'env-card--prod' if company.producao? %>">
+      <div class="env-card <%= 'env-card--prod' if company.producao? %>" id="empresa-<%= company.id %>">
         <div>
           <div class="env-card__name"><%= company.trade_name.presence || company.legal_name %></div>
           <div class="env-card__meta"><%= company.cnpj_formatted %> · próxima nota <%= company.current_nfe_number %> / série <%= company.nfe_series %></div>

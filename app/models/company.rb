@@ -104,6 +104,10 @@ class Company < ApplicationRecord
     homologacao? ? 'Homologação' : 'Produção'
   end
 
+  def production_block_message
+    "#{trade_name.presence || legal_name} está em homologação: ligue a produção da empresa para emitir nota de produção."
+  end
+
   def nfe_certificate
     Nfe::Certificate.new(certificate.download, certificate_password)
   end

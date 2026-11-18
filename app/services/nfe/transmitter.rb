@@ -32,6 +32,7 @@ module Nfe
     def call
       raise Error, 'A nota não tem XML assinado.' unless @note.xml_available?
       raise Error, 'Esta nota não pode ser transmitida.' unless @consult || @note.transmittable?
+      raise Error, @note.company.production_block_message if !@consult && @note.production_blocked?
 
       @consult ? consult_by_key : authorize
       @note

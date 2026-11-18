@@ -89,6 +89,11 @@ class FiscalNote < ApplicationRecord
     TRANSMITTABLE_STATUSES.include?(status) && xml_available?
   end
 
+  # Nota de produção de empresa em homologação não vai à SEFAZ (consultar continua valendo).
+  def production_blocked?
+    producao? && company.homologacao?
+  end
+
   # Erro de comunicação pode ter chegado à SEFAZ: vale consultar pela chave antes de reenviar.
   def consultable?
     access_key.present? && (erro? || assinada? || rejeitada?)

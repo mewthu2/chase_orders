@@ -34,12 +34,17 @@ module Nfe
       @note.environment
     end
 
+    def ensure_production_allowed!(company)
+      raise Error, company.production_block_message if @note.producao? && company.homologacao?
+    end
+
     def from_b2b_order(order)
       setting = B2bSetting.current
       company = setting.issuer(order)
       nature = setting.nature_for(order)
       raise Error, "Escolha a empresa emissora e a natureza em #{B2bSetting.config_name(order)}." unless company && nature
 
+      ensure_production_allowed!(company)
       CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
       Generator.call(order:, company:, nature:, environment:)
     end
@@ -51,6 +56,7 @@ module Nfe
       nature = setting.remessa_nature_for(order)
       raise Error, "Escolha a empresa e a natureza da nota de remessa em #{B2bSetting.remessa_config_name(order)}." unless company && nature
 
+      ensure_production_allowed!(company)
       CompanyOperationNature.find_or_create_by!(company:, operation_nature: nature)
       Generator.call(order:, company:, nature:, environment:, role: 'remessa')
     end
@@ -59,6 +65,7 @@ module Nfe
       origin, destination = InternalTransferInvoicer.companies_for(shipment)
       raise Error, 'Ligue as duas lojas a uma empresa (Empresas → Loja desta empresa) antes de gerar a nota.' unless origin && destination
 
+      ensure_production_allowed!(origin)
       TransferGenerator.call(shipment:, company: origin, recipient_company: destination, environment:)
     end
   end

@@ -1,0 +1,17 @@
+<%# Botão de emissão em produção desativado: a empresa está em homologação. Locais: company, label e detail (opcional). %>
+<% unlock_path = production_unlock_path(company) %>
+<div class="nf-prod-lock">
+  <button type="button" class="nf-prod-lock__btn" disabled>
+    <i class="fas fa-lock"></i><%= label %>
+    <% if local_assigns[:detail].present? %><small><%= detail %></small><% end %>
+  </button>
+  <p class="nf-prod-lock__msg">
+    <i class="fas fa-flask"></i>
+    <span><strong><%= company.trade_name.presence || company.legal_name %> está em homologação.</strong> Ligue a produção da empresa para liberar este botão.</span>
+  </p>
+  <% if unlock_path %>
+    <%= link_to unlock_path, class: 'nf-prod-lock__link' do %><i class="fas fa-power-off"></i>Tirar de homologação<i class="fas fa-arrow-right nf-prod-lock__arrow"></i><% end %>
+  <% else %>
+    <p class="nf-prod-lock__hint">Peça a quem administra as empresas para ligar a produção.</p>
+  <% end %>
+</div>

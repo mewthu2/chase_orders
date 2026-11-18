@@ -1,5 +1,11 @@
 <% content_for :title, "Nota Fiscal #{@fiscal_note.number}" %>
 <% note = @fiscal_note %>
+<%# Nota de produção de empresa em homologação: os botões de envio dão lugar ao aviso com o link para ligar a produção. %>
+<% locked_action = if !note.production_blocked? then nil
+                   elsif note.emittable? && screen_can?(:fiscal_notes, :execute) then 'Emitir na SEFAZ'
+                   elsif note.transmittable? then 'Transmitir à SEFAZ'
+                   elsif note.regenerable? && note.shopify_order_name.blank? && screen_can?(:fiscal_notes, :create) then 'Gerar nova nota'
+                   end %>
 
 <div class="users-container">
   <div class="page-header">
@@ -17,16 +23,16 @@
       <% if note.consultable? %>
         <%= button_to consult_fiscal_note_path(note), method: :post, class: "btn-back", form: { class: 'd-inline' } do %><i class="fas fa-sync-alt me-1"></i>Consultar na SEFAZ<% end %>
       <% end %>
-      <% if note.transmittable? %>
+      <% if note.transmittable? && !locked_action %>
         <%= button_to transmit_fiscal_note_path(note), method: :post, class: "btn-sefaz", form: { class: 'd-inline', data: { turbo_submits_with: 'Enviando…' } } do %><i class="fas fa-paper-plane me-2"></i>Transmitir à SEFAZ<% end %>
       <% end %>
-      <% if note.emittable? && screen_can?(:fiscal_notes, :execute) %>
+      <% if note.emittable? && !locked_action && screen_can?(:fiscal_notes, :execute) %>
         <%= button_to transmit_fiscal_note_path(note), method: :post, class: "btn-sefaz",
                       form: { class: 'd-inline', data: { hc_confirm: { title: "Emitir a NF-e nº #{note.number} na SEFAZ?",
                                                                       text: (note.producao? ? 'Ela passa a valer como documento fiscal.' : 'Homologação: sem valor fiscal.'),
                                                                       ok: 'Emitir', no: 'Voltar', icon: 'fas fa-paper-plane' }.to_json } } do %><i class="fas fa-paper-plane me-2"></i>Emitir na SEFAZ<% end %>
       <% end %>
-      <% if note.regenerable? && screen_can?(:fiscal_notes, :create) %>
+      <% if note.regenerable? && !locked_action && screen_can?(:fiscal_notes, :create) %>
         <%= button_to regenerate_fiscal_note_path(note), method: :post, class: "btn-export",
                       form: { class: 'd-inline', data: { hc_confirm: { title: 'Gerar uma nova nota no lugar desta?',
                                                                       text: 'A nova nota é gerada e assinada, mas não vai à SEFAZ: você confere e emite depois.',
@@ -47,6 +53,10 @@
       <% end %>
     </div>
   </div>
+
+  <% if locked_action %>
+    <%= render 'fiscal_notes/production_lock', company: note.company, label: locked_action %>
+  <% end %>
 
   <% if note.cancelada? %>
     <div class="sefaz-result sefaz-result--bad nf-canceled">

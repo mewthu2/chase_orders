@@ -2,6 +2,9 @@
 <% production = env == 'producao' %>
 <% transfer = shipment.internal_transfer %>
 <% can_issue = blocker.nil? && (note.nil? || note.rejeitada? || note.cancelada?) && !note&.denied? %>
+<%# Empresa em homologação: nada de produção sai daqui até ligar a produção dela. %>
+<% issue_locked = production && company&.homologacao? %>
+<% send_locked = note&.production_blocked? && (note.assinada? || note.emittable?) %>
 <% tone = if note.nil? then 'idle'
           elsif note.autorizada? then 'ok'
           elsif note.erro? || note.assinada? || note.rascunho? then 'wait'
@@ -41,11 +44,11 @@
       <% if screen_can?(:fiscal_notes) %>
         <%= link_to fiscal_note_path(note), class: 'it-slot__link' do %><i class="fas fa-up-right-from-square"></i>Abrir nota<% end %>
       <% end %>
-      <% if note.assinada? || note.erro? %>
+      <% if note.erro? || (note.assinada? && !send_locked) %>
         <%= button_to transmit_internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :post, class: 'btn-back btn-sm' do %>
           <i class="fas <%= note.erro? ? 'fa-magnifying-glass' : 'fa-paper-plane' %> me-1"></i><%= note.erro? ? 'Consultar na SEFAZ' : 'Enviar para a SEFAZ' %>
         <% end %>
-      <% elsif note.emittable? %>
+      <% elsif note.emittable? && !send_locked %>
         <%# Gerada para conferir: só vai à SEFAZ por aqui ou pela tela da nota. %>
         <%= button_to transmit_internal_transfer_shipment_fiscal_note_path(transfer, shipment, note), method: :post, class: 'btn-sefaz btn-sm',
                       form: { data: { hc_confirm: { title: "Emitir a NF-e nº #{note.number} na SEFAZ?", text: (production ? 'Ela passa a valer como documento fiscal.' : 'Homologação: sem valor fiscal.'),
@@ -62,13 +65,19 @@
         <span class="it-slot__locked" title="<%= note.undeletable_reason %>"><i class="fas fa-lock"></i><%= note.undeletable_reason %></span>
       <% end %>
     </div>
+    <% if send_locked %>
+      <%= render 'fiscal_notes/production_lock', company: note.company, label: note.emittable? ? 'Emitir na SEFAZ' : 'Enviar para a SEFAZ' %>
+    <% end %>
   <% else %>
     <p class="it-slot__empty">Nenhuma nota de <%= production ? 'produção' : 'homologação' %> nesta remessa.</p>
   <% end %>
 
   <% if can_issue %>
     <% number = note&.rejeitada? ? note.number : company.current_nfe_number(env) %>
-    <% if note&.cancelada? %>
+    <% if issue_locked %>
+      <%= render 'fiscal_notes/production_lock', company: company, detail: "nº #{number} · série #{company.nfe_series}",
+                 label: note&.cancelada? ? 'Gerar nova nota (sem emitir)' : (note ? 'Emitir de novo' : 'Emitir nota de produção') %>
+    <% elsif note&.cancelada? %>
       <%# Depois do cancelamento a nova nota só é gerada: confere e emite depois (Emitir na SEFAZ). %>
       <%= button_to internal_transfer_shipment_fiscal_notes_path(transfer, shipment), method: :post, params: { environment: env, draft: 1 },
                     class: 'btn-export it-slot__issue' do %>
