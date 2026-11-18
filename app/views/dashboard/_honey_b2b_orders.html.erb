@@ -1,7 +1,9 @@
 <%# Pedidos feitos no Honey no Log02 (sem Tiny), filtrados pelas etapas. Locais: stages (etapas de B2bOrder::LOG_STAGES),
-    title, meta, empty_text e review (true na tela de aprovação: mostra Aprovar/Ignorar). %>
+    title, meta, empty_text, review (true na tela de aprovação: mostra Aprovar/Ignorar) e show_correios (coluna do
+    número no Correios, nas telas em que o pedido já foi criado lá). %>
 <% review = local_assigns.fetch(:review, false) %>
-<% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'canceled' => 'red' } %>
+<% show_correios = local_assigns.fetch(:show_correios, false) %>
+<% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'canceled' => 'red', 'completed' => 'green' } %>
 <% stage_map = B2bOrder::LOG_STAGES.to_h { |k, (label, help)| [k, [label, tones[k], help]] } %>
 <% kind_labels = { 'sale' => 'Atacado', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' } %>
 <% orders = B2bOrder.honey_flow.includes(:client, :transfer_location, :b2b_order_items).where('b2b_orders.created_at > ?', 6.months.ago).to_a
@@ -30,11 +32,11 @@
        { k: :n, label: 'Número', t: :mono, main: true, hide: true },
        { k: :tipo, label: 'Tipo', hide: true },
        { k: :destino, label: 'Destino', cls: 'customer-name-cell' },
+       { k: :correios, label: 'Nº no Correios', t: :mono, hide: !show_correios },
        { k: :dt, label: 'Criado', t: :dt, sort: true },
        { k: :total, label: 'Total', t: :money },
        { k: :st, label: 'Etapa', t: :status, map: stage_map },
        { k: :erro, label: 'Erro da última tentativa', t: :html, nodetail: true },
-       { k: :correios, label: 'Nº no Correios', t: :mono, hide: true },
        { k: :rastreio, label: 'Rastreio', t: :mono, hide: true },
        { k: :ultima, label: 'Última tentativa', hide: true }
      ]) %>
@@ -45,7 +47,6 @@
         order = r[:record]
         stage = r[:st]
         safe_join([
-          link_to(content_tag(:i, '', class: 'fas fa-eye'), b2b_order_edit_path(order), class: 'action-btn', data: { tip: 'Ver o pedido' }, 'aria-label': 'Ver o pedido'),
           (if review && screen_can?(:dashboard_correios_b2b, :approve)
              safe_join([
                (hc_row_action('fas fa-check', 'Aprovar', approve_honey_order_b2b_dashboard_index_path(id: order.id, review: params[:review]), method: :post) unless stage == 'creation'),
@@ -57,6 +58,10 @@
              step = { 'creation' => 'Criar no Correios agora', 'invoice' => 'Emitir a NF-e e enviar o XML agora', 'tracking' => 'Buscar o rastreio agora' }[stage]
              hc_row_action('fas fa-play', step, run_honey_b2b_step_dashboard_index_path(id: order.id), method: :post,
                            confirm: (stage == 'invoice' ? { title: "Emitir a NF-e do pedido ##{order.id}?", text: 'O Honey gera a nota, autoriza na SEFAZ e manda o XML ao Correios.', ok: 'Emitir e enviar' } : nil))
+           end),
+          (if stage == 'invoice' && screen_can?(:dashboard_correios_b2b, :execute)
+             hc_row_action('fas fa-flag-checkered', 'Concluir e tirar da fila', complete_honey_order_b2b_dashboard_index_path(id: order.id), method: :post,
+                           confirm: { title: "Concluir o pedido ##{order.id}?", text: 'Conclua quando o pedido já tiver saído. O Honey não emite a NF-e nem envia o XML, e ele não entra na fila do rastreio.', ok: 'Concluir' })
            end)
         ].compact)
       }) %>

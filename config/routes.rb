@@ -100,6 +100,7 @@ Rails.application.routes.draw do
       get :send_xml_b2b
       post :run_send_xml_b2b
       post :complete_send_xml_b2b
+      post :complete_honey_order_b2b
       get :push_tracking
       post :run_push_tracking
       post :run_push_tracking_now

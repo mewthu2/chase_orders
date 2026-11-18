@@ -72,6 +72,54 @@ class Log02WithoutTiny2Test < ActionDispatch::IntegrationTest
     refute Attempt.where(kinds: :get_tracking_tiny2, tiny_order_id: 903_000_002).exists?
   end
 
+  test 'the XML screen shows the Correios number and Concluir for Honey orders, and no Ver pedido' do
+    order = sale(status: :preparando_envio, correios_order_id: 25_000_123)
+
+    get send_xml_b2b_dashboard_index_path
+
+    assert_select 'th', text: 'Nº no Correios'
+    assert_select 'tbody td', text: '25000123'
+    assert_select 'form[action=?]', complete_honey_order_b2b_dashboard_index_path(id: order.id), 1
+    assert_select "[data-tip='Ver o pedido']", 0
+    assert_select "a.pg-pn[href='#{edit_b2b_order_path(order)}']", text: 'P'
+  end
+
+  test 'the approval screen, where orders have no Correios number yet, keeps the column hidden' do
+    sale
+
+    get order_correios_create_b2b_dashboard_index_path
+
+    assert_select 'th', text: 'Nº no Correios', count: 0
+  end
+
+  test 'Concluir takes a Honey order out of the XML and tracking queues without sending anything' do
+    order = sale(status: :preparando_envio, correios_order_id: 25_000_123)
+
+    post complete_honey_order_b2b_dashboard_index_path(id: order.id)
+
+    assert_redirected_to send_xml_b2b_dashboard_index_path
+    order.reload
+    assert_equal 'completed', order.log_stage
+    assert order.enviado?
+    assert_empty B2bOrder.waiting_xml
+    assert_empty B2bOrder.waiting_tracking
+    assert Attempt.exists?(kinds: :send_xml_honey, status: :success, b2b_order_id: order.id)
+    HoneyB2bLog.stub(:send_xml, ->(_) { flunk 'não pode enviar o XML' }) { HoneyB2bLog.send_pending_xml! }
+
+    get order_correios_tracking_b2b_dashboard_index_path
+    assert_select 'tbody', text: /Concluído à mão/
+  end
+
+  test 'Concluir only works while the Honey order waits for the XML' do
+    order = sale(status: :aberto)
+
+    post complete_honey_order_b2b_dashboard_index_path(id: order.id)
+
+    assert_match(/não está esperando/, flash[:alert])
+    assert order.reload.aberto?
+    assert_not order.log_ignored?
+  end
+
   test 'the old Emissão de Notas step goes to the NF-e e XML step' do
     get invoice_emition_b2b_dashboard_index_path
 

@@ -4,7 +4,7 @@ class DashboardController < ApplicationController
   # Actions exclusivas do painel "Correios B2B" (permissão dashboard_correios_b2b).
   B2B_ONLY_ACTIONS = %i[
     push_tracking_b2b run_push_tracking_b2b run_push_tracking_b2b_now
-    send_xml_b2b run_send_xml_b2b complete_send_xml_b2b
+    send_xml_b2b run_send_xml_b2b complete_send_xml_b2b complete_honey_order_b2b
     invoice_emition_b2b
     order_correios_create_b2b order_correios_create_queue_b2b run_create_correios_b2b
     approve_order_b2b ignore_order_b2b approve_honey_order_b2b ignore_honey_order_b2b run_honey_b2b_step
@@ -19,7 +19,7 @@ class DashboardController < ApplicationController
   B2C_ORDERS_LOOKBACK = 8.weeks
 
   DASHBOARD_ACTION_OVERRIDES = { delete_order_from_queue: :destroy, update_invoice_id: :edit,
-                                 approve_honey_order_b2b: :approve, ignore_honey_order_b2b: :approve, run_honey_b2b_step: :execute }.freeze
+                                 approve_honey_order_b2b: :approve, ignore_honey_order_b2b: :approve, run_honey_b2b_step: :execute, complete_honey_order_b2b: :execute }.freeze
 
   guard_screen :dashboard_correios, except: B2B_ONLY_ACTIONS + SHARED_CORREIOS_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
   guard_screen :dashboard_correios_b2b, only: B2B_ONLY_ACTIONS, actions: DASHBOARD_ACTION_OVERRIDES
@@ -214,6 +214,20 @@ class DashboardController < ApplicationController
     redirect_to redirect_path, notice: "Pedido #{queue_attempt.tiny_order_id} concluído e tirado da fila."
   rescue StandardError => e
     redirect_to send_xml_b2b_dashboard_index_path, alert: "Erro ao concluir pedido: #{e.message}"
+  end
+
+  # Pedido do Honey na fila do XML que já saiu por fora: sai desta fila e não entra na do rastreio.
+  def complete_honey_order_b2b
+    order = B2bOrder.honey_flow.find(params[:id])
+    back = send_xml_b2b_dashboard_index_path
+    return redirect_to(back, alert: "O pedido ##{order.id} não está esperando a NF-e e o XML.") unless order.log_stage == 'invoice'
+
+    B2bOrder.transaction do
+      order.update_columns(log_ignored: true, status: B2bOrder.statuses[:enviado], updated_at: Time.current)
+      Attempt.create!(kinds: :send_xml_honey, status: :success, b2b_order_id: order.id, order_correios_id: order.correios_order_id,
+                      message: 'Concluído à mão no Honey, sem envio do XML', user: current_user.email)
+    end
+    redirect_to back, notice: "Pedido ##{order.id} concluído e tirado da fila."
   end
 
   def invoice_emition

@@ -21,11 +21,11 @@ class HoneyB2bLog
     end
 
     def send_pending_xml!
-      each_safely(B2bOrder.honey_flow.where.not(correios_order_id: nil).where(xml_sent_at: nil).where.not(status: :cancelado)) { |o| send_xml(o) }
+      each_safely(B2bOrder.waiting_xml) { |o| send_xml(o) }
     end
 
     def track_pending!
-      each_safely(B2bOrder.honey_flow.where.not(xml_sent_at: nil).where(tracking_code: [nil, '']).where.not(status: :cancelado)) { |o| fetch_tracking(o) }
+      each_safely(B2bOrder.waiting_tracking) { |o| fetch_tracking(o) }
     end
 
     # Reservas dos pedidos do Honey (chave "H<id>" na tabela de reservas): no Log02, os que ainda não foram ao

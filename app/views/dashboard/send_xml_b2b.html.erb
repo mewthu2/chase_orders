@@ -1,5 +1,5 @@
 <% title 'NF-e e XML para os Correios (Log02)' %>
-<% waiting = B2bOrder.honey_flow.where.not(correios_order_id: nil).where(xml_sent_at: nil).where.not(status: :cancelado).count %>
+<% waiting = B2bOrder.waiting_xml.count %>
 <% complete = ->(att) {
      next nil unless screen_can?(:dashboard_correios_b2b, :execute)
 
@@ -18,7 +18,7 @@
              running: @job_running, btn: 'Enviar fila agora', last_run: Attempt.where(kinds: :send_xml_honey).maximum(:created_at),
              confirm: "O sistema emite agora a NF-e e envia o XML dos #{waiting} pedidos da fila.",
              text: 'Emite a NF-e no Honey e manda o XML ao Correios dos pedidos já criados lá. O sistema roda sozinho; use Enviar fila agora se não puder esperar.' %>
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[invoice], title: 'Pedidos esperando a NF-e e o XML', meta: 'Criados no Correios: falta a NF-e (emitida no Honey) e o XML.', empty_text: 'Nenhum pedido esperando a nota.' %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[invoice], show_correios: true, title: 'Pedidos esperando a NF-e e o XML', meta: 'Criados no Correios: falta a NF-e (emitida no Honey) e o XML.', empty_text: 'Nenhum pedido esperando a nota.' %>
 </div>
 
 <% if @send_xml.any? %>
