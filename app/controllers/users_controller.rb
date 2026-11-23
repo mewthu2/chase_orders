@@ -84,6 +84,9 @@ class UsersController < ApplicationController
   def send_password_reset
     @user.send_reset_password_instructions
     redirect_to users_path, notice: "Link enviado. #{@user.name} vai receber o e-mail em instantes."
+  rescue StandardError => e
+    Rails.logger.error("[Users#send_password_reset] #{e.class}: #{e.message}")
+    redirect_to users_path, alert: "Não foi possível enviar o e-mail agora (servidor de e-mail indisponível). Defina a senha de #{@user.name} em Editar."
   end
 
   private

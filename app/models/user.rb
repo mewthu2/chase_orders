@@ -298,6 +298,14 @@ class User < ApplicationRecord
     AVAILABLE_LOCATIONS.map { |key, data| [data[:name], key] }
   end
 
+  # O aviso "sua senha foi alterada" é só cortesia: se o servidor de e-mail estiver fora do ar,
+  # a senha nova vale do mesmo jeito (antes a falha do SMTP derrubava a gravação com erro 500).
+  def send_password_change_notification
+    super
+  rescue StandardError => e
+    Rails.logger.error("[User##{id}] aviso de troca de senha não enviado: #{e.class}: #{e.message}")
+  end
+
   private
 
   # { 'orders' => 'VPVC' }: letras liberadas em cada tela, somando os perfis. Uma consulta só, sem
