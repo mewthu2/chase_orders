@@ -29,6 +29,8 @@ class FiscalNote < ApplicationRecord
   has_one_attached :xml
   # Evento de cancelamento homologado na SEFAZ (procEventoNFe), gravado pelo Nfe::Canceller.
   has_one_attached :cancel_xml
+  # Cartas de correção (CC-e) registradas na SEFAZ, da primeira à última (a última é a que vale).
+  has_many :corrections, -> { order(:sequence) }, class_name: 'FiscalNoteCorrection', dependent: :destroy
 
   enum :status, { rascunho: 0, assinada: 1, autorizada: 2, rejeitada: 3, cancelada: 4, erro: 5 }
   enum :environment, { producao: 1, homologacao: 2 }
@@ -117,6 +119,11 @@ class FiscalNote < ApplicationRecord
   # Cancelamento na SEFAZ (evento 110111): a nota autorizada, com chave e protocolo, a qualquer tempo.
   def cancelable?
     autorizada? && access_key.present? && protocol.present?
+  end
+
+  # Carta de correção (evento 110110): só nota autorizada, com chave e protocolo, até 20 cartas por nota.
+  def correctable?
+    autorizada? && access_key.present? && protocol.present? && corrections.size < Nfe::CorrectionLetter::MAX_SEQUENCE
   end
 
   def within_cancel_window?

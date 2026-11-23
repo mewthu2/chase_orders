@@ -178,4 +178,56 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'assinada', sent
     assert draft.reload.autorizada?
   end
+  test 'an authorized note offers the correction letter on the list and the note; registering it shows the history' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 2.hours.ago)
+    sign_in @admin
+
+    get fiscal_notes_path
+    assert_select "a.action-btn[href='#{fiscal_note_path(@signed, corrigir: 1, anchor: 'correcao')}']", count: 1
+    get fiscal_note_path(@signed, corrigir: 1)
+    assert_select 'a.nf-cce-open', text: /Carta de correção/
+    assert_select "#correcao[data-open] form[action='#{correct_fiscal_note_path(@signed)}'] textarea[name='correction'][minlength='15'][maxlength='1000']"
+
+    fake = lambda do |note, text:, user:|
+      correction = note.corrections.create!(sequence: 1, correction: text, protocol: '131260000000777', registered_at: Time.current, created_by: user.name)
+      correction.xml.attach(io: StringIO.new('<procEventoNFe/>'), filename: 'cce.xml', content_type: 'application/xml')
+      correction
+    end
+    Nfe::CorrectionLetter.stub(:call, fake) do
+      post correct_fiscal_note_path(@signed), params: { correction: 'Onde se le Rua A, leia-se Rua B.' }
+    end
+
+    assert_redirected_to fiscal_note_path(@signed, anchor: 'correcao')
+    follow_redirect!
+    assert_match(/Carta de correção nº 1 registrada na SEFAZ \(protocolo 131260000000777\)/, response.body)
+    assert_select '.nf-cce__item.is-current .nf-cce__text', text: 'Onde se le Rua A, leia-se Rua B.'
+    assert_select "a[href='#{correction_xml_fiscal_note_path(@signed, correction_id: @signed.corrections.first.id)}']"
+    assert_select '#nfCceText', text: 'Onde se le Rua A, leia-se Rua B.'
+    assert Log.where(resource_type: 'fiscal_note', action_type: 'correction_letter', resource_id: @signed.id).exists?
+
+    get correction_xml_fiscal_note_path(@signed, correction_id: @signed.corrections.first.id)
+    assert_equal '<procEventoNFe/>', response.body
+  end
+
+  test 'a refused correction letter comes back to the open form with the typed text' do
+    @signed.update!(status: :autorizada, protocol: '131260000000001', authorized_at: 2.hours.ago)
+    sign_in @admin
+
+    Nfe::CorrectionLetter.stub(:call, ->(*, **) { raise Nfe::CorrectionLetter::Error, 'A SEFAZ recusou a carta de correção: 573 Duplicidade' }) do
+      post correct_fiscal_note_path(@signed), params: { correction: 'Texto da correcao digitado aqui' }
+    end
+
+    assert_redirected_to fiscal_note_path(@signed, corrigir: 1, anchor: 'correcao')
+    follow_redirect!
+    assert_match(/573 Duplicidade/, response.body)
+    assert_select '#correcao[data-open] #nfCceText', text: 'Texto da correcao digitado aqui'
+  end
+
+  test 'notes that are not authorized do not offer the correction letter' do
+    sign_in @admin
+
+    get fiscal_note_path(@signed)
+    assert_select 'a.nf-cce-open', count: 0
+    assert_select '#correcao', count: 0
+  end
 end

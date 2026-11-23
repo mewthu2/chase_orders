@@ -342,6 +342,10 @@ Rails.application.routes.draw do
       post :cancel
       get :cancel_xml
       post :regenerate
+      # Carta de correção (CC-e, evento 110110): registrar uma nova e baixar o XML/PDF de cada uma.
+      post :correct
+      get 'correcoes/:correction_id/xml', action: :correction_xml, as: :correction_xml
+      get 'correcoes/:correction_id/pdf', action: :correction_pdf, as: :correction_pdf
     end
   end
 

@@ -12,7 +12,8 @@
        dest: fiscal_note_destination(note).presence || '—', valor: note.total_value.to_f,
        emissao: note.issued_at || note.created_at, natureza: note.operation_nature.presence || '—', cfop: note.cfop_summary.presence || '—',
        chave: note.access_key.to_s.scan(/\d{1,4}/).join(' ').presence || '—', protocolo: note.protocol.presence || '—',
-       sefaz: [note.sefaz_status_code, note.sefaz_message].compact_blank.join(' - ').presence || '—', erro: note.error_message }
+       sefaz: [note.sefaz_status_code, note.sefaz_message].compact_blank.join(' - ').presence || '—', erro: note.error_message,
+       cce: note.corrections.any? ? "#{note.corrections.size} (última: nº #{note.corrections.last.sequence}, protocolo #{note.corrections.last.protocol})" : '—' }
    } %>
 <% search = ->(scope, text) {
      term = "%#{ActiveRecord::Base.sanitize_sql_like(text.strip.delete_prefix('#'))}%"
@@ -40,7 +41,8 @@
        { k: :cfop, label: 'CFOP', hide: true },
        { k: :chave, label: 'Chave de acesso', hide: true },
        { k: :protocolo, label: 'Protocolo de autorização', hide: true },
-       { k: :sefaz, label: 'Resposta da SEFAZ', hide: true }
+       { k: :sefaz, label: 'Resposta da SEFAZ', hide: true },
+       { k: :cce, label: 'Cartas de correção', hide: true }
      ],
      filters: [
        { id: :q, type: :search, label: 'Buscar', ph: 'Número, pedido, empresa ou chave…', tip: 'Procura no número da nota, no pedido de origem, na empresa e na chave de acesso.' },
@@ -101,6 +103,7 @@
             (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', danfe_fiscal_note_path(note)) if note.xml_available? && screen_can?(:fiscal_notes, :export)),
             (hc_row_action('fas fa-paper-plane', 'Enviar à SEFAZ', transmit_fiscal_note_path(note), method: :post,
                            confirm: { title: "Enviar a nota #{r[:num]} à SEFAZ?", text: 'A SEFAZ confere a nota e responde se ela foi autorizada. Depois de autorizada, só dá para desfazer com um cancelamento.', ok: 'Enviar' }) if note.transmittable? && screen_can?(:fiscal_notes, :execute)),
+            (hc_row_action('fas fa-file-pen', 'Carta de correção', fiscal_note_path(note, corrigir: 1, anchor: 'correcao')) if note.correctable? && screen_can?(:fiscal_notes, :edit)),
             (link_to('Cancelar na SEFAZ', fiscal_note_path(note, cancelar: 1, anchor: 'cancelar'), class: 'btn btn-danger btn-sm nf-cancel-row',
                      data: { tip: 'Abre a nota para escrever o motivo e confirmar o cancelamento' }) if note.cancelable? && screen_can?(:fiscal_notes, :destroy))
           ].compact)

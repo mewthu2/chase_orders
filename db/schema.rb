@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_23_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -475,6 +475,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
     t.index ["needs_sync"], name: "index_discounts_on_needs_sync"
     t.index ["shopify_node_id"], name: "index_discounts_on_shopify_node_id", unique: true
     t.index ["starts_at"], name: "index_discounts_on_starts_at"
+  end
+
+  create_table "fiscal_note_corrections", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "fiscal_note_id", null: false
+    t.integer "sequence", null: false
+    t.text "correction", null: false
+    t.string "protocol"
+    t.datetime "registered_at"
+    t.string "created_by"
+    t.string "sefaz_status_code"
+    t.text "sefaz_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fiscal_note_id", "sequence"], name: "index_fiscal_note_corrections_on_fiscal_note_id_and_sequence", unique: true
+    t.index ["fiscal_note_id"], name: "index_fiscal_note_corrections_on_fiscal_note_id"
   end
 
   create_table "fiscal_notes", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1031,6 +1046,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
     t.index ["user_id"], name: "index_stock_corrections_on_user_id"
   end
 
+  create_table "stock_reservation_priorities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "source", null: false
+    t.integer "level", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source"], name: "index_stock_reservation_priorities_on_source", unique: true
+  end
+
   create_table "stock_reservation_refreshes", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.integer "account", null: false
     t.datetime "last_refreshed_at"
@@ -1039,14 +1062,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account"], name: "index_stock_reservation_refreshes_on_account", unique: true
-  end
-
-  create_table "stock_reservation_priorities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.string "source", null: false
-    t.integer "level", default: 1, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["source"], name: "index_stock_reservation_priorities_on_source", unique: true
   end
 
   create_table "stock_reservations", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1515,6 +1530,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_18_150000) do
   add_foreign_key "companies", "operation_natures", column: "internal_transfer_nature_id", on_delete: :nullify
   add_foreign_key "company_operation_natures", "companies"
   add_foreign_key "company_operation_natures", "operation_natures"
+  add_foreign_key "fiscal_note_corrections", "fiscal_notes"
   add_foreign_key "fiscal_notes", "b2b_orders"
   add_foreign_key "fiscal_notes", "companies"
   add_foreign_key "fiscal_notes", "internal_transfer_shipments"

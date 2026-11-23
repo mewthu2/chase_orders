@@ -41,6 +41,9 @@
       <% if note.rejeitada? && note.shopify_order_name.present? %>
         <%= link_to shopify_fiscal_notes_path(order: note.shopify_order_name), class: "btn-export" do %><i class="fas fa-redo me-2"></i>Corrigir e emitir de novo<% end %>
       <% end %>
+      <% if note.correctable? && screen_can?(:fiscal_notes, :edit) %>
+        <a href="#correcao" class="btn-export nf-cce-open"><i class="fas fa-file-pen me-2"></i>Carta de correção</a>
+      <% end %>
       <% if note.cancelable? && screen_can?(:fiscal_notes, :destroy) %>
         <a href="#cancelar" class="btn btn-danger nf-cancel-open">Cancelar na SEFAZ</a>
       <% end %>
@@ -107,6 +110,77 @@
     </div>
   <% end %>
 
+  <% can_correct = note.correctable? && screen_can?(:fiscal_notes, :edit) %>
+  <% if can_correct || note.corrections.any? %>
+    <% last = note.corrections.last %>
+    <div class="form-section nf-cce <%= 'nf-cce--history' if note.corrections.any? %>" id="correcao" <%= 'data-open' if params[:corrigir].present? %>>
+      <div class="form-section-header">
+        <h5 class="form-section-title"><i class="fas fa-file-pen me-2"></i>Carta de correção</h5>
+        <% if note.corrections.any? %><span class="nf-cce__count"><%= pluralize(note.corrections.size, 'carta registrada', plural: 'cartas registradas') %></span><% end %>
+      </div>
+      <div class="form-section-body">
+        <% if note.corrections.any? %>
+          <ol class="nf-cce__list">
+            <% note.corrections.reverse_each do |correction| %>
+              <li class="nf-cce__item <%= 'is-current' if correction == last %>" style="--i: <%= last.sequence - correction.sequence %>">
+                <div class="nf-cce__seq"><%= correction.sequence %></div>
+                <div class="nf-cce__body">
+                  <div class="nf-cce__meta">
+                    <% if correction == last %><span class="nf-cce__badge">Vale esta</span><% else %><span class="nf-cce__badge nf-cce__badge--old">Substituída</span><% end %>
+                    Protocolo <strong><%= correction.protocol %></strong>
+                    <% if correction.registered_at %> · <%= correction.registered_at.in_time_zone.strftime('%d/%m/%Y %H:%M') %><% end %>
+                    <% if correction.created_by.present? %> · por <%= correction.created_by %><% end %>
+                  </div>
+                  <p class="nf-cce__text"><%= correction.correction %></p>
+                  <% if correction.xml.attached? && screen_can?(:fiscal_notes, :export) %>
+                    <div class="nf-cce__files">
+                      <%= link_to correction_pdf_fiscal_note_path(note, correction_id: correction.id), data: { turbo: false } do %><i class="fas fa-file-pdf"></i>PDF (DACCE)<% end %>
+                      <%= link_to correction_xml_fiscal_note_path(note, correction_id: correction.id) do %><i class="fas fa-file-code"></i>XML do evento<% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </li>
+            <% end %>
+          </ol>
+        <% end %>
+
+        <% if can_correct %>
+          <div class="nf-cce__form">
+            <p class="text-muted-custom mb-2">
+              A carta vai direto para a SEFAZ (evento 110110, <%= note.homologacao? ? 'homologação' : 'produção' %>) e fica vinculada à nota.
+              <% if last %>
+                <strong>Ela substitui a carta nº <%= last.sequence %>:</strong> escreva tudo o que precisa ser corrigido, inclusive o que já estava na anterior (o texto dela já vem abaixo).
+              <% else %>
+                Se precisar corrigir de novo depois, a nova carta substitui esta, então ela deve repetir todas as correções.
+              <% end %>
+            </p>
+            <details class="nf-cce__rules">
+              <summary><i class="fas fa-scale-balanced"></i>O que a carta de correção não pode corrigir</summary>
+              <ul>
+                <li>Valores que mudam o imposto: base de cálculo, alíquota, diferença de preço, quantidade e valor da operação.</li>
+                <li>Dados cadastrais que troquem o remetente ou o destinatário.</li>
+                <li>A data de emissão ou de saída.</li>
+              </ul>
+              <small>Nesses casos é preciso cancelar a nota (ou emitir uma complementar). Pode corrigir, por exemplo: endereço, transportadora, volumes, peso, CFOP de mesmo efeito, dados adicionais.</small>
+            </details>
+            <%= form_with url: correct_fiscal_note_path(note), method: :post, local: true,
+                          data: { hc_confirm: { title: "Registrar a carta de correção nº #{(last&.sequence || 0) + 1} da NF-e #{note.number}?",
+                                                text: "Vai para a SEFAZ#{' (homologação)' if note.homologacao?} e não dá para apagar: só dá para registrar outra carta por cima.",
+                                                ok: 'Registrar na SEFAZ', no: 'Voltar', icon: 'fas fa-file-pen' }.to_json } do %>
+              <label class="field-label" for="nfCceText">Correção</label>
+              <textarea name="correction" id="nfCceText" class="field-input" rows="5" minlength="15" maxlength="1000" required
+                        placeholder="Ex.: Onde se lê endereço do destinatário Rua A, 10, leia-se Rua A, 100, apto 201."><%= flash[:correction_draft].presence || last&.correction %></textarea>
+              <div class="nf-cancel__foot">
+                <span class="text-muted-custom" id="nfCceCount">0 / 1000 · mínimo de 15 caracteres</span>
+                <button type="submit" class="btn-sefaz nf-cce__btn" id="nfCceSubmit" disabled><i class="fas fa-paper-plane me-2"></i>Registrar carta na SEFAZ</button>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <% if note.cancelable? && screen_can?(:fiscal_notes, :destroy) %>
     <% hours = note.authorized_at ? ((Time.current - note.authorized_at) / 3600).floor : nil %>
     <div class="form-section nf-cancel" id="cancelar" <%= 'data-open' if params[:cancelar].present? %>>
@@ -167,6 +241,38 @@
     </div>
   </div>
 </div>
+
+<% if note.correctable? && screen_can?(:fiscal_notes, :edit) %>
+  <% content_for :scripts do %>
+  <script>
+  // Carta de correção: o formulário abre pelo botão (ou já aberto ao voltar com erro); o contador libera o envio com 15 a 1000 caracteres.
+  document.addEventListener('DOMContentLoaded', function () {
+    var box = document.getElementById('correcao');
+    var text = document.getElementById('nfCceText');
+    var count = document.getElementById('nfCceCount');
+    var submit = document.getElementById('nfCceSubmit');
+    if (!box || !text) return;
+    function update() {
+      var size = text.value.replace(/\s+/g, ' ').trim().length;
+      count.textContent = size + ' / 1000 · mínimo de 15 caracteres';
+      submit.disabled = size < 15 || size > 1000;
+    }
+    function open() {
+      box.classList.add('is-open');
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      text.focus();
+      text.setSelectionRange(text.value.length, text.value.length);
+    }
+    if (box.hasAttribute('data-open') || window.location.hash === '#correcao') open();
+    document.querySelectorAll('.nf-cce-open').forEach(function (btn) {
+      btn.addEventListener('click', function (event) { event.preventDefault(); open(); });
+    });
+    text.addEventListener('input', update);
+    update();
+  });
+  </script>
+  <% end %>
+<% end %>
 
 <% if note.cancelable? && screen_can?(:fiscal_notes, :destroy) %>
   <% content_for :scripts do %>

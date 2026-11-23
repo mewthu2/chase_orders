@@ -1,10 +1,13 @@
 class FiscalNotesController < ApplicationController
-  guard_screen :fiscal_notes, actions: { create_from_shopify: :create, cancel: :destroy, regenerate: :create }
-  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult, :cancel, :cancel_xml, :regenerate]
+  guard_screen :fiscal_notes, actions: { create_from_shopify: :create, cancel: :destroy, regenerate: :create, correct: :edit,
+                                         correction_xml: :export, correction_pdf: :export }
+  before_action :set_note, only: [:show, :xml, :danfe, :transmit, :consult, :cancel, :cancel_xml, :regenerate,
+                                  :correct, :correction_xml, :correction_pdf]
+  before_action :set_correction, only: [:correction_xml, :correction_pdf]
   before_action :set_order, only: [:new, :create]
 
   def index
-    @scope = FiscalNote.includes(:company, :b2b_order, :order, :nature, :xml_attachment,
+    @scope = FiscalNote.includes(:company, :b2b_order, :order, :nature, :xml_attachment, :corrections,
                                  internal_transfer_shipment: [:origin_location, { internal_transfer: :destination_location }]).recent
     @companies = Company.order(:legal_name)
   end
@@ -104,6 +107,34 @@ class FiscalNotesController < ApplicationController
     redirect_to fiscal_note_path(@fiscal_note), alert: e.message
   end
 
+  # Carta de correção (evento 110110) com o texto digitado. Cada carta nova substitui as anteriores na SEFAZ.
+  def correct
+    correction = Nfe::CorrectionLetter.call(@fiscal_note, text: params[:correction], user: current_user)
+    LogService.create_log(user: current_user, resource_type: 'fiscal_note', action_type: 'correction_letter',
+                          resource_name: "NF-e #{@fiscal_note.number}/#{@fiscal_note.series}", resource_id: @fiscal_note.id,
+                          details: { sequence: correction.sequence, correction: correction.correction, protocol: correction.protocol },
+                          request: request)
+    redirect_to fiscal_note_path(@fiscal_note, anchor: 'correcao'),
+                notice: "Carta de correção nº #{correction.sequence} registrada na SEFAZ (protocolo #{correction.protocol})."
+  rescue Nfe::CorrectionLetter::Error => e
+    # O texto volta para o formulário: a carta recusada não se perde.
+    flash[:correction_draft] = params[:correction].to_s.first(1000)
+    redirect_to fiscal_note_path(@fiscal_note, corrigir: 1, anchor: 'correcao'), alert: e.message
+  end
+
+  def correction_xml
+    return redirect_to(fiscal_note_path(@fiscal_note), alert: 'Esta carta de correção não tem XML.') unless @correction.xml.attached?
+
+    send_data @correction.xml.download, filename: @correction.xml.filename.to_s, type: 'application/xml', disposition: 'attachment'
+  end
+
+  def correction_pdf
+    return redirect_to(fiscal_note_path(@fiscal_note), alert: 'Esta carta de correção não tem XML.') unless @correction.xml.attached?
+
+    pdf = Nfe::CorrectionLetterPdf.new(@correction.xml.download, (@fiscal_note.xml.download if @fiscal_note.xml_available?))
+    send_data pdf.render, filename: pdf.filename, type: 'application/pdf', disposition: 'attachment'
+  end
+
   def cancel_xml
     unless @fiscal_note.cancel_xml.attached?
       redirect_to fiscal_note_path(@fiscal_note), alert: 'Esta nota não tem evento de cancelamento.'
@@ -143,6 +174,10 @@ class FiscalNotesController < ApplicationController
 
   def set_note
     @fiscal_note = FiscalNote.find(params[:id])
+  end
+
+  def set_correction
+    @correction = @fiscal_note.corrections.find(params[:correction_id])
   end
 
   def set_order
