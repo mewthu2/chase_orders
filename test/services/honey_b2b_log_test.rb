@@ -62,6 +62,14 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert Attempt.create_correios_order_honey.where(b2b_order_id: o.id).success.exists?
   end
 
+  test 'the same SKU in two lines goes to Correios as one item with the quantities added' do
+    o = order
+    o.b2b_order_items.create!(sku: 'sku1 ', name: 'Legging', quantity: 3, price: 50)
+    sent = capture_creation { HoneyB2bLog.create_pending! }
+
+    assert_equal [{ codigo: 'SKU1', quantidade: '5' }], sent[:params][:itens]
+  end
+
   test 'by carrier the order goes as 74926 with the carrier CNPJ; a supply by hand goes SEDEX with mão própria to the receivers' do
     sale = order(:sale, freight_service: nil, carrier: @carrier)
     sent = capture_creation { HoneyB2bLog.create_in_correios(sale) }

@@ -269,7 +269,10 @@ class HoneyB2bLog
     address = destination_address
     return [nil, nil, 'Pedido sem destinatário (cliente ou loja de destino).'] unless address
 
-    items = @order.b2b_order_items.map { |i| { codigo: i.sku.to_s.upcase, quantidade: i.quantity.to_s } }
+    # O Correios recusa o pedido com o mesmo SKU em duas linhas ("Produto deve existir e estar vinculado
+    # ao depositante."), então as linhas repetidas viram uma só, com as quantidades somadas.
+    items = @order.b2b_order_items.group_by { |i| i.sku.to_s.strip.upcase }
+                  .map { |sku, rows| { codigo: sku, quantidade: rows.sum { |i| i.quantity.to_i }.to_s } }
     params = {
       invoice: @order.correios_number, numero_ecommerce: @order.id.to_s, data_pedido: Time.current.strftime('%d/%m/%Y'),
       valor: DECLARED_VALUE, pedido_id: @order.correios_number, forma_envio: service, itens: items
