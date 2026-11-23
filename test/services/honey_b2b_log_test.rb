@@ -89,6 +89,15 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_equal B2bTinyService::B2C_TRANSFER_RECIPIENT_NAME, sent[:recipient_name]
   end
 
+  test 'a supply by plain SEDEX goes 39888 without mão própria' do
+    supply = order(:stock_transfer, freight_service: B2bOrder::STOCK_TRANSFER_SEDEX, receiver_name: nil)
+    sent = capture_creation { HoneyB2bLog.create_in_correios(supply) }
+    assert_equal '39888', sent[:params][:forma_envio]
+    assert_nil sent[:params][:mao_propria]
+    assert_nil sent[:params][:cnpj_transportadora]
+    assert_nil sent[:recipient_name]
+  end
+
   test 'a supply to another address goes to Correios with that address and the store CNPJ' do
     supply = order(:stock_transfer, different_shipping_address: true, shipping_street: 'Rua Nova', shipping_number: '99', shipping_complement: 'Loja 2',
                                     shipping_neighbourhood: 'Funcionários', shipping_city: 'Belo Horizonte', shipping_state: 'MG', shipping_zip: '30.130-000')

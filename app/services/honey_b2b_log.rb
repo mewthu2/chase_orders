@@ -258,7 +258,8 @@ class HoneyB2bLog
                           elsif @order.sale? && @order.freight_service.blank?
                             [nil, nil, false]
                           else
-                            [SEDEX_SERVICE, nil, @order.stock_transfer?]
+                            # Abastecimento por SEDEX: com mão própria, a não ser que tenha escolhido SEDEX normal.
+                            [SEDEX_SERVICE, nil, @order.hand_delivery?]
                           end
   end
 

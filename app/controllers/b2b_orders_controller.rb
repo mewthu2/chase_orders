@@ -368,7 +368,7 @@ class B2bOrdersController < ApplicationController
   end
 
   # As transferências não aceitam dados de envio: a B2C tem destinatário fixo e vai como transportadora; o
-  # abastecimento vai por SEDEX com mão própria ou, se escolher uma, pela transportadora (carrier_id). Só o
+  # abastecimento vai por SEDEX com mão própria, por SEDEX normal (freight_service) ou pela transportadora (carrier_id). Só o
   # abastecimento escolhe o local de destino e o responsável pelo recebimento.
   SHIPPING_PARAMS = %i[client_id carrier_id carrier_name carrier_shipping_method freight_service].freeze
   # Só o atacado tem forma de pagamento e desconto livre no total.
@@ -380,7 +380,7 @@ class B2bOrdersController < ApplicationController
     permitted = permitted.except(:transfer_direction) unless order_kind == 'b2c_transfer' && action_name == 'create'
     case order_kind
     when 'b2c_transfer' then permitted.except(*SHIPPING_PARAMS, *SALE_ONLY_PARAMS, :transfer_location_id, :receiver_name)
-    when 'stock_transfer' then permitted.except(*(SHIPPING_PARAMS - [:carrier_id]), *SALE_ONLY_PARAMS)
+    when 'stock_transfer' then permitted.except(*(SHIPPING_PARAMS - %i[carrier_id freight_service]), *SALE_ONLY_PARAMS)
     else permitted.except(:receiver_name)
     end
   end

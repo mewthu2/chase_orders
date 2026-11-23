@@ -34,6 +34,8 @@ class B2bOrder < ApplicationRecord
   FREIGHT_SERVICES = ['SEDEX CORREIOS LOG+', 'PAC CORREIOS LOG+', 'SEDEX HOJE LOG+'].freeze
   # Pedido do atacado: Correios Log só por SEDEX (ou transportadora, que não usa serviço).
   SALE_FREIGHT_SERVICES = ['SEDEX CORREIOS LOG+'].freeze
+  # Abastecimento por SEDEX normal (sem mão própria).
+  STOCK_TRANSFER_SEDEX = 'SEDEX CORREIOS LOG+'.freeze
 
   # Forma de pagamento combinada com o cliente do atacado. É só registro: vai nas observações do pedido no
   # Tiny, sem gerar cobrança.
@@ -53,6 +55,10 @@ class B2bOrder < ApplicationRecord
   validates :freight_service, inclusion: { in: FREIGHT_SERVICES }, allow_blank: true
   validates :freight_service, inclusion: { in: SALE_FREIGHT_SERVICES, message: 'do atacado é só SEDEX' },
                               allow_blank: true, if: -> { sale? && freight_service_changed? }
+  validates :freight_service, inclusion: { in: [STOCK_TRANSFER_SEDEX], message: 'do abastecimento é só SEDEX' },
+                              allow_blank: true, if: -> { stock_transfer? && freight_service_changed? }
+  # Abastecimento por transportadora não leva serviço de frete (senão viraria SEDEX).
+  before_validation(if: :stock_transfer?) { self.freight_service = nil if carrier_id.present? }
   validates :payment_method, inclusion: { in: PAYMENT_METHODS.keys }, allow_blank: true
   # Exigida no formulário do atacado e no envio ao Tiny (require_payment); pedidos já enviados ao Tiny
   # antes deste campo existir continuam editáveis sem ele.
@@ -236,9 +242,22 @@ class B2bOrder < ApplicationRecord
     "#{payment_label} #{installment_days.size}x (#{payment_terms})"
   end
 
-  # Abastecimento sem transportadora escolhida vai por SEDEX com mão própria; com transportadora, vai por ela.
+  # Abastecimento: por transportadora (carrier_id), por SEDEX normal (freight_service preenchido, sem
+  # transportadora) ou, sem nenhum dos dois, por SEDEX com mão própria (o padrão, e o dos pedidos antigos).
   def hand_delivery?
-    stock_transfer? && carrier_id.blank?
+    stock_transfer? && carrier_id.blank? && freight_service.blank?
+  end
+
+  def stock_transfer_by_sedex?
+    stock_transfer? && carrier_id.blank? && freight_service.present?
+  end
+
+  # "SEDEX · Mão Própria", "SEDEX" ou "Transportadora · Nome".
+  def stock_delivery_label
+    return 'SEDEX · Mão Própria' if hand_delivery?
+    return 'SEDEX' if stock_transfer_by_sedex?
+
+    "Transportadora · #{carrier&.name}"
   end
 
   def stock_transfer_by_carrier?

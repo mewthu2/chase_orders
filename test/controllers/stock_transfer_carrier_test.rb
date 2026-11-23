@@ -26,6 +26,7 @@ class StockTransferCarrierTest < ActionDispatch::IntegrationTest
   test 'the form offers both deliveries and the list shows how each one goes' do
     get new_stock_transfer_path
     assert_select 'input[name=stock_delivery][value=hand][checked]'
+    assert_select 'input[name=stock_delivery][value=sedex]'
     assert_select 'input[name=stock_delivery][value=carrier]'
     assert_select "select#stockCarrierSelect option[value='#{@carrier.id}']", text: 'MIX CARGO TRANSPORTES'
     assert_select '#itemsTable th', text: 'Desconto', count: 0
@@ -33,6 +34,25 @@ class StockTransferCarrierTest < ActionDispatch::IntegrationTest
     post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: @carrier.id, b2b_order_items_attributes: items } }
     get stock_transfers_path
     assert_match 'Transportadora · MIX CARGO TRANSPORTES', response.body
+  end
+
+  test 'a supply by plain SEDEX needs no receiver and shows as SEDEX; a carrier clears the service' do
+    post stock_transfers_path, params: { b2b_order: { transfer_location_id: @location.id, carrier_id: '', freight_service: B2bOrder::STOCK_TRANSFER_SEDEX,
+                                                      receiver_name: '', b2b_order_items_attributes: items } }
+    supply = B2bOrder.stock_transfer.last
+    assert supply.stock_transfer_by_sedex?
+    assert_not supply.hand_delivery?
+    assert_equal 'SEDEX', supply.stock_delivery_label
+
+    get edit_stock_transfer_path(supply)
+    assert_select 'input[name=stock_delivery][value=sedex][checked]'
+
+    patch stock_transfer_path(supply), params: { b2b_order: { carrier_id: @carrier.id, freight_service: B2bOrder::STOCK_TRANSFER_SEDEX } }
+    assert_nil supply.reload.freight_service
+    assert supply.stock_transfer_by_carrier?
+
+    supply.update!(carrier: nil, receiver_name: 'Maria')
+    assert supply.hand_delivery?
   end
 
   test 'the Correios B2B classification still sees a carrier supply as store supply' do

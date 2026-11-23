@@ -159,13 +159,19 @@
       </div>
       <div class="od-panel" data-od-panel="entrega" hidden>
         <% by_carrier = @b2b_order.carrier_id.present? %>
+        <% by_sedex = !by_carrier && @b2b_order.freight_service.present? %>
         <div class="od-block" id="stockDeliverySection">
           <span class="field-label">Como vai</span>
           <div class="pg-radios od-choices">
             <label class="pg-radio od-choice">
-              <input type="radio" name="stock_delivery" value="hand" <%= 'checked' unless by_carrier %>>
+              <input type="radio" name="stock_delivery" value="hand" <%= 'checked' unless by_carrier || by_sedex %>>
               <b><i class="fas fa-hand-holding"></i>SEDEX · Mão própria</b>
               <small id="stockDeliveryHandHint">Serviço adicional 002: só os responsáveis abaixo podem receber.</small>
+            </label>
+            <label class="pg-radio od-choice">
+              <input type="radio" name="stock_delivery" value="sedex" <%= 'checked' if by_sedex %>>
+              <b><i class="fas fa-box"></i>SEDEX</b>
+              <small>SEDEX normal, sem mão própria: qualquer pessoa no endereço pode receber.</small>
             </label>
             <label class="pg-radio od-choice">
               <input type="radio" name="stock_delivery" value="carrier" <%= 'checked' if by_carrier %>>
@@ -180,11 +186,13 @@
               <span class="text-muted-custom d-block mt-1"><%= link_to 'Cadastrar transportadora', new_carrier_path, target: '_blank' %></span>
             </div>
           </div>
-          <%# Mão própria: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
+          <%# Mão própria e SEDEX: o campo vai vazio (sem transportadora). Desabilitado o select, este é o valor enviado. %>
           <input type="hidden" name="b2b_order[carrier_id]" value="" id="stockCarrierBlank" <%= 'disabled' if by_carrier %>>
+          <%# SEDEX normal leva o serviço; mão própria e transportadora vão sem ele. %>
+          <input type="hidden" name="b2b_order[freight_service]" value="<%= B2bOrder::STOCK_TRANSFER_SEDEX if by_sedex %>" id="stockFreightServiceField">
         </div>
         <div class="od-block">
-          <span class="field-label">Responsáveis pelo recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier %>">(opcional com transportadora)</span></span>
+          <span class="field-label">Responsáveis pelo recebimento <span class="text-muted-custom" id="receiverOptionalHint" style="<%= 'display: none;' unless by_carrier || by_sedex %>">(opcional sem mão própria)</span></span>
           <%= form.hidden_field :receiver_name, id: 'receiverNameField' %>
           <div id="receiverNamesList" class="od-receivers">
             <% receiver_names = @b2b_order.receiver_name.to_s.split(',').map(&:strip).reject(&:blank?).presence || [''] %>
@@ -401,21 +409,23 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Responsáveis pelo recebimento: um campo por pessoa, salvos juntos separados por vírgula.
-  // Abastecimento: SEDEX com mão própria (sem transportadora, responsável obrigatório) ou transportadora.
+  // Abastecimento: SEDEX com mão própria (sem transportadora, responsável obrigatório), SEDEX normal ou transportadora.
   var stockDelivery = document.getElementById('stockDeliverySection');
   if (stockDelivery) {
     var applyStockDelivery = function () {
       var checked = stockDelivery.querySelector('input[name="stock_delivery"]:checked');
       var byCarrier = !!checked && checked.value === 'carrier';
+      var byHand = !checked || checked.value === 'hand';
+      document.getElementById('stockFreightServiceField').value = checked && checked.value === 'sedex' ? '<%= B2bOrder::STOCK_TRANSFER_SEDEX %>' : '';
       var select = document.getElementById('stockCarrierSelect');
       document.getElementById('stockCarrierSection').style.display = byCarrier ? '' : 'none';
-      document.getElementById('stockDeliveryHandHint').style.display = byCarrier ? 'none' : '';
-      document.getElementById('receiverOptionalHint').style.display = byCarrier ? '' : 'none';
+      document.getElementById('stockDeliveryHandHint').style.display = byHand ? '' : 'none';
+      document.getElementById('receiverOptionalHint').style.display = byHand ? 'none' : '';
       select.disabled = !byCarrier;
       select.required = byCarrier;
       document.getElementById('stockCarrierBlank').disabled = byCarrier;
       var firstReceiver = document.querySelector('#receiverNamesList .receiver-name-input');
-      if (firstReceiver && <%= @b2b_order.tiny_reference_id.blank? %>) firstReceiver.required = !byCarrier;
+      if (firstReceiver && <%= @b2b_order.tiny_reference_id.blank? %>) firstReceiver.required = byHand;
     };
     stockDelivery.addEventListener('change', applyStockDelivery);
     applyStockDelivery();

@@ -24,9 +24,9 @@
                           banner: ['Tudo pelo Honey', 'O pedido salvo reserva o estoque do Log02 e espera a aprovação em Log02 › Pedidos p/ Aprovar. Depois o Honey cria no Correios, emite a NF-e, manda o XML e acompanha o rastreio. Nada vai para o Tiny.'] },
               'stock_transfer' => { title: 'Abastecimento Lojas', subtitle: 'Reposição das lojas com o estoque do Log02.', icon: 'fas fa-dolly', perm: :store_supply,
                                     unit: %w[abastecimentos abastecimento], list: 'Lista de abastecimentos', list_icon: 'fas fa-dolly', new_label: 'Novo abastecimento',
-                                    meta: 'Embaixo de cada loja aparece quem recebe a mercadoria. Com mão própria, só essa pessoa pode receber; com transportadora, aparece o nome dela.',
+                                    meta: 'Embaixo de cada loja aparece quem recebe a mercadoria. Com mão própria, só essa pessoa pode receber; por SEDEX normal, qualquer pessoa no endereço; com transportadora, aparece o nome dela.',
                                     empty: ['Nenhum abastecimento encontrado', 'Quando uma loja precisar de reposição, crie um abastecimento: os produtos saem do estoque do Log02.'],
-                                    banner: ['O estoque sai do Log02', 'Os produtos saem do estoque do Log02 (antes Correios B2B) e seguem por SEDEX mão própria ou pela transportadora escolhida. Depois de aprovado no Log02, o Honey cria no Correios e emite a NF-e de transferência; nada vai para o Tiny.'] },
+                                    banner: ['O estoque sai do Log02', 'Os produtos saem do estoque do Log02 (antes Correios B2B) e seguem por SEDEX mão própria, SEDEX normal ou pela transportadora escolhida. Depois de aprovado no Log02, o Honey cria no Correios e emite a NF-e de transferência; nada vai para o Tiny.'] },
               'b2c_transfer' => { title: 'Transferências B2B ⇄ B2C', subtitle: 'Peças entre o estoque de atacado e a filial da loja online, nos dois sentidos.', icon: 'fas fa-random', perm: :b2b_transfers,
                                   unit: %w[transferências transferência], list: 'Lista de transferências', list_icon: 'fas fa-random', new_label: 'Nova B2B → B2C',
                                   meta: 'Cada transferência mostra o sentido: B2B → B2C segue pelo Log02; B2C → B2B só gera as notas.',
@@ -43,7 +43,7 @@
        tiny: (order.tiny_reference_number.presence || order.tiny_reference_id.presence).to_s, track: order.tracking_code.presence || '—', st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
-       entrega: order.stock_transfer? ? (order.hand_delivery? ? 'SEDEX · Mão Própria' : "Transportadora · #{order.carrier&.name}") : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
+       entrega: order.stock_transfer? ? order.stock_delivery_label : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',
        fretev: order.freight_value ? number_to_currency(order.freight_value, unit: 'R$ ', separator: ',', delimiter: '.') : '—', obs: order.notes.presence || '—',
        erro: order.error_message, loc: [[order.transfer_location&.name, order.transfer_location_id]].reject { |n, _| n.blank? }, receb: order.receiver_name.presence || '—',
        por: order.user&.name, dest: b2b_order_destination(order), log: order.tiny_reference_id.blank? ? B2bOrder::LOG_STAGES.dig(order.log_stage, 0) : 'No Tiny (antigo)', pag: order.payment_description || '—',
@@ -188,7 +188,7 @@
                  cta: (link_to(safe_join([content_tag(:i, '', class: 'fas fa-plus'), screen[:new_label]]), new_order_path_for, class: 'btn btn-export') if screen_can?(perm, :create)) },
         detail: { title: ->(r) { "#{sale ? 'Pedido' : (supply ? 'Abastecimento' : 'Transferência')} ##{r[:n]}" },
                   note: (sale ? 'Valores e peças são os do Honey. Depois que o pedido vai para o Tiny, o Honey só acompanha a situação.'
-                              : supply ? 'Sai do estoque do Log02. Por SEDEX mão própria, só quem está em "Quem recebe na loja" consegue retirar na entrega; por transportadora, vai pela que está em "Entrega".'
+                              : supply ? 'Sai do estoque do Log02. Por SEDEX mão própria, só quem está em "Quem recebe na loja" consegue retirar na entrega; por SEDEX normal, qualquer pessoa no endereço recebe; por transportadora, vai pela que está em "Entrega".'
                                        : 'B2B → B2C segue como transportadora, dentro do galpão do Log. B2C → B2B não vai ao Correios: só gera as duas notas.'),
                   extra: ->(r) { safe_join([(content_tag(:div, content_tag(:i, '', class: 'fas fa-triangle-exclamation') + content_tag(:span, "#{r[:record].b2c_transfer? ? 'Mensagem' : 'Mensagem do Tiny'}: #{r[:erro]}"), class: 'pg-fnote is-warn') if r[:erro].present?), items_section.call(r)].compact) } },
         actions: ->(r) {
