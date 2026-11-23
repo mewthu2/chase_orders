@@ -233,8 +233,32 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal [], NfeSchema.errors(note.xml.download)
   end
 
-  test 'without note details the note has no carrier and no freight; with no-freight mode the carrier is left out' do
-    order = build_order(kind: :stock_transfer)
+  test 'without note details an order outside the Log02 has no carrier and no freight' do
+    order = build_order(kind: :stock_transfer, tiny_reference_id: '123')
+    xml = Nokogiri::XML(generate(order, @company).xml.download)
+    assert_equal '9', xml.at_xpath('//n:transp/n:modFrete', NS).text
+    assert_nil xml.at_xpath('//n:transp/n:transporta', NS)
+    assert_nil xml.at_xpath('//n:prod/n:xPed', NS)
+  end
+
+  # O Correios Log recusa o XML sem transporta (400 sem corpo) e confere o xPed na nota que abre pela chave
+  # (NF-e 15788 do pedido 93).
+  test 'a Log02 order without a carrier goes with the ECT head office in transporta and its Correios number in xPed' do
+    [build_order(kind: :stock_transfer, correios_order_id: 25_370_767), build_order(kind: :b2c_transfer, correios_order_id: 25_388_909),
+     build_order(kind: :sale, freight_service: 'SEDEX CORREIOS LOG+', freight_value: 100, correios_order_id: 25_402_497)].each do |order|
+      raw = generate(order, @company).xml.download
+      assert_equal [], NfeSchema.errors(raw)
+      xml = Nokogiri::XML(raw)
+      assert_equal '0', xml.at_xpath('//n:transp/n:modFrete', NS).text
+      assert_equal '34028316000103', xml.at_xpath('//n:transp/n:transporta/n:CNPJ', NS).text
+      assert_equal 'EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS', xml.at_xpath('//n:transp/n:transporta/n:xNome', NS).text
+      assert_equal [order.correios_order_id.to_s] * order.b2b_order_items.size, xml.xpath('//n:det/n:prod/n:xPed', NS).map(&:text)
+      assert_equal 'indTot', xml.at_xpath('//n:prod/n:xPed', NS).previous_element.name
+    end
+  end
+
+  test 'the chosen no-freight mode leaves the carrier out' do
+    order = build_order(kind: :stock_transfer, nf_freight_mode: '9')
     xml = Nokogiri::XML(generate(order, @company).xml.download)
     assert_equal '9', xml.at_xpath('//n:transp/n:modFrete', NS).text
     assert_nil xml.at_xpath('//n:transp/n:transporta', NS)

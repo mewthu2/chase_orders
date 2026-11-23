@@ -215,4 +215,22 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_includes out, '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignatureValue>abc</SignatureValue></Signature>'
     assert_no_match(/xmlns:/, out)
   end
+
+  # Sem o grupo transporta o Correios Log responde 400 sem corpo (pedidos 89, 90, 98...).
+  test 'a note without carrier goes to Correios with the ECT in transporta and paid freight; an existing carrier stays' do
+    xml = '<?xml version="1.0" encoding="UTF-8"?><nfeProc xmlns="http://www.portalfiscal.inf.br/nfe"><NFe><infNFe>' \
+          '<det nItem="1"><prod><cProd>A</cProd><indTot>1</indTot></prod></det>' \
+          '<transp><modFrete>9</modFrete></transp></infNFe></NFe></nfeProc>'
+
+    out = HoneyB2bLog.with_correios_order_number(xml, 1, carrier: Nfe::Generator::CORREIOS_CARRIER)
+
+    assert_includes out, '<transp><modFrete>0</modFrete><transporta><CNPJ>34028316000103</CNPJ>' \
+                         '<xNome>EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS</xNome><xEnder>Avenida Um, 800</xEnder>' \
+                         '<xMun>Contagem</xMun><UF>MG</UF></transporta></transp>'
+    assert_no_match(/xmlns=""|xmlns:/, out)
+
+    with_carrier = xml.sub('<modFrete>9</modFrete>', '<modFrete>0</modFrete><transporta><CNPJ>13642117000110</CNPJ></transporta>')
+    out = HoneyB2bLog.with_correios_order_number(with_carrier, 1, carrier: Nfe::Generator::CORREIOS_CARRIER)
+    assert_includes out, '<transp><modFrete>0</modFrete><transporta><CNPJ>13642117000110</CNPJ></transporta></transp>'
+  end
 end

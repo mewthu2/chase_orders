@@ -9,6 +9,24 @@ module Nfe
       new(order: order, company: company, nature: nature, environment: environment, role: role).call
     end
 
+    # O Correios Log recusa o XML sem o grupo transporta (400 sem corpo, "Requisição vazia") e quer nele o
+    # CNPJ da ECT matriz, o mesmo cnpjTransportadora que ele guarda em todos os pedidos do Log02 (as notas do
+    # Tiny por SEDEX já saíam assim). Vale para a nota do pedido que vai ao Correios sem transportadora escolhida.
+    CORREIOS_CARRIER = { document: '34028316000103', name: 'EMPRESA BRASILEIRA DE CORREIOS E TELEGRAFOS',
+                         state_registration: nil, address: 'Avenida Um, 800', city: 'Contagem', state: 'MG' }.freeze
+
+    # Transportadora (grupo transporta) da nota do pedido: { document:, name:, state_registration:, address:,
+    # city:, state: } ou nil. A escolhida na aba Nota fiscal ou, sem ela, a do pedido; sem nenhuma, a ECT
+    # quando o pedido vai ao Correios Log.
+    def self.carrier_for(order)
+      carrier = order.nf_carrier || order.carrier
+      return (CORREIOS_CARRIER if order.honey_flow?) unless carrier
+
+      address = [carrier.street, carrier.number, carrier.complement.presence].compact.join(', ')
+      { document: carrier.registration, name: carrier.name, state_registration: carrier.state_registration,
+        address: address, city: carrier.city, state: carrier.state }
+    end
+
     # environment: homologação ou produção (sem ele, o ambiente atual da empresa). Cada pedido tem no máximo
     # uma nota ativa por ambiente, como as remessas da Transferência Interna.
     # role 'remessa': a nota de remessa do abastecimento (destinatário da remessa, sem transportadora), contada
@@ -261,6 +279,7 @@ module Nfe
         additional_info: (@order.nf_additional_info.presence unless remessa?) || @nature.notes_for(**note_context(recipient)),
         fisco_info: @nature.fisco_notes_for(**note_context(recipient)), environment: @environment,
         freight_mode: freight_mode, carrier: carrier_data, payments: payments, duplicates: duplicates,
+        order_number: correios_order_number,
         # Transferência (abastecimento e B2C) leva o IBS/CBS de não incidência, como a Transferência Interna:
         # sem o grupo, a SEFAZ rejeita (1115 "IBS/CBS não informado").
         ibs_cbs_exempt: (XmlBuilder::IBS_CBS_TRANSFER unless sale?)
@@ -289,11 +308,15 @@ module Nfe
       sale? ? (source&.business_name.presence || source&.responsible_name) : source&.name
     end
 
-    # Transportadora da nota: a escolhida na aba Nota fiscal ou, sem ela, a do pedido (abastecimento por transportadora).
+    # Transportadora da nota (Nfe::Generator.carrier_for); a remessa não leva.
     def note_carrier
-      return nil if remessa?
+      remessa? ? nil : self.class.carrier_for(@order)
+    end
 
-      @order.nf_carrier || @order.carrier
+    # O número do pedido no Correios Log vai em xPed de cada produto da própria nota (não só na cópia enviada a
+    # ele): o Correios confere a nota que abre pela chave.
+    def correios_order_number
+      @order.correios_order_id if !remessa? && @order.honey_flow?
     end
 
     # Modalidade do frete: a escolhida na aba Nota fiscal; sem ela, por conta do remetente quando há frete ou
@@ -305,14 +328,7 @@ module Nfe
       @order.freight_value.to_d.positive? || note_carrier ? '0' : '9'
     end
 
-    def carrier_data
-      carrier = note_carrier
-      return nil unless carrier
-
-      address = [carrier.street, carrier.number, carrier.complement.presence].compact.join(', ')
-      { document: carrier.registration, name: carrier.name, state_registration: carrier.state_registration,
-        address: address, city: carrier.city, state: carrier.state }
-    end
+    def carrier_data = note_carrier
 
     def note_context(recipient)
       { company_state: @company.state, recipient_state: recipient[:state], order_name: "Pedido #{@order.id}",

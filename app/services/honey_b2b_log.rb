@@ -77,10 +77,14 @@ class HoneyB2bLog
 
   # O Correios só aceita o XML com o número do pedido dele em xPed, em cada produto (depois de indTot) e em
   # compra, se houver ("tag xPed não localizada no xml da NFe"). Como no fluxo antigo do Tiny, o número entra
-  # só na cópia enviada ao Correios; o XML autorizado guardado na nota não muda.
-  def self.with_correios_order_number(xml, number)
+  # só na cópia enviada ao Correios; o XML autorizado guardado na nota não muda (as notas novas já saem com o
+  # xPed: Nfe::Generator). Do mesmo jeito, a nota sem transportadora recebe nessa cópia a do pedido (carrier, no
+  # formato de Nfe::Generator.carrier_for) e o frete por conta do remetente: sem o grupo transporta o Correios
+  # responde 400 sem corpo.
+  def self.with_correios_order_number(xml, number, carrier: nil)
     doc = Nokogiri::XML(xml)
     ns = doc.root&.namespace
+    add_carrier(doc, ns, carrier) if carrier
     put = lambda do |parent, after|
       node = parent.at_xpath('./*[local-name()="xPed"]')
       unless node
@@ -95,6 +99,31 @@ class HoneyB2bLog
     doc.xpath('//*[local-name()="compra"]').each { |compra| put.call(compra, nil) }
     doc.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML).sub(/\A<\?xml[^>]*\?>\s*/, %(<?xml version="1.0" encoding="UTF-8"?>))
   end
+
+  def self.add_carrier(doc, ns, carrier)
+    transp = doc.at_xpath('//*[local-name()="infNFe"]/*[local-name()="transp"]')
+    return if transp.nil? || transp.at_xpath('./*[local-name()="transporta"]')
+
+    mode = transp.at_xpath('./*[local-name()="modFrete"]') or return
+    mode.content = '0' if mode.content.strip == '9'
+    build = lambda do |name, value = nil|
+      Nokogiri::XML::Node.new(name, doc).tap do |n|
+        n.namespace = ns if ns
+        n.content = value if value
+      end
+    end
+    group = build.call('transporta')
+    document = carrier[:document].to_s.gsub(/\D/, '')
+    group.add_child(build.call(document.length == 11 ? 'CPF' : 'CNPJ', document)) if [11, 14].include?(document.length)
+    group.add_child(build.call('xNome', carrier[:name].to_s.squish.first(60))) if carrier[:name].present?
+    ie = carrier[:state_registration].to_s.gsub(/\D/, '')
+    group.add_child(build.call('IE', ie)) if ie.present?
+    group.add_child(build.call('xEnder', carrier[:address].to_s.squish.first(60))) if carrier[:address].present?
+    group.add_child(build.call('xMun', carrier[:city].to_s.squish.first(60))) if carrier[:city].present?
+    group.add_child(build.call('UF', carrier[:state])) if carrier[:state].present?
+    mode.add_next_sibling(group)
+  end
+  private_class_method :add_carrier
 
   def self.create_in_correios(order) = new(order).create_in_correios
   def self.send_xml(order) = new(order).send_xml
@@ -129,7 +158,7 @@ class HoneyB2bLog
       return attempt
     end
 
-    xml = self.class.with_correios_order_number(note.xml.download, @order.correios_order_id)
+    xml = self.class.with_correios_order_number(note.xml.download, @order.correios_order_id, carrier: Nfe::Generator.carrier_for(@order))
     attempt.update!(xml_nota: xml.delete("\n"), id_nota_fiscal: note.number, is_transportadora: carrier_service?)
     Correios::Invoices.send_xml_to_correios(attempt)
     attempt.reload

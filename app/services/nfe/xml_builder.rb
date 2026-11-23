@@ -43,8 +43,11 @@ module Nfe
     # tax: regras de tributação (OperationNature#tax_rules); sem ela valem as situações cadastradas na empresa.
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
-                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil, carrier: nil)
+                   fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil, carrier: nil,
+                   order_number: nil)
       @company = company
+      # Número do pedido de compra (xPed de cada produto): o pedido do Correios Log, que ele exige na nota.
+      @order_number = order_number.to_s.strip.first(15).presence
       # Transportadora (grupo transporta): { document:, name:, state_registration:, address:, city:, state: }.
       @carrier = carrier
       # Parcelas a receber (grupo cobr): [{ number:, due: Date, value: }]. Sem elas, a nota não tem cobrança.
@@ -402,6 +405,7 @@ module Nfe
           xml.vFrete format('%.2f', money(item[:freight])) if money(item[:freight]).positive?
           xml.vDesc format('%.2f', money(item[:discount])) if money(item[:discount]).positive?
           xml.indTot '1'
+          xml.xPed @order_number if @order_number
         end
         taxes = item_taxes[index]
         xml.imposto do
