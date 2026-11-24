@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.2.2"
+ruby "4.0.10"
 
 # This gem supports operating on xlsx files (Open XML format). While it is capable of properly parsing the entire OOXML structure
 gem 'rubyXL'
@@ -22,7 +22,7 @@ gem 'rqrcode', '~> 2.2'
 gem "shopify_api"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 8.0.5', '>= 8.0.5.2'
+gem 'rails', '~> 8.1.4', '>= 8.1.4.1'
 
 # A simple HTTP and REST client for Ruby, inspired by the Sinatra microframework style of specifying actions: get, put, post, delete.
 gem 'rest-client'
@@ -57,7 +57,7 @@ gem 'bcrypt'
 gem 'devise'
 
 # Use Sass to process CSS
-gem 'sassc-rails'
+gem 'dartsass-sprockets' # Dart Sass no Sprockets (o sassc/libsass não compila no Ruby 4)
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem 'puma', '~> 7.2'
@@ -122,6 +122,8 @@ group :development do
 end
 
 group :test do
+  # minitest 6 tirou o minitest/mock (usado em 27 testes): fica na 5.x por enquanto.
+  gem "minitest", "~> 5.25"
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"

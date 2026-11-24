@@ -11,6 +11,11 @@ module ChaseOrders
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.0
 
+    # Dart Sass (dartsass-sprockets): cala os avisos de depreciação que vêm de dependências
+    # (Font Awesome/Bootstrap em node_modules) e o do @import, que o projeto ainda usa.
+    config.sass.quiet_deps = true
+    config.sass.silence_deprecations = %w[import]
+
     config.time_zone = 'Brasilia'
 
     # Idioma: o painel é todo em português; o inglês fica só como reserva para chaves sem tradução.
