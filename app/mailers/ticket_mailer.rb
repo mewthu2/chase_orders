@@ -15,7 +15,15 @@ class TicketMailer < ApplicationMailer
 
   before_action :load_context
 
+  # Por que cada papel recebe os avisos do chamado (vai no bloco "Por que você recebeu este e-mail?").
+  ROLE_REASONS = {
+    'requester' => 'foi você quem abriu este chamado',
+    'responsible' => 'você é responsável pelo assunto deste chamado',
+    'follower' => 'você foi chamado(a) para acompanhar este chamado'
+  }.freeze
+
   def opened
+    why("Um chamado novo foi aberto e #{role_reason}.")
     hero('🎫', 'Novo chamado aberto', TicketsHelper.status_color(@ticket.status))
     deliver_with(subject: "Novo: #{@ticket.title}")
   end
@@ -23,6 +31,7 @@ class TicketMailer < ApplicationMailer
   def new_message
     @message = params[:message]
     @author = @message.user
+    why("Houve uma nova interação no chamado ##{@ticket.id} e #{role_reason}. Avisamos todos os participantes, menos quem escreveu.")
     @recent = @ticket.messages.where.not(id: @message.id).includes(:user).last(3)
     status = @message.status_to_name
     case status
@@ -37,11 +46,13 @@ class TicketMailer < ApplicationMailer
 
   def follower_added
     @added_by = params[:added_by]
+    why("#{@added_by&.name || 'Alguém'} chamou você para acompanhar o chamado ##{@ticket.id}; a partir de agora você recebe os avisos dele.")
     hero('👀', 'Você foi chamado para acompanhar', TicketsHelper.status_color(@ticket.status))
     deliver_with(subject: "Você foi chamado para acompanhar: #{@ticket.title}")
   end
 
   def overdue
+    why("O prazo de resposta do chamado ##{@ticket.id} venceu e #{role_reason}.")
     hero('⏰', 'Prazo de resposta vencido', TicketsHelper::OVERDUE_COLOR)
     deliver_with(subject: "⚠ Prazo vencido: #{@ticket.title}")
   end
@@ -54,6 +65,12 @@ class TicketMailer < ApplicationMailer
     @role_label = (TicketParticipant::ROLE_LABELS[@ticket.role_of(@recipient)] || 'participante').downcase
     @tip = TIPS[@ticket.id.to_i % TIPS.size]
     attachments.inline['chase-logo.png'] = File.binread(LOGO_PATH)
+  end
+
+  def role_reason = ROLE_REASONS.fetch(@ticket.role_of(@recipient).to_s, 'você participa deste chamado')
+
+  def why(text)
+    @why = text
   end
 
   def hero(emoji, title, color)

@@ -3,6 +3,7 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable, :trackable
+  include TwoFactorLogin
 
   has_many :user_profiles, dependent: :destroy
   has_many :profiles, through: :user_profiles, after_add: :reset_permission_cache, after_remove: :reset_permission_cache

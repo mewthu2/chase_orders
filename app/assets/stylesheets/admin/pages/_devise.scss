@@ -21,3 +21,10 @@
   .btn-login:disabled { opacity: 0.65; cursor: wait; }
   .form-check-label { color: $text-secondary; cursor: pointer; }
 }
+
+// Verificação em 2 etapas (users/two_factor/show): campo grande do código e o "Reenviar" como link.
+.login-view {
+  .login-code-input { font-size: 26px; font-weight: 700; letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; padding-left: .45em; }
+  .login-resend { text-align: center; margin: 14px 0 0; }
+  .login-link-button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+}

@@ -3,6 +3,10 @@ CHASE · Sua conta
 ==========================================
 
 <%= yield %>
+<% if content_for?(:why) %>
+
+Por que você recebeu este e-mail? <%= strip_tags(yield(:why)) %>
+<% end %>
 
 ------------------------------------------
 Segurança: a Chase nunca pede sua senha por e-mail, WhatsApp ou telefone.

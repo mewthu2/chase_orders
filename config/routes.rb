@@ -1,7 +1,13 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
-  devise_for :user, skip: [:registrations]
+  devise_for :user, skip: [:registrations], controllers: { sessions: 'users/sessions' }
+  # Segunda etapa do login (TwoFactorLogin): código de 6 dígitos enviado por e-mail.
+  devise_scope :user do
+    get 'user/two_factor', to: 'users/two_factor#show', as: :user_two_factor
+    post 'user/two_factor', to: 'users/two_factor#verify'
+    post 'user/two_factor/resend', to: 'users/two_factor#resend', as: :resend_user_two_factor
+  end
   root to: 'home#index'
 
   namespace :whatsapp do

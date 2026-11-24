@@ -1,0 +1,32 @@
+<% content_for :title, 'Verificação em 2 etapas' %>
+
+<%= render layout: 'devise/shared/auth_card', locals: { icon: 'fa-shield-alt', title: 'Confirme que é você', subtitle: "Enviamos um código de 6 dígitos para #{masked_email(@user.email)}." } do %>
+  <div class="login-form">
+    <%= form_with url: user_two_factor_path, method: :post, local: true do |f| %>
+      <div class="form-group">
+        <%= f.label :code, 'Código de verificação', class: 'form-label' %>
+        <%= f.text_field :code, value: nil, autofocus: true, required: true, class: 'form-control login-code-input',
+              inputmode: 'numeric', autocomplete: 'one-time-code', pattern: '[0-9 ]{6,7}', maxlength: 7,
+              placeholder: '000000', 'aria-describedby': 'login-code-tip' %>
+      </div>
+
+      <p class="login-tip" id="login-code-tip"><i class="fas fa-clock" aria-hidden="true"></i> O código vale por <%= distance_of_time_in_words(TwoFactorLogin::CODE_TTL) %>. Não chegou? Confira o spam ou peça outro abaixo.</p>
+
+      <div class="login-options">
+        <div class="form-check">
+          <%= f.check_box :trust_device, { checked: true, class: 'form-check-input' }, '1', '0' %>
+          <%= f.label :trust_device, "Confiar neste navegador por #{TwoFactorLogin::TRUST_PERIOD.in_days.to_i} dias", class: 'form-check-label' %>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <%= f.button type: 'submit', class: 'btn btn-primary btn-login', data: { disable_with: 'Conferindo…', turbo_submits_with: 'Conferindo…' } do %><span>Entrar</span><i class="fas fa-arrow-right"></i><% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="login-resend">
+    <%= button_to 'Reenviar código', resend_user_two_factor_path, class: 'login-recovery login-link-button', form: { class: 'd-inline' } %>
+  </div>
+  <p class="login-back"><%= link_to new_user_session_path, class: 'login-recovery' do %><i class="fas fa-arrow-left me-1" aria-hidden="true"></i>Voltar para o login<% end %></p>
+<% end %>

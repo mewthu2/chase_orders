@@ -1,0 +1,32 @@
+<% content_for :why do %>A senha da conta <strong><%= @resource.email %></strong> foi digitada certa no login do Honey. Com a verificação em 2 etapas, o login só termina com este código de acesso, que chega apenas no seu e-mail.<% end %>
+<% content_for :hero_emoji, '🛡️' %>
+<% content_for :hero_title, 'Seu código de acesso chegou!' %>
+<% content_for :banner_color, '#8957e5' %>
+<% content_for :preheader, "#{@code} é o seu código para entrar no Honey (vale por #{distance_of_time_in_words(TwoFactorLogin::CODE_TTL)})." %>
+
+<p style="margin:0 0 14px;">Olá, <strong><%= @resource.name.presence || @resource.email %></strong>! <span style="font-size:18px;">👋</span></p>
+<p style="margin:0 0 20px;color:#374151;">Alguém (tomara que você!) acabou de digitar a senha certa no Honey. Para terminar de entrar, use este código:</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 22px;">
+  <tr>
+    <td class="shimmer" bgcolor="#1f6feb" style="padding:3px;border-radius:16px;background-color:#1f6feb;background-image:linear-gradient(120deg,#e3b341,#f85149,#8957e5,#1f6feb,#3fb950);">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background:#0d1117;border-radius:13px;">
+        <tr>
+          <% @code.to_s.each_char.with_index do |digit, i| %>
+            <td style="padding:16px <%= i == 2 ? 14 : 6 %>px 16px <%= i.zero? ? 18 : 6 %>px;<%= 'padding-right:18px;' if i == 5 %>">
+              <span style="display:inline-block;width:38px;height:50px;line-height:50px;text-align:center;border-radius:10px;background:#161b22;border:1px solid #30363d;color:#ffffff;font-size:28px;font-weight:800;font-family:'SF Mono',Menlo,Consolas,monospace;"><%= digit %></span>
+            </td>
+          <% end %>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<div style="margin:0 0 18px;padding:12px 14px;border-radius:12px;background:#fff8e6;border:1px solid #f5d98b;font-size:13px;color:#7a5a00;">
+  ⏳ O código vale por <strong><%= distance_of_time_in_words(TwoFactorLogin::CODE_TTL) %></strong> e funciona uma vez só. Depois de <%= TwoFactorLogin::MAX_ATTEMPTS %> tentativas erradas, peça outro na tela de login.
+</div>
+
+<div style="margin:0;padding:12px 14px;border-radius:12px;background:#fdecec;border:1px solid #f5b5b1;font-size:13px;color:#8a1c14;">
+  🚨 <strong>Não foi você?</strong> Alguém sabe a sua senha. Não passe este código para ninguém e troque a senha pelo "Esqueci minha senha" na tela de login.
+</div>

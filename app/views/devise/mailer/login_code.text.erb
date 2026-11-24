@@ -1,0 +1,11 @@
+<% content_for :why do %>A senha da conta <strong><%= @resource.email %></strong> foi digitada certa no login do Honey. Com a verificação em 2 etapas, o login só termina com este código de acesso, que chega apenas no seu e-mail.<% end %>
+<% content_for :hero_title, '🛡️ Seu código de acesso chegou!' %>
+Olá, <%= @resource.name.presence || @resource.email %>!
+
+Alguém (tomara que você!) acabou de digitar a senha certa no Honey. Para terminar de entrar, use este código:
+
+    <%= @code %>
+
+O código vale por <%= distance_of_time_in_words(TwoFactorLogin::CODE_TTL) %> e funciona uma vez só.
+
+Não foi você? Alguém sabe a sua senha. Não passe este código para ninguém e troque a senha pelo "Esqueci minha senha" na tela de login.

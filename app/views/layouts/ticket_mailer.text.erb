@@ -4,6 +4,8 @@ CHASE · Central de Chamados
 
 <%= yield %>
 
+Por que você recebeu este e-mail? <%= strip_tags(@why) %>
+
 ------------------------------------------
 Quem está neste chamado: <%= @ticket.participants.map { |p| "#{p.user.name} (#{p.role_label})" }.join(', ') %>
 

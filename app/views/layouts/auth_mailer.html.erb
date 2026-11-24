@@ -39,7 +39,7 @@
               <td class="shimmer px" bgcolor="#0d1117" style="padding:22px 28px;background-color:#0d1117;background-image:linear-gradient(120deg,#0d1117 0%,#1f3a8a 45%,#8957e5 75%,#0d1117 100%);">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td><%= image_tag attachments['chase-logo.png'].url, alt: 'Chase', height: 44, style: 'display:block;height:44px;border:0;' %></td>
+                    <td><%= image_tag attachments['chase-logo.png'].url, alt: 'Chase', height: 88, style: 'display:block;height:88px;border:0;' %></td>
                     <td align="right">
                       <span style="display:inline-block;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.12);color:#e6edf3;font-size:12px;font-weight:600;letter-spacing:.4px;">🔐 Sua conta</span>
                     </td>
@@ -72,6 +72,17 @@
               </td>
             </tr>
 
+            <% if content_for?(:why) %>
+              <%# Todo e-mail explica por que a pessoa o recebeu (cada template/mailer define o motivo). %>
+              <tr>
+                <td class="px" style="padding:0 28px 26px;">
+                  <div style="padding:14px 16px;border-radius:12px;background:#eef4ff;border:1px solid #c7d7fe;font-size:13px;line-height:1.6;color:#1e3a8a;">
+                    <strong>🤔 Por que você recebeu este e-mail?</strong><br><%= yield :why %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+
             <tr>
               <td class="shimmer" height="5" bgcolor="#1f6feb" style="height:5px;line-height:5px;font-size:0;background-color:#1f6feb;background-image:linear-gradient(90deg,#e3b341,#f85149,#8957e5,#1f6feb,#3fb950,#e3b341);">&nbsp;</td>
             </tr>
@@ -82,7 +93,7 @@
                 </div>
                 <div style="margin:20px 0 0;text-align:center;font-size:14px;color:#e6edf3;font-weight:600;">Feito com <span class="heart">💛</span> pelo time Chase</div>
                 <div style="margin:10px 0 0;text-align:center;font-size:11px;line-height:1.6;color:#6e7681;">
-                  E-mail automático do ChaseOrders sobre a conta <strong style="color:#8b949e;"><%= @resource.email %></strong>.
+                  E-mail automático do Honey.Chase sobre a conta <strong style="color:#8b949e;"><%= @resource.email %></strong>.
                 </div>
               </td>
             </tr>

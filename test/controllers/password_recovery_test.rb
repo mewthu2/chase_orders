@@ -24,7 +24,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
 
     mail = ActionMailer::Base.deliveries.last
     assert_equal [@user.email], mail.to
-    assert_equal [ENV.fetch('MAILER_FROM', 'chamados@chaseorders.com')], mail.from
+    assert_equal [Mail::Address.new(Devise.mailer_sender).address], mail.from
     assert_equal 'Instruções para redefinir sua senha', mail.subject
     assert mail.attachments['chase-logo.png'].inline?
     html = mail.html_part.body.decoded

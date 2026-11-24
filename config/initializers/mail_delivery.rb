@@ -1,4 +1,9 @@
-# E-mails de produção e desenvolvimento pelo add-on Mailtrap da Heroku (Email Sandbox). O add-on
+# Entrega dos e-mails de produção e desenvolvimento.
+# 1) Amazon SES (envio real) quando há AWS_SES_ACCESS_KEY_ID: mesma conta do mewtda-painel, com o
+#    domínio chasebrasil.com verificado por DKIM (CNAMEs *._domainkey no DNS do Squarespace).
+# 2) Mailtrap, como antes, quando não há SES.
+#
+# Mailtrap: add-on da Heroku (Email Sandbox). O add-on
 # só expõe MAILTRAP_API_TOKEN; as credenciais SMTP vêm da API do Mailtrap (primeira inbox).
 # Em dev, sem o token no .env, fica o SMTP local de config/environments/development.rb.
 # Atenção: é um sandbox — os e-mails ficam na inbox do Mailtrap e não chegam aos usuários.
@@ -32,7 +37,13 @@ if Rails.env.production? || Rails.env.development?
 
     token = ENV['MAILTRAP_API_TOKEN']
     sending_token = ENV['MAILTRAP_SENDING_TOKEN']
-    if sending_token.present?
+    if ENV['AWS_SES_ACCESS_KEY_ID'].present?
+      self.delivery_method = :ses_v2
+      self.ses_v2_settings = {
+        region: ENV.fetch('AWS_SES_REGION', 'us-east-1'),
+        credentials: Aws::Credentials.new(ENV['AWS_SES_ACCESS_KEY_ID'], ENV['AWS_SES_SECRET_ACCESS_KEY'])
+      }
+    elsif sending_token.present?
       # Email Sending (envio real): exige o domínio do MAILER_FROM verificado no Mailtrap.
       self.delivery_method = :smtp
       self.smtp_settings = {
