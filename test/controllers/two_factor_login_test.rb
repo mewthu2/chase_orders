@@ -46,9 +46,9 @@ class TwoFactorLoginTest < ActionDispatch::IntegrationTest
     assert_select '.login-subtitle', text: /an\*+@example\.com/
   end
 
-  test 'the right code signs in and the trusted browser skips the code next time' do
+  test 'the right code signs in, and every new login asks for a new code' do
     login
-    post user_two_factor_path, params: { code: sent_code, trust_device: '1' }
+    post user_two_factor_path, params: { code: sent_code }
 
     assert_redirected_to root_path
     assert_nil @user.reload.login_code_digest
@@ -57,27 +57,23 @@ class TwoFactorLoginTest < ActionDispatch::IntegrationTest
     sign_out_now
     ActionMailer::Base.deliveries.clear
     login
-    assert_redirected_to root_path
-    assert_empty ActionMailer::Base.deliveries
+    assert_redirected_to user_two_factor_path
+    assert_equal 1, ActionMailer::Base.deliveries.size
   end
 
-  test 'without trusting the browser the next login asks for a new code' do
+  test 'the e-mail button opens the code page with the code after the #, never in the query string' do
     login
-    post user_two_factor_path, params: { code: sent_code, trust_device: '0' }
-    sign_out_now
+    mail = ActionMailer::Base.deliveries.last
+    link = %r{https?://[^/"\s]+/user/two_factor#code=#{sent_code}}
 
-    login
-    assert_redirected_to user_two_factor_path
-  end
+    assert_match(/href="#{link}"/, mail.html_part.body.decoded)
+    assert_match link, mail.text_part.body.decoded
+    refute_match(/two_factor\?code=/, mail.html_part.body.decoded)
+    assert_includes mail.html_part.body.decoded, 'Usar este código'
 
-  test 'changing the password stops trusting the browser' do
-    login
-    post user_two_factor_path, params: { code: sent_code, trust_device: '1' }
-    sign_out_now
-    @user.update!(password: 'outrasenha2')
-
-    login(password: 'outrasenha2')
-    assert_redirected_to user_two_factor_path
+    get user_two_factor_path
+    assert_select 'input#code[data-login-code]'
+    refute_includes response.body, 'Confiar neste navegador'
   end
 
   test 'a wrong code is refused and too many wrong tries burn the code' do

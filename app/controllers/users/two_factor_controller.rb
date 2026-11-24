@@ -1,8 +1,7 @@
 module Users
   # Segunda etapa do login: a senha já conferiu em Users::SessionsController e o código foi por e-mail.
-  # A pessoa digita o código aqui e só então entra (com "lembrar de mim" e "confiar neste navegador").
+  # A pessoa digita o código aqui (ou chega pelo botão do e-mail, com o código já preenchido) e só então entra.
   class TwoFactorController < DeviseController
-    include TrustedLoginDevice
 
     PENDING_TTL = 15.minutes
 
@@ -17,7 +16,6 @@ module Users
         session.delete(:two_factor_login)
         @user.remember_me = true if @pending['remember']
         sign_in(:user, @user)
-        trust_login_device!(@user) if params[:trust_device] == '1'
         redirect_to after_sign_in_path_for(@user), notice: I18n.t('devise.sessions.signed_in')
       when :invalid
         render_show_with('Código incorreto. Confira o último e-mail que enviamos e tente de novo.')

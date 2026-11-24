@@ -1,5 +1,6 @@
 # Verificação em 2 etapas por e-mail no login: depois da senha certa, um código de 6 dígitos vai para o
 # e-mail da pessoa (AuthMailer#login_code) e só com ele o login termina (Users::TwoFactorController).
+# Todo login com senha pede o código (não há "confiar neste navegador").
 # Liga com TWO_FACTOR_LOGIN=on — só com o envio de e-mail de produção funcionando, senão ninguém entra.
 module TwoFactorLogin
   extend ActiveSupport::Concern
@@ -7,7 +8,6 @@ module TwoFactorLogin
   CODE_TTL = 10.minutes
   MAX_ATTEMPTS = 5
   RESEND_INTERVAL = 30.seconds
-  TRUST_PERIOD = 30.days
 
   def self.enabled? = ENV['TWO_FACTOR_LOGIN'] == 'on'
 
@@ -39,9 +39,6 @@ module TwoFactorLogin
       login_code_attempts >= MAX_ATTEMPTS ? :expired : :invalid
     end
   end
-
-  # Valor do cookie "confiar neste navegador": deriva da senha, então trocar a senha desconfia de todos.
-  def trusted_login_token = login_code_hmac("trust:#{authenticatable_salt}")
 
   private
 
