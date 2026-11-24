@@ -138,7 +138,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :planner_orders do
+  resources :planner_orders, except: [:index] do
     member do
       post :transmit
       get :export_xlsx

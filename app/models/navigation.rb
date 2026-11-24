@@ -110,10 +110,8 @@ module Navigation
                path: ->(v) { v.api_correios_b2b_dashboard_index_path }, perm: 'dashboard_correios_b2b', active: page('dashboard', 'api_correios_b2b'))
         ]),
         group('planejador', 'Planejador', 'fas fa-clipboard-list', 'Transforma uma planilha de produtos em nota de transferência no Tiny.', children: [
-          link('plan-lista', 'Pedidos do Planejador', 'fas fa-list', 'Planilhas enviadas e se já viraram nota no Tiny.',
-               path: ->(v) { v.planner_orders_path }, perm: 'planner_orders', active: page('planner_orders', 'index', 'show', 'edit', 'update')),
           link('plan-novo', 'Novo Pedido', 'fas fa-plus-circle', 'Suba o CSV (Name, SKU, Ordered) e transmita ao Tiny.',
-               path: ->(v) { v.new_planner_order_path }, perm: 'planner_orders', act: 'C', active: page('planner_orders', 'new', 'create'))
+               path: ->(v) { v.new_planner_order_path }, perm: 'planner_orders', act: 'C', active: page('planner_orders', 'new', 'create', 'show', 'edit', 'update'))
         ]),
         link('log-abastecimento', 'Abastecimento Lojas', 'fas fa-dolly', 'Reponha as lojas com o estoque do Log02.',
              path: ->(v) { v.stock_transfers_path }, perm: 'store_supply', active: kind('stock_transfer')),

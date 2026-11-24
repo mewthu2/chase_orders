@@ -74,10 +74,9 @@ class HoneyPagesRenderTest < ActionDispatch::IntegrationTest
     assert_engine_page
     assert_select 'script#syncScheduleForm'
 
-    PlannerOrder.create!(reference: 'PO-2026-1', status: :saved, user: @admin)
-    get planner_orders_path
-    assert_engine_page
-    assert_select 'tbody .pg-mono', text: 'PO-2026-1'
+    get new_planner_order_path
+    assert_response :success
+    assert_select 'form#pgForm[action=?]', planner_orders_path
 
     Attempt.create!(kinds: :send_xml, status: :fail, tiny_order_id: 4242, message: 'Recusado')
     get attempts_path(channel: 'b2c')

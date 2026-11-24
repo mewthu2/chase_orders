@@ -1,8 +1,6 @@
 <% content_for :title, "Novo Pedido do Planejador" %>
 
-<%= hc_page_header 'Novo Pedido do Planejador', 'Suba a planilha do planejamento e o sistema monta o pedido de transferência.', icon: 'fas fa-plus' do %>
-  <%= link_to planner_orders_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar para a lista<% end %>
-<% end %>
+<%= hc_page_header 'Novo Pedido do Planejador', 'Suba a planilha do planejamento e o sistema monta o pedido de transferência.', icon: 'fas fa-plus' %>
 
 <div class="pg-blocks">
   <%= form_with url: planner_orders_path, method: :post, multipart: true, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do |form| %>
@@ -15,10 +13,10 @@
         <%= file_field_tag :csv_file, accept: '.csv', required: true, id: 'csv-file-input', class: 'visually-hidden',
                            onchange: "document.getElementById('csv-file-name').textContent = this.files[0] ? this.files[0].name : 'Arraste a planilha aqui ou clique para escolher'" %>
       </div>
-      <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Depois de salvar, o pedido fica como Salvo. Na lista você pode incluir marcadores (ex.: pedido 455) que vão nas observações da nota.</span></div>
+      <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Depois de salvar, o pedido fica como Salvo. Na tela do pedido você pode incluir marcadores (ex.: pedido 455) que vão nas observações da nota.</span></div>
     </div>
     <div class="pg-inline-foot">
-      <%= link_to 'Cancelar', planner_orders_path, class: 'btn btn-ghost' %>
+      <%= link_to 'Cancelar', root_path, class: 'btn btn-ghost' %>
       <button type="submit" class="btn btn-primary" data-disable-with="Processando…"><i class="fas fa-floppy-disk"></i>Salvar pedido</button>
     </div>
   <% end %>

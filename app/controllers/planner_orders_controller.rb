@@ -5,10 +5,6 @@ class PlannerOrdersController < ApplicationController
   guard_screen :planner_orders
   before_action :set_planner_order, only: [:show, :edit, :update, :transmit, :export_xlsx]
 
-  def index
-    @scope = PlannerOrder.includes(:user, :planner_order_items).order(created_at: :desc)
-  end
-
   def new
     @planner_order = PlannerOrder.new
   end

@@ -933,39 +933,6 @@
     "Consultar Estoque em Lote"
    ]
   },
-  "plan-lista": {
-   "title": "Pedidos do Planejador",
-   "purpose": "Ver as planilhas enviadas e se cada uma já virou nota de transferência no Tiny.",
-   "when": "Para acompanhar ou retransmitir uma planilha.",
-   "actions": [
-    "Novo Pedido",
-    "Transmitir para Tiny",
-    "Retransmitir para Tiny",
-    "Exportar CSV Correios"
-   ],
-   "statuses": [
-    [
-     "Rascunho",
-     "Começado.",
-     "gray"
-    ],
-    [
-     "Salvo",
-     "Pronto para transmitir.",
-     "blue"
-    ],
-    [
-     "Transmitido",
-     "Enviado ao Tiny. Confira a coluna \"Nota Tiny\".",
-     "green"
-    ],
-    [
-     "Erro",
-     "Veja a mensagem e retransmita.",
-     "red"
-    ]
-   ]
-  },
   "plan-novo": {
    "title": "Novo Pedido do Planejador",
    "purpose": "Subir uma planilha CSV com produtos e quantidades para gerar uma nota de transferência no Tiny.",
@@ -1491,7 +1458,6 @@
   "log03-funil": "travado parado pedidos etapas resumo",
   "adm-usuarios": "usuario funcionario acesso conta",
   "adm-perfis": "permissao acesso tela perfil area loja acao liberar",
-  "plan-lista": "planilha csv planejamento",
   "inicio": "inicio home meus chamados",
   "log-transf-b2c": "transferencia atacado loja online b2b b2c",
   "log-locais": "destino cnpj endereco transferencia",
