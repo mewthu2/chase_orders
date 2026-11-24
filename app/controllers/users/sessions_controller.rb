@@ -1,13 +1,15 @@
 module Users
   # Login. Com a 2 etapas ligada (TwoFactorLogin), a senha certa nunca entra direto: manda o código por
-  # e-mail e segue para Users::TwoFactorController.
+  # e-mail e segue para Users::TwoFactorController. Navegador "lembrado" (30 dias) entra só com a senha.
   class SessionsController < Devise::SessionsController
+    include TrustedLoginDevice
 
     def create
       return super unless TwoFactorLogin.enabled?
 
       user = User.find_for_authentication(email: sign_in_params[:email])
       return super unless user&.valid_password?(sign_in_params[:password]) && user.active_for_authentication?
+      return super if trusted_login_device?(user)
 
       user.send_login_code!
       session[:two_factor_login] = { 'user_id' => user.id, 'remember' => sign_in_params[:remember_me] == '1', 'started_at' => Time.current.to_i }

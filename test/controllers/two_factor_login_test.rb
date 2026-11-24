@@ -73,7 +73,38 @@ class TwoFactorLoginTest < ActionDispatch::IntegrationTest
 
     get user_two_factor_path
     assert_select 'input#code[data-login-code]'
-    refute_includes response.body, 'Confiar neste navegador'
+  end
+
+  test '"lembre-se de mim" skips the code in this browser for 30 days' do
+    login
+    get user_two_factor_path
+    assert_select 'input[type=checkbox][name=trust_device]:not([checked])'
+    assert_select 'label[for=trust_device]', text: 'Lembre-se de mim por 30 dias'
+
+    post user_two_factor_path, params: { code: sent_code, trust_device: '1' }
+    assert_redirected_to root_path
+
+    sign_out_now
+    ActionMailer::Base.deliveries.clear
+    login
+    assert_redirected_to root_path
+    assert_empty ActionMailer::Base.deliveries
+
+    sign_out_now
+    travel(TwoFactorLogin::TRUST_PERIOD + 1.day) do
+      login
+      assert_redirected_to user_two_factor_path
+    end
+  end
+
+  test 'changing the password forgets the remembered browser' do
+    login
+    post user_two_factor_path, params: { code: sent_code, trust_device: '1' }
+    sign_out_now
+    @user.update!(password: 'outrasenha2')
+
+    login(password: 'outrasenha2')
+    assert_redirected_to user_two_factor_path
   end
 
   test 'a wrong code is refused and too many wrong tries burn the code' do

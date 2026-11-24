@@ -12,6 +12,13 @@
 
       <p class="login-tip" id="login-code-tip"><i class="fas fa-clock" aria-hidden="true"></i> O código vale por <%= distance_of_time_in_words(TwoFactorLogin::CODE_TTL) %>. Não chegou? Confira o spam ou peça outro abaixo.</p>
 
+      <div class="login-options">
+        <div class="form-check">
+          <%= f.check_box :trust_device, { class: 'form-check-input' }, '1', '0' %>
+          <%= f.label :trust_device, "Lembre-se de mim por #{TwoFactorLogin::TRUST_PERIOD.in_days.to_i} dias", class: 'form-check-label' %>
+        </div>
+      </div>
+
       <div class="form-actions">
         <%= f.button type: 'submit', class: 'btn btn-primary btn-login', data: { disable_with: 'Conferindo…', turbo_submits_with: 'Conferindo…' } do %><span>Entrar</span><i class="fas fa-arrow-right"></i><% end %>
       </div>
