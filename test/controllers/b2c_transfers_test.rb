@@ -125,7 +125,7 @@ class B2cTransfersTest < ActionDispatch::IntegrationTest
 
     get b2c_transfers_path
 
-    assert_select "a.pg-pn.is-err[href='#{edit_b2c_transfer_path(order, tab: 'nota')}'][data-tip*='nº 11']", text: 'N'
+    assert_select "a.pg-pn.is-err[href='#{edit_b2c_transfer_path(order, tab: 'nota')}'][data-tip*='nº 11']", text: /\AN\s*11\z/
   end
 
   test 'the edit page of an old B2C transfer sent to Tiny has no Cancelar no Tiny button' do

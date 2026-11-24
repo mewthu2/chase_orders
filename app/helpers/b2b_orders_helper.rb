@@ -12,17 +12,16 @@ module B2bOrdersHelper
 
   # Número do pedido com o P (abre o pedido) e o N (abre a aba da nota, na cor da situação dela).
   # note: { environment:, status:, number: } de FiscalNote.latest_by_order, ou nil.
-  # remessa: o mesmo para a nota de remessa (um segundo N), só nos pedidos que têm remessa (B2bOrder#remessa_note?);
-  # sem passar, a lista não mostra a remessa.
-  # numbers: true mostra o número de cada nota dentro do quadrado do N (ex.: N 1324, N.r 1325).
-  def b2b_pn_cell(order, note, remessa: :skip, numbers: false)
+  # remessa: o mesmo para a nota de remessa (o N.r), nos pedidos que têm remessa (B2bOrder#remessa_note?).
+  # O número de cada nota vai dentro do quadrado (ex.: N 1324, N.r 1325).
+  def b2b_pn_cell(order, note, remessa: nil)
     letters = [link_to('P', b2b_order_edit_path(order), class: 'pg-pn', data: { tip: 'Pedido: abrir e editar' }, 'aria-label': 'Abrir o pedido'),
-               b2b_note_letter(order, note, numbers:)]
-    letters << b2b_note_letter(order, remessa, numbers:, remessa: true) if remessa != :skip && order.remessa_note?
+               b2b_note_letter(order, note)]
+    letters << b2b_note_letter(order, remessa, remessa: true) if order.remessa_note?
     safe_join([content_tag(:span, "##{order.id}", class: 'num'), content_tag(:span, safe_join(letters), class: 'pg-pn-group')])
   end
 
-  def b2b_note_letter(order, note, numbers: false, remessa: false)
+  def b2b_note_letter(order, note, remessa: false)
     tone, label = note ? B2B_NOTE_TONES.fetch(note[:status], ['is-wait', note[:status]]) : ['is-none', nil]
     what = remessa ? 'Nota de remessa' : 'Nota fiscal'
     tip = if note
@@ -33,9 +32,9 @@ module B2bOrdersHelper
           end
     path = b2b_order_edit_path(order, tab: 'nota', anchor: ('remessaNote' if remessa))
     mark = remessa ? 'N.r' : 'N'
-    # Com numbers, o número da nota vai dentro do quadrado, na cor da situação dela (verde se autorizada).
-    body = numbers && note ? safe_join([content_tag(:span, mark, class: 'pg-pn-l'), content_tag(:span, note[:number], class: 'pg-pn-num')]) : mark
-    link_to(body, path, class: "pg-pn #{tone}#{' pg-pn--wide' if numbers || remessa}#{' pg-pn--remessa' if remessa}", data: { tip: tip },
+    # O número da nota vai dentro do quadrado, na cor da situação dela (verde se autorizada).
+    body = note ? safe_join([content_tag(:span, mark, class: 'pg-pn-l'), content_tag(:span, note[:number], class: 'pg-pn-num')]) : mark
+    link_to(body, path, class: "pg-pn #{tone}#{' pg-pn--wide' if note || remessa}#{' pg-pn--remessa' if remessa}", data: { tip: tip },
                         'aria-label': remessa ? 'Abrir a nota de remessa' : 'Abrir a nota fiscal')
   end
 

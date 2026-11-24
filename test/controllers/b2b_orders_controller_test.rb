@@ -175,7 +175,7 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a.pg-pn[href='#{edit_b2b_order_path(order)}']", text: 'P'
-    assert_select "a.pg-pn.is-ok[href='#{edit_b2b_order_path(order, tab: 'nota')}'][data-tip*='nº 21']", text: 'N'
+    assert_select "a.pg-pn.is-ok[href='#{edit_b2b_order_path(order, tab: 'nota')}'][data-tip*='nº 21']", text: /\AN\s*21\z/
     assert_select "a.pg-pn.is-none[href='#{edit_b2b_order_path(other, tab: 'nota')}']", text: 'N'
   end
 

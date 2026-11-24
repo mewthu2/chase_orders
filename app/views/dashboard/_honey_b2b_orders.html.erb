@@ -10,13 +10,14 @@
                     .select { |o| stages.include?(o.log_stage) } %>
 <% last_attempts = Attempt.where(b2b_order_id: orders.map(&:id), kinds: Attempt::HONEY_KINDS).order(:id).group_by(&:b2b_order_id).transform_values(&:last) %>
 <% notes = FiscalNote.latest_by_order(orders.map(&:id)) %>
+<% remessas = FiscalNote.latest_by_order(orders.select(&:remessa_note?).map(&:id), role: 'remessa') %>
 <%# Etapa de cada tipo de tentativa: o erro só aparece na linha enquanto o pedido está parado naquela etapa. %>
 <% attempt_stage = { 'create_correios_order_honey' => 'creation', 'send_xml_honey' => 'invoice', 'get_tracking_honey' => 'tracking' } %>
 <% honey_table = HoneyTable.new(params, id: 'honey', unit: 'pedidos', unit1: 'pedido', page_size: 8, sort: { k: :dt, dir: 1 },
      rows: orders.map { |o|
        last = last_attempts[o.id]
        failed = last && !last.success? && attempt_stage[last.kinds] == o.log_stage
-       { id: o.id, record: o, n: "##{o.id}", pn: b2b_pn_cell(o, notes[o.id]), tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
+       { id: o.id, record: o, n: "##{o.id}", pn: b2b_pn_cell(o, notes[o.id], remessa: remessas[o.id]), tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
          dt: o.created_at, total: o.total.to_f, st: o.log_stage, correios: b2b_correios_number(o.correios_order_id), rastreio: o.tracking_code.presence || '—',
          ultima: last ? "#{last.success? ? 'OK' : 'Falhou'}: #{(last.error.presence || last.message.presence || '—').to_s.truncate(160)}" : '—',
          erro: (if failed

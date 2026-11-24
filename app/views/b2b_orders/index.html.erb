@@ -36,12 +36,8 @@
 <% content_for :title, screen[:title] %>
 <% perm = screen[:perm] %>
 <%# Pedidos de venda e Transferência B2C: ao lado do número, P abre o pedido e N abre a nota (cor pela situação da nota). %>
-<%# Na Transferência B2B ⇄ B2C, o número de cada nota fica ao lado do N, e um segundo N é a nota de remessa. %>
-<% pn_cell = ->(order) {
-     next b2b_pn_cell(order, @latest_notes&.dig(order.id)) unless order.b2c_transfer?
-
-     b2b_pn_cell(order, @latest_notes&.dig(order.id), remessa: @latest_remessas&.dig(order.id), numbers: true)
-   } %>
+<%# O número de cada nota fica dentro do quadrado do N; na Transferência B2B ⇄ B2C, o N.r é a nota de remessa. %>
+<% pn_cell = ->(order) { b2b_pn_cell(order, @latest_notes&.dig(order.id), remessa: @latest_remessas&.dig(order.id)) } %>
 <% map = ->(order) {
      items = order.b2b_order_items
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
