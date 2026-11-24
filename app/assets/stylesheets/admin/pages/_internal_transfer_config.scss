@@ -1,0 +1,101 @@
+// ---- Configurações das transferências: aprovadores em grade e notas por empresa em tabela ----
+@keyframes itc-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes itc-pop {
+  0%   { transform: scale(.4); opacity: 0; }
+  70%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.itc .pg-flow { margin-bottom: 0; }
+.itc .pg-flow-step { animation: itc-rise .4s var(--ease) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.itc .pg-flow-step .n i { font-size: 12px; }
+.itc .pg-flow-step small { white-space: normal; overflow: visible; line-height: 1.35; }
+
+.itc-form { display: flex; flex-direction: column; gap: 18px; }
+.itc-section { padding: 18px 20px 20px; margin: 0; }
+.itc-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.itc-head h3 { margin: 0 6px 0 0; }
+.itc-lead { margin-bottom: 16px; max-width: 980px; }
+.itc-lead .fa-crown { color: var(--yellow); font-size: 11px; }
+
+.itc-count {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 12px; color: var(--text-2); background: rgba(255,255,255,.05); border: 1px solid var(--border-2);
+  b { color: var(--text); font-variant-numeric: tabular-nums; }
+  &.is-ok { color: color-mix(in srgb, var(--green) 70%, #fff 30%); border-color: color-mix(in srgb, var(--green) 35%, transparent); background: color-mix(in srgb, var(--green) 9%, transparent); }
+}
+.itc-filter { margin-left: auto; width: 240px; max-width: 100%; }
+
+// ---- aprovadores ----
+.itc-people { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.itc-person {
+  position: relative; display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 8px 34px 8px 10px;
+  border-radius: var(--r); cursor: pointer; user-select: none;
+  background: var(--surface-2); border: 1px solid var(--border);
+  animation: itc-rise .35s var(--ease) both; animation-delay: calc(min(var(--i, 0), 30) * 15ms);
+  transition: border-color var(--t), background-color var(--t), transform var(--t) var(--ease), box-shadow var(--t);
+  &:hover { transform: translateY(-1px); border-color: var(--border-3); }
+  &[hidden] { display: none; }
+  .itc-who { display: flex; flex-direction: column; min-width: 0; }
+  .itc-who small { margin-left: 30px; margin-top: -2px; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--text-2); }
+  &:has(.itc-check:checked) {
+    border-color: color-mix(in srgb, var(--area, var(--brand-400)) 65%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--area, var(--brand-400)) 14%, transparent), transparent), var(--surface-2);
+    box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--area, var(--brand-400)) 90%, transparent);
+    .person { color: var(--text); font-weight: 600; }
+    .itc-tick { opacity: 1; animation: itc-pop .35s var(--spring) both; }
+  }
+  &:has(.itc-check:focus-visible) { outline: 2px solid var(--brand-300); outline-offset: 2px; }
+}
+.itc-check { position: absolute; opacity: 0; pointer-events: none; }
+.itc-admin { flex: none; font-size: 11px; color: var(--yellow); }
+.itc-tick { position: absolute; right: 11px; top: 50%; margin-top: -7px; font-size: 14px; color: var(--area, var(--brand-400)); opacity: 0; }
+.itc-empty { margin: 10px 0 0; font-size: 13px; color: var(--text-3); }
+
+// ---- empresas ----
+.itc-table {
+  thead th:nth-child(1) { width: 29%; }
+  thead th:nth-child(2) { width: 11%; }
+  thead th:nth-child(3) { width: 22%; }
+  tbody td { padding: 10px 12px; }
+  .field-input { min-width: 0; width: 100%; height: 38px; }
+  .ticket-status + .ticket-status { margin-left: 4px; }
+  tr.is-unlinked td:first-child { box-shadow: inset 3px 0 0 var(--border-3); }
+  tr.is-unlinked .itc-co { color: var(--text-3); }
+  tr:not(.is-unlinked) td:first-child { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--area, var(--brand-400)) 70%, transparent); }
+  tr.is-inactive { opacity: .6; }
+}
+.itc-co { display: block; color: var(--text); font-weight: 650; font-size: 13.5px; transition: color var(--t); }
+.itc-co-sub { display: block; margin-top: 2px; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+// ---- barra de salvar ----
+.itc-savebar {
+  position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 10px 12px 10px 16px; border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(10px);
+  border: 1px solid var(--border-2); box-shadow: var(--shadow-2);
+  transition: border-color var(--t), box-shadow var(--t);
+  &.is-dirty {
+    border-color: rgba(227,179,65,.45);
+    box-shadow: var(--shadow-2), 0 0 0 4px rgba(227,179,65,.08);
+    .itc-savebar-msg { color: var(--yellow); }
+    .itc-savebar-msg i { color: var(--yellow); }
+  }
+}
+.itc-savebar-msg { margin-right: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3); transition: color var(--t); }
+.itc-savebar-msg i { color: var(--brand-300); }
+
+@media (max-width: 760px) {
+  .itc-filter { margin-left: 0; width: 100%; }
+  .itc-table thead { display: none; }
+  .itc-table, .itc-table tbody, .itc-table tr, .itc-table td { display: block; width: 100%; }
+  .itc-table tr { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .itc-table tbody td { border: 0; padding: 6px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .itc .pg-flow-step, .itc-person, .itc-tick { animation: none !important; }
+}

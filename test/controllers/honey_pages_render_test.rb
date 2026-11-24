@@ -52,8 +52,9 @@ class HoneyPagesRenderTest < ActionDispatch::IntegrationTest
   test 'transfer approvers configuration' do
     get edit_internal_transfer_config_path
     assert_response :success
-    assert_select '.pg-split .pg-inline input[type=checkbox][name="approver_ids[]"]', minimum: 1
-    assert_select '.pg-howto li', count: 5
+    assert_select '#pgForm .itc-people input[type=checkbox][name="approver_ids[]"]', minimum: 1
+    assert_select '.itc .pg-flow-step', count: 5
+    assert_select '#pgForm .itc-savebar button[type=submit]'
   end
 
   test 'cashback unifications' do

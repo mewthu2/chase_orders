@@ -4,86 +4,150 @@
   <%= link_to internal_transfers_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
 <% end %>
 
-<div class="pg-blocks">
-  <div class="pg-split" style="--cols: 1.3fr 1fr">
-    <div class="pg-split-a">
-      <%= form_with url: internal_transfer_config_path, method: :patch, local: true, class: 'panel pg-card pg-inline', id: 'pgForm' do %>
-        <h3><i class="fas fa-file-invoice"></i>Nota fiscal</h3>
-        <p class="pg-p" style="margin-bottom: 14px">A empresa da loja de origem emite a NF-e de transferência para a empresa da loja de destino. Escolha a loja de cada empresa e a natureza da nota.</p>
-        <div class="pg-fields">
-          <% @companies.each do |company| %>
-            <% chosen_location = params.dig(:companies, company.id.to_s, :location_id) || company.location&.id %>
-            <% chosen_nature = params.dig(:companies, company.id.to_s, :internal_transfer_nature_id) || company.internal_transfer_nature_id %>
-            <% default_nature = OperationNature.default_for(company, :transfer) %>
-            <% fitting = @transfer_natures.select { |n| n.compatible_with?(company) } %>
-            <div class="pg-fsec">
-              <%= company.trade_name.presence || company.legal_name %> · CNPJ <%= company.cnpj_formatted %> · <%= company.city %>/<%= company.state %>
-              <%= hc_status(company.environment_label, company.producao? ? 'green' : 'yellow',
-                            tip: company.producao? ? 'As notas saem com valor fiscal.' : 'As notas saem em homologação, sem valor fiscal. Troque em Empresas.') %>
-              <% unless company.active? %><%= hc_status('Inativa', 'gray', tip: 'Empresa inativa não emite nota.') %><% end %>
-            </div>
-            <div class="form-group pg-fg pg-w2">
-              <label class="field-label" for="company_<%= company.id %>_location_id">Loja desta empresa</label>
-              <%= select_tag "companies[#{company.id}][location_id]", options_for_select(@locations.map { |l| [l.name, l.id] }, chosen_location),
-                             include_blank: 'Nenhuma loja', id: "company_#{company.id}_location_id", class: 'field-input' %>
-            </div>
-            <div class="form-group pg-fg pg-w2">
-              <label class="field-label" for="company_<%= company.id %>_nature_id">Natureza da transferência</label>
-              <%= select_tag "companies[#{company.id}][internal_transfer_nature_id]",
-                             options_for_select(fitting.map { |n| ["#{n.description} · CFOP #{n.cfop}", n.id] }, chosen_nature),
-                             include_blank: default_nature ? "Padrão da empresa (#{default_nature.description})" : 'Padrão da empresa (nenhuma vinculada)',
-                             id: "company_#{company.id}_nature_id", class: 'field-input' %>
-            </div>
-          <% end %>
-          <% if @companies.empty? %>
-            <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Nenhuma empresa cadastrada. Cadastre em <%= link_to 'Empresas', companies_path %>.</span></div>
-          <% else %>
-            <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Lojas da mesma empresa não têm nota entre si. Só aparecem as naturezas de transferência que servem para o regime de cada empresa; ao salvar, a natureza fica vinculada a ela. Certificado, ambiente e numeração ficam em <%= link_to 'Empresas', companies_path %>.</span></div>
-          <% end %>
+<%
+  steps = [['fa-hand', 'Pede', 'A loja de destino pede as peças'],
+           ['fa-user-check', 'Aprova', 'Um aprovador aprova ou reprova'],
+           ['fa-box', 'Reserva', 'A origem tira do estoque no Shopify'],
+           ['fa-truck', 'Envia', 'A origem envia com rastreio e NF-e'],
+           ['fa-house-circle-check', 'Recebe', 'As peças entram no destino']]
+  approver_count = @users.count { |u| @approver_ids.include?(u.id) }
+  repeated_names = @users.map { |u| u.name.to_s.strip.downcase }.tally.select { |_, n| n > 1 }.keys
+  rows = @companies.map do |company|
+    { company:,
+      location: params.dig(:companies, company.id.to_s, :location_id) || company.location&.id,
+      nature: params.dig(:companies, company.id.to_s, :internal_transfer_nature_id) || company.internal_transfer_nature_id,
+      default_nature: OperationNature.default_for(company, :transfer),
+      fitting: @transfer_natures.select { |n| n.compatible_with?(company) } }
+  end
+%>
 
-          <div class="pg-fsec" style="margin-top: 10px"><i class="fas fa-user-check"></i> Aprovadores: quem pode aprovar</div>
-          <div class="form-group pg-fg">
-            <div class="select-wrap pg-search"><input type="text" id="approverSearch" class="field-input" placeholder="Filtrar por nome…" autocomplete="off"></div>
-          </div>
-          <%= hidden_field_tag 'approver_ids[]', '', id: nil %>
-          <% @users.each do |user| %>
-            <div class="form-group pg-fg pg-w2" data-approver-name="<%= user.name.to_s.downcase %>">
-              <label class="form-check">
-                <%= check_box_tag 'approver_ids[]', user.id, @approver_ids.include?(user.id), id: "approver_#{user.id}", class: 'form-check-input' %>
-                <span><%= user.name %></span>
-                <% if user.admin? %><span class="info-dot" tabindex="0" data-tip="Administrador. Aprova sempre, mesmo sem estar marcado.">i</span><% end %>
-              </label>
-            </div>
-          <% end %>
-          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Qualquer um dos marcados pode aprovar ou reprovar. Se ninguém for marcado, só os administradores aprovam.</span></div>
-        </div>
-        <div class="pg-inline-foot">
-          <%= link_to 'Cancelar', internal_transfers_path, class: 'btn btn-ghost' %>
-          <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>
+<div class="pg-blocks itc">
+  <nav class="pg-flow" aria-label="Como a transferência anda">
+    <div class="pg-flow-h"><i class="fas fa-route"></i>Como a transferência anda<span>Só depois de aprovada a origem reserva as peças.</span></div>
+    <div class="pg-flow-steps">
+      <% steps.each_with_index do |(icon, title, text), i| %>
+        <div class="pg-flow-step<%= ' is-current' if i == 1 %>" style="--i: <%= i %>">
+          <span class="n"><i class="fas <%= icon %>"></i></span>
+          <span class="t"><b><%= i + 1 %>. <%= title %></b><small data-tip="<%= text %>"><%= text %></small></span>
         </div>
       <% end %>
     </div>
-    <div class="pg-split-b">
-      <div class="panel pg-card pg-howto">
-        <h3><i class="fas fa-list-ol"></i>Como a aprovação funciona</h3>
-        <ol>
-          <% ['A loja de destino <b>pede</b> as peças.', 'Um dos aprovadores marcados <b>aprova ou reprova</b>.',
-              'Só depois de aprovada, cada loja de origem <b>reserva</b> a sua parte. Isso tira as peças do estoque dela no Shopify.',
-              'A loja de origem <b>envia</b> e informa o rastreio.', 'A loja de destino <b>recebe</b> e as peças entram no estoque dela.'].each_with_index do |text, i| %>
-            <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
-          <% end %>
-        </ol>
+  </nav>
+
+  <%= form_with url: internal_transfer_config_path, method: :patch, local: true, id: 'pgForm', class: 'itc-form' do %>
+    <section class="panel pg-card itc-section">
+      <header class="itc-head">
+        <h3><i class="fas fa-user-check"></i>Aprovadores</h3>
+        <span class="itc-count" data-approver-count><b><%= approver_count %></b> marcado<%= 's' unless approver_count == 1 %></span>
+        <div class="select-wrap pg-search itc-filter"><input type="text" id="approverSearch" class="field-input" placeholder="Filtrar por nome ou e-mail…" autocomplete="off"></div>
+      </header>
+      <p class="pg-p itc-lead">Qualquer um dos marcados pode aprovar ou reprovar. Administradores <i class="fas fa-crown"></i> aprovam sempre, mesmo sem marcar. Se ninguém for marcado, só eles aprovam.</p>
+
+      <%= hidden_field_tag 'approver_ids[]', '', id: nil %>
+      <div class="itc-people">
+        <% @users.each_with_index do |user, i| %>
+          <label class="itc-person" data-approver-name="<%= "#{user.name} #{user.email}".downcase %>" style="--i: <%= i %>" title="<%= user.email %>">
+            <%= check_box_tag 'approver_ids[]', user.id, @approver_ids.include?(user.id), id: "approver_#{user.id}", class: 'itc-check' %>
+            <span class="itc-who"><%= hc_person(user.name) %><% if repeated_names.include?(user.name.to_s.strip.downcase) %><small><%= user.email %></small><% end %></span>
+            <% if user.admin? %><i class="fas fa-crown itc-admin" data-tip="Administrador. Aprova sempre, mesmo sem estar marcado."></i><% end %>
+            <i class="fas fa-circle-check itc-tick"></i>
+          </label>
+        <% end %>
       </div>
-      <div class="callout pg-banner is-info"><i class="fas fa-circle-info"></i><div><strong>Administradores sempre aprovam.</strong> Mesmo sem estar marcado na lista, quem é administrador pode aprovar ou reprovar qualquer transferência.</div></div>
+      <p class="itc-empty" hidden>Ninguém com esse nome.</p>
+    </section>
+
+    <section class="panel pg-card itc-section">
+      <header class="itc-head">
+        <h3><i class="fas fa-file-invoice"></i>Nota fiscal</h3>
+        <% if rows.any? %>
+          <span class="itc-count"><b><%= rows.count { |r| r[:location].present? } %></b> de <%= rows.size %> empresas com loja</span>
+          <span class="itc-count is-ok"><b><%= rows.count { |r| r[:company].producao? } %></b> em produção</span>
+        <% end %>
+      </header>
+      <p class="pg-p itc-lead">A empresa da loja de origem emite a NF-e de transferência para a empresa da loja de destino. Lojas da mesma empresa não têm nota entre si. Só aparecem as naturezas que servem ao regime de cada empresa; ao salvar, a natureza fica vinculada a ela. Certificado, ambiente e numeração ficam em <%= link_to 'Empresas', companies_path %>.</p>
+
+      <% if rows.empty? %>
+        <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Nenhuma empresa cadastrada. Cadastre em <%= link_to 'Empresas', companies_path %>.</span></div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="orders-table pg-tbl itc-table">
+            <thead>
+              <tr><th>Empresa</th><th>Ambiente</th><th>Loja desta empresa</th><th>Natureza da transferência</th></tr>
+            </thead>
+            <tbody>
+              <% rows.each do |row| %>
+                <% company = row[:company] %>
+                <tr class="<%= 'is-unlinked' if row[:location].blank? %><%= ' is-inactive' unless company.active? %>" data-company-row>
+                  <td data-label="Empresa">
+                    <b class="itc-co"><%= company.trade_name.presence || company.legal_name %></b>
+                    <small class="itc-co-sub">CNPJ <%= company.cnpj_formatted %> · <%= company.city %>/<%= company.state %></small>
+                  </td>
+                  <td data-label="Ambiente">
+                    <%= hc_status(company.environment_label, company.producao? ? 'green' : 'yellow',
+                                  tip: company.producao? ? 'As notas saem com valor fiscal.' : 'As notas saem em homologação, sem valor fiscal. Troque em Empresas.') %>
+                    <% unless company.active? %><%= hc_status('Inativa', 'gray', tip: 'Empresa inativa não emite nota.') %><% end %>
+                  </td>
+                  <td data-label="Loja">
+                    <label class="sr-only" for="company_<%= company.id %>_location_id">Loja de <%= company.trade_name.presence || company.legal_name %></label>
+                    <%= select_tag "companies[#{company.id}][location_id]", options_for_select(@locations.map { |l| [l.name, l.id] }, row[:location]),
+                                   include_blank: 'Nenhuma loja', id: "company_#{company.id}_location_id", class: 'field-input', data: { company_location: true } %>
+                  </td>
+                  <td data-label="Natureza">
+                    <label class="sr-only" for="company_<%= company.id %>_nature_id">Natureza de <%= company.trade_name.presence || company.legal_name %></label>
+                    <%= select_tag "companies[#{company.id}][internal_transfer_nature_id]",
+                                   options_for_select(row[:fitting].map { |n| ["#{n.description} · CFOP #{n.cfop}", n.id] }, row[:nature]),
+                                   include_blank: row[:default_nature] ? "Padrão: #{row[:default_nature].description}" : 'Padrão: nenhuma vinculada',
+                                   id: "company_#{company.id}_nature_id", class: 'field-input' %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </section>
+
+    <div class="itc-savebar">
+      <span class="itc-savebar-msg"><i class="fas fa-circle-info"></i><span data-dirty-msg>Nada alterado ainda.</span></span>
+      <%= link_to 'Cancelar', internal_transfers_path, class: 'btn btn-ghost' %>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar</button>
     </div>
-  </div>
+  <% end %>
 </div>
 
 <script>
-  document.getElementById('approverSearch').addEventListener('input', function (e) {
-    var q = e.target.value.trim().toLowerCase();
-    document.querySelectorAll('[data-approver-name]').forEach(function (row) {
-      row.style.display = row.dataset.approverName.indexOf(q) === -1 ? 'none' : '';
+  (function () {
+    var form = document.getElementById('pgForm');
+    var people = form.querySelectorAll('[data-approver-name]');
+    var empty = form.querySelector('.itc-empty');
+    var count = form.querySelector('[data-approver-count]');
+    var bar = form.querySelector('.itc-savebar');
+    var msg = form.querySelector('[data-dirty-msg]');
+
+    document.getElementById('approverSearch').addEventListener('input', function (e) {
+      var q = e.target.value.trim().toLowerCase(), shown = 0;
+      people.forEach(function (row) {
+        var hit = row.dataset.approverName.indexOf(q) !== -1;
+        row.hidden = !hit;
+        if (hit) shown++;
+      });
+      empty.hidden = shown > 0;
     });
-  });
+
+    function refreshCount() {
+      var n = form.querySelectorAll('.itc-check:checked').length;
+      count.innerHTML = '<b>' + n + '</b> marcado' + (n === 1 ? '' : 's');
+    }
+
+    form.querySelectorAll('[data-company-location]').forEach(function (sel) {
+      sel.addEventListener('change', function () { sel.closest('tr').classList.toggle('is-unlinked', !sel.value); });
+    });
+
+    form.addEventListener('change', function () {
+      refreshCount();
+      bar.classList.add('is-dirty');
+      msg.textContent = 'Há alterações não salvas.';
+    });
+  })();
 </script>
