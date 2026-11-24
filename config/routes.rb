@@ -369,6 +369,7 @@ Rails.application.routes.draw do
                             only: [:index, :new, :create, :edit, :update, :destroy] do
     member do
       get :romaneio
+      post :complete
     end
   end
 

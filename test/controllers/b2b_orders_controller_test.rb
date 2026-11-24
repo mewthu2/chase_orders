@@ -179,6 +179,21 @@ class B2bOrdersControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.pg-pn.is-none[href='#{edit_b2b_order_path(other, tab: 'nota')}']", text: 'N'
   end
 
+  test 'the sales list shows the total with the freight and the payment method' do
+    sign_in @admin
+    order = B2bOrder.new(kind: :sale, payment_method: 'pix', user: @admin, client: @client, status: :aberto, freight_value: 25)
+    order.b2b_order_items.build(sku: 'SKU1', quantity: 2, price: 50)
+    order.save!
+
+    get b2b_orders_path
+
+    assert_select 'thead th', text: 'Total com frete'
+    assert_select 'thead th', text: 'Pagamento'
+    assert_select 'tbody td', text: /R\$\s*125,00/
+    assert_select 'tbody', text: /com R\$ 25,00 de frete/
+    assert_select 'tbody td', text: 'PIX'
+  end
+
   test 'romaneio is only served on the screen of the order kind' do
     sign_in @admin
     order = build_order

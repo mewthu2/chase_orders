@@ -36,11 +36,14 @@ class B2bTransferSettingsController < ApplicationController
   private
 
   # B2C → B2B: empresa e natureza da nota de transferência e da nota de remessa, e o destinatário da remessa.
+  # B2B → B2C: empresa, natureza e destinatário da nota de remessa (a de transferência usa b2c_issuer/b2c_nature).
   def b2c_to_b2b_attrs
     data = params.require(:b2b_setting).permit(:b2c_to_b2b_issuer_company_id, :b2c_to_b2b_nature_id, :b2c_to_b2b_remessa_issuer_company_id,
-                                               :b2c_to_b2b_remessa_nature_id, b2c_to_b2b_remessa_recipient: B2bSetting::REMESSA_RECIPIENT_FIELDS).to_h
-    if data.key?('b2c_to_b2b_remessa_recipient')
-      data['b2c_to_b2b_remessa_recipient'] = B2bSetting.normalize_recipient(data['b2c_to_b2b_remessa_recipient'])
+                                               :b2c_to_b2b_remessa_nature_id, :b2b_to_b2c_remessa_issuer_company_id, :b2b_to_b2c_remessa_nature_id,
+                                               b2c_to_b2b_remessa_recipient: B2bSetting::REMESSA_RECIPIENT_FIELDS,
+                                               b2b_to_b2c_remessa_recipient: B2bSetting::REMESSA_RECIPIENT_FIELDS).to_h
+    %w[b2c_to_b2b_remessa_recipient b2b_to_b2c_remessa_recipient].each do |key|
+      data[key] = B2bSetting.normalize_recipient(data[key]) if data.key?(key)
     end
     data
   end

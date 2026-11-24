@@ -6,10 +6,10 @@ class B2bOrdersController < ApplicationController
   KIND_SCREENS = { 'sale' => :b2b_orders, 'stock_transfer' => :store_supply, 'b2c_transfer' => :b2b_transfers }.freeze
   FORM_HELPER_ACTIONS = %i[parse_items_spreadsheet product_stock search_product product_picker search_client import_client].freeze
 
-  guard_screen(except: FORM_HELPER_ACTIONS) { KIND_SCREENS.fetch(params[:order_kind].to_s, :b2b_orders) }
+  guard_screen(except: FORM_HELPER_ACTIONS, actions: { complete: :edit }) { KIND_SCREENS.fetch(params[:order_kind].to_s, :b2b_orders) }
   guard_screen(only: FORM_HELPER_ACTIONS, actions: { parse_items_spreadsheet: :view, import_client: :view }) { KIND_SCREENS.values }
   before_action :set_kind
-  before_action :set_b2b_order, only: [:edit, :update, :destroy, :romaneio]
+  before_action :set_b2b_order, only: [:edit, :update, :destroy, :romaneio, :complete]
   helper_method :order_kind, :order_deletable?, :orders_path_for, :new_order_path_for, :edit_order_path_for,
                 :order_path_for, :romaneio_order_path_for, :order_form_url
 
@@ -22,6 +22,7 @@ class B2bOrdersController < ApplicationController
     @order_ids_with_active_note = FiscalNote.active_statuses.where(b2b_order_id: B2bOrder.where(kind: order_kind).select(:id)).pluck(:b2b_order_id).to_set
     @filter_locations = TransferLocation.order(:name) if order_kind == 'stock_transfer'
     @latest_notes = latest_notes_by_order if %w[sale b2c_transfer].include?(order_kind)
+    @latest_remessas = FiscalNote.latest_by_order(B2bOrder.where(kind: order_kind).select(:id), role: 'remessa') if order_kind == 'b2c_transfer'
   end
 
   def new
@@ -78,6 +79,18 @@ class B2bOrdersController < ApplicationController
     LogService.create_log(user: current_user, resource_type: 'b2b_order', action_type: 'delete',
                           resource_name: "Pedido B2B ##{id}", resource_id: id, details: snapshot, request: request)
     redirect_to orders_path_for(order_kind), notice: "Pedido ##{id} excluído."
+  end
+
+  # Transferência B2B → B2C concluída à mão: fica Concluída e sai das filas do Log02 (B2bOrder#complete!).
+  def complete
+    return redirect_to(orders_path_for(order_kind), alert: "A transferência ##{@b2b_order.id} não pode ser concluída agora.") unless @b2b_order.completable?
+
+    before = @b2b_order.status
+    @b2b_order.complete!
+    LogService.create_log(user: current_user, resource_type: 'b2b_order', action_type: 'complete',
+                          resource_name: "Transferência B2C ##{@b2b_order.id}", resource_id: @b2b_order.id,
+                          details: { status_before: before }, request: request)
+    redirect_to orders_path_for(order_kind), notice: "Transferência ##{@b2b_order.id} concluída."
   end
 
   # Romaneio em PDF (lista de itens) para mandar ao cliente; o navegador já baixa o arquivo.

@@ -148,6 +148,7 @@ module Nfe
       note = reused || FiscalNote.new(company: @company, number: number, series: @company.nfe_series)
       note.assign_attributes(
         internal_transfer_shipment: @shipment, access_key: result.access_key, environment: @environment,
+        payment_method: XmlBuilder::NO_PAYMENT.first[:method],
         operation_nature_id: @nature&.id, operation_nature: operation_nature,
         cfop_summary: items.map { |i| i[:cfop] }.uniq.join(', '), status: :assinada, total_value: result.total,
         issued_at: issued_at, protocol: nil, error_message: nil, sefaz_status_code: nil, sefaz_message: nil,

@@ -289,6 +289,7 @@ module Nfe
       note = reused || FiscalNote.new(company: @company, number: number, series: @company.nfe_series)
       note.assign_attributes(
         b2b_order: @order, role: @role, access_key: result.access_key, environment: @environment, operation_nature: operation_nature,
+        payment_method: (payments.presence || XmlBuilder::NO_PAYMENT).first[:method],
         operation_nature_id: @nature.id, cfop_summary: items.map { |item| item[:cfop] }.uniq.join(', '), status: :assinada,
         total_value: result.total, issued_at: issued_at, protocol: nil, error_message: nil, sefaz_status_code: nil,
         sefaz_message: nil, sefaz_receipt: nil, authorized_at: nil

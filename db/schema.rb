@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -258,6 +258,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_120000) do
     t.bigint "b2c_to_b2b_remessa_issuer_company_id"
     t.bigint "b2c_to_b2b_remessa_nature_id"
     t.json "b2c_to_b2b_remessa_recipient"
+    t.bigint "b2b_to_b2c_remessa_issuer_company_id"
+    t.bigint "b2b_to_b2c_remessa_nature_id"
+    t.json "b2b_to_b2c_remessa_recipient"
     t.index ["b2c_issuer_company_id"], name: "index_b2b_settings_on_b2c_issuer_company_id"
     t.index ["b2c_nature_id"], name: "index_b2b_settings_on_b2c_nature_id"
     t.index ["supply_issuer_company_id"], name: "index_b2b_settings_on_supply_issuer_company_id"
@@ -521,6 +524,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_24_120000) do
     t.datetime "canceled_at"
     t.string "canceled_by"
     t.string "role"
+    t.string "payment_method", limit: 2
     t.index ["b2b_order_id", "role"], name: "index_fiscal_notes_on_b2b_order_id_and_role"
     t.index ["b2b_order_id"], name: "index_fiscal_notes_on_b2b_order_id"
     t.index ["company_id", "environment", "series", "number"], name: "index_fiscal_notes_on_company_env_series_number", unique: true

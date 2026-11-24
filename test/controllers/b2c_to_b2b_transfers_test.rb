@@ -157,15 +157,12 @@ class B2cToB2bTransfersTest < ActionDispatch::IntegrationTest
     assert order.reload.aberto?
   end
 
-  test 'the B2B to B2C direction keeps its fixed recipient, Log02 flow and no remessa' do
+  test 'the B2B to B2C direction keeps its fixed recipient and Log02 flow, and also has a remessa note' do
     order = build_order(transfer_direction: :b2b_to_b2c)
 
     assert_includes B2bOrder.honey_flow, order
     assert_equal 'review', order.log_stage
-    assert_not order.remessa_note?
-    post b2b_order_fiscal_notes_path(b2b_order_id: order.id), params: { environment: 'homologacao', role: 'remessa' }
-    assert_match(/nota de remessa/, flash[:alert])
-    assert_empty FiscalNote.where(b2b_order: order)
+    assert order.remessa_note?
   end
 
   test 'the romaneio names the B2B branch' do

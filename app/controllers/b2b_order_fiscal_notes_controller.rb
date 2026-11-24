@@ -3,7 +3,7 @@
 # produção (no máximo uma ativa por ambiente). Empresa e natureza vêm das configurações de cada tela.
 class B2bOrderFiscalNotesController < ApplicationController
   KIND_SCREENS = B2bOrdersController::KIND_SCREENS
-  NO_REMESSA = 'Só o abastecimento das lojas e a transferência B2C → B2B têm nota de remessa.'.freeze
+  NO_REMESSA = 'Só o abastecimento das lojas e as transferências B2B ⇄ B2C têm nota de remessa.'.freeze
 
   guard_screen(actions: { create: :edit, destroy: :edit, transmit: :edit, details: :edit, remessa_recipient: :edit }) { KIND_SCREENS.fetch(order.kind, :b2b_orders) }
   before_action :set_note, only: [:destroy, :transmit]

@@ -37,6 +37,8 @@ class Nfe::ShopifyGeneratorTest < ActiveSupport::TestCase
     # Frete rateado pelo valor líquido: 180/230 e 50/230 de 15.
     assert_equal %w[11.74 3.26], xml.xpath('//n:det/n:prod/n:vFrete', NS).map(&:text)
     assert_equal '245.00', xml.at_xpath('//n:pag/n:detPag/n:vPag', NS).text
+    assert_equal '03', note.payment_method
+    assert_equal 'Crédito', note.payment_label
     assert_match(/Pedido #1001/, xml.at_xpath('//n:infCpl', NS).text)
     assert_equal [], NfeSchema.errors(note.xml.download)
     assert_equal 2, @company.reload.next_nfe_number_homologation

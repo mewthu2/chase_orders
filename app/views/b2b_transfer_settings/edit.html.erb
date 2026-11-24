@@ -55,6 +55,24 @@
         <% if order_kind == 'b2c_transfer' %>
           <% company_options = Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] } %>
           <% default_label = ->(record, text) { record ? "Padrão: #{record.respond_to?(:legal_name) ? (record.trade_name.presence || record.legal_name) : record.description}" : text } %>
+          <% remessa_natures = OperationNature.where(active: true).order(:description).map { |n| ["#{n.description} · CFOP #{n.cfop} · #{n.regime_label}", n.id] } %>
+          <div class="rr-section" id="b2bToB2cRemessaSettings">
+            <h3><i class="fas fa-warehouse"></i>B2B → B2C: nota de remessa</h3>
+            <p class="rr-intro">Uma nota a mais de cada transferência B2B → B2C: a filial B2C, que recebe a nota de transferência, manda a mercadoria para o depósito do Correios (ex.: <b>5905 - Remessa para depósito fechado ou armazém geral</b>).</p>
+            <div class="pg-fields">
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2b_to_b2c_remessa_issuer_company_id">Filial B2C (emite)</label>
+                <%= form.select :b2b_to_b2c_remessa_issuer_company_id, company_options, { include_blank: default_label.call(@setting.remessa_issuer('b2b_to_b2c'), 'Selecione...') }, class: 'field-input' %>
+              </div>
+              <div class="form-group pg-fg pg-w2">
+                <label class="field-label" for="b2b_setting_b2b_to_b2c_remessa_nature_id">Natureza da operação</label>
+                <%= form.select :b2b_to_b2c_remessa_nature_id, remessa_natures, { include_blank: default_label.call(@setting.remessa_nature_for('b2b_to_b2c'), 'Selecione...') }, class: 'field-input' %>
+              </div>
+            </div>
+            <span class="field-label rr-label">Destinatário padrão da remessa</span>
+            <p class="rr-intro">Já vem em cada transferência. Para uma só, dá para trocar na aba Nota fiscal dela.</p>
+            <%= render 'b2b_orders/remessa_recipient_fields', scope: 'b2b_setting[b2b_to_b2c_remessa_recipient]', data: @setting.remessa_recipient_data('b2b_to_b2c') %>
+          </div>
           <div class="rr-section" id="b2cToB2bSettings">
             <h3><i class="fas fa-right-left"></i>B2C → B2B: nota de transferência</h3>
             <p class="rr-intro">Este sentido <b>não entra no Correios</b>. A filial B2C emite esta nota para a filial B2B.</p>
@@ -100,7 +118,8 @@
           <% ['O pedido é <b>aprovado</b> em Log02 › Pedidos p/ Aprovar e o Honey cria no <b>Correios</b>.',
               'Na etapa do XML, o Honey <b>emite a NF-e</b> com esta empresa e natureza e autoriza na <b>SEFAZ</b>.',
               'O XML autorizado vai ao <b>Correios</b>, que libera a etiqueta.',
-              'Se precisar, dá para emitir antes pela letra <b>N</b> da lista (aba Nota fiscal do pedido).'].each_with_index do |text, i| %>
+              'Se precisar, dá para emitir antes pela letra <b>N</b> da lista (aba Nota fiscal do pedido).',
+              (order_kind == 'b2c_transfer' ? 'A <b>nota de remessa</b> da filial B2C para o depósito sai na mesma aba, pelo segundo <b>N</b> da lista.' : nil)].compact.each_with_index do |text, i| %>
             <li style="--i: <%= i %>"><span class="n"><%= i + 1 %></span><span><%= text.html_safe %></span></li>
           <% end %>
         </ol>

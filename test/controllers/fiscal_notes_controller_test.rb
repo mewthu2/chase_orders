@@ -47,6 +47,21 @@ class FiscalNotesControllerTest < ActionDispatch::IntegrationTest
     assert_select 'tbody', text: /Outra Empresa/
   end
 
+  test 'the list has the payment method column and filters by it' do
+    sign_in @admin
+    @signed.update_columns(payment_method: '17')
+    @failed.update_columns(payment_method: '15')
+
+    get fiscal_notes_path
+    assert_select 'thead th', text: 'Pagamento'
+    assert_select 'tbody .ticket-status', text: 'Pix'
+    assert_select 'tbody .ticket-status', text: 'Boleto'
+
+    get fiscal_notes_path(pag: '17')
+    assert_select 'tbody tr', count: 1
+    assert_select 'tbody', text: /Empresa Nota/
+  end
+
   test 'show displays the access key, company and error' do
     sign_in @admin
 

@@ -182,6 +182,18 @@ class FiscalNote < ApplicationRecord
     'avulsa'
   end
 
+  # Forma de pagamento da nota (tPag gravado na emissão): crédito, Pix, boleto... ou "Sem pagamento" nas transferências.
+  PAYMENT_LABELS = {
+    '03' => ['Crédito', 'blue', 'Cartão de crédito.'], '04' => ['Débito', 'blue', 'Cartão de débito.'],
+    '17' => ['Pix', 'green', 'Pago por Pix.'], '15' => ['Boleto', 'orange', 'Boleto bancário.'],
+    '01' => ['Dinheiro', 'green', 'Pago em dinheiro.'], '90' => ['Sem pagamento', 'gray', 'Nota sem cobrança, como as de transferência e remessa.'],
+    '99' => ['Outros', 'gray', 'Outra forma de pagamento.']
+  }.freeze
+
+  def payment_label
+    PAYMENT_LABELS.dig(payment_method, 0) || Nfe::Danfe::PAYMENT_METHODS[payment_method]
+  end
+
   def purpose_label
     PURPOSES.dig(purpose, 0)
   end
@@ -191,9 +203,9 @@ class FiscalNote < ApplicationRecord
   end
 
   # Última nota do pedido (não cancelada, sem as de remessa) de cada pedido B2B, preferindo a de produção: { b2b_order_id => { environment:, status:, number: } }.
-  # order_ids pode ser uma lista ou um select de ids.
-  def self.latest_by_order(order_ids)
-    rows = principal.where(b2b_order_id: order_ids).where.not(status: :cancelada).order(:id).pluck(:b2b_order_id, :environment, :status, :number)
+  # order_ids pode ser uma lista ou um select de ids. role: 'remessa' faz o mesmo com as notas de remessa.
+  def self.latest_by_order(order_ids, role: nil)
+    rows = where(role:, b2b_order_id: order_ids).where.not(status: :cancelada).order(:id).pluck(:b2b_order_id, :environment, :status, :number)
     rows.group_by(&:first).transform_values do |list|
       _, env, status, number = list.select { |r| r[1] == 'producao' }.last || list.last
       { environment: env, status: status, number: number }

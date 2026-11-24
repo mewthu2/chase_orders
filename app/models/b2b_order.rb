@@ -133,9 +133,24 @@ class B2bOrder < ApplicationRecord
     tiny_reference_id.blank? && !b2c_to_b2b?
   end
 
-  # Pedidos com a nota de remessa além da nota principal.
+  # Transferência B2B → B2C que já passou da nota (ou que veio do Tiny) e ainda não terminou: dá para concluir à
+  # mão (Concluir na lista), já que a entrega dentro do galpão nem sempre gera rastreio.
+  COMPLETABLE_STATUSES = %w[faturado pronto_para_envio nao_entregue].freeze
+  def completable?
+    return false unless b2c_transfer? && b2b_to_b2c?
+    return false if cancelado? || enviado?
+
+    tiny_reference_id.present? || COMPLETABLE_STATUSES.include?(status)
+  end
+
+  # Conclui a transferência (fica Concluída, o status enviado) e tira o pedido das filas do Log02 (XML e rastreio).
+  def complete!
+    update_columns(status: self.class.statuses[:enviado], log_ignored: log_ignored || honey_flow?, updated_at: Time.current)
+  end
+
+  # Pedidos com a nota de remessa além da nota principal: o abastecimento e a transferência B2C, nos dois sentidos.
   def remessa_note?
-    stock_transfer? || b2c_to_b2b?
+    stock_transfer? || b2c_transfer?
   end
 
   # Origem da reserva deste pedido na escadinha (StockReservationPriority).

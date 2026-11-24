@@ -8,7 +8,9 @@
 #   lojas e para a transferência B2C (nas Configurações de cada tela). Sem escolha, valem a empresa do atacado
 #   e transfer_nature (a natureza de transferência de antes, comum aos dois);
 # - b2c_to_b2b_*: transferência no sentido B2C → B2B, que não vai ao Correios: a filial B2C emite a nota de
-#   transferência para a filial B2B, e a filial B2B emite a nota de remessa.
+#   transferência para a filial B2B, e a filial B2B emite a nota de remessa;
+# - b2b_to_b2c_remessa_*: nota de remessa do sentido B2B → B2C: a filial B2C, que recebe a transferência,
+#   manda para o depósito do Correios.
 class B2bSetting < ApplicationRecord
   DEFAULT_ISSUER_CNPJ = '25405327000255'.freeze
   DEFAULT_SALE_NATURE = 'Atacado'.freeze
@@ -27,6 +29,8 @@ class B2bSetting < ApplicationRecord
   belongs_to :b2c_to_b2b_nature, class_name: 'OperationNature', optional: true
   belongs_to :b2c_to_b2b_remessa_issuer_company, class_name: 'Company', optional: true
   belongs_to :b2c_to_b2b_remessa_nature, class_name: 'OperationNature', optional: true
+  belongs_to :b2b_to_b2c_remessa_issuer_company, class_name: 'Company', optional: true
+  belongs_to :b2b_to_b2c_remessa_nature, class_name: 'OperationNature', optional: true
 
   # Nota de remessa do abastecimento: destinatário padrão, o depósito do Correios Log+ em Contagem (como na
   # NF-e 15777). Dá para mudar nas configurações e, só num pedido, na aba Nota fiscal dele.
@@ -64,7 +68,7 @@ class B2bSetting < ApplicationRecord
 
   # Onde se escolhe a empresa e a natureza da nota de remessa do pedido.
   def self.remessa_config_name(order)
-    order.b2c_to_b2b? ? CONFIG_NAMES['b2c_transfer'] : CONFIG_NAMES['stock_transfer']
+    order.b2c_transfer? ? CONFIG_NAMES['b2c_transfer'] : CONFIG_NAMES['stock_transfer']
   end
 
   def self.current
@@ -102,18 +106,25 @@ class B2bSetting < ApplicationRecord
 
   # Remessa do abastecimento: sem escolha, sai pela empresa do abastecimento. Remessa do B2C → B2B: sem escolha,
   # pela empresa que emite a transferência B2B → B2C, a filial B2B (que também recebe a nota de transferência).
+  # Remessa do B2B → B2C: sem escolha, pela filial B2C, que recebe a nota de transferência.
   def remessa_issuer(order = nil)
     return b2c_to_b2b_remessa_issuer_company || issuer('b2c_transfer') if b2c_to_b2b?(order)
+    return b2b_to_b2c_remessa_issuer_company || b2c_to_b2b_issuer if b2b_to_b2c?(order)
 
     remessa_issuer_company || issuer('stock_transfer')
   end
 
   def remessa_nature_for(order = nil)
-    b2c_to_b2b?(order) ? (b2c_to_b2b_remessa_nature || remessa_nature) : remessa_nature
+    return b2c_to_b2b_remessa_nature || remessa_nature if b2c_to_b2b?(order)
+    return b2b_to_b2c_remessa_nature || remessa_nature if b2b_to_b2c?(order)
+
+    remessa_nature
   end
 
   def remessa_recipient_data(order = nil)
-    own = b2c_to_b2b_remessa_recipient.presence if b2c_to_b2b?(order)
+    own = if b2c_to_b2b?(order) then b2c_to_b2b_remessa_recipient.presence
+          elsif b2b_to_b2c?(order) then b2b_to_b2c_remessa_recipient.presence
+          end
     self.class.normalize_recipient(own || remessa_recipient.presence || REMESSA_DEFAULT_RECIPIENT)
   end
 
@@ -134,6 +145,12 @@ class B2bSetting < ApplicationRecord
     order.to_s == 'b2c_to_b2b' || (order.respond_to?(:b2c_to_b2b?) && order.b2c_to_b2b?)
   end
 
+  # Pedido de transferência B2C no sentido B2B → B2C (o atacado e o abastecimento também guardam o sentido
+  # padrão b2b_to_b2c, então o tipo do pedido conta).
+  def b2b_to_b2c?(order)
+    order.to_s == 'b2b_to_b2c' || (order.respond_to?(:b2c_transfer?) && order.b2c_transfer? && order.b2b_to_b2c?)
+  end
+
   def default_transfer_nature
     transfer_nature || OperationNature.transfer.where(active: true).where('description LIKE ?', "#{DEFAULT_TRANSFER_NATURE}%").first
   end
@@ -150,7 +167,8 @@ class B2bSetting < ApplicationRecord
   def issuer_nature_pairs
     [[issuer('sale'), sale_nature], [issuer('stock_transfer'), supply_nature || transfer_nature],
      [issuer('b2c_transfer'), b2c_nature || transfer_nature], [remessa_issuer, remessa_nature],
-     [b2c_to_b2b_issuer, b2c_to_b2b_nature], [remessa_issuer('b2c_to_b2b'), b2c_to_b2b_remessa_nature]]
+     [b2c_to_b2b_issuer, b2c_to_b2b_nature], [remessa_issuer('b2c_to_b2b'), b2c_to_b2b_remessa_nature],
+     [remessa_issuer('b2b_to_b2c'), b2b_to_b2c_remessa_nature]]
   end
 
   def natures_match_kind

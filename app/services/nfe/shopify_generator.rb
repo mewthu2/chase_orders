@@ -140,7 +140,7 @@ module Nfe
 
       note = reused || FiscalNote.new(company: @company, number: number, series: @company.nfe_series)
       note.assign_attributes(
-        order: @shopify_order.local_order, shopify_order_name: @shopify_order.name,
+        order: @shopify_order.local_order, shopify_order_name: @shopify_order.name, payment_method: @payment.to_h.symbolize_keys[:method].presence || '99',
         access_key: result.access_key, environment: @company.environment, operation_nature_id: @nature.id,
         operation_nature: @nature.description, cfop_summary: items.map { |i| i[:cfop] }.uniq.join(', '),
         status: :assinada, total_value: result.total, issued_at: issued_at, protocol: nil, error_message: nil,

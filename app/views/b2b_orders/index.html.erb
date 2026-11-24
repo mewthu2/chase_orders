@@ -16,6 +16,7 @@
 <% if kind == 'b2c_transfer'
      statuses['aberto'] = ['Aberto', 'gray', 'B2B → B2C: esperando a aprovação em Log02 › Pedidos p/ Aprovar. B2C → B2B: esperando as duas notas.']
      statuses['faturado'] = ['Faturado', 'yellow', 'B2B → B2C: XML enviado ao Correios, esperando o rastreio. B2C → B2B: as duas notas de produção autorizadas.']
+     statuses['enviado'] = ['Concluída', 'green', 'B2B → B2C: saiu para a filial B2C ou foi concluída à mão pelo Concluir da lista.']
    end %>
 <% screen = { 'sale' => { title: 'Pedidos de Atacado', subtitle: 'Vendas para lojistas, do Honey até o Correios, sem o Tiny.', icon: 'fas fa-handshake', perm: :b2b_orders,
                           unit: %w[pedidos pedido], list: 'Lista de pedidos de atacado', list_icon: 'fas fa-file-invoice-dollar', new_label: 'Novo pedido',
@@ -35,11 +36,17 @@
 <% content_for :title, screen[:title] %>
 <% perm = screen[:perm] %>
 <%# Pedidos de venda e Transferência B2C: ao lado do número, P abre o pedido e N abre a nota (cor pela situação da nota). %>
-<% pn_cell = ->(order) { b2b_pn_cell(order, @latest_notes&.dig(order.id)) } %>
+<%# Na Transferência B2B ⇄ B2C, o número de cada nota fica ao lado do N, e um segundo N é a nota de remessa. %>
+<% pn_cell = ->(order) {
+     next b2b_pn_cell(order, @latest_notes&.dig(order.id)) unless order.b2c_transfer?
+
+     b2b_pn_cell(order, @latest_notes&.dig(order.id), remessa: @latest_remessas&.dig(order.id), numbers: true)
+   } %>
 <% map = ->(order) {
      items = order.b2b_order_items
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
+       total_frete: order.grand_total, frete_sub: (order.freight_value.to_d.positive? ? "com #{number_to_currency(order.freight_value, unit: 'R$', separator: ',', delimiter: '.')} de frete" : 'sem frete'),
        tiny: (order.tiny_reference_number.presence || order.tiny_reference_id.presence).to_s, track: order.tracking_code.presence || '—', st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
@@ -70,7 +77,10 @@
          { k: :cliente, label: 'Cliente', sub: :cidade },
          { k: :cidade, label: 'Cidade / UF', hide: true, nodetail: true },
          { k: :cnpj, label: 'CNPJ/CPF', t: :mono, cls: 'due' },
-         { k: :total, label: 'Total', t: :money },
+         { k: :total_frete, label: 'Total com frete', t: :money, sub: :frete_sub },
+         { k: :frete_sub, label: 'Frete', hide: true, nodetail: true },
+         { k: :total, label: 'Total dos produtos', t: :money, hide: true },
+         { k: :pag, label: 'Pagamento' },
          { k: :tiny, label: 'Nº pedido', t: :mono, sub: :track },
          { k: :track, label: 'Rastreamento', t: :mono, hide: true },
          { k: :st, label: 'Status', t: :status, map: statuses },
@@ -81,7 +91,6 @@
          { k: :transp, label: 'Transportadora', hide: true },
          { k: :fretepg, label: 'Frete por conta de', hide: true },
          { k: :fretev, label: 'Valor do frete (R$)', hide: true },
-         { k: :pag, label: 'Forma de pagamento', hide: true },
          { k: :desc, label: 'Desconto do pedido', hide: true },
          { k: :obs, label: 'Observações', hide: true }
        ],
@@ -145,7 +154,7 @@
        kpis: [
          { label: 'Aguardando aprovação', icon: 'fas fa-user-clock', tone: 'yellow', help: 'B2B → B2C esperando a aprovação no Log02 e B2C → B2B esperando as notas.', col: :st, val: 'aberto' },
          { label: 'Em preparo', icon: 'fas fa-box-open', tone: 'purple', help: 'No Correios, com a nota sendo emitida ou já faturadas, saindo do galpão.', col: :st, vals: %w[aprovado preparando_envio faturado pronto_para_envio] },
-         { label: 'Enviadas', icon: 'fas fa-truck-fast', tone: 'green', help: 'Já saíram para a filial de destino.', col: :st, val: 'enviado' },
+         { label: 'Concluídas', icon: 'fas fa-flag-checkered', tone: 'green', help: 'Já saíram para a filial de destino ou foram concluídas à mão.', col: :st, val: 'enviado' },
          { label: 'Com problema', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Pedem uma ação sua. Abra para ver o motivo.', col: :st, vals: %w[dados_incompletos nao_entregue] }
        ])
    end %>
@@ -195,6 +204,8 @@
           order = r[:record]
           safe_join([
             (hc_row_action('fas fa-pencil-alt', sale ? 'Editar' : 'Corrigir itens', edit_order_path_for(order)) if screen_can?(perm, :edit) && !order.b2c_transfer?),
+            (hc_row_action('fas fa-flag-checkered', 'Concluir', complete_b2c_transfer_path(order), method: :post,
+                           confirm: { title: "Concluir a transferência ##{order.id}?", text: 'Ela fica como Concluída e sai das filas do Log02 (XML e rastreio). Use quando a mercadoria já chegou à filial B2C.', ok: 'Concluir' }) if order.completable? && screen_can?(perm, :edit)),
             (hc_row_action('fas fa-file-pdf', sale ? 'Romaneio' : 'Baixar romaneio (PDF)', romaneio_order_path_for(order)) unless order.stock_transfer?),
             (hc_row_action('fas fa-file-invoice', 'Nota fiscal', edit_order_path_for(order, tab: 'nota')) if screen_can?(perm, :edit) && !order.b2c_transfer?),
             (if order_deletable?(order)

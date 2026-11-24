@@ -12,19 +12,32 @@ module B2bOrdersHelper
 
   # Número do pedido com o P (abre o pedido) e o N (abre a aba da nota, na cor da situação dela).
   # note: { environment:, status:, number: } de FiscalNote.latest_by_order, ou nil.
-  def b2b_pn_cell(order, note)
+  # remessa: o mesmo para a nota de remessa (um segundo N), só nos pedidos que têm remessa (B2bOrder#remessa_note?);
+  # sem passar, a lista não mostra a remessa.
+  # numbers: true mostra o número de cada nota ao lado do N (ex.: N 1324).
+  def b2b_pn_cell(order, note, remessa: :skip, numbers: false)
+    letters = [link_to('P', b2b_order_edit_path(order), class: 'pg-pn', data: { tip: 'Pedido: abrir e editar' }, 'aria-label': 'Abrir o pedido'),
+               b2b_note_letter(order, note, numbers:)]
+    letters << b2b_note_letter(order, remessa, numbers:, remessa: true) if remessa != :skip && order.remessa_note?
+    safe_join([content_tag(:span, "##{order.id}", class: 'num'), content_tag(:span, safe_join(letters), class: 'pg-pn-group')])
+  end
+
+  def b2b_note_letter(order, note, numbers: false, remessa: false)
     tone, label = note ? B2B_NOTE_TONES.fetch(note[:status], ['is-wait', note[:status]]) : ['is-none', nil]
-    note_tip = if note
-                 "Nota fiscal: NF-e nº #{note[:number]}#{' (homologação)' if note[:environment] == 'homologacao'}, #{label}." +
-                   (note[:status] == 'autorizada' ? '' : ' Dá para corrigir e emitir de novo.')
-               else
-                 'Nota fiscal: ainda não emitida. Clique para emitir.'
-               end
-    safe_join([content_tag(:span, "##{order.id}", class: 'num'),
-               content_tag(:span, safe_join([
-                 link_to('P', b2b_order_edit_path(order), class: 'pg-pn', data: { tip: 'Pedido: abrir e editar' }, 'aria-label': 'Abrir o pedido'),
-                 link_to('N', b2b_order_edit_path(order, tab: 'nota'), class: "pg-pn #{tone}", data: { tip: note_tip }, 'aria-label': 'Abrir a nota fiscal')
-               ]), class: 'pg-pn-group')])
+    what = remessa ? 'Nota de remessa' : 'Nota fiscal'
+    tip = if note
+            "#{what}: NF-e nº #{note[:number]}#{' (homologação)' if note[:environment] == 'homologacao'}, #{label}." +
+              (note[:status] == 'autorizada' ? '' : ' Dá para corrigir e emitir de novo.')
+          else
+            "#{what}: ainda não emitida. Clique para emitir."
+          end
+    path = b2b_order_edit_path(order, tab: 'nota', anchor: ('remessaNote' if remessa))
+    letter = link_to('N', path, class: "pg-pn #{tone}#{' pg-pn--remessa' if remessa}", data: { tip: tip },
+                                'aria-label': remessa ? 'Abrir a nota de remessa' : 'Abrir a nota fiscal')
+    return letter unless numbers
+
+    number = note ? content_tag(:span, note[:number], class: 'pg-pn-num mono') : content_tag(:span, '—', class: 'pg-pn-num is-none')
+    content_tag(:span, letter + number, class: 'pg-pn-note')
   end
 
   # Número do pedido no Correios com a bandeirinha nas cores do Correios, para identificar de relance.

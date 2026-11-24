@@ -81,6 +81,15 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal '25405327000174', xml.at_xpath('//n:dest/n:CNPJ', NS).text
   end
 
+  test 'the note keeps the payment method of the order (tPag) for the list; a transfer has none' do
+    assert_equal '17', generate(build_order(payment_method: 'pix'), @company).payment_method
+    assert_equal '15', Nokogiri::XML(generate(build_order(payment_method: 'boleto'), @company).xml.download).at_xpath('//n:detPag/n:tPag', NS).text
+
+    transfer = generate(build_order(kind: :stock_transfer), @company)
+    assert_equal '90', transfer.payment_method
+    assert_equal 'Sem pagamento', transfer.payment_label
+  end
+
   test 'the wholesale order discount is prorated over the items (vDesc) and lowers the note total' do
     order = build_order(order_discount: 10, order_discount_type: 'percent') # itens 25,50 -> desconto 2,55
 
