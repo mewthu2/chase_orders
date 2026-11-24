@@ -902,13 +902,11 @@ class DashboardController < ApplicationController
   end
 
   def extract_attempt_param(attempt_params, key)
-    attempt_params.to_s.match(/:#{Regexp.escape(key.to_s)}=>"([^"]*)"/)&.captures&.first
+    AttemptParamsText.value(attempt_params, key)
   end
 
   def extract_item_quantity_from_attempt_params(attempt_params, product_code)
-    item_match = attempt_params.to_s.scan(/\{[^{}]*:codigo=>"#{Regexp.escape(product_code)}"[^{}]*\}/).first
-
-    item_match&.match(/:quantidade=>"([^"]*)"/)&.captures&.first || '0'
+    AttemptParamsText.item_quantity(attempt_params, product_code)
   end
 
   def prepare_tracking_data_optimized(filters = {})

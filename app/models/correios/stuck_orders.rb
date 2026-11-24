@@ -61,12 +61,10 @@ module Correios::StuckOrders
   end
 
   def extract_param(attempt_params, key)
-    attempt_params.match(/:#{Regexp.escape(key.to_s)}=>"([^"]*)"/)&.captures&.first
+    AttemptParamsText.value(attempt_params, key)
   end
 
   def extract_item_quantity(attempt_params, product_code)
-    item_match = attempt_params.scan(/\{[^{}]*:codigo=>"#{Regexp.escape(product_code)}"[^{}]*\}/).first
-
-    item_match&.match(/:quantidade=>"([^"]*)"/)&.captures&.first || '0'
+    AttemptParamsText.item_quantity(attempt_params, product_code)
   end
 end
