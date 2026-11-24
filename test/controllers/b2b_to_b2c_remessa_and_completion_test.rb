@@ -69,7 +69,7 @@ class B2bToB2cRemessaAndCompletionTest < ActionDispatch::IntegrationTest
     assert_empty FiscalNote.where(b2b_order: order).principal, 'a nota de transferência continua separada'
   end
 
-  test 'the list shows the number of each note next to its N, with a second N for the remessa' do
+  test 'the list shows the number of each note inside its N, with a second N.r for the remessa' do
     order = build_order(status: :faturado)
     FiscalNote.create!(company: @b2c, b2b_order: order, number: 1324, series: 1, environment: :producao, status: :autorizada)
     FiscalNote.create!(company: @b2c, b2b_order: order, number: 1325, series: 1, environment: :producao, status: :assinada, role: 'remessa')
@@ -77,10 +77,9 @@ class B2bToB2cRemessaAndCompletionTest < ActionDispatch::IntegrationTest
 
     get b2c_transfers_path
 
-    assert_select '.pg-pn-note', text: /N\s*1324/
-    assert_select ".pg-pn-note a.pg-pn--remessa.is-wait[href='#{edit_b2c_transfer_path(order, tab: 'nota', anchor: 'remessaNote')}'][data-tip*='Nota de remessa: NF-e nº 1325']", text: 'N'
-    assert_select '.pg-pn-note .pg-pn-num', text: '1325'
-    assert_select "a.pg-pn--remessa.is-none[href='#{edit_b2c_transfer_path(pending_remessa, tab: 'nota', anchor: 'remessaNote')}']"
+    assert_select 'a.pg-pn.pg-pn--wide.is-ok', text: /\AN\s*1324\z/
+    assert_select "a.pg-pn--remessa.is-wait[href='#{edit_b2c_transfer_path(order, tab: 'nota', anchor: 'remessaNote')}'][data-tip*='Nota de remessa: NF-e nº 1325']", text: /\AN\.r\s*1325\z/
+    assert_select "a.pg-pn--remessa.is-none[href='#{edit_b2c_transfer_path(pending_remessa, tab: 'nota', anchor: 'remessaNote')}']", text: 'N.r'
   end
 
   test 'Concluir finishes a billed B2B to B2C transfer and takes it out of the Log02 queues' do

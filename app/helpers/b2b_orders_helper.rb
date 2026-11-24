@@ -14,7 +14,7 @@ module B2bOrdersHelper
   # note: { environment:, status:, number: } de FiscalNote.latest_by_order, ou nil.
   # remessa: o mesmo para a nota de remessa (um segundo N), só nos pedidos que têm remessa (B2bOrder#remessa_note?);
   # sem passar, a lista não mostra a remessa.
-  # numbers: true mostra o número de cada nota ao lado do N (ex.: N 1324).
+  # numbers: true mostra o número de cada nota dentro do quadrado do N (ex.: N 1324, N.r 1325).
   def b2b_pn_cell(order, note, remessa: :skip, numbers: false)
     letters = [link_to('P', b2b_order_edit_path(order), class: 'pg-pn', data: { tip: 'Pedido: abrir e editar' }, 'aria-label': 'Abrir o pedido'),
                b2b_note_letter(order, note, numbers:)]
@@ -32,12 +32,11 @@ module B2bOrdersHelper
             "#{what}: ainda não emitida. Clique para emitir."
           end
     path = b2b_order_edit_path(order, tab: 'nota', anchor: ('remessaNote' if remessa))
-    letter = link_to('N', path, class: "pg-pn #{tone}#{' pg-pn--remessa' if remessa}", data: { tip: tip },
-                                'aria-label': remessa ? 'Abrir a nota de remessa' : 'Abrir a nota fiscal')
-    return letter unless numbers
-
-    number = note ? content_tag(:span, note[:number], class: 'pg-pn-num mono') : content_tag(:span, '—', class: 'pg-pn-num is-none')
-    content_tag(:span, letter + number, class: 'pg-pn-note')
+    mark = remessa ? 'N.r' : 'N'
+    # Com numbers, o número da nota vai dentro do quadrado, na cor da situação dela (verde se autorizada).
+    body = numbers && note ? safe_join([content_tag(:span, mark, class: 'pg-pn-l'), content_tag(:span, note[:number], class: 'pg-pn-num')]) : mark
+    link_to(body, path, class: "pg-pn #{tone}#{' pg-pn--wide' if numbers || remessa}#{' pg-pn--remessa' if remessa}", data: { tip: tip },
+                        'aria-label': remessa ? 'Abrir a nota de remessa' : 'Abrir a nota fiscal')
   end
 
   # Número do pedido no Correios com a bandeirinha nas cores do Correios, para identificar de relance.
