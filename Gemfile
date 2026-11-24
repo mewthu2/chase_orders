@@ -20,6 +20,8 @@ gem 'rqrcode', '~> 2.2'
 
 # This library provides support for Ruby Shopify apps to access the Shopify Admin API, by making it easier to perform the following actions:
 gem "shopify_api"
+# O shopify_api usa OpenStruct, que no Ruby 4 deixou de vir embutido (antes chegava pelo oj).
+gem 'ostruct'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem 'rails', '~> 8.1.4', '>= 8.1.4.1'
@@ -95,6 +97,8 @@ gem "bootsnap", require: false
 
 # Nokogiri (鋸) is an HTML, XML, SAX, and Reader parser. Among Nokogiri's many features is the ability to search documents via XPath or CSS3 selectors.
 gem 'nokogiri'
+# Mesma linha do json que vem com o Ruby 4 (o 3.x muda comportamento).
+gem 'json', '~> 2.18'
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # gem "image_processing", "~> 1.2"
