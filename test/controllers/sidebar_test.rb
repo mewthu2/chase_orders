@@ -42,8 +42,9 @@ class SidebarTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".sb-link.is-active[href='#{transfer_locations_path}']"
-    assert_select '.sb-section.has-active[data-area="logistica"]'
-    assert_select '.crumbs .area-crumb', text: /Logística/
+    assert_select '.sb-section.has-active[data-area="adm"]'
+    assert_select '.crumbs .area-crumb', text: /Adm/
+    assert_select '.crumbs a', text: 'Logística'
     assert_select '.crumbs .current', text: 'Locais de Transferência'
   end
 

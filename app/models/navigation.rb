@@ -43,8 +43,6 @@ module Navigation
              path: ->(v) { v.stock_withdrawals_path }, perm: 'stock_withdrawals', active: ctrl('stock_withdrawals')),
         link('loja-transf', 'Transferência de Estoque', 'fas fa-exchange-alt', 'Peça peças de outra loja, com aprovação e rastreio.',
              path: ->(v) { v.internal_transfers_path }, perm: 'internal_transfers', active: ctrl('internal_transfers')),
-        link('config-transf', 'Configurar Transferências', 'fas fa-sliders-h', 'Quem aprova as transferências de estoque.',
-             path: ->(v) { v.edit_internal_transfer_config_path }, cond: :admin, active: ctrl('internal_transfer_configs')),
         link('loja-cashback', 'Cupons de cashback', 'fas fa-coins', 'Junte dois cupons MTZ da cliente em um cupom UNF.',
              path: ->(v) { v.cashback_unifications_path }, perm: 'cashback_unifications', active: ctrl('cashback_unifications'))
       ]),
@@ -115,8 +113,6 @@ module Navigation
         ]),
         link('log-abastecimento', 'Abastecimento Lojas', 'fas fa-dolly', 'Reponha as lojas com o estoque do Log02.',
              path: ->(v) { v.stock_transfers_path }, perm: 'store_supply', active: kind('stock_transfer')),
-        link('log-locais', 'Locais de Transferência', 'fas fa-map-marker-alt', 'Destinos (CNPJ e endereço) usados nas transferências.',
-             path: ->(v) { v.transfer_locations_path }, perm: 'transfer_locations', active: ctrl('transfer_locations')),
         link('log-transf-b2c', 'Transferências B2B ⇄ B2C', 'fas fa-random', 'Transfira peças entre o estoque de atacado e a loja online, nos dois sentidos.',
              path: ->(v) { v.b2c_transfers_path }, perm: 'b2b_transfers', active: kind('b2c_transfer'))
       ]),
@@ -145,7 +141,11 @@ module Navigation
         ]),
         group('adm-logistica', 'Logística', 'fas fa-truck-fast', 'Regras da operação de estoque.', children: [
           link('adm-prioridade-reserva', 'Priorização de reserva de estoque', 'fas fa-stairs', 'Defina quem passa na frente quando o estoque é disputado.',
-               path: ->(v) { v.stock_reservation_priority_path }, perm: 'stock_reservation_priority', active: ctrl('stock_reservation_priorities'))
+               path: ->(v) { v.stock_reservation_priority_path }, perm: 'stock_reservation_priority', active: ctrl('stock_reservation_priorities')),
+          link('config-transf', 'Configurar Transferências', 'fas fa-sliders-h', 'Quem aprova as transferências de estoque.',
+               path: ->(v) { v.edit_internal_transfer_config_path }, cond: :admin, active: ctrl('internal_transfer_configs')),
+          link('log-locais', 'Locais de Transferência', 'fas fa-map-marker-alt', 'Destinos (CNPJ e endereço) usados nas transferências.',
+               path: ->(v) { v.transfer_locations_path }, perm: 'transfer_locations', active: ctrl('transfer_locations'))
         ]),
         group('fiscal', 'Fiscal e cadastros', 'fas fa-receipt', 'Notas fiscais, empresas emissoras e transportadoras.', children: [
           link('adm-notas', 'Notas Fiscais', 'fas fa-file-invoice', 'Emita e transmita a NF-e direto na SEFAZ.',
