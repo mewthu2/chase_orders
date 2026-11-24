@@ -8,8 +8,9 @@
 #
 # Coluna: { k:, label:, t: :text|:num|:status|:person|:loc|:qty|:money|:dt|:d|:tag|:chips|:bool|:mono|:steps|:html|:progress,
 #           sub: <k>, sort: true, map: { valor => [rótulo, tom, ajuda] }, hide: true, nodetail: true, main: true, cls:, unit:, plain: }
-# Filtro: { id:, type: :search|:select|:period, label:, col:, cols: [...], options: [[valor, rótulo]], all:, tip:, ph:,
+# Filtro: { id:, type: :search|:select|:period|:month, label:, col:, cols: [...], options: [[valor, rótulo]], all:, tip:, ph:,
 #           server: true (o controller já aplicou; aqui só mostra o campo e o chip) }
+#         :month é o mês com setas (como o do Tiny), valor "AAAA-MM" ou "todos"; default: o mês mostrado sem valor na URL.
 # Indicador: { label:, icon:, tone:, help:, col:, vals: [...], sum: <k>, count:, text: }
 class HoneyTable
   PERIODS = [['1', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias']].freeze
@@ -138,6 +139,7 @@ class HoneyTable
   def filter_options(filter)
     return filter[:options] if filter[:options]
     return PERIODS if filter[:type] == :period
+    return [[filter_value(filter).to_s, self.class.month_label(filter_value(filter))]] if filter[:type] == :month
 
     column = col(filter[:col])
     if column && column[:t] == :status
@@ -145,6 +147,22 @@ class HoneyTable
     else
       rows.flat_map { |r| Array(r[filter[:col]]) }.compact.uniq.sort_by(&:to_s).map { |v| [v.to_s, v.to_s] }
     end
+  end
+
+  MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
+
+  # "2026-11" => "Novembro de 2026"; "todos" => "Todos os meses".
+  def self.month_label(value)
+    return 'Todos os meses' if value.to_s == 'todos'
+
+    date = parse_month(value) or return value.to_s
+    "#{MONTHS[date.month - 1]} de #{date.year}"
+  end
+
+  def self.parse_month(value)
+    Date.strptime(value.to_s, '%Y-%m') if value.to_s.match?(/\A\d{4}-\d{2}\z/)
+  rescue Date::Error
+    nil
   end
 
   def self.norm(text) = I18n.transliterate(text.to_s).downcase

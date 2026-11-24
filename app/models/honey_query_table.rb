@@ -33,7 +33,8 @@ class HoneyQueryTable < HoneyTable
   def kpi_value(kpi)
     return kpi[:text] if kpi.key?(:text)
     return kpi[:count] if kpi.key?(:count)
-    return kpi[:value].call(@scope) if kpi[:value].respond_to?(:call)
+    # filtered: true conta só o que os filtros deixam na lista (ex.: o mês escolhido).
+    return kpi[:value].call(kpi[:filtered] ? filtered : @scope) if kpi[:value].respond_to?(:call)
 
     attr = @attrs[kpi[:col]] or return @scope.except(:select).count
     counts = (@counts ||= {})[attr] ||= @scope.except(:select).reorder(nil).group(attr).count.transform_keys(&:to_s)
@@ -55,6 +56,9 @@ class HoneyQueryTable < HoneyTable
     super
   end
 
+  # Registros que a lista mostra com os filtros atuais (todas as páginas).
+  def filtered = filtered_scope
+
   private
 
   def filtered_scope
@@ -71,6 +75,7 @@ class HoneyQueryTable < HoneyTable
         out = if @filter_sql[f[:id]] then @filter_sql[f[:id]].call(out, value)
               elsif f[:type] == :search && @search then @search.call(out, value)
               elsif f[:type] == :period && @attrs[f[:col]] then out.where(@attrs[f[:col]] => period_start(value)..)
+              elsif f[:type] == :month then out # o controller aplica o mês (com o mês atual quando vazio)
               elsif @attrs[f[:col]] then out.where(@attrs[f[:col]] => value.to_s.split(','))
               else out
               end

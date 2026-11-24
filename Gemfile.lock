@@ -461,6 +461,7 @@ DEPENDENCIES
   rest-client
   rqrcode (~> 2.2)
   rubyXL
+  rubyzip (~> 3.0)
   selenium-webdriver
   shopify_api
   sidekiq (~> 7.2)

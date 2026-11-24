@@ -1250,6 +1250,94 @@
    "actions": [
     "Salvar"
    ]
+  },
+  "atc-notas": {
+   "title": "Notas Fiscais do Atacado",
+   "subtitle": "NF-e dos pedidos de atacado, mês a mês",
+   "purpose": "Ver as notas dos pedidos de atacado de um mês, somar o valor e baixar o XML de todas (ou das marcadas) num ZIP para a contabilidade.",
+   "when": "No fechamento do mês ou quando a contabilidade pedir os XML.",
+   "actions": [
+    "Trocar o mês pelas setas",
+    "Marcar notas para somar o valor",
+    "Baixar XML do filtro (ZIP)",
+    "Baixar XML das selecionadas",
+    "Baixar XML e DANFE de uma nota"
+   ],
+   "statuses": [
+    [
+     "Autorizada",
+     "Nota válida na SEFAZ.",
+     "green"
+    ],
+    [
+     "Cancelada",
+     "Era autorizada e foi cancelada.",
+     "purple"
+    ],
+    [
+     "Rejeitada",
+     "A SEFAZ recusou: abra o pedido e corrija.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "XML",
+     "O arquivo digital da nota, que vai para a contabilidade."
+    ],
+    [
+     "ZIP",
+     "Um arquivo só com o XML de várias notas."
+    ],
+    [
+     "Valor da nota",
+     "Produtos, frete, seguro e despesas, menos o desconto."
+    ]
+   ]
+  },
+  "log-notas": {
+   "title": "Notas Fiscais da Logística",
+   "subtitle": "NF-e do abastecimento e das transferências, mês a mês",
+   "purpose": "Ver as notas do abastecimento das lojas e das transferências B2B ⇄ B2C (com as notas de remessa) de um mês, somar o valor e baixar o XML num ZIP.",
+   "when": "No fechamento do mês ou quando a contabilidade pedir os XML.",
+   "actions": [
+    "Trocar o mês pelas setas",
+    "Filtrar por tipo (abastecimento, transferência, remessa)",
+    "Marcar notas para somar o valor",
+    "Baixar XML do filtro (ZIP)",
+    "Baixar XML das selecionadas"
+   ],
+   "statuses": [
+    [
+     "Autorizada",
+     "Nota válida na SEFAZ.",
+     "green"
+    ],
+    [
+     "Cancelada",
+     "Era autorizada e foi cancelada.",
+     "purple"
+    ],
+    [
+     "Rejeitada",
+     "A SEFAZ recusou: abra o pedido e corrija.",
+     "red"
+    ]
+   ],
+   "terms": [
+    [
+     "XML",
+     "O arquivo digital da nota, que vai para a contabilidade."
+    ],
+    [
+     "ZIP",
+     "Um arquivo só com o XML de várias notas."
+    ],
+    [
+     "Valor da nota",
+     "Produtos, frete, seguro e despesas, menos o desconto."
+    ]
+   ]
   }
  },
  "glossary": [
@@ -1462,6 +1550,8 @@
   "log-transf-b2c": "transferencia atacado loja online b2b b2c",
   "log-locais": "destino cnpj endereco transferencia",
   "atc-frete": "frete tabela faixa valor pedido atacado",
-  "log02-xml": "nota nf nfe emissao fiscal sefaz"
+  "log02-xml": "nota nf nfe emissao fiscal sefaz",
+  "atc-notas": "nota nf nfe xml zip contabilidade mes atacado fiscal",
+  "log-notas": "nota nf nfe xml zip contabilidade mes abastecimento transferencia remessa fiscal"
  }
 }

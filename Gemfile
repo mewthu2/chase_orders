@@ -5,6 +5,8 @@ ruby "4.0.10"
 
 # This gem supports operating on xlsx files (Open XML format). While it is capable of properly parsing the entire OOXML structure
 gem 'rubyXL'
+# ZIP com os XML das notas fiscais (Notas Fiscais do Atacado e da Logística)
+gem 'rubyzip', '~> 3.0', require: 'zip'
 
 gem 'wicked_pdf'
 gem 'wkhtmltopdf-binary'

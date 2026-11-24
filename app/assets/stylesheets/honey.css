@@ -1551,6 +1551,20 @@ a.pg-kpi:hover .go, .pg-kpi.is-active .go { opacity: 1; transform: none; }
 .pg-bulk b { color: var(--text); font-size: 14px; }
 .pg-bulk.is-on { background: linear-gradient(90deg, rgba(18,135,214,.14), rgba(18,135,214,.03)); color: var(--text-2); }
 .pg-bulk-hint { margin-left: auto; color: var(--text-4); }
+.pg-month { display: flex; align-items: center; gap: 6px; }
+.pg-month .select-wrap { flex: 1; min-width: 0; }
+.pg-month-nav { flex: none; display: inline-grid; place-items: center; width: 34px; height: 38px; border-radius: var(--r); color: var(--text-2); text-decoration: none;
+  background: var(--surface-2); border: 1px solid var(--border-2); transition: transform var(--t-fast), color var(--t-fast), border-color var(--t-fast), background-color var(--t-fast); }
+.pg-month-nav:hover { color: #fff; border-color: var(--brand-400); background: rgba(18,135,214,.14); }
+.pg-month-nav:first-child:hover { transform: translateX(-2px); }
+.pg-month-nav:last-child:hover { transform: translateX(2px); }
+.fnl-sum { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border-2); background: rgba(255,255,255,.03); transition: border-color var(--t), background-color var(--t), color var(--t); }
+.fnl-sum i { color: var(--yellow); font-size: 11px; }
+.fnl-sum b { font-variant-numeric: tabular-nums; }
+.fnl-bulk.is-on .fnl-sum { color: var(--yellow); border-color: rgba(227,179,65,.4); background: var(--yellow-bg); animation: fnl-pop .35s var(--spring, ease) both; }
+.fnl-bulk .btn.is-disabled { opacity: .45; pointer-events: none; }
+@keyframes fnl-pop { 0% { transform: scale(.92); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .fnl-bulk.is-on .fnl-sum, .pg-month-nav { animation: none; transition: none; } }
 .pg-bulk.is-on .pg-bulk-hint { display: none; }
 .pg-mono { font-size: 12.5px; color: var(--text); }
 .pg-copy { margin-left: 6px; width: 22px; height: 22px; border-radius: 6px; font-size: 11px; color: var(--text-4); opacity: 0; transition: opacity var(--t-fast), color var(--t-fast), background-color var(--t-fast); }

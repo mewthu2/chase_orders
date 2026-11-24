@@ -86,7 +86,8 @@ module NavigationHelper
       title: "Ajuda: #{screen['title'] || item[:label]}",
       sub: [entry[:area]&.dig(:title), entry[:group]&.dig(:label)].compact.join(' › '),
       icon: item[:icon], id: id, screen: screen, item: item, group: entry[:group],
-      perm: item[:perm]
+      # Item com várias permissões (basta uma): mostra a primeira que o usuário tem.
+      perm: Array(item[:perm]).find { |key| current_user.can?(key) } || Array(item[:perm]).first
     }
   end
 

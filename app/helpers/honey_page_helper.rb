@@ -121,7 +121,9 @@ module HoneyPageHelper
     name = table.param_name(filter[:id])
     value = table.filter_value(filter)
     label = content_tag(:label, safe_join([filter[:label], (content_tag(:span, 'i', class: 'info-dot', tabindex: 0, data: { tip: filter[:tip] }) if filter[:tip])].compact), class: 'field-label', for: "pgf-#{table.id}-#{filter[:id]}")
-    if filter[:type] == :search
+    if filter[:type] == :month
+      hc_pg_month_field(table, filter, name, value, label)
+    elsif filter[:type] == :search
       content_tag(:div, class: 'filter-field pg-ff-search') do
         label + content_tag(:div, text_field_tag(name, value, id: "pgf-#{table.id}-#{filter[:id]}", class: "field-input#{' is-set' if value}", placeholder: filter[:ph] || 'Buscar…', autocomplete: 'off', onchange: 'this.form.requestSubmit()'), class: 'select-wrap pg-search')
       end
@@ -130,6 +132,28 @@ module HoneyPageHelper
       options = [[all, '']] + table.filter_options(filter).map { |v, l| [l, v] }
       content_tag(:div, class: 'filter-field') do
         label + content_tag(:div, select_tag(name, options_for_select(options, value.to_s), id: "pgf-#{table.id}-#{filter[:id]}", class: "field-input#{' is-set' if value}", onchange: 'this.form.requestSubmit()'), class: 'select-wrap')
+      end
+    end
+  end
+
+  # Mês com setas, como o filtro do Tiny: ‹ Novembro de 2026 ›, mais "Todos os meses" no fim da lista.
+  def hc_pg_month_field(table, filter, name, value, label)
+    all = value.to_s == 'todos'
+    shown = HoneyTable.parse_month(value) || HoneyTable.parse_month(filter[:default]) || Date.current.beginning_of_month
+    page = table.param_name(:page)
+    months = (0...36).map { |i| Date.current.beginning_of_month << i }
+    months = (months | [shown]).sort.reverse
+    options = months.map { |d| [HoneyTable.month_label(d.strftime('%Y-%m')), d.strftime('%Y-%m')] } + [['Todos os meses', 'todos']]
+    nav = lambda do |date, icon, tip|
+      link_to(content_tag(:i, '', class: "fas #{icon}"), hc_pg_url(name => date.strftime('%Y-%m'), page => nil),
+              class: 'pg-month-nav', data: { tip: tip }, 'aria-label': tip)
+    end
+    content_tag(:div, class: 'filter-field pg-ff-month') do
+      label + content_tag(:div, class: "pg-month#{' is-all' if all}") do
+        nav.call(shown << 1, 'fa-chevron-left', 'Mês anterior') +
+          content_tag(:div, select_tag(name, options_for_select(options, all ? 'todos' : shown.strftime('%Y-%m')), id: "pgf-#{table.id}-#{filter[:id]}",
+                                       class: 'field-input is-set', onchange: 'this.form.requestSubmit()'), class: 'select-wrap') +
+          nav.call(shown >> 1, 'fa-chevron-right', 'Próximo mês')
       end
     end
   end

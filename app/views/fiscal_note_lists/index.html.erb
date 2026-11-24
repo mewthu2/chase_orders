@@ -1,0 +1,91 @@
+<% content_for :title, list[:title] %>
+<% table = fiscal_note_list_table(list_key, @scope) %>
+<% can_export = list[:screens].any? { |key| screen_can?(key, :export) } %>
+<% xmls_path = list_key == 'atacado' ? xmls_wholesale_fiscal_notes_path : xmls_logistics_fiscal_notes_path %>
+<% filter_query = request.query_parameters.except('page') %>
+
+<%= hc_page_header list[:title], list[:subtitle], icon: list[:icon] do %>
+  <% if can_export %>
+    <%= link_to xmls_path + (filter_query.any? ? "?#{filter_query.to_query}" : ''), class: 'btn btn-export', id: 'fnlZipAll',
+                data: { tip: 'Baixa um ZIP com o XML de cada nota autorizada ou cancelada que a lista mostra (todas as páginas). As canceladas levam o evento de cancelamento junto.' } do %>
+      <i class="fas fa-file-zipper"></i>Baixar XML do filtro (ZIP)
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks fnl">
+  <%= hc_pg_kpis(table) %>
+  <% bulk = capture do %>
+    <div class="pg-bulk fnl-bulk" data-fnl-bulk data-zip-url="<%= xmls_path %>" data-query="<%= filter_query.to_query %>">
+      <span><b data-fnl-count>0</b> <span data-fnl-unit>selecionadas</span></span>
+      <span class="fnl-sum" data-tip="Soma das notas ativas selecionadas (rascunho, assinada e autorizada), com frete e despesas.">
+        <i class="fas fa-sack-dollar"></i><b data-fnl-sum>R$ 0,00</b>
+      </span>
+      <% if can_export %>
+        <a class="btn btn-sm btn-primary is-disabled" data-fnl-zip href="#" aria-disabled="true"><i class="fas fa-file-zipper"></i>Baixar XML das selecionadas</a>
+      <% end %>
+      <button type="button" class="btn btn-ghost btn-sm" data-fnl-clear>Limpar seleção</button>
+      <span class="pg-bulk-hint">Marque as notas para somar o valor e baixar só o XML delas.</span>
+    </div>
+  <% end %>
+  <%= hc_pg_table(table, title: 'Notas fiscais', icon: 'fas fa-file-invoice',
+        meta: 'Do mês escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
+        link: ->(r) {
+          note = r[:record]
+          screen_can?(:fiscal_notes) ? fiscal_note_path(note) : b2b_order_edit_path(note.b2b_order, tab: 'nota', anchor: ('remessaNote' if note.remessa?))
+        },
+        select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]) } },
+        bulk: bulk,
+        empty: { title: 'Nenhuma nota neste mês', text: 'Use as setas do filtro de mês para ver outros meses.' },
+        detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]],
+                  note: ->(r) { r[:erro].presence || (r[:amb] == 'homologacao' ? 'Nota de homologação (teste): não tem valor fiscal.' : nil) } },
+        actions: ->(r) {
+          note = r[:record]
+          safe_join([
+            (hc_row_action('fas fa-file-code', 'Baixar XML', xml_fiscal_note_path(note)) if note.xml_available? && can_export),
+            (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', danfe_fiscal_note_path(note)) if note.xml_available? && can_export)
+          ].compact)
+        }) %>
+</div>
+
+<script>
+  (function () {
+    var bar = document.querySelector('[data-fnl-bulk]');
+    if (!bar) return;
+    var table = bar.closest('.pg-body') || document;
+    var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    var zip = bar.querySelector('[data-fnl-zip]');
+
+    function boxes() { return table.querySelectorAll('.row-select-checkbox'); }
+    function refresh() {
+      var ids = [], sum = 0;
+      boxes().forEach(function (cb) {
+        if (!cb.checked) return;
+        ids.push(cb.dataset.id);
+        if (cb.dataset.active === 'true') sum += parseFloat(cb.dataset.value || '0');
+      });
+      bar.querySelector('[data-fnl-count]').textContent = ids.length;
+      bar.querySelector('[data-fnl-unit]').textContent = ids.length === 1 ? 'selecionada' : 'selecionadas';
+      bar.querySelector('[data-fnl-sum]').textContent = money.format(sum);
+      bar.classList.toggle('is-on', ids.length > 0);
+      var all = table.querySelector('#selectAllCheckbox');
+      if (all) all.checked = ids.length > 0 && ids.length === boxes().length;
+      if (zip) {
+        var query = bar.dataset.query ? bar.dataset.query + '&' : '';
+        zip.href = ids.length ? bar.dataset.zipUrl + '?' + query + ids.map(function (id) { return 'ids%5B%5D=' + id; }).join('&') : '#';
+        zip.classList.toggle('is-disabled', !ids.length);
+        zip.setAttribute('aria-disabled', ids.length ? 'false' : 'true');
+      }
+    }
+
+    table.addEventListener('change', function (e) {
+      if (e.target.id === 'selectAllCheckbox') boxes().forEach(function (cb) { cb.checked = e.target.checked; });
+      if (e.target.id === 'selectAllCheckbox' || e.target.classList.contains('row-select-checkbox')) refresh();
+    });
+    bar.querySelector('[data-fnl-clear]').addEventListener('click', function () {
+      boxes().forEach(function (cb) { cb.checked = false; });
+      refresh();
+    });
+    if (zip) zip.addEventListener('click', function (e) { if (zip.classList.contains('is-disabled')) e.preventDefault(); });
+  })();
+</script>

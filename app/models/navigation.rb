@@ -2,7 +2,7 @@
 # a barra lateral, a busca rápida (Ctrl + K), o mapa do sistema e a ajuda de cada tela.
 #
 # Cada item: id (casa com config/honey/help.json), label, icon, desc, path (lambda que recebe
-# a view), perm (chave de Screen; nil = qualquer usuário logado), cond (:admin ou
+# a view), perm (chave de Screen, ou uma lista: basta ter uma; nil = qualquer usuário logado), cond (:admin ou
 # :sectors_non_admin), active (lambda que recebe a view e diz se a tela atual é este item),
 # step (número da etapa nos fluxos do Correios), aka (nome antigo), badge (:waiting_me, :catalogs).
 module Navigation
@@ -12,6 +12,7 @@ module Navigation
   def page(controller, *actions) = ->(v) { v.controller_path == controller && actions.include?(v.action_name) }
   def kind(value) = ->(v) { v.controller_path == 'b2b_orders' && v.params[:order_kind] == value }
   def channel(value) = ->(v) { v.controller_path == 'attempts' && v.params[:channel] == value }
+  def note_list(value) = ->(v) { v.controller_path == 'fiscal_note_lists' && v.params[:list] == value }
   def home(scope) = ->(v) { v.controller_path == 'home' && (v.params[:scope].presence || 'mine') == scope }
 
   def menu
@@ -114,7 +115,9 @@ module Navigation
         link('log-abastecimento', 'Abastecimento Lojas', 'fas fa-dolly', 'Reponha as lojas com o estoque do Log02.',
              path: ->(v) { v.stock_transfers_path }, perm: 'store_supply', active: kind('stock_transfer')),
         link('log-transf-b2c', 'Transferências B2B ⇄ B2C', 'fas fa-random', 'Transfira peças entre o estoque de atacado e a loja online, nos dois sentidos.',
-             path: ->(v) { v.b2c_transfers_path }, perm: 'b2b_transfers', active: kind('b2c_transfer'))
+             path: ->(v) { v.b2c_transfers_path }, perm: 'b2b_transfers', active: kind('b2c_transfer')),
+        link('log-notas', 'Notas Fiscais', 'fas fa-file-invoice', 'Notas do abastecimento e das transferências, mês a mês, com o ZIP dos XML.',
+             path: ->(v) { v.logistics_fiscal_notes_path }, perm: %w[store_supply b2b_transfers], active: note_list('logistica'))
       ]),
 
       area('atacado', [
@@ -124,6 +127,8 @@ module Navigation
              path: ->(v) { v.b2b_orders_path }, perm: 'b2b_orders', active: kind('sale')),
         link('atc-frete', 'Tabela de Frete', 'fas fa-truck-ramp-box', 'Frete do pedido de atacado por faixa de valor do pedido.',
              path: ->(v) { v.b2b_freight_rates_path }, perm: 'b2b_orders', active: ctrl('b2b_freight_rates')),
+        link('atc-notas', 'Notas Fiscais', 'fas fa-file-invoice', 'Notas dos pedidos de atacado, mês a mês, com o ZIP dos XML.',
+             path: ->(v) { v.wholesale_fiscal_notes_path }, perm: 'b2b_orders', active: note_list('atacado')),
         link('atc-catalogos', 'Catálogos', 'fas fa-book-open', 'Monte catálogos e mande o link para lojistas encomendarem.',
              path: ->(v) { v.b2b_catalogs_path }, perm: 'b2b_catalogs', badge: :catalogs, active: ctrl('b2b_catalogs', 'b2b_catalog_orders'))
       ]),
@@ -197,7 +202,7 @@ module Navigation
     return false if item[:cond] == :sectors_non_admin && (user.admin? || user.visible_ticket_sector_ids.empty?)
     return true unless item[:perm]
 
-    user.can?(item[:perm], item[:act] || 'V')
+    Array(item[:perm]).any? { |key| user.can?(key, item[:act] || 'V') }
   end
 
   # Menu só com o que o usuário pode abrir: grupos e áreas vazios somem, e os títulos de
