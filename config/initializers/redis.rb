@@ -48,12 +48,15 @@ Rails.application.configure do
   }
 end
 
+# Nunca logar a senha do Redis (a URL traz usuário e senha).
+redis_url_for_log = redis_url.to_s.sub(%r{//[^@/]*@}, '//[FILTRADO]@')
+
 begin
   $redis.ping
-  Rails.logger.info "Redis conectado com sucesso: #{redis_url}"
+  Rails.logger.info "Redis conectado com sucesso: #{redis_url_for_log}"
 rescue Redis::BaseError => e
   Rails.logger.error "Erro ao conectar com Redis: #{e.message}"
-  Rails.logger.error "Verifique se o Redis está rodando em: #{redis_url}"
+  Rails.logger.error "Verifique se o Redis está rodando em: #{redis_url_for_log}"
 end
 
 def redis_expire_if_exists(key, ttl)

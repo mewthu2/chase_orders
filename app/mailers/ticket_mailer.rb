@@ -4,7 +4,7 @@ class TicketMailer < ApplicationMailer
   layout 'ticket_mailer'
   helper TicketsHelper
 
-  LOGO_PATH = Rails.root.join('app/assets/images/admin/chase-logo.png')
+  LOGO_PATH = Rails.root.join('app/assets/images/mail/honey-chase-logo.png') # 400x44, ~35 KB: vai anexado em todo e-mail
   TIPS = [
     '📸 Cole prints direto no chamado com Ctrl+V — não precisa salvar o arquivo antes.',
     '⚡ Quanto mais detalhes na primeira mensagem, mais rápido o chamado anda.',
