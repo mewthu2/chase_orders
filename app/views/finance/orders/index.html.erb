@@ -2,6 +2,7 @@
 <% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
 <% statuses = { 'pago' => ['Pago', 'green', 'Recebido.'], 'pendente' => ['Pendente', 'yellow', 'Boleto ainda não pago, dentro do vencimento.'],
                 'vencido' => ['Vencido', 'red', 'Boleto não pago e já vencido.'] } %>
+<% order_statuses = b2b_order_statuses.except('cancelado') %>
 <% can_pay = screen_can?(:finance_orders, :edit) %>
 <% today = Date.current %>
 <% rows = @receivables.map do |r|
@@ -18,7 +19,7 @@
        consultor: consultant ? safe_join([consultant, (hc_status('cadastro pendente', 'yellow', tip: 'Nome digitado no pedido, sem cadastro. Cadastre ou vincule em Financeiro › Consultores.') if order.consultant_pending?)].compact, ' ') : '—',
        consultor_txt: consultant.to_s, digitador: order.user&.name || '—',
        valor: r[:amount].to_f, venc: r[:due], pago_em: r[:paid_at], pago_txt: r[:paid_at] ? l(r[:paid_at], format: '%d/%m/%Y') : '—',
-       st: st, quem: payment&.paid_by&.name || (payment ? '—' : 'Na criação (PIX/cartão)') }
+       st: st, ost: order.status, quem: payment&.paid_by&.name || (payment ? '—' : 'Na criação (PIX/cartão)') }
    end %>
 <% sum = ->(sts) { rows.select { |r| sts.include?(r[:st]) }.sum { |r| r[:valor] } } %>
 <% table = HoneyTable.new(params, rows: rows, unit: 'recebimentos', unit1: 'recebimento', page_size: 25, sort: { k: :venc, dir: 1 },
@@ -34,9 +35,11 @@
        { k: :venc, label: 'Vencimento', t: :d, sort: true },
        { k: :pago_txt, label: 'Pago em', sub: :quem },
        { k: :quem, label: 'Baixa por', hide: true },
-       { k: :st, label: 'Situação', t: :status, map: statuses }
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :ost, label: 'Status do pedido', t: :status, map: order_statuses }
      ],
      filters: [
+       { id: :ost, type: :select, label: 'Status do pedido', col: :ost, all: 'Todos os status', tip: 'Em que ponto está o pedido, da aprovação no Log02 até a entrega.' },
        { id: :mes, type: :month, label: 'Vencimento', server: true, default: @month, tip: 'Mês do vencimento da parcela (PIX e cartão: a data do pedido). Use "todos" para ver tudo.' },
        { id: :q, type: :search, label: 'Buscar', ph: 'Pedido, cliente, consultor…', cols: %i[num cliente consultor_txt digitador], tip: 'Procura no número do pedido, no cliente, no consultor e no vendedor.' }
      ],

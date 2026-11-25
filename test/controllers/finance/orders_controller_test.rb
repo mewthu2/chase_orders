@@ -27,6 +27,18 @@ class Finance::OrdersControllerTest < ActionDispatch::IntegrationTest
     assert_match 'cadastro pendente', response.body
   end
 
+  test 'lista mostra o status do pedido e filtra por ele' do
+    @pix.update_columns(status: B2bOrder.statuses[:enviado])
+    sign_in @finance
+    get finance_orders_path(mes: 'todos')
+    assert_select 'th', text: /Status do pedido/
+    assert_select 'td', text: /Enviado/
+    assert_select 'td', text: /Aberto/
+    get finance_orders_path(mes: 'todos', ost: 'enviado')
+    assert_select '.row-select-checkbox', count: 1
+    assert_select 'td', text: /Aberto/, count: 0
+  end
+
   test 'pay grava data e quem deu baixa; unpay desfaz' do
     sign_in @finance
     payment = @boleto.payments.first

@@ -7,6 +7,22 @@ module B2bOrdersHelper
     end
   end
 
+  # Status do pedido nas listas ({ status => [rótulo, tom, ajuda] }). Hash novo a cada chamada: a lista das
+  # transferências troca alguns textos.
+  def b2b_order_statuses
+    {
+      'aberto' => ['Aberto', 'gray', 'Salvo no Honey, esperando a aprovação em Log02 › Pedidos p/ Aprovar.'],
+      'aprovado' => ['Aprovado', 'blue', 'Aprovado no Log02: entra no Correios na próxima rodada da criação.'],
+      'preparando_envio' => ['Preparando envio', 'purple', 'Já está no Correios, aguardando a NF-e e o despacho.'],
+      'faturado' => ['Faturado', 'yellow', 'NF-e emitida e XML enviado ao Correios; esperando o rastreio.'],
+      'pronto_para_envio' => ['Pronto para envio', 'orange', 'Embalado, esperando a coleta.'],
+      'enviado' => ['Enviado', 'green', 'Já saiu para entrega.'],
+      'nao_entregue' => ['Não entregue', 'red', 'A transportadora não conseguiu entregar. Fale com o cliente.'],
+      'dados_incompletos' => ['Dados incompletos', 'red', 'Pedido com dados faltando. Veja o motivo no histórico.'],
+      'cancelado' => ['Cancelado', 'gray', 'Cancelado.']
+    }
+  end
+
   B2B_NOTE_TONES = { 'autorizada' => ['is-ok', 'autorizada'], 'rejeitada' => ['is-err', 'rejeitada'], 'erro' => ['is-wait', 'sem resposta da SEFAZ'],
                      'assinada' => ['is-wait', 'assinada, falta enviar à SEFAZ'], 'rascunho' => ['is-wait', 'gerada, falta emitir'] }.freeze
 
