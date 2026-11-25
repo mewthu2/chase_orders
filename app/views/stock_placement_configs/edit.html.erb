@@ -1,0 +1,43 @@
+<% content_for :title, 'Colocação de Estoque · Configurações' %>
+<%= hc_page_header 'Configurações da colocação', 'Empresa, natureza de operação e destinatário da nota de remessa de cada lado.', icon: 'fas fa-sliders' do %>
+  <%= link_to stock_placements_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+<% end %>
+
+<%= form_with url: stock_placement_config_path, method: :patch, local: true, data: { turbo: false } do %>
+  <div class="sp-config">
+    <% StockPlacement::SIDES.each do |side, side_label| %>
+      <% config = @configs[side] %>
+      <% data = config.recipient_data %>
+      <div class="form-section">
+        <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-warehouse me-2"></i><%= side_label %></h5></div>
+        <div class="form-section-body">
+          <div class="form-grid">
+            <div class="form-col-6">
+              <label class="field-label" for="cfg_<%= side %>_company">Empresa que emite a remessa</label>
+              <%= select_tag "configs[#{side}][company_id]", options_from_collection_for_select(@companies, :id, ->(c) { "#{c.trade_name.presence || c.legal_name} · #{Nfe::Cnpj.format(c.cnpj)}" }, config.company_id),
+                             include_blank: 'Escolha…', class: 'field-input', id: "cfg_#{side}_company" %>
+            </div>
+            <div class="form-col-6">
+              <label class="field-label" for="cfg_<%= side %>_nature">Natureza de operação</label>
+              <%= select_tag "configs[#{side}][operation_nature_id]",
+                             options_for_select(@natures.map { |n| ["#{n.description} (#{n.company&.trade_name.presence || n.company&.legal_name})", n.id] }, config.operation_nature_id),
+                             include_blank: 'Escolha…', class: 'field-input', id: "cfg_#{side}_nature" %>
+              <small class="field-hint">Ex.: 5905 - Remessa para depósito fechado ou armazém geral. As naturezas ficam em Adm › Naturezas de Operação.</small>
+            </div>
+          </div>
+          <h6 class="sp-cfg-sub">Destinatário (depósito do Correios)</h6>
+          <div class="form-grid">
+            <% [['name', 'Nome', 6], ['document', 'CNPJ', 3], ['state_registration', 'Inscrição estadual', 3], ['street', 'Logradouro', 6], ['number', 'Número', 2],
+                ['complement', 'Complemento', 4], ['neighbourhood', 'Bairro', 4], ['city', 'Cidade', 4], ['state', 'UF', 2], ['zip', 'CEP', 3], ['city_ibge_code', 'Código IBGE', 3]].each do |field, label, cols| %>
+              <div class="form-col-<%= cols %>">
+                <label class="field-label" for="cfg_<%= side %>_<%= field %>"><%= label %></label>
+                <%= text_field_tag "configs[#{side}][recipient][#{field}]", data[field], class: 'field-input', id: "cfg_#{side}_#{field}" %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <div class="form-actions"><%= submit_tag 'Salvar configurações', class: 'btn-submit' %></div>
+<% end %>

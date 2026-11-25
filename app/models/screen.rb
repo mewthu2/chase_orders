@@ -45,6 +45,8 @@ class Screen
     store_supply:           { label: 'Abastecimento Lojas',                   area: 'logistica', acts: 'VCEXDP', loc: true },
     transfer_locations:     { label: 'Locais de Transferência',               area: 'logistica', acts: 'VCED' },
     b2b_transfers:          { label: 'Transferência B2B → B2C',               area: 'logistica', acts: 'VCEXDP' },
+    stock_entries:          { label: 'Notas Fiscais de Entrada',              area: 'logistica', acts: 'VCDP' },
+    stock_placements:       { label: 'Colocação de Estoque',                  area: 'logistica', acts: 'VCEXP' },
     clients:                { label: 'Cadastro de Clientes',                  area: 'atacado',   acts: 'VCED' },
     b2b_orders:             { label: 'Pedidos de Atacado',                    area: 'atacado',   acts: 'VCEXDP' },
     b2b_catalogs:           { label: 'Catálogos',                             area: 'atacado',   acts: 'VCEXP' },

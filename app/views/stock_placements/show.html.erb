@@ -1,0 +1,148 @@
+<% content_for :title, "Colocação · NF-e #{@entry.number}" %>
+<% rec = @entry.reconciliation %>
+<% balanced = @entry.balanced? %>
+<% can_upload = screen_can?(:stock_placements, :create) %>
+<% can_emit = screen_can?(:stock_placements, :execute) %>
+<% can_export = screen_can?(:stock_placements, :export) %>
+<% problems = rec.reject { |r| r[:diff].zero? && !r[:outside] } %>
+<% judged = @entry.both_sides? %>
+
+<% unless turbo_frame_request? %>
+  <%= hc_page_header "Colocação · NF-e #{@entry.number}", @entry.supplier_name, icon: 'fas fa-boxes-stacked' do %>
+    <%= link_to stock_placements_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+  <% end %>
+<% end %>
+<%= turbo_frame_tag 'placement_panel' do %>
+  <div class="sp-panel" <%= 'data-sp-changed' if flash[:notice] || flash[:alert] %>>
+    <% if flash[:notice] %><div class="callout pg-banner is-ok"><i class="fas fa-circle-check"></i><div><%= flash[:notice] %></div></div><% end %>
+    <% if flash[:alert] %><div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i><div><%= flash[:alert] %></div></div><% end %>
+
+    <div class="sp-head">
+      <div>
+        <h3>NF-e de entrada nº <%= @entry.number %> · <%= @entry.supplier_name %></h3>
+        <p><%= @entry.issued_at ? l(@entry.issued_at, format: '%d/%m/%Y') : '—' %> · <%= @entry.items.size %> itens · <b><%= stock_qty(@entry.pieces) %> peças</b> · <%= stock_money(@entry.total_value) %></p>
+      </div>
+      <% label, tone, tip = StockEntry::STATUSES.fetch(@entry.status) %>
+      <%= hc_status(label, tone, tip: tip) %>
+    </div>
+
+    <div class="sp-sides">
+      <% StockPlacement::SIDES.each do |side, side_label| %>
+        <% placement = @entry.placement(side) %>
+        <% config = StockPlacementConfig.for(side) %>
+        <% active = placement&.active_note %>
+        <section class="sp-side">
+          <header>
+            <h4><i class="fas fa-warehouse"></i><%= side_label %></h4>
+            <span><%= config.company ? (config.company.trade_name.presence || config.company.legal_name) : 'sem empresa configurada' %></span>
+          </header>
+
+          <% if placement %>
+            <div class="sp-csv">
+              <i class="fas fa-file-csv"></i>
+              <div><b><%= placement.csv_filename.presence || 'CSV' %></b>
+                <span><%= placement.quantities.size %> SKUs · <%= stock_qty(placement.pieces) %> peças · <%= placement.uploaded_by&.name %>, <%= l(placement.updated_at, format: '%d/%m %H:%M') %></span></div>
+              <% if can_upload && !active %>
+                <%= button_to remove_stock_placement_path(@entry, side: side), method: :delete, class: 'action-btn', 'aria-label': 'Retirar CSV',
+                              form: { data: { hc_confirm: { title: "Retirar o CSV do #{side_label}?", text: 'A conferência volta a esperar este lado.', ok: 'Retirar', danger: true }.to_json } } do %><i class="fas fa-xmark"></i><% end %>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="sp-wait"><i class="fas fa-hourglass-half"></i>Falta o CSV deste lado.</p>
+          <% end %>
+
+          <% if can_upload && !active %>
+            <%= form_with url: upload_stock_placement_path(@entry, side: side), method: :post, multipart: true, class: 'sp-upload' do %>
+              <label class="btn btn-secondary btn-sm">
+                <i class="fas fa-upload"></i><span data-sp-name><%= placement ? 'Trocar CSV' : 'Escolher CSV' %></span>
+                <%= file_field_tag :csv, accept: '.csv,text/csv,text/plain', hidden: true, required: true,
+                                   onchange: "this.closest('label').querySelector('[data-sp-name]').textContent = this.files[0] ? this.files[0].name : 'Escolher CSV'; this.form.querySelector('[type=submit]').disabled = !this.files[0]" %>
+              </label>
+              <button type="submit" class="btn btn-primary btn-sm" disabled>Subir</button>
+            <% end %>
+          <% end %>
+
+          <% if placement&.divergence_acknowledged_at %>
+            <p class="sp-acked"><i class="fas fa-triangle-exclamation"></i>Nota gerada com divergência: ciente <%= placement.divergence_acknowledged_by&.name || '—' %>, <%= l(placement.divergence_acknowledged_at, format: '%d/%m/%Y %H:%M') %>.</p>
+          <% end %>
+          <div class="sp-notes">
+            <% (placement ? placement.notes_by_recent.to_a : []).each do |note| %>
+              <% nl = FiscalNote::STATUS_LABELS[note.status] %>
+              <div class="sp-note is-<%= note.status %>">
+                <div>
+                  <b>NF-e de remessa nº <%= note.number %></b>
+                  <span><%= nl %> · <%= note.environment_label %> · <%= stock_money(note.total_value) %></span>
+                  <% if note.rejeitada? || note.erro? %><small><%= note.sefaz_message.presence || note.error_message %></small><% end %>
+                </div>
+                <div class="sp-note-acts">
+                  <% if can_export && note.xml_available? %>
+                    <%= link_to note_danfe_stock_placement_path(@entry, note_id: note.id), class: 'action-btn', data: { turbo: false, tip: 'Baixar DANFE' }, 'aria-label': 'DANFE' do %><i class="fas fa-file-pdf"></i><% end %>
+                    <%= link_to note_xml_stock_placement_path(@entry, note_id: note.id), class: 'action-btn', data: { turbo: false, tip: 'Baixar XML' }, 'aria-label': 'XML' do %><i class="fas fa-file-code"></i><% end %>
+                  <% end %>
+                  <% if can_emit && (note.emittable? || note.transmittable?) %>
+                    <%= button_to transmit_stock_placement_path(@entry, note_id: note.id), method: :post, class: 'btn btn-primary btn-sm',
+                                  form: { data: { hc_confirm: { title: "Emitir na SEFAZ a NF-e de remessa nº #{note.number} (#{side_label})?", text: "Tem certeza? #{note.environment_label}: depois de autorizada, só dá para cancelar na SEFAZ.", ok: 'Sim, emitir', icon: 'fas fa-paper-plane' }.to_json } } do %>
+                      <i class="fas fa-paper-plane"></i><%= note.erro? ? 'Consultar na SEFAZ' : 'Emitir na SEFAZ' %>
+                    <% end %>
+                  <% end %>
+                  <% if can_emit && note.undeletable_reason.nil? && !note.cancelada? %>
+                    <%= button_to discard_note_stock_placement_path(@entry, note_id: note.id), method: :delete, class: 'action-btn action-btn--danger', 'aria-label': 'Excluir nota',
+                                  form: { data: { hc_confirm: { title: "Excluir a NF-e de remessa nº #{note.number}?", text: 'Ela ainda não vale na SEFAZ. Depois dá para gerar outra.', ok: 'Excluir', danger: true }.to_json } } do %><i class="fas fa-trash"></i><% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            <% if can_emit && placement && !active %>
+              <% env = config.company&.environment || 'producao' %>
+              <% div_text = balanced ? '' : " ATENÇÃO: a conferência com a nota de entrada tem #{@entry.both_sides? ? "#{problems.size} divergência(s)" : 'lado sem CSV'} e você marcou que está ciente." %>
+              <%= form_with url: generate_stock_placement_path(@entry, side: side), method: :post, class: 'sp-gen-form',
+                            data: { hc_confirm: { title: "Gerar a NF-e de remessa do #{side_label}?", text: "#{placement.quantities.size} SKUs, #{placement.pieces} peças, pelo valor da nota de entrada (#{env == 'homologacao' ? 'homologação' : 'produção'}). Ela sai como rascunho para você conferir o DANFE antes de emitir.#{div_text}", ok: 'Gerar nota', icon: 'fas fa-file-invoice', danger: !balanced }.to_json } do %>
+                <%= hidden_field_tag :environment, env %>
+                <% unless balanced %>
+                  <label class="sp-ack">
+                    <%= check_box_tag :ciente, '1', false, onchange: "this.form.querySelector('.sp-gen').disabled = !this.checked#{' || true' unless config.ready?}" %>
+                    <span>Estou ciente de que a conferência não bateu e quero gerar a nota mesmo assim.</span>
+                  </label>
+                <% end %>
+                <button type="submit" class="btn btn-primary btn-sm sp-gen" <%= 'disabled' if !balanced || !config.ready? %>><i class="fas fa-file-invoice"></i>Gerar nota de remessa</button>
+              <% end %>
+              <% unless config.ready? %><small class="sp-hint">Falta a empresa e a natureza deste lado nas Configurações.</small><% end %>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+    </div>
+
+    <section class="sp-check">
+      <header>
+        <h4><i class="fas fa-scale-balanced"></i>Conferência com a nota de entrada</h4>
+        <% if !@entry.both_sides? %>
+          <%= hc_status('Esperando os dois CSVs', 'gray') %>
+        <% elsif balanced %>
+          <%= hc_status('Bateu 100%', 'green', tip: 'Log02 + Log03 = nota de entrada em todos os SKUs.') %>
+        <% else %>
+          <%= hc_status("#{problems.size} #{problems.size == 1 ? 'divergência' : 'divergências'}", 'red') %>
+        <% end %>
+      </header>
+      <div class="table-responsive">
+        <table class="table sp-table">
+          <thead><tr><th>SKU</th><th class="is-r">Nota</th><th class="is-r">Log02</th><th class="is-r">Log03</th><th class="is-r">Diferença</th></tr></thead>
+          <tbody>
+            <% (judged ? problems + (rec - problems) : rec).each do |r| %>
+              <tr class="<%= 'is-bad' if judged && !(r[:diff].zero? && !r[:outside]) %>">
+                <td><span class="mono"><%= r[:sku] %></span><% if r[:description] %><span class="cell-sub"><%= r[:description] %></span><% end %>
+                  <% if r[:outside] %><span class="cell-sub sp-out"><i class="fas fa-circle-exclamation"></i> não está na nota de entrada</span><% end %></td>
+                <td class="is-r"><%= stock_qty(r[:entry]) %></td>
+                <td class="is-r"><%= stock_qty(r[:log02]) %></td>
+                <td class="is-r"><%= stock_qty(r[:log03]) %></td>
+                <td class="is-r sp-diff"><% if r[:diff].zero? %><i class="fas fa-check"></i><% elsif !judged %><span class="sp-hint">esperando</span><% else %><%= r[:diff].positive? ? "+#{r[:diff]} sobrando" : "#{r[:diff]} faltando" %><% end %></td>
+              </tr>
+            <% end %>
+          </tbody>
+          <tfoot><tr><th>Total</th><th class="is-r"><%= stock_qty(rec.sum { |r| r[:entry] }) %></th><th class="is-r"><%= stock_qty(rec.sum { |r| r[:log02] }) %></th>
+            <th class="is-r"><%= stock_qty(rec.sum { |r| r[:log03] }) %></th><th class="is-r"><%= rec.sum { |r| r[:diff] }.then { |d| d.zero? ? '0' : (d.positive? ? "+#{d}" : d) } %></th></tr></tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+<% end %>

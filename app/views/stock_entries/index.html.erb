@@ -1,0 +1,28 @@
+<% content_for :title, 'Notas Fiscais de Entrada' %>
+<% table = stock_entries_table(@entries) %>
+
+<%= hc_page_header 'Notas Fiscais de Entrada', 'Suba o XML da nota de compra: fornecedor, itens e valores ficam guardados para a colocação no Log02 e no Log03.', icon: 'fas fa-file-import' do %>
+  <% if screen_can?(:stock_entries, :create) %>
+    <%= form_with url: stock_entries_path, method: :post, multipart: true, local: true, class: 'se-upload', data: { turbo: false } do %>
+      <label class="btn btn-secondary se-file" data-tip="Escolha o arquivo .xml da NF-e (o que o fornecedor manda por e-mail).">
+        <i class="fas fa-file-code"></i><span data-se-name>Escolher XML</span>
+        <%= file_field_tag :xml, accept: '.xml,application/xml,text/xml', required: true, hidden: true,
+                           onchange: "this.closest('label').querySelector('[data-se-name]').textContent = this.files[0] ? this.files[0].name : 'Escolher XML'; this.form.querySelector('button').disabled = !this.files[0]" %>
+      </label>
+      <button type="submit" class="btn btn-primary" disabled><i class="fas fa-upload"></i>Subir XML</button>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Notas de entrada', icon: 'fas fa-file-import', meta: 'Clique no número para ver os itens.',
+        link: ->(r) { stock_entry_path(r[:record]) },
+        empty: { title: 'Nenhuma nota de entrada ainda', text: 'Suba o XML de uma nota de compra pelo botão no topo.' },
+        actions: ->(r) {
+          safe_join([
+            (hc_row_action('fas fa-boxes-stacked', 'Colocação de estoque', stock_placements_path(abrir: r[:id])) if screen_can?(:stock_placements)),
+            (hc_row_action('fas fa-file-code', 'Baixar XML', xml_stock_entry_path(r[:record])) if screen_can?(:stock_entries, :export))
+          ].compact)
+        }) %>
+</div>

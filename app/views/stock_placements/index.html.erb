@@ -1,0 +1,67 @@
+<% content_for :title, 'Colocação de Estoque' %>
+<% table = stock_entries_table(@entries) %>
+<% ready = StockPlacement::SIDES.keys.all? { |s| StockPlacementConfig.for(s).ready? } %>
+
+<%= hc_page_header 'Colocação de Estoque', 'Divida cada nota de entrada entre o Correios Log02 e o Log03 por CSV (sku, estoque) e gere a nota de remessa de cada lado.', icon: 'fas fa-boxes-stacked' do %>
+  <%= link_to '/templates/colocacao_estoque_modelo.csv', class: 'btn btn-secondary', download: true, data: { tip: 'Planilha modelo com as colunas sku e estoque.' } do %><i class="fas fa-file-csv"></i>CSV modelo<% end %>
+  <% if screen_can?(:stock_placements, :edit) %>
+    <%= link_to edit_stock_placement_config_path, class: 'btn btn-secondary' do %><i class="fas fa-sliders"></i>Configurações<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <% unless ready %>
+    <div class="callout pg-banner is-warn"><i class="fas fa-sliders"></i>
+      <div><strong>Falta configurar a nota de remessa.</strong> Escolha a empresa e a natureza de operação do Log02 e do Log03 em
+        <%= screen_can?(:stock_placements, :edit) ? link_to('Configurações', edit_stock_placement_config_path) : 'Configurações (peça a quem tem acesso)' %>.</div></div>
+  <% end %>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Notas de entrada', icon: 'fas fa-boxes-stacked', meta: 'Clique em Colocar para abrir a nota: CSV do Log02, CSV do Log03, conferência e notas de remessa.',
+        link: ->(r) { stock_placement_path(r[:record]) },
+        empty: { title: 'Nenhuma nota de entrada ainda', text: 'Suba o XML em Logística › Notas Fiscais de Entrada.' },
+        actions: ->(r) {
+          content_tag(:button, safe_join([content_tag(:i, '', class: 'fas fa-boxes-stacked'), 'Colocar']), type: 'button', class: 'btn btn-sm btn-primary sp-open',
+                      data: { sp_open: stock_placement_path(r[:record]), tip: 'Abrir a colocação desta nota' })
+        }) %>
+</div>
+
+<div class="modal fade sp-modal" id="placementModal" tabindex="-1" aria-labelledby="placementModalLabel" aria-hidden="true" data-controller="modal">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white" id="placementModalLabel"><i class="fas fa-boxes-stacked me-2"></i>Colocação de estoque</h5>
+        <button type="button" class="btn-close btn-close-white" data-action="modal#close" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <%= turbo_frame_tag 'placement_panel', data: { turbo: 'true' } do %>
+          <p class="sp-loading"><i class="fas fa-spinner fa-spin"></i> Abrindo…</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // "Colocar" carrega o painel da nota no modal (turbo-frame) e abre o modal. ?abrir=ID abre direto.
+  (function () {
+    var modalEl = document.getElementById('placementModal');
+    function open(url) {
+      var frame = document.getElementById('placement_panel');
+      frame.innerHTML = '<p class="sp-loading"><i class="fas fa-spinner fa-spin"></i> Abrindo…</p>';
+      frame.src = url;
+      var bs = window.bootstrap && window.bootstrap.Modal.getOrCreateInstance(document.getElementById('placementModal'));
+      if (bs) bs.show(); else window.location = url;
+    }
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-sp-open]');
+      if (!btn) return;
+      e.preventDefault();
+      open(btn.dataset.spOpen);
+    });
+    var auto = new URLSearchParams(window.location.search).get('abrir');
+    if (auto && /^\d+$/.test(auto)) window.addEventListener('load', function () { open('<%= stock_placements_path %>/' + auto); });
+    // Ao fechar, a lista recarrega para mostrar a situação nova.
+    if (modalEl) modalEl.addEventListener('hidden.bs.modal', function () { if (modalEl.dataset.changed) window.location = '<%= stock_placements_path %>'; });
+    document.addEventListener('turbo:frame-load', function (e) { if (e.target.id === 'placement_panel' && e.target.querySelector('[data-sp-changed]')) { var m = document.getElementById('placementModal'); if (m) m.dataset.changed = '1'; } });
+  })();
+</script>

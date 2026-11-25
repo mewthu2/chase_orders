@@ -25,6 +25,8 @@ class FiscalNote < ApplicationRecord
   belongs_to :b2b_order, optional: true
   belongs_to :order, optional: true
   belongs_to :internal_transfer_shipment, optional: true
+  # Nota de remessa da Colocação de estoque (Log02 ou Log03 de uma nota de entrada).
+  belongs_to :stock_placement, optional: true
   belongs_to :nature, class_name: 'OperationNature', foreign_key: :operation_nature_id, optional: true
   has_one_attached :xml
   # Evento de cancelamento homologado na SEFAZ (procEventoNFe), gravado pelo Nfe::Canceller.

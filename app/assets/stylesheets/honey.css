@@ -2624,3 +2624,64 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 @media (prefers-reduced-motion: reduce) { .rpt-svg .rpt-bar, .rpt-fill { animation: none; } }
 .rpt-period .pg-month { display: flex; align-items: center; gap: 6px; }
 .rpt-period .pg-month .select-wrap { min-width: 230px; }
+
+/* ----- Notas Fiscais de Entrada e Colocação de Estoque ----- */
+.se-upload { display: inline-flex; gap: 8px; align-items: center; margin: 0; }
+.se-file { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.se-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.se-facts > div { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); }
+.se-facts span { font-size: 11.5px; color: var(--text-4); text-transform: uppercase; letter-spacing: .04em; }
+.se-facts b { font-size: 14px; color: var(--text); font-weight: 600; }
+.se-facts .se-key { grid-column: 1 / -1; }
+.se-danger { display: flex; justify-content: flex-end; }
+.sp-modal .modal-body { padding: 18px 20px; }
+.sp-loading { color: var(--text-3); margin: 24px 0; text-align: center; }
+.sp-panel { display: flex; flex-direction: column; gap: 16px; }
+.sp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sp-head h3 { margin: 0 0 4px; font-size: 17px; }
+.sp-head p { margin: 0; color: var(--text-3); font-size: 13px; }
+.sp-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .sp-sides { grid-template-columns: 1fr; } }
+.sp-side { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); animation: popIn 380ms var(--spring) both; }
+.sp-side + .sp-side { animation-delay: 70ms; }
+.sp-side header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sp-side h4 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.sp-side h4 i { color: var(--brand-300); }
+.sp-side header span { font-size: 12px; color: var(--text-4); }
+.sp-csv { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--green) 9%, transparent); border: 1px solid color-mix(in srgb, var(--green) 30%, transparent); }
+.sp-csv > i { color: var(--green); font-size: 18px; }
+.sp-csv > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.sp-csv span { font-size: 12px; color: var(--text-3); }
+.sp-csv form { margin: 0; }
+.sp-wait { margin: 0; color: var(--text-3); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.sp-upload { display: flex; gap: 8px; align-items: center; margin: 0; }
+.sp-upload label { cursor: pointer; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+.sp-notes { display: flex; flex-direction: column; gap: 8px; }
+.sp-notes form { margin: 0; display: inline; }
+.sp-note { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-2); }
+.sp-note > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.sp-note span { font-size: 12px; color: var(--text-3); }
+.sp-note small { font-size: 12px; color: #ff8a82; }
+.sp-note.is-autorizada { border-color: color-mix(in srgb, var(--green) 45%, transparent); background: color-mix(in srgb, var(--green) 7%, transparent); }
+.sp-note.is-rejeitada, .sp-note.is-erro { border-color: rgba(248,81,73,.4); }
+.sp-note.is-cancelada { opacity: .6; }
+.sp-note-acts { display: inline-flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.sp-gen[disabled] { opacity: .45; cursor: not-allowed; }
+.sp-hint { color: var(--text-4); font-size: 12px; }
+.sp-check { display: flex; flex-direction: column; gap: 10px; }
+.sp-check header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.sp-check h4 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.sp-table { font-size: 13px; margin: 0; }
+.sp-table .is-r { text-align: right; font-variant-numeric: tabular-nums; }
+.sp-table td .cell-sub { display: block; }
+.sp-table tr.is-bad td { background: color-mix(in srgb, var(--red) 8%, transparent); }
+.sp-table tr.is-bad .sp-diff { color: #ff8a82; font-weight: 700; }
+.sp-table .sp-diff .fa-check { color: var(--green); }
+.sp-out { color: #ff8a82 !important; }
+.sp-cfg-sub { margin: 18px 0 8px; font-size: 13px; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }
+.sp-config { display: flex; flex-direction: column; gap: 16px; }
+@media (prefers-reduced-motion: reduce) { .sp-side { animation: none; } }
+.sp-gen-form { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 0; }
+.sp-ack { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; color: var(--text-2); background: color-mix(in srgb, var(--yellow) 9%, transparent); border: 1px solid color-mix(in srgb, var(--yellow) 35%, transparent); cursor: pointer; }
+.sp-ack input { margin-top: 2px; }
+.sp-acked { margin: 0; font-size: 12.5px; color: var(--yellow); display: flex; gap: 6px; align-items: center; }

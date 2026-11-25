@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -564,6 +564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
     t.string "canceled_by"
     t.string "role"
     t.string "payment_method", limit: 2
+    t.bigint "stock_placement_id"
     t.index ["b2b_order_id", "role"], name: "index_fiscal_notes_on_b2b_order_id_and_role"
     t.index ["b2b_order_id"], name: "index_fiscal_notes_on_b2b_order_id"
     t.index ["company_id", "environment", "series", "number"], name: "index_fiscal_notes_on_company_env_series_number", unique: true
@@ -572,6 +573,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
     t.index ["operation_nature_id"], name: "index_fiscal_notes_on_operation_nature_id"
     t.index ["order_id"], name: "index_fiscal_notes_on_order_id"
     t.index ["status"], name: "index_fiscal_notes_on_status"
+    t.index ["stock_placement_id"], name: "index_fiscal_notes_on_stock_placement_id"
   end
 
   create_table "internal_transfer_approvers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1089,6 +1091,76 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
     t.index ["user_id"], name: "index_stock_corrections_on_user_id"
   end
 
+  create_table "stock_entries", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "company_id"
+    t.string "access_key", limit: 44, null: false
+    t.integer "number", null: false
+    t.integer "series"
+    t.string "supplier_name"
+    t.string "supplier_cnpj", limit: 20
+    t.string "supplier_state", limit: 2
+    t.string "recipient_cnpj", limit: 20
+    t.string "nature_text"
+    t.datetime "issued_at"
+    t.decimal "total_value", precision: 14, scale: 2, default: "0.0", null: false
+    t.decimal "products_value", precision: 14, scale: 2, default: "0.0", null: false
+    t.boolean "authorized", default: false, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["access_key"], name: "index_stock_entries_on_access_key", unique: true
+    t.index ["company_id"], name: "index_stock_entries_on_company_id"
+    t.index ["created_by_id"], name: "index_stock_entries_on_created_by_id"
+  end
+
+  create_table "stock_entry_items", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "stock_entry_id", null: false
+    t.integer "position", null: false
+    t.string "sku", null: false
+    t.string "ean"
+    t.string "description"
+    t.string "ncm", limit: 10
+    t.string "cest", limit: 10
+    t.integer "origin"
+    t.string "cfop", limit: 4
+    t.string "unit", limit: 10
+    t.decimal "quantity", precision: 14, scale: 4, null: false
+    t.decimal "unit_price", precision: 16, scale: 6, default: "0.0", null: false
+    t.decimal "total", precision: 14, scale: 2, default: "0.0", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stock_entry_id", "sku"], name: "index_stock_entry_items_on_stock_entry_id_and_sku"
+    t.index ["stock_entry_id"], name: "index_stock_entry_items_on_stock_entry_id"
+  end
+
+  create_table "stock_placement_configs", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "side", limit: 10, null: false
+    t.bigint "company_id"
+    t.bigint "operation_nature_id"
+    t.json "recipient"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_stock_placement_configs_on_company_id"
+    t.index ["operation_nature_id"], name: "index_stock_placement_configs_on_operation_nature_id"
+    t.index ["side"], name: "index_stock_placement_configs_on_side", unique: true
+  end
+
+  create_table "stock_placements", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "stock_entry_id", null: false
+    t.string "side", limit: 10, null: false
+    t.json "items", null: false
+    t.string "csv_filename"
+    t.bigint "uploaded_by_id"
+    t.bigint "divergence_acknowledged_by_id"
+    t.datetime "divergence_acknowledged_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["divergence_acknowledged_by_id"], name: "index_stock_placements_on_divergence_acknowledged_by_id"
+    t.index ["stock_entry_id", "side"], name: "index_stock_placements_on_stock_entry_id_and_side", unique: true
+    t.index ["stock_entry_id"], name: "index_stock_placements_on_stock_entry_id"
+    t.index ["uploaded_by_id"], name: "index_stock_placements_on_uploaded_by_id"
+  end
+
   create_table "stock_reservation_priorities", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "source", null: false
     t.integer "level", default: 1, null: false
@@ -1595,6 +1667,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
   add_foreign_key "fiscal_notes", "internal_transfer_shipments"
   add_foreign_key "fiscal_notes", "operation_natures"
   add_foreign_key "fiscal_notes", "orders"
+  add_foreign_key "fiscal_notes", "stock_placements"
   add_foreign_key "internal_transfer_approvers", "users"
   add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
   add_foreign_key "internal_transfer_events", "internal_transfers"
@@ -1636,6 +1709,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
   add_foreign_key "stock_correction_items", "stock_corrections"
   add_foreign_key "stock_corrections", "locations"
   add_foreign_key "stock_corrections", "users"
+  add_foreign_key "stock_entries", "companies"
+  add_foreign_key "stock_entries", "users", column: "created_by_id"
+  add_foreign_key "stock_entry_items", "stock_entries"
+  add_foreign_key "stock_placement_configs", "companies"
+  add_foreign_key "stock_placement_configs", "operation_natures"
+  add_foreign_key "stock_placements", "stock_entries"
+  add_foreign_key "stock_placements", "users", column: "divergence_acknowledged_by_id"
+  add_foreign_key "stock_placements", "users", column: "uploaded_by_id"
   add_foreign_key "stock_withdrawal_items", "locations"
   add_foreign_key "stock_withdrawal_items", "products"
   add_foreign_key "stock_withdrawal_items", "stock_withdrawals"

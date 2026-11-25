@@ -1410,6 +1410,51 @@
      "Comparação com o período anterior do mesmo tamanho (o mês anterior, o ano anterior...)."
     ]
    ]
+  },
+  "log-entradas": {
+   "title": "Notas Fiscais de Entrada",
+   "subtitle": "XML das notas de compra",
+   "purpose": "Guardar a nota de compra do fornecedor a partir do XML: fornecedor, itens, quantidades e valores. Ela é a base da Colocação de estoque. Não mexe no estoque do Shopify nem do Correios.",
+   "when": "Quando chegar mercadoria comprada de fornecedor.",
+   "actions": [
+    "Subir XML",
+    "Ver os itens da nota",
+    "Baixar XML",
+    "Ir para a Colocação de estoque",
+    "Excluir (sem nota de remessa gerada)"
+   ]
+  },
+  "log-colocacao": {
+   "title": "Colocação de Estoque",
+   "subtitle": "Divisão da nota de entrada entre o Log02 e o Log03",
+   "purpose": "Dizer quanto de cada SKU da nota de entrada vai para o Correios Log02 (atacado) e para o Log03 (e-commerce) com um CSV (sku, estoque) de cada lado. Quando a soma dos dois bate 100% com a nota, cada lado gera a sua NF-e de remessa.",
+   "when": "Depois de subir a nota de entrada, quando a divisão entre os depósitos estiver definida.",
+   "actions": [
+    "Colocar (abre a nota)",
+    "Subir o CSV do Log02 e do Log03",
+    "Conferir com a nota de entrada",
+    "Gerar nota de remessa",
+    "Emitir na SEFAZ",
+    "Baixar DANFE e XML",
+    "Configurações (empresa, natureza e destinatário)"
+   ],
+   "statuses": [
+    [
+     "Aguardando colocação",
+     "Ainda sem CSV.",
+     "yellow"
+    ],
+    [
+     "Em colocação",
+     "Com CSV ou nota, falta terminar.",
+     "blue"
+    ],
+    [
+     "Colocada",
+     "As duas remessas autorizadas.",
+     "green"
+    ]
+   ]
   }
  },
  "glossary": [
@@ -1627,6 +1672,8 @@
   "atc-frete": "frete tabela faixa valor pedido atacado",
   "log02-xml": "nota nf nfe emissao fiscal sefaz",
   "log-notas": "nota nf nfe xml zip contabilidade mes abastecimento transferencia remessa fiscal",
-  "rel-vendas-atacado": "relatorio dashboard grafico vendas faturamento atacado kpi ticket medio clientes produtos vendedor consultor"
+  "rel-vendas-atacado": "relatorio dashboard grafico vendas faturamento atacado kpi ticket medio clientes produtos vendedor consultor",
+  "log-entradas": "nota entrada xml compra fornecedor nfe recebimento mercadoria",
+  "log-colocacao": "colocacao estoque log02 log03 csv remessa deposito correios divisao"
  }
 }

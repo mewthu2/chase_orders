@@ -1,0 +1,51 @@
+<% content_for :title, "NF-e de entrada #{@entry.number}" %>
+<% known = Product.where(sku: @entry.items.map(&:sku)).pluck(:sku).to_set %>
+<% label, tone, tip = StockEntry::STATUSES.fetch(@entry.status) %>
+
+<%= hc_page_header "NF-e de entrada nº #{@entry.number}", "#{@entry.supplier_name} · #{Nfe::Cnpj.format(@entry.supplier_cnpj)}#{" · #{@entry.supplier_state}" if @entry.supplier_state.present?}", icon: 'fas fa-file-import' do %>
+  <%= link_to stock_entries_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+  <% if screen_can?(:stock_placements) %>
+    <%= link_to stock_placements_path(abrir: @entry.id), class: 'btn btn-primary' do %><i class="fas fa-boxes-stacked"></i>Colocação de estoque<% end %>
+  <% end %>
+  <% if screen_can?(:stock_entries, :export) && @entry.xml.attached? %>
+    <%= link_to xml_stock_entry_path(@entry), class: 'btn btn-export' do %><i class="fas fa-file-code"></i>Baixar XML<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks se-show">
+  <div class="se-facts">
+    <div><span>Emissão</span><b><%= @entry.issued_at ? l(@entry.issued_at, format: '%d/%m/%Y') : '—' %></b></div>
+    <div><span>Para</span><b><%= @entry.company&.trade_name.presence || @entry.company&.legal_name || Nfe::Cnpj.format(@entry.recipient_cnpj) %></b></div>
+    <div><span>Natureza</span><b><%= @entry.nature_text.presence || '—' %></b></div>
+    <div><span>Itens</span><b><%= @entry.items.size %> · <%= stock_qty(@entry.pieces) %> peças</b></div>
+    <div><span>Valor dos produtos</span><b><%= stock_money(@entry.products_value) %></b></div>
+    <div><span>Valor da nota</span><b><%= stock_money(@entry.total_value) %></b></div>
+    <div><span>Colocação</span><b><%= hc_status(label, tone, tip: tip) %></b></div>
+    <div><span>SEFAZ</span><b><%= @entry.authorized ? hc_status('Autorizada', 'green') : hc_status('Sem protocolo no XML', 'yellow', tip: 'O XML não traz a autorização da SEFAZ (nfeProc).') %></b></div>
+    <div class="se-key"><span>Chave de acesso</span><b class="mono"><%= @entry.access_key.scan(/\d{1,4}/).join(' ') %></b></div>
+  </div>
+
+  <% if (missing = @entry.items.map(&:sku).uniq.reject { |s| known.include?(s) }).any? %>
+    <div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i>
+      <div><strong><%= missing.size %> SKU(s) da nota não estão no cadastro de produtos:</strong> <%= missing.first(12).join(', ') %><%= '…' if missing.size > 12 %>. A nota de remessa usa o NCM e a descrição da própria nota de entrada.</div></div>
+  <% end %>
+
+  <% rows = @entry.items.map { |i| { id: i.id, sku: i.sku, desc: i.description, ncm: i.ncm, cfop: i.cfop, un: i.unit, qtd: i.quantity.to_i, unit: i.unit_price.to_f, total: i.total.to_f,
+                                     cad: known.include?(i.sku) ? 'sim' : 'nao', ean: i.ean || '—' } } %>
+  <% items = HoneyTable.new(params, id: 'itens', rows: rows, unit: 'itens', unit1: 'item', page_size: 100,
+        cols: [{ k: :sku, label: 'SKU', t: :mono, main: true, sub: :desc, sort: true }, { k: :desc, label: 'Descrição', hide: true },
+               { k: :qtd, label: 'Quantidade', t: :qty, sort: true }, { k: :unit, label: 'Valor unitário', t: :money, sort: true }, { k: :total, label: 'Total', t: :money, sort: true },
+               { k: :ncm, label: 'NCM', t: :mono }, { k: :cfop, label: 'CFOP', t: :mono }, { k: :un, label: 'Unidade' }, { k: :ean, label: 'EAN', hide: true },
+               { k: :cad, label: 'No cadastro', t: :status, map: { 'sim' => ['Sim', 'green', 'O SKU existe no cadastro de produtos.'], 'nao' => ['Não', 'yellow', 'O SKU não está no cadastro de produtos.'] } }],
+        filters: [{ id: :q, type: :search, label: 'Buscar', ph: 'SKU ou descrição…', cols: %i[sku desc] }]) %>
+  <%= hc_pg_table(items, title: 'Itens da nota', icon: 'fas fa-list', meta: "#{@entry.items.size} itens, #{stock_qty(@entry.pieces)} peças.") %>
+
+  <% if screen_can?(:stock_entries, :destroy) && !@entry.locked? %>
+    <div class="se-danger">
+      <%= button_to stock_entry_path(@entry), method: :delete, class: 'btn btn-ghost btn-sm',
+                    form: { data: { hc_confirm: { title: "Excluir a NF-e de entrada nº #{@entry.number}?", text: 'A nota e os CSVs da colocação saem do Honey. Dá para subir o XML de novo depois.', ok: 'Excluir', danger: true }.to_json } } do %>
+        <i class="fas fa-trash"></i>Excluir esta nota de entrada
+      <% end %>
+    </div>
+  <% end %>
+</div>

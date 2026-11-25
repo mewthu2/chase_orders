@@ -207,6 +207,25 @@ Rails.application.routes.draw do
     end
   end
 
+  # Logística › Notas Fiscais de Entrada e Colocação de estoque (Log02 e Log03, com as notas de remessa).
+  scope 'logistica' do
+    resources :stock_entries, path: 'notas-de-entrada', only: %i[index show create destroy] do
+      member { get :xml }
+    end
+    resource :stock_placement_config, path: 'colocacao-de-estoque/configuracoes', only: %i[edit update]
+    resources :stock_placements, path: 'colocacao-de-estoque', only: %i[index show] do
+      member do
+        post 'csv/:side', action: :upload, as: :upload
+        delete 'csv/:side', action: :remove, as: :remove
+        post 'nota/:side', action: :generate, as: :generate
+        post 'nota/:note_id/emitir', action: :transmit, as: :transmit
+        delete 'nota/:note_id', action: :discard_note, as: :discard_note
+        get 'nota/:note_id/xml', action: :note_xml, as: :note_xml
+        get 'nota/:note_id/danfe', action: :note_danfe, as: :note_danfe
+      end
+    end
+  end
+
   # Adm › Dashboards e relatórios.
   namespace :reports, path: 'relatorios' do
     get 'vendas-atacado', to: 'wholesale_sales#index', as: :wholesale_sales

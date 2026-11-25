@@ -117,6 +117,10 @@ module Navigation
              path: ->(v) { v.stock_transfers_path }, perm: 'store_supply', active: kind('stock_transfer')),
         link('log-transf-b2c', 'Transferências B2B ⇄ B2C', 'fas fa-random', 'Transfira peças entre o estoque de atacado e a loja online, nos dois sentidos.',
              path: ->(v) { v.b2c_transfers_path }, perm: 'b2b_transfers', active: kind('b2c_transfer')),
+        link('log-entradas', 'Notas Fiscais de Entrada', 'fas fa-file-import', 'Suba o XML da nota de compra e veja fornecedor, itens e valores.',
+             path: ->(v) { v.stock_entries_path }, perm: 'stock_entries', active: ctrl('stock_entries')),
+        link('log-colocacao', 'Colocação de Estoque', 'fas fa-boxes-stacked', 'Divida a nota de entrada entre o Log02 e o Log03 (CSV) e gere as notas de remessa.',
+             path: ->(v) { v.stock_placements_path }, perm: 'stock_placements', active: ctrl('stock_placements', 'stock_placement_configs')),
         link('log-notas', 'Notas Fiscais', 'fas fa-file-invoice', 'Notas do abastecimento e das transferências, mês a mês, com o ZIP dos XML.',
              path: ->(v) { v.logistics_fiscal_notes_path }, perm: %w[store_supply b2b_transfers], active: note_list('logistica'))
       ]),
