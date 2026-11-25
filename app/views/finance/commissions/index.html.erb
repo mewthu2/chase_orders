@@ -1,26 +1,23 @@
 <% content_for :title, 'Financeiro · Comissões' %>
 <% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% pct = ->(v) { v ? number_with_precision(v, precision: 2, separator: ',', strip_insignificant_zeros: true) : '' } %>
 <% can_edit = screen_can?(:commissions, :edit) %>
 <% mes = @month.strftime('%Y-%m') %>
 <% roles = { 'typist' => ['Vendedor', 'blue', 'Quem digitou o pedido: comissão no mês do pedido, sem esperar pagamento.'],
-             'consultant' => ['Consultor', 'purple', 'Comissão quando o pedido é pago: PIX e cartão na hora, boleto parcela a parcela.'] } %>
+             'consultant' => ['Consultor', 'purple', 'Quem recomendou: comissão quando o pedido é pago (PIX e cartão na hora, boleto parcela a parcela).'] } %>
 <% rows = @result.rows.map do |r|
-     editable = can_edit && r.beneficiary
-     percent_txt = r.percent ? number_with_precision(r.percent, precision: 2, separator: ',', strip_insignificant_zeros: true) : ''
      { id: r.key, record: r, papel: r.role.to_s, nome: r.name,
        pessoa: safe_join([link_to(r.name, person_finance_commissions_path(key: r.key, mes: mes), class: 'text-main'),
                           (hc_status('cadastro pendente', 'yellow', tip: 'Nome digitado sem cadastro: sem percentual até cadastrar ou vincular em Consultores.') if r.pending),
-                          (hc_status('sem percentual', 'gray', tip: 'Ninguém definiu o percentual deste mês: comissão zero.') if !r.pending && r.percent.nil?)].compact, ' '),
-       pct: editable ? content_tag(:span, text_field_tag("percents[#{r.key}]", percent_txt, form: 'finRates', class: 'field-input fin-pct', inputmode: 'decimal', placeholder: '0', 'aria-label': "Percentual de #{r.name}") + content_tag(:em, '%'), class: 'fin-pct-wrap')
-                     : (r.percent ? "#{percent_txt}%" : '—'),
-       base: r.base.to_f, comissao: r.commission.to_f, itens: r.entries.size }
+                          (hc_status('sem percentual', 'gray', tip: 'Defina o percentual no quadro Percentuais de comissão: comissão zero até lá.') if !r.pending && r.percent.nil?)].compact, ' '),
+       pct: r.percent ? "#{pct.call(r.percent)}%" : '—', base: r.base.to_f, comissao: r.commission.to_f, itens: r.entries.size }
    end %>
 <% table = HoneyTable.new(params, rows: rows, unit: 'pessoas', unit1: 'pessoa', page_size: 50, sort: { k: :comissao, dir: -1 },
      tabs: { col: :papel, items: [['', 'Todos'], ['typist', 'Vendedores'], ['consultant', 'Consultores']] },
      cols: [
        { k: :pessoa, label: 'Pessoa', t: :html, main: true },
        { k: :papel, label: 'Papel', t: :status, map: roles },
-       { k: :pct, label: 'Percentual do mês', t: :html },
+       { k: :pct, label: 'Percentual' },
        { k: :base, label: 'Base (total com frete)', t: :money, sort: true },
        { k: :comissao, label: 'Comissão', t: :money, sort: true },
        { k: :itens, label: 'Pedidos / parcelas', t: :qty }
@@ -42,17 +39,45 @@
 
 <div class="pg-blocks fin">
   <%= hc_pg_kpis(table) %>
-  <% tools = if can_edit
-       capture do %>
-    <%= button_to copy_previous_finance_commissions_path, params: { mes: mes }, class: 'btn btn-ghost btn-sm', form: { style: 'display:inline' },
-                  data: { tip: 'Traz os percentuais do último mês que tem algum, só para quem ainda não tem neste mês.' } do %><i class="fas fa-clone"></i>Copiar do mês anterior<% end %>
-    <button type="submit" form="finRates" class="btn btn-sm btn-primary fin-save"><i class="fas fa-floppy-disk"></i>Salvar percentuais</button>
-  <% end
-     end %>
-  <%= form_with url: rates_finance_commissions_path, id: 'finRates', class: 'd-none' do %><%= hidden_field_tag :mes, mes %><% end if can_edit %>
-  <%= hc_pg_table(table, title: 'Comissões do mês', icon: 'fas fa-percent', tools: tools,
-        meta: 'Digite o percentual de cada pessoa e salve. Deixar em branco tira o percentual do mês. Cada mês é independente.',
+  <%= hc_pg_table(table, title: 'Comissões do mês', icon: 'fas fa-percent',
+        meta: 'Cada pessoa com o percentual geral dela. Clique no nome para ver os pedidos e parcelas da conta.',
         empty: { title: 'Ninguém com comissão neste mês', text: 'Use as setas do mês para ver outros meses.' },
         link: ->(r) { person_finance_commissions_path(key: r[:id], mes: mes) },
         detail: { title: ->(r) { r[:nome] } }) %>
+
+  <section class="table-card pg-card fin-rates">
+    <div class="table-toolbar">
+      <div>
+        <h3><i class="fas fa-sliders" style="margin-right: 8px; color: var(--text-3)"></i>Percentuais de comissão</h3>
+        <div class="meta">Um percentual por pessoa, que vale para todos os meses. Deixe em branco para tirar.</div>
+      </div>
+    </div>
+    <%= form_with url: rates_finance_commissions_path, class: 'fin-rates-form' do %>
+      <%= hidden_field_tag :mes, mes %>
+      <% [['Vendedores', 'quem digita o pedido', 'fas fa-keyboard', @sellers, 'User'], ['Consultores', 'quem recomenda', 'fas fa-id-badge', @consultants, 'Consultant']].each do |title, sub, icon, people, type| %>
+        <div class="fin-rates-group">
+          <h4><i class="<%= icon %>"></i><%= title %> <small><%= sub %></small></h4>
+          <% if people.empty? %>
+            <p class="text-muted-custom">Ninguém ainda.</p>
+          <% else %>
+            <div class="fin-rates-grid stagger">
+              <% people.each_with_index do |person, i| %>
+                <% key = "#{type}-#{person.id}" %>
+                <label class="fin-rate spot" style="--i: <%= i %>">
+                  <span><%= person.name %><%= ' (inativo)' if type == 'Consultant' && !person.active %></span>
+                  <span class="fin-pct-wrap">
+                    <%= text_field_tag "percents[#{key}]", pct.call(@rates[[type, person.id]]), class: 'field-input fin-pct', inputmode: 'decimal', placeholder: '0',
+                                       disabled: !can_edit, 'aria-label': "Percentual de #{person.name}" %><em>%</em>
+                  </span>
+                </label>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+      <% if can_edit %>
+        <div class="fin-rates-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar percentuais</button></div>
+      <% end %>
+    <% end %>
+  </section>
 </div>

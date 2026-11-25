@@ -12,18 +12,10 @@ class B2bOrderPaymentTest < ActiveSupport::TestCase
     assert_not p3.overdue?
   end
 
-  test 'CommissionRate.copy_previous! copia do ultimo mes com linhas e nao sobrescreve' do
+  test 'percentual de comissao e um so por pessoa' do
     a = finance_user('Ana')
-    b = Consultant.create!(name: 'Bia')
-    CommissionRate.create!(month: Date.new(2026, 9, 1), beneficiary: a, percent: 1)
-    CommissionRate.create!(month: Date.new(2026, 10, 1), beneficiary: a, percent: 2)
-    CommissionRate.create!(month: Date.new(2026, 10, 1), beneficiary: b, percent: 5)
-    CommissionRate.create!(month: Date.new(2026, 12, 1), beneficiary: b, percent: 7)
-
-    assert_equal 1, CommissionRate.copy_previous!(Date.new(2026, 12, 15))
-    rates = CommissionRate.for_month(Date.new(2026, 12, 1))
-    assert_equal 2, rates[['User', a.id]]
-    assert_equal 7, rates[['Consultant', b.id]]
-    assert_equal 0, CommissionRate.copy_previous!(Date.new(2026, 9, 1))
+    CommissionRate.create!(beneficiary: a, percent: 2)
+    assert_not CommissionRate.new(beneficiary: a, percent: 3).valid?
+    assert_equal({ ['User', a.id] => 2 }, CommissionRate.percents)
   end
 end

@@ -199,7 +199,6 @@ Rails.application.routes.draw do
     resources :commissions, only: :index, path: 'comissoes' do
       collection do
         post :rates
-        post :copy_previous
         get ':key', action: :show, as: :person
       end
     end

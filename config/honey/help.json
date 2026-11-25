@@ -16,8 +16,8 @@
   "fin-comissoes": {
    "title": "Comissões",
    "purpose": "Comissão do mês sobre o total do pedido com frete. São dois: o vendedor (quem digitou o pedido) recebe no mês do pedido; o consultor (quem recomendou), quando o pedido é pago (boleto parcela a parcela).",
-   "when": "No fechamento do mês ou ao mudar o percentual de alguém.",
-   "actions": ["Salvar percentuais", "Copiar do mês anterior", "Exportar CSV"]
+   "when": "No fechamento do mês ou ao mudar o percentual de alguém (o percentual é geral, vale para todos os meses).",
+   "actions": ["Salvar percentuais", "Exportar CSV"]
   },
   "fin-consultores": {
    "title": "Consultores",

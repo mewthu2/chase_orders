@@ -12,7 +12,7 @@ class Finance::CommissionsTest < ActiveSupport::TestCase
     @consultant = Consultant.create!(name: 'Carla')
   end
 
-  def rate(who, percent, month = NOV) = CommissionRate.create!(month: month, beneficiary: who, percent: percent)
+  def rate(who, percent) = CommissionRate.create!(beneficiary: who, percent: percent)
   def row(result, beneficiary) = result.rows.find { |r| r.beneficiary == beneficiary }
 
   test 'digitador recebe sobre o total com frete no mes do pedido' do
@@ -36,7 +36,6 @@ class Finance::CommissionsTest < ActiveSupport::TestCase
 
   test 'boleto 3x so conta as parcelas pagas, no mes do pagamento' do
     rate(@consultant, 10)
-    rate(@consultant, 10, DEC)
     order = finance_order(user: @typist, price: 300, payment_terms: '30 60 90', consultant: @consultant, created_at: Time.zone.local(2026, 10, 1))
     p1, p2, = order.payments.reload.to_a
     p1.update!(paid_at: Date.new(2026, 11, 3))
@@ -66,12 +65,11 @@ class Finance::CommissionsTest < ActiveSupport::TestCase
     assert_equal 0, r.commission
   end
 
-  test 'percentual de outro mes nao afeta o mes' do
+  test 'percentual e geral: vale para todos os meses' do
     rate(@typist, 2)
     finance_order(user: @typist, price: 100, payment_method: 'pix', created_at: Time.zone.local(2026, 11, 5))
-    rate(@typist, 9, DEC)
-    result = Finance::Commissions.new(month: NOV)
-    assert_equal 2, row(result, @typist).commission
-    assert_equal({ base: 100, commission: 2 }, result.totals)
+    finance_order(user: @typist, price: 300, payment_method: 'pix', created_at: Time.zone.local(2026, 12, 5))
+    assert_equal({ base: 100, commission: 2 }, Finance::Commissions.new(month: NOV).totals)
+    assert_equal 6, row(Finance::Commissions.new(month: DEC), @typist).commission
   end
 end

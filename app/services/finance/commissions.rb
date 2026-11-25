@@ -1,6 +1,6 @@
 module Finance
-  # Comissões de um mês, calculadas na hora a partir dos pedidos de atacado, das parcelas pagas e dos percentuais do
-  # mês (CommissionRate). Nada é gravado: cancelar, corrigir um pedido ou vincular um consultor reflete sozinho.
+  # Comissões de um mês, calculadas na hora a partir dos pedidos de atacado, das parcelas pagas e do percentual
+  # geral de cada pessoa (CommissionRate). Nada é gravado: cancelar, corrigir um pedido ou vincular um consultor reflete sozinho.
   #
   # - Quem digitou o pedido (b2b_orders.user): total com frete dos pedidos criados no mês.
   # - Consultor: PIX e cartão, o total no mês do pedido; boleto (ou sem forma), cada parcela no mês da baixa.
@@ -19,7 +19,7 @@ module Finance
 
     def rows
       @rows ||= begin
-        rates = CommissionRate.for_month(month)
+        rates = CommissionRate.percents
         typist_rows(rates) + consultant_rows(rates)
       end
     end

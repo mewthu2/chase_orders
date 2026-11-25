@@ -2484,3 +2484,14 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .fin-pending-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .fin-link-form .field-input { height: 32px; min-width: 200px; }
 @media (prefers-reduced-motion: reduce) { .home-aurora i, .home-title, .home-empty i, .fin-pulse { animation: none; } }
+.fin-rates-form { padding: 0 16px 16px; }
+.fin-rates-group { margin-bottom: 16px; }
+.fin-rates-group h4 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px; font-size: 13.5px; color: #fff; }
+.fin-rates-group h4 i { color: var(--brand-300); }
+.fin-rates-group h4 small { color: var(--text-3); font-weight: 500; }
+.fin-rates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.fin-rate { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+  transition: border-color var(--t) var(--ease), transform var(--t) var(--ease-out); }
+.fin-rate:focus-within { border-color: var(--brand-400); transform: translateY(-2px); }
+.fin-rate > span:first-child { color: var(--text); font-size: 13px; }
+.fin-rates-actions { display: flex; justify-content: flex-end; }

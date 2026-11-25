@@ -20,7 +20,7 @@
        { k: :comissao, label: 'Comissão', t: :money, sort: true }
      ],
      kpis: [
-       { label: 'Percentual', icon: 'fas fa-percent', tone: 'purple', help: 'Percentual do mês.', text: @row.percent ? "#{number_with_precision(@row.percent, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" : 'sem percentual' },
+       { label: 'Percentual', icon: 'fas fa-percent', tone: 'purple', help: 'Percentual geral da pessoa.', text: @row.percent ? "#{number_with_precision(@row.percent, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" : 'sem percentual' },
        { label: 'Base', icon: 'fas fa-receipt', tone: 'blue', help: 'Total com frete.', text: money.call(@row.base) },
        { label: 'Comissão', icon: 'fas fa-sack-dollar', tone: 'green', help: 'A receber neste mês.', text: money.call(@row.commission) }
      ]) %>

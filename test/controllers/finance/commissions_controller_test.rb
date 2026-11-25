@@ -14,8 +14,8 @@ class Finance::CommissionsControllerTest < ActionDispatch::IntegrationTest
     sign_in @finance
   end
 
-  test 'index lista digitador e consultor do mes' do
-    CommissionRate.create!(month: Date.new(2026, 11, 1), beneficiary: @consultant, percent: 5)
+  test 'index lista vendedor e consultor do mes' do
+    CommissionRate.create!(beneficiary: @consultant, percent: 5)
     get finance_commissions_path(mes: '2026-11')
     assert_response :success
     assert_match 'Digitadora', response.body
@@ -23,25 +23,27 @@ class Finance::CommissionsControllerTest < ActionDispatch::IntegrationTest
     assert_match 'R$ 5,00', response.body
   end
 
-  test 'get de mes vazio nao cria percentual' do
-    CommissionRate.create!(month: Date.new(2026, 10, 1), beneficiary: @consultant, percent: 5)
-    assert_no_difference('CommissionRate.count') { get finance_commissions_path(mes: '2026-11') }
+  test 'quadro de percentuais lista vendedores e consultores ativos mesmo sem venda no mes' do
+    Consultant.create!(name: 'Sem Venda')
+    get finance_commissions_path(mes: '2027-03')
+    assert_select "input[name='percents[Consultant-#{@consultant.id}]']"
+    assert_select "input[name='percents[User-#{@typist.id}]']"
+    assert_match 'Sem Venda', response.body
   end
 
-  test 'salvar percentuais grava so no mes do parametro e vazio apaga' do
-    CommissionRate.create!(month: Date.new(2026, 11, 1), beneficiary: @consultant, percent: 5)
+  test 'salvar percentuais grava geral e vazio apaga' do
+    CommissionRate.create!(beneficiary: @consultant, percent: 5)
     post rates_finance_commissions_path, params: { mes: '2026-11', percents: { "User-#{@typist.id}" => '2,5', "Consultant-#{@consultant.id}" => '' } }
     assert_redirected_to finance_commissions_path(mes: '2026-11')
-    rates = CommissionRate.for_month(Date.new(2026, 11, 1))
+    rates = CommissionRate.percents
     assert_equal BigDecimal('2.5'), rates[['User', @typist.id]]
     assert_not rates.key?(['Consultant', @consultant.id])
-    assert_empty CommissionRate.for_month(Date.new(2026, 12, 1))
   end
 
-  test 'copiar do mes anterior' do
-    CommissionRate.create!(month: Date.new(2026, 10, 1), beneficiary: @consultant, percent: 5)
-    post copy_previous_finance_commissions_path, params: { mes: '2026-11' }
-    assert_equal 5, CommissionRate.for_month(Date.new(2026, 11, 1))[['Consultant', @consultant.id]]
+  test 'percentual invalido avisa' do
+    post rates_finance_commissions_path, params: { mes: '2026-11', percents: { "User-#{@typist.id}" => '150' } }
+    assert_match 'não foi salvo', flash[:alert].to_s
+    assert_empty CommissionRate.percents
   end
 
   test 'detalhe da pessoa e csv' do

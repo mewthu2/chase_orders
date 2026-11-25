@@ -8,7 +8,7 @@ class Finance::ReviewFixesTest < ActiveSupport::TestCase
   def setup
     @user = finance_user
     @consultant = Consultant.create!(name: 'Carla')
-    CommissionRate.create!(month: Date.new(2026, 11, 1), beneficiary: @consultant, percent: 10)
+    CommissionRate.create!(beneficiary: @consultant, percent: 10)
   end
 
   test 'boleto com parcela paga que vira pix nao conta em dobro' do

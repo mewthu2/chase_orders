@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_130000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -372,14 +372,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_120100) do
   end
 
   create_table "commission_rates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.date "month", null: false
+    t.date "month"
     t.string "beneficiary_type", null: false
     t.bigint "beneficiary_id", null: false
     t.decimal "percent", precision: 5, scale: 2, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["beneficiary_type", "beneficiary_id"], name: "index_commission_rates_on_beneficiary"
-    t.index ["month", "beneficiary_type", "beneficiary_id"], name: "index_commission_rates_on_month_and_beneficiary", unique: true
+    t.index ["beneficiary_type", "beneficiary_id"], name: "index_commission_rates_unique_beneficiary", unique: true
   end
 
   create_table "companies", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
