@@ -58,7 +58,8 @@ class Screen
     companies:              { label: 'Empresas e Naturezas de Operação',      area: 'adm',       acts: 'VCEXD' },
     carriers:               { label: 'Transportadoras',                       area: 'adm',       acts: 'VCED' },
     stock_reservation_priority: { label: 'Priorização de reserva de estoque', area: 'adm',       acts: 'VE' },
-    logs:                   { label: 'Logs',                                  area: 'adm',       acts: 'V' }
+    logs:                   { label: 'Logs',                                  area: 'adm',       acts: 'V' },
+    report_wholesale_sales: { label: 'Relatórios · Vendas Atacado',           area: 'adm',       acts: 'V' }
   }.freeze
 
   def self.keys = DEFINITIONS.keys.map(&:to_s)

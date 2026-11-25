@@ -153,6 +153,10 @@ module Navigation
           link('adm-resp', 'Responsabilidades', 'fas fa-sitemap', 'Áreas que recebem chamados, com responsáveis e prazo.',
                path: ->(v) { v.ticket_responsabilities_path }, cond: :admin, active: ctrl('ticket_responsabilities'))
         ]),
+        group('adm-relatorios', 'Dashboards e relatórios', 'fas fa-chart-line', 'Números do negócio em gráficos e indicadores.', children: [
+          link('rel-vendas-atacado', 'Vendas Atacado', 'fas fa-chart-column', 'Faturamento das notas de venda do atacado: indicadores, evolução, clientes, produtos e vendedores.',
+               path: ->(v) { v.reports_wholesale_sales_path }, perm: 'report_wholesale_sales', active: ctrl('reports/wholesale_sales'))
+        ]),
         group('adm-logistica', 'Logística', 'fas fa-truck-fast', 'Regras da operação de estoque.', children: [
           link('adm-prioridade-reserva', 'Priorização de reserva de estoque', 'fas fa-stairs', 'Defina quem passa na frente quando o estoque é disputado.',
                path: ->(v) { v.stock_reservation_priority_path }, perm: 'stock_reservation_priority', active: ctrl('stock_reservation_priorities')),

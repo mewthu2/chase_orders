@@ -207,6 +207,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Adm › Dashboards e relatórios.
+  namespace :reports, path: 'relatorios' do
+    get 'vendas-atacado', to: 'wholesale_sales#index', as: :wholesale_sales
+  end
+
   # Ordem e colunas visíveis de cada tabela, por usuário (botão Colunas das listas).
   resource :table_columns, only: %i[update destroy], path: 'preferencias/colunas'
   resource :internal_transfer_config, only: [:edit, :update]

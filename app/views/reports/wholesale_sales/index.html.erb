@@ -1,0 +1,91 @@
+<% content_for :title, 'Vendas Atacado' %>
+<% r = @report %>
+<% cur = r.current %>
+<% prev = r.previous %>
+<% period = r.period %>
+<% prev_label = "#{l(period.previous.begin, format: '%d/%m/%Y')} a #{l(period.previous.end, format: '%d/%m/%Y')}" %>
+
+<%= hc_page_header 'Vendas Atacado', 'Notas fiscais de venda do atacado emitidas (autorizadas em produção) são as vendas concretizadas.', icon: 'fas fa-chart-column' do %>
+  <%= form_with url: reports_wholesale_sales_path, method: :get, local: true, class: 'rpt-period', data: { turbo: false } do %>
+    <label for="rptPeriodo" class="visually-hidden">Período</label>
+    <div class="select-wrap">
+      <%= select_tag :periodo, options_for_select(Reports::WholesaleSales.period_options, period.key), id: 'rptPeriodo', class: 'field-input is-set', onchange: 'this.form.requestSubmit()' %>
+    </div>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks rpt">
+  <p class="rpt-range"><i class="fas fa-calendar-days"></i><b><%= period.label %></b> · <%= l(period.range.begin, format: '%d/%m/%Y') %> a <%= l(period.range.end, format: '%d/%m/%Y') %>
+    <span>comparado com <%= prev_label %></span></p>
+
+  <div class="kpi-grid stagger pg-kpis rpt-kpis" style="--cols: 3">
+    <%= rpt_kpi(label: 'Faturamento', value: rpt_money(cur[:revenue]), icon: 'fas fa-sack-dollar', tone: 'green', i: 0,
+                help: "antes #{rpt_money(prev[:revenue])}", delta: r.delta(:revenue), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Notas emitidas', value: number_with_delimiter(cur[:notes], delimiter: '.'), icon: 'fas fa-file-invoice', tone: 'blue', i: 1,
+                help: "#{cur[:orders]} #{cur[:orders] == 1 ? 'pedido' : 'pedidos'}", delta: r.delta(:notes), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Ticket médio', value: rpt_money(cur[:ticket]), icon: 'fas fa-receipt', tone: 'purple', i: 2,
+                help: 'faturamento ÷ pedidos', delta: r.delta(:ticket), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Peças vendidas', value: number_with_delimiter(cur[:pieces], delimiter: '.'), icon: 'fas fa-shirt', tone: 'orange', i: 3,
+                help: (cur[:orders].positive? ? "#{number_with_precision(cur[:pieces].to_f / cur[:orders], precision: 1, separator: ',', strip_insignificant_zeros: true)} por pedido" : '—'),
+                delta: r.delta(:pieces), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Clientes atendidos', value: number_with_delimiter(cur[:clients], delimiter: '.'), icon: 'fas fa-store', tone: 'yellow', i: 4,
+                help: 'lojistas com nota no período', delta: r.delta(:clients), previous: prev_label) %>
+    <div class="pg-kpi is-static spot" style="--i: 5">
+      <div class="stat-card" style="--tone: <%= hc_tone('red') %>">
+        <span class="tone-bar"></span>
+        <div class="stat-top"><span class="ticket-stat__label">Notas canceladas</span><span class="stat-ic"><i class="fas fa-ban"></i></span></div>
+        <div class="stat-value is-text"><%= r.cancelled[:count] %></div>
+        <div class="stat-help rpt-help"><span><%= rpt_money(r.cancelled[:value]) %> que não contam como venda</span></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="table-card rpt-card">
+    <div class="rpt-head">
+      <h3><i class="fas fa-chart-column"></i>Faturamento <%= period.granularity == :day ? 'por dia' : 'por mês' %></h3>
+      <span><%= period.label %> · passe o mouse nas colunas</span>
+    </div>
+    <div class="rpt-body"><%= rpt_columns(r.timeline, title: "Faturamento #{period.granularity == :day ? 'por dia' : 'por mês'}, #{period.label}") %></div>
+  </section>
+
+  <% if period.granularity == :day %>
+    <section class="table-card rpt-card">
+      <div class="rpt-head">
+        <h3><i class="fas fa-chart-line"></i>Evolução nos últimos 12 meses</h3>
+        <span>até <%= l(period.range.end, format: '%B de %Y') %></span>
+      </div>
+      <div class="rpt-body"><%= rpt_columns(r.monthly_trend, title: 'Faturamento por mês, últimos 12 meses', height: 180) %></div>
+    </section>
+  <% end %>
+
+  <div class="rpt-grid">
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-store"></i>Top 10 clientes</h3><span>por faturamento</span></div>
+      <div class="rpt-body">
+        <%= rpt_bars(r.top_clients, extra: ->(x) { "#{x[:count]} #{x[:count] == 1 ? 'nota' : 'notas'}" }) %>
+      </div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-shirt"></i>Top 10 produtos</h3><span>por modelo, valor dos itens</span></div>
+      <div class="rpt-body">
+        <%= rpt_bars(r.top_products, extra: ->(x) { "#{number_with_delimiter(x[:pieces], delimiter: '.')} peças · #{x[:skus]} #{x[:skus] == 1 ? 'SKU' : 'SKUs'}" }) %>
+      </div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-user-tie"></i>Vendedores</h3><span>quem digitou o pedido</span></div>
+      <div class="rpt-body"><%= rpt_bars(r.by_seller, extra: ->(x) { "#{x[:count]} #{x[:count] == 1 ? 'nota' : 'notas'}" }) %></div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-handshake"></i>Consultores</h3><span>quem recomendou</span></div>
+      <div class="rpt-body"><%= rpt_bars(r.by_consultant, extra: ->(x) { "#{x[:count]} #{x[:count] == 1 ? 'nota' : 'notas'}" }) %></div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-map-location-dot"></i>Vendas por estado</h3><span>UF do cliente</span></div>
+      <div class="rpt-body"><%= rpt_bars(r.by_state, extra: ->(x) { "#{x[:count]} #{x[:count] == 1 ? 'nota' : 'notas'}" }) %></div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-credit-card"></i>Formas de pagamento</h3><span>do pedido</span></div>
+      <div class="rpt-body"><%= rpt_bars(r.by_payment, extra: ->(x) { "#{x[:count]} #{x[:count] == 1 ? 'nota' : 'notas'}" }) %></div>
+    </section>
+  </div>
+</div>

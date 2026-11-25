@@ -2574,3 +2574,51 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 @media (prefers-reduced-motion: reduce) { .fin-terms-preview li { animation: none; } }
 .fin-pmodal .fin-pm-terms { margin: -8px 0 16px; font-size: 13px; }
 .fin-pmodal .fin-pm-terms a { color: var(--brand-300); }
+
+/* ----- Relatórios (Adm › Dashboards e relatórios) ----- */
+.rpt { --rpt-c: var(--brand-400); }
+.rpt-period { margin: 0; }
+.rpt-period .field-input { min-width: 220px; }
+.rpt-range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--text-2); font-size: 13.5px; }
+.rpt-range .fa-calendar-days { color: var(--rpt-c); }
+.rpt-range span { color: var(--text-4); }
+.rpt-kpis .stat-value.is-text { font-size: 24px; }
+.rpt-help { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rpt-delta { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid; }
+.rpt-delta.is-up { color: var(--green); background: var(--green-bg, rgba(63,185,80,.12)); border-color: rgba(63,185,80,.35); }
+.rpt-delta.is-down { color: #ff8a82; background: var(--red-bg); border-color: rgba(248,81,73,.35); }
+.rpt-delta.is-flat { color: var(--text-3); border-color: var(--border-2); font-weight: 500; }
+.rpt-delta i { font-size: 10px; }
+.rpt-card { padding: 0; }
+.rpt-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; padding: 16px 18px 6px; }
+.rpt-head h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.rpt-head h3 i { color: var(--text-3); }
+.rpt-head span { font-size: 12px; color: var(--text-4); }
+.rpt-body { padding: 8px 18px 16px; }
+.rpt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 1080px) { .rpt-grid { grid-template-columns: 1fr; } }
+.rpt-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rpt-svg .rpt-gl { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; }
+.rpt-svg .rpt-axis { stroke: var(--border-2); stroke-width: 1; }
+.rpt-svg .rpt-tick { fill: var(--text-4); font-size: 11px; font-family: inherit; }
+.rpt-svg .rpt-bar { fill: var(--rpt-c); opacity: .9; transform-box: fill-box; transform-origin: bottom; animation: rpt-grow 620ms var(--ease-out, ease-out) both; animation-delay: calc(var(--i, 0) * 18ms); transition: opacity var(--t), filter var(--t); }
+.rpt-svg .rpt-hit { fill: transparent; cursor: default; }
+.rpt-svg .rpt-col:hover .rpt-bar { opacity: 1; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--rpt-c) 60%, transparent)); }
+.rpt-svg .rpt-col:hover .rpt-hit { fill: color-mix(in srgb, var(--rpt-c) 7%, transparent); }
+@keyframes rpt-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.rpt-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.rpt-row { display: flex; flex-direction: column; gap: 4px; padding: 4px 6px; margin: 0 -6px; border-radius: 8px; transition: background var(--t); }
+.rpt-row:hover { background: color-mix(in srgb, var(--rpt-c) 6%, transparent); }
+.rpt-row-top { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.rpt-lbl { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rpt-val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rpt-track { height: 6px; border-radius: 4px; background: var(--surface-3, rgba(255,255,255,.05)); overflow: hidden; }
+.rpt-fill { display: block; height: 100%; width: var(--w); border-radius: 0 4px 4px 0; background: var(--rpt-c); animation: rpt-fill 700ms var(--ease-out, ease-out) both; animation-delay: calc(var(--i, 0) * 50ms); }
+@keyframes rpt-fill { from { width: 0; } }
+.rpt-sub { font-size: 11.5px; color: var(--text-4); }
+.rpt-empty { margin: 8px 0; color: var(--text-3); font-size: 13px; }
+.rpt-table { margin-top: 10px; font-size: 12.5px; }
+.rpt-table summary { cursor: pointer; color: var(--text-3); display: inline-flex; gap: 6px; align-items: center; }
+.rpt-table summary:hover { color: var(--text); }
+.rpt-table table { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { .rpt-svg .rpt-bar, .rpt-fill { animation: none; } }

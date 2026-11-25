@@ -1381,6 +1381,35 @@
      "Produtos, frete, seguro e despesas, menos o desconto."
     ]
    ]
+  },
+  "rel-vendas-atacado": {
+   "title": "Vendas Atacado",
+   "subtitle": "Faturamento das NF-e de venda do atacado",
+   "purpose": "Acompanhar as vendas do atacado: faturamento, notas, ticket médio, peças e clientes do período, comparados com o período anterior, com a evolução por dia ou mês e os rankings de clientes, produtos, estados, formas de pagamento, vendedores e consultores.",
+   "when": "No acompanhamento do mês, no fechamento e para comparar períodos.",
+   "actions": [
+    "Escolher o período (mês, últimos 30 dias, últimos 12 meses ou o ano)",
+    "Passar o mouse nas barras para ver o valor",
+    "Abrir a tabela de cada gráfico"
+   ],
+   "terms": [
+    [
+     "Venda",
+     "NF-e de venda do atacado autorizada em produção, pela data de emissão. Cancelada não conta."
+    ],
+    [
+     "Faturamento",
+     "Soma do valor das notas: produtos, frete e despesas, menos desconto."
+    ],
+    [
+     "Ticket médio",
+     "Faturamento dividido pelo número de pedidos com nota."
+    ],
+    [
+     "Variação",
+     "Comparação com o período anterior do mesmo tamanho (o mês anterior, o ano anterior...)."
+    ]
+   ]
   }
  },
  "glossary": [
@@ -1597,6 +1626,7 @@
   "log-locais": "destino cnpj endereco transferencia",
   "atc-frete": "frete tabela faixa valor pedido atacado",
   "log02-xml": "nota nf nfe emissao fiscal sefaz",
-  "log-notas": "nota nf nfe xml zip contabilidade mes abastecimento transferencia remessa fiscal"
+  "log-notas": "nota nf nfe xml zip contabilidade mes abastecimento transferencia remessa fiscal",
+  "rel-vendas-atacado": "relatorio dashboard grafico vendas faturamento atacado kpi ticket medio clientes produtos vendedor consultor"
  }
 }
