@@ -74,7 +74,7 @@ class HoneyQueryTable < HoneyTable
         value = filter_value(f) or next
         out = if @filter_sql[f[:id]] then @filter_sql[f[:id]].call(out, value)
               elsif f[:type] == :search && @search then @search.call(out, value)
-              elsif f[:type] == :period && @attrs[f[:col]] then out.where(@attrs[f[:col]] => period_start(value)..)
+              elsif f[:type] == :period && @attrs[f[:col]] then out.where(@attrs[f[:col]] => period_range(value))
               elsif f[:type] == :month then out # o controller aplica o mês (com o mês atual quando vazio)
               elsif @attrs[f[:col]] then out.where(@attrs[f[:col]] => value.to_s.split(','))
               else out

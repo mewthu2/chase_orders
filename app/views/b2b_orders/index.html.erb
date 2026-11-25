@@ -43,7 +43,7 @@
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
        total_frete: order.grand_total, frete_sub: (order.freight_value.to_d.positive? ? "com #{number_to_currency(order.freight_value, unit: 'R$', separator: ',', delimiter: '.')} de frete" : 'sem frete'),
-       tiny: (order.tiny_reference_number.presence || order.tiny_reference_id.presence).to_s, track: order.tracking_code.presence || '—', st: order.status,
+       tiny: (order.tiny_reference_number.presence || order.tiny_reference_id.presence).to_s, track: order.tracking_code.presence || (order.honey_flow? && order.log_stage == 'carrier' ? 'Transportadora' : '—'), st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.salesperson_name.presence || '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
        entrega: order.stock_transfer? ? order.stock_delivery_label : nil, fretepg: { 'shipper' => 'Remetente', 'recipient' => 'Destinatário' }[order.freight_paid_by] || '—',

@@ -218,6 +218,34 @@ class HoneyB2bLogTest < ActiveSupport::TestCase
     assert_equal 'shipped', o.log_stage
   end
 
+  # O Correios só dá rastreio no fluxo postal (SEDEX 39888, PAC 39870): por transportadora (74926) não há código.
+  test 'a supply by carrier leaves the tracking queue as shipped by carrier without asking Correios' do
+    o = order(:stock_transfer, carrier: @carrier, correios_order_id: 778, xml_sent_at: Time.current, status: :faturado)
+    Attempt.create!(kinds: :create_correios_order_honey, b2b_order_id: o.id, status: :success, order_correios_id: 778, is_transportadora: true)
+
+    Correios::Orders.stub(:get_tracking, ->(*, **) { flunk 'não pode perguntar ao Correios' }) { HoneyB2bLog.track_pending! }
+
+    o.reload
+    assert o.enviado?
+    assert_nil o.tracking_code
+    assert_equal 'carrier', o.log_stage
+    assert_not_includes B2bOrder.waiting_tracking, o
+    assert_match(/transportadora/, Attempt.where(b2b_order_id: o.id, kinds: :get_tracking_honey).last.message)
+  end
+
+  test 'a Correios error on the tracking is recorded instead of looking like a missing code' do
+    o = order(:stock_transfer, correios_order_id: 779, xml_sent_at: Time.current, status: :faturado)
+    Attempt.create!(kinds: :create_correios_order_honey, b2b_order_id: o.id, status: :success, order_correios_id: 779, is_transportadora: false)
+    response = Struct.new(:code, :parsed_response) { def dig(*) = nil }
+                     .new(403, { 'mensagem' => 'IWS112 - Cartão de postagem com status: SUSPENSO.' })
+
+    attempt = Correios::Orders.stub(:get_tracking, ->(*, **) { response }) { HoneyB2bLog.fetch_tracking(o) }
+
+    assert attempt.error?
+    assert_match(/403: IWS112.*SUSPENSO/, attempt.error)
+    assert_equal 'tracking', o.reload.log_stage
+  end
+
   test 'the XML sent to Correios carries its order number in xPed of every product and of compra, keeping the signature' do
     xml = '<?xml version="1.0" encoding="UTF-8"?><nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00"><NFe><infNFe>' \
           '<det nItem="1"><prod><cProd>A</cProd><indTot>1</indTot></prod></det>' \

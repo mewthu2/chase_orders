@@ -2,6 +2,7 @@
 #
 #   aprovado ──criação──▶ preparando_envio (correios_order_id) ──NF-e + XML──▶ faturado (xml_sent_at)
 #            ──rastreio──▶ enviado (tracking_code)
+# Por transportadora (serviço 74926) o Correios não dá rastreio: o pedido vai de faturado direto para enviado.
 #
 # Cada passo grava uma tentativa (Attempt create_correios_order_honey / send_xml_honey / get_tracking_honey,
 # com b2b_order_id) e roda no fim do job do Log02 da mesma etapa, então segue o agendador e os botões de
@@ -14,6 +15,7 @@ class HoneyB2bLog
   FALLBACK_EMAIL = 'contato@chasebrasil.com'.freeze
   # Destinatário fixo da transferência B2C, com o código IBGE de Belo Horizonte para a NF-e.
   B2C_RECIPIENT_IBGE = '3106200'.freeze
+  CARRIER_NO_TRACKING = 'Enviado por transportadora: o Correios só dá rastreio para SEDEX (39888) e PAC (39870).'.freeze
 
   class << self
     def create_pending!
@@ -163,16 +165,32 @@ class HoneyB2bLog
     Correios::Invoices.send_xml_to_correios(attempt)
     attempt.reload
     if xml_accepted?(attempt)
-      @order.update_columns(xml_sent_at: Time.current, status: B2bOrder.statuses[:faturado], updated_at: Time.current)
+      # Por transportadora não há rastreio dos Correios: o pedido já fica enviado e não entra na fila do rastreio.
+      status = carrier_shipment? ? :enviado : :faturado
+      @order.update_columns(xml_sent_at: Time.current, status: B2bOrder.statuses[status], updated_at: Time.current)
       attempt.update(status: :success) unless attempt.success?
     end
     attempt
   end
 
   # ---- 3. rastreio ----
+  # O Correios só dá rastreio no fluxo postal (SEDEX 39888 e PAC 39870). Pedido por transportadora (74926) não
+  # tem código: sai da fila como enviado, sem perguntar ao Correios.
   def fetch_tracking
     attempt = Attempt.create!(kinds: :get_tracking_honey, b2b_order_id: @order.id, order_correios_id: @order.correios_order_id)
+    if carrier_shipment?
+      attempt.update(status: :success, message: CARRIER_NO_TRACKING)
+      @order.update_columns(status: B2bOrder.statuses[:enviado], updated_at: Time.current)
+      return attempt
+    end
+
     tracking = Correios::Orders.get_tracking(@order.correios_order_id, from_tiny2: true)
+    if tracking.respond_to?(:code) && tracking.code.to_i >= 400
+      message = (tracking.parsed_response['mensagem'] if tracking.parsed_response.is_a?(Hash)).presence || "HTTP #{tracking.code}"
+      attempt.update(status: :error, status_code: tracking.code.to_s, error: "Correios respondeu #{tracking.code}: #{message}".first(255))
+      return attempt
+    end
+
     code = tracking.is_a?(Hash) || tracking.respond_to?(:dig) ? tracking.dig('rastreio', 0, 'codigoObjeto') : nil
     if code.present?
       attempt.update(status: :success, tracking: code)
@@ -244,6 +262,12 @@ class HoneyB2bLog
 
   def carrier_service?
     correios_service.first == CARRIER_SERVICE
+  end
+
+  # Como o pedido foi criado no Correios (a tentativa guarda se foi por transportadora); sem ela, o serviço de hoje.
+  def carrier_shipment?
+    created = Attempt.where(b2b_order_id: @order.id, kinds: :create_correios_order_honey, status: :success).order(:id).last
+    created.nil? || created.is_transportadora.nil? ? carrier_service? : created.is_transportadora
   end
 
   # [código do serviço, CNPJ da transportadora, mão própria?]

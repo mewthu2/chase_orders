@@ -130,30 +130,50 @@ module HoneyPageHelper
     else
       all = filter[:all] || (filter[:type] == :period ? 'Todo o período' : 'Todos')
       options = [[all, '']] + table.filter_options(filter).map { |v, l| [l, v] }
+      select = content_tag(:div, select_tag(name, options_for_select(options, value.to_s), id: "pgf-#{table.id}-#{filter[:id]}", class: "field-input#{' is-set' if value}",
+                                                                   onchange: 'this.form.requestSubmit()', data: ({ date_range_target: 'select' } if filter[:type] == :period)), class: 'select-wrap')
       content_tag(:div, class: 'filter-field') do
-        label + content_tag(:div, select_tag(name, options_for_select(options, value.to_s), id: "pgf-#{table.id}-#{filter[:id]}", class: "field-input#{' is-set' if value}", onchange: 'this.form.requestSubmit()'), class: 'select-wrap')
+        label + (filter[:type] == :period ? content_tag(:div, select + hc_pg_calendar_button, class: 'pg-month pg-range', data: hc_pg_range_data(value)) : select)
       end
     end
   end
 
+  # Botão do calendário dos filtros de data (mês e período): abre o seletor "de tal dia a tal dia"
+  # (app/javascript/controllers/date_range_controller.js), que grava o intervalo no select do filtro.
+  def hc_pg_calendar_button
+    tip = 'Escolher no calendário, de um dia a outro'
+    button_tag(content_tag(:i, '', class: 'fas fa-calendar-days'), type: 'button', class: 'pg-month-nav pg-cal-btn',
+                                                                    data: { tip: tip, date_range_target: 'button', action: 'date-range#toggle' }, 'aria-label': tip, 'aria-haspopup': 'dialog')
+  end
+
+  def hc_pg_range_data(value)
+    range = HoneyTable.parse_range(value)
+    { controller: 'date-range', date_range_from_value: range&.begin&.to_date&.iso8601, date_range_to_value: range&.end&.to_date&.iso8601 }.compact
+  end
+
   # Mês com setas, como o filtro do Tiny: ‹ Novembro de 2026 ›, mais "Todos os meses" no fim da lista.
+  # O calendário ao lado escolhe um intervalo de dias, que entra no mesmo select ("03/11/2026 a 20/11/2026").
   def hc_pg_month_field(table, filter, name, value, label)
     all = value.to_s == 'todos'
-    shown = HoneyTable.parse_month(value) || HoneyTable.parse_month(filter[:default]) || Date.current.beginning_of_month
+    range = HoneyTable.parse_range(value)
+    shown = range&.begin&.to_date&.beginning_of_month || HoneyTable.parse_month(value) || HoneyTable.parse_month(filter[:default]) || Date.current.beginning_of_month
     page = table.param_name(:page)
     months = (0...36).map { |i| Date.current.beginning_of_month << i }
     months = (months | [shown]).sort.reverse
     options = months.map { |d| [HoneyTable.month_label(d.strftime('%Y-%m')), d.strftime('%Y-%m')] } + [['Todos os meses', 'todos']]
+    options.unshift([HoneyTable.range_label(value), value]) if range
+    selected = range ? value : (all ? 'todos' : shown.strftime('%Y-%m'))
     nav = lambda do |date, icon, tip|
       link_to(content_tag(:i, '', class: "fas #{icon}"), hc_pg_url(name => date.strftime('%Y-%m'), page => nil),
               class: 'pg-month-nav', data: { tip: tip }, 'aria-label': tip)
     end
     content_tag(:div, class: 'filter-field pg-ff-month') do
-      label + content_tag(:div, class: "pg-month#{' is-all' if all}") do
+      label + content_tag(:div, class: "pg-month#{' is-all' if all}#{' is-range' if range}", data: hc_pg_range_data(value).merge(date_range_month_value: shown.iso8601)) do
         nav.call(shown << 1, 'fa-chevron-left', 'Mês anterior') +
-          content_tag(:div, select_tag(name, options_for_select(options, all ? 'todos' : shown.strftime('%Y-%m')), id: "pgf-#{table.id}-#{filter[:id]}",
-                                       class: 'field-input is-set', onchange: 'this.form.requestSubmit()'), class: 'select-wrap') +
-          nav.call(shown >> 1, 'fa-chevron-right', 'Próximo mês')
+          content_tag(:div, select_tag(name, options_for_select(options, selected), id: "pgf-#{table.id}-#{filter[:id]}",
+                                       class: 'field-input is-set', onchange: 'this.form.requestSubmit()', data: { date_range_target: 'select' }), class: 'select-wrap') +
+          nav.call(shown >> 1, 'fa-chevron-right', 'Próximo mês') +
+          hc_pg_calendar_button
       end
     end
   end

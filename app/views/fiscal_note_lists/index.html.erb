@@ -29,14 +29,14 @@
     </div>
   <% end %>
   <%= hc_pg_table(table, title: 'Notas fiscais', icon: 'fas fa-file-invoice',
-        meta: 'Do mês escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
+        meta: 'Do mês ou período escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
         link: ->(r) {
           note = r[:record]
           screen_can?(:fiscal_notes) ? fiscal_note_path(note) : b2b_order_edit_path(note.b2b_order, tab: 'nota', anchor: ('remessaNote' if note.remessa?))
         },
         select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]) } },
         bulk: bulk,
-        empty: { title: 'Nenhuma nota neste mês', text: 'Use as setas do filtro de mês para ver outros meses.' },
+        empty: { title: 'Nenhuma nota neste período', text: 'Use as setas do filtro de mês ou o calendário para ver outras datas.' },
         detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]],
                   note: ->(r) { r[:erro].presence || (r[:amb] == 'homologacao' ? 'Nota de homologação (teste): não tem valor fiscal.' : nil) } },
         actions: ->(r) {

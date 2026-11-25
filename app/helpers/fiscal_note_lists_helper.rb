@@ -69,7 +69,7 @@ module FiscalNoteListsHelper
         { k: :protocolo, label: 'Protocolo de autorização', hide: true }
       ].compact,
       filters: [
-        { id: :mes, type: :month, label: 'Mês', tip: 'Mês de emissão da nota. As setas trocam de mês; no fim da lista dá para ver todos os meses.' },
+        { id: :mes, type: :month, label: 'Mês', tip: 'Mês de emissão da nota. As setas trocam de mês, o calendário escolhe de um dia a outro e no fim da lista dá para ver todos os meses.' },
         { id: :q, type: :search, label: 'Buscar', ph: 'Número, pedido, empresa ou chave…', tip: 'Procura no número da nota, no pedido, na empresa e na chave de acesso.' },
         ({ id: :tipo, type: :select, label: 'Tipo', col: :tipo, options: types.map { |k, v| [k, v[0]] }, all: 'Todos os tipos', tip: 'Abastecimento, transferência B2B ⇄ B2C ou a nota de remessa.' } if logistics),
         { id: :status, type: :select, label: 'Situação', col: :st, all: 'Todas as situações', tip: 'Em que ponto a nota está.' },

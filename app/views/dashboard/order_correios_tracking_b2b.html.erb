@@ -3,5 +3,5 @@
            order_types: @order_types, transport: true %>
 
 <div class="pg-blocks" style="margin-top: 16px">
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation invoice tracking shipped completed], show_correios: true, title: 'Pedidos do Honey no Log02', meta: 'Em que etapa está cada pedido feito no Honey.', empty_text: 'Nenhum pedido do Honey nos últimos 6 meses.' %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[review ignored creation invoice tracking shipped carrier completed], show_correios: true, title: 'Pedidos do Honey no Log02', meta: 'Em que etapa está cada pedido feito no Honey.', empty_text: 'Nenhum pedido do Honey nos últimos 6 meses.' %>
 </div>

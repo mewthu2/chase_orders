@@ -11,6 +11,7 @@
 # Filtro: { id:, type: :search|:select|:period|:month, label:, col:, cols: [...], options: [[valor, rótulo]], all:, tip:, ph:,
 #           server: true (o controller já aplicou; aqui só mostra o campo e o chip) }
 #         :month é o mês com setas (como o do Tiny), valor "AAAA-MM" ou "todos"; default: o mês mostrado sem valor na URL.
+#         :month e :period também aceitam um intervalo de dias do calendário, valor "AAAA-MM-DD..AAAA-MM-DD".
 # Indicador: { label:, icon:, tone:, help:, col:, vals: [...], sum: <k>, count:, text: }
 class HoneyTable
   PERIODS = [['1', 'Hoje'], ['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias']].freeze
@@ -76,7 +77,7 @@ class HoneyTable
 
         out = case f[:type]
               when :search then search(out, f, value)
-              when :period then out.select { |r| (time = r[f[:col]]) && time >= period_start(value) }
+              when :period then out.select { |r| (time = r[f[:col]]).respond_to?(:in_time_zone) && period_range(value).cover?(time.in_time_zone) }
               else out.select { |r| match?(r[f[:col]], value) }
               end
       end
@@ -137,8 +138,12 @@ class HoneyTable
   end
 
   def filter_options(filter)
+    if filter[:type] == :period
+      label = self.class.range_label(filter_value(filter))
+      base = filter[:options] || PERIODS
+      return label ? base + [[filter_value(filter).to_s, label]] : base
+    end
     return filter[:options] if filter[:options]
-    return PERIODS if filter[:type] == :period
     return [[filter_value(filter).to_s, self.class.month_label(filter_value(filter))]] if filter[:type] == :month
 
     column = col(filter[:col])
@@ -151,9 +156,10 @@ class HoneyTable
 
   MONTHS = %w[Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro].freeze
 
-  # "2026-11" => "Novembro de 2026"; "todos" => "Todos os meses".
+  # "2026-11" => "Novembro de 2026"; "todos" => "Todos os meses"; "2026-11-03..2026-11-20" => "03/11/2026 a 20/11/2026".
   def self.month_label(value)
     return 'Todos os meses' if value.to_s == 'todos'
+    return range_label(value) if parse_range(value)
 
     date = parse_month(value) or return value.to_s
     "#{MONTHS[date.month - 1]} de #{date.year}"
@@ -163,6 +169,23 @@ class HoneyTable
     Date.strptime(value.to_s, '%Y-%m') if value.to_s.match?(/\A\d{4}-\d{2}\z/)
   rescue Date::Error
     nil
+  end
+
+  RANGE_VALUE = /\A(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})\z/
+
+  # Intervalo escolhido no calendário: "AAAA-MM-DD..AAAA-MM-DD" => do começo do primeiro dia ao fim do último.
+  def self.parse_range(value)
+    match = value.to_s.match(RANGE_VALUE) or return nil
+    first, last = [Date.iso8601(match[1]), Date.iso8601(match[2])].sort
+    first.in_time_zone.beginning_of_day..last.in_time_zone.end_of_day
+  rescue Date::Error
+    nil
+  end
+
+  def self.range_label(value)
+    range = parse_range(value) or return nil
+    first, last = range.begin.to_date, range.end.to_date
+    first == last ? first.strftime('%d/%m/%Y') : "#{first.strftime('%d/%m/%Y')} a #{last.strftime('%d/%m/%Y')}"
   end
 
   def self.norm(text) = I18n.transliterate(text.to_s).downcase
@@ -186,6 +209,11 @@ class HoneyTable
   def period_start(value)
     days = value.to_i
     days == 1 ? Time.current.beginning_of_day : days.days.ago
+  end
+
+  # Período do filtro: o intervalo do calendário ou os últimos N dias.
+  def period_range(value)
+    self.class.parse_range(value) || (period_start(value)..)
   end
 
   def sorted(rows)

@@ -18,7 +18,11 @@
    } %>
 <% with_coupon = ->(scope) { scope.where.not(discount_codes: nil).where("JSON_LENGTH(orders.discount_codes) > 0") } %>
 <% table = HoneyQueryTable.new(params, scope: @scope, map: map, search: search, page_size: 8, unit: 'pedidos', unit1: 'pedido',
-     attrs: { loc: :location_id }, filter_sql: { per: ->(scope, v) { scope.where('COALESCE(orders.shopify_creation_date, orders.created_at) >= ?', v.to_i.days.ago.beginning_of_day) } },
+     attrs: { loc: :location_id }, filter_sql: { per: ->(scope, v) {
+       range = HoneyTable.parse_range(v)
+       range ? scope.where('COALESCE(orders.shopify_creation_date, orders.created_at) BETWEEN ? AND ?', range.begin, range.end)
+             : scope.where('COALESCE(orders.shopify_creation_date, orders.created_at) >= ?', v.to_i.days.ago.beginning_of_day)
+     } },
      sort_sql: { num: 'orders.id', total: 'orders.current_total_price', dt: 'COALESCE(orders.shopify_creation_date, orders.created_at)' },
      cols: [
        { k: :num, label: 'Pedido', t: :num, main: true, sort: true, nodetail: true },
@@ -42,7 +46,7 @@
      filters: [
        { id: :q, type: :search, label: 'Buscar pedido', ph: 'Nº do pedido, cliente, e-mail ou telefone', tip: 'Procura pelo número do pedido, pelo nome, e-mail ou telefone da cliente e pelo ID do Shopify ou do Tiny.' },
        { id: :loja, type: :select, label: 'Localização', col: :loc, options: @locations.map { |l| [l.id.to_s, l.slug == 'log+' ? "#{l.name} (envio pelos Correios)" : l.name] }, all: 'Todas as localizações', tip: 'A loja do pedido. O Log03 reúne os pedidos online enviados pelos Correios.' },
-       { id: :per, type: :select, label: 'Período', options: [['7', 'Últimos 7 dias'], ['15', 'Últimos 15 dias'], ['30', 'Últimos 30 dias']], all: 'Todo o período', tip: 'Filtra pela data em que o pedido foi feito no Shopify.' }
+       { id: :per, type: :period, label: 'Período', options: [['7', 'Últimos 7 dias'], ['15', 'Últimos 15 dias'], ['30', 'Últimos 30 dias']], all: 'Todo o período', tip: 'Filtra pela data em que o pedido foi feito no Shopify.' }
      ],
      kpis: [
        { label: 'Pedidos', icon: 'fas fa-shopping-cart', tone: 'blue', help: 'Todos os pedidos que vieram do Shopify.', value: ->(scope) { scope.except(:includes).count } },

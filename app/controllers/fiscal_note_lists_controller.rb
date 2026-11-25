@@ -26,7 +26,7 @@ class FiscalNoteListsController < ApplicationController
     notes = notes.where(status: ZIP_STATUSES).reorder(:number).limit(MAX_ZIP_NOTES + 1)
                  .includes(:company, xml_attachment: :blob, cancel_xml_attachment: :blob).to_a
     return redirect_back_or_to(list_path, alert: 'Nenhuma nota autorizada ou cancelada com XML neste filtro.') if notes.none?(&:xml_available?)
-    return redirect_back_or_to(list_path, alert: "São mais de #{MAX_ZIP_NOTES} notas: escolha um mês ou filtre mais.") if notes.size > MAX_ZIP_NOTES
+    return redirect_back_or_to(list_path, alert: "São mais de #{MAX_ZIP_NOTES} notas: escolha um mês, um período menor ou filtre mais.") if notes.size > MAX_ZIP_NOTES
 
     send_data Nfe::XmlZip.call(notes), filename: zip_filename(ids.any?), type: 'application/zip', disposition: 'attachment'
   end
@@ -47,15 +47,21 @@ class FiscalNoteListsController < ApplicationController
     range ? out.where('COALESCE(fiscal_notes.issued_at, fiscal_notes.created_at) BETWEEN ? AND ?', range.begin, range.end) : out
   end
 
+  # O mês do filtro ou o intervalo de dias escolhido no calendário.
   def month_range
     return nil if params[:mes] == 'todos'
+    return HoneyTable.parse_range(params[:mes]) if HoneyTable.parse_range(params[:mes])
 
     month = HoneyTable.parse_month(params[:mes]) || Date.current.beginning_of_month
     month.in_time_zone.beginning_of_month..month.in_time_zone.end_of_month
   end
 
   def zip_filename(selected)
-    month = params[:mes] == 'todos' ? 'todos-os-meses' : (HoneyTable.parse_month(params[:mes]) || Date.current).strftime('%Y-%m')
+    range = HoneyTable.parse_range(params[:mes])
+    month = if params[:mes] == 'todos' then 'todos-os-meses'
+            elsif range then "#{range.begin.to_date.iso8601}_a_#{range.end.to_date.iso8601}"
+            else (HoneyTable.parse_month(params[:mes]) || Date.current).strftime('%Y-%m')
+            end
     "notas-#{list_key}-#{month}#{'-selecionadas' if selected}.zip"
   end
 end

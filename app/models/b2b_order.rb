@@ -99,7 +99,8 @@ class B2bOrder < ApplicationRecord
 
   # Filas do Log02 depois da criação no Correios. Pedido já no Correios com log_ignored foi concluído à mão: sai das duas.
   scope :waiting_xml, -> { honey_flow.where.not(correios_order_id: nil).where(xml_sent_at: nil, log_ignored: false).where.not(status: :cancelado) }
-  scope :waiting_tracking, -> { honey_flow.where.not(xml_sent_at: nil).where(tracking_code: [nil, ''], log_ignored: false).where.not(status: :cancelado) }
+  # Enviado sem código é o que foi por transportadora (sem rastreio dos Correios): também sai da fila.
+  scope :waiting_tracking, -> { honey_flow.where.not(xml_sent_at: nil).where(tracking_code: [nil, ''], log_ignored: false).where.not(status: %i[cancelado enviado]) }
 
   # B2C → B2B reserva o estoque B2C até as duas notas de produção saírem (status faturado).
   scope :reserving_b2c_stock, -> { b2c_to_b2b.where(tiny_reference_id: [nil, '']).where.not(status: %i[cancelado faturado enviado]) }
@@ -114,6 +115,7 @@ class B2bOrder < ApplicationRecord
     'invoice' => ['NF-e e XML', 'Criado no Correios: falta emitir a NF-e no Honey e enviar o XML.'],
     'tracking' => ['Rastreio', 'XML enviado: esperando o Correios liberar o código de rastreio.'],
     'shipped' => ['Enviado', 'Com código de rastreio.'],
+    'carrier' => ['Enviado por transportadora', 'XML enviado. Vai por transportadora: o Correios só dá rastreio para SEDEX (39888) e PAC (39870).'],
     'canceled' => ['Cancelado', 'Cancelado.'],
     'completed' => ['Concluído à mão', 'Tirado da fila à mão: o Honey não envia o XML nem busca o rastreio.'],
     'notes_only' => ['Só notas fiscais', 'B2C → B2B: não vai ao Correios, só precisa da nota de transferência e da de remessa.']
@@ -184,6 +186,7 @@ class B2bOrder < ApplicationRecord
     return 'notes_only' if b2c_to_b2b?
     return 'shipped' if tracking_code.present?
     return 'completed' if correios_order_id.present? && log_ignored?
+    return 'carrier' if xml_sent_at.present? && enviado?
     return 'tracking' if xml_sent_at.present?
     return 'invoice' if correios_order_id.present?
     return 'ignored' if log_ignored?

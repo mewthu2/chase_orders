@@ -3,7 +3,7 @@
     número no Correios, nas telas em que o pedido já foi criado lá). %>
 <% review = local_assigns.fetch(:review, false) %>
 <% show_correios = local_assigns.fetch(:show_correios, false) %>
-<% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'canceled' => 'red', 'completed' => 'green' } %>
+<% tones = { 'review' => 'yellow', 'ignored' => 'gray', 'creation' => 'blue', 'invoice' => 'purple', 'tracking' => 'orange', 'shipped' => 'green', 'carrier' => 'blue', 'canceled' => 'red', 'completed' => 'green' } %>
 <% stage_map = B2bOrder::LOG_STAGES.to_h { |k, (label, help)| [k, [label, tones[k], help]] } %>
 <% kind_labels = { 'sale' => 'Atacado', 'stock_transfer' => 'Abastecimento', 'b2c_transfer' => 'Transferência B2C' } %>
 <% orders = B2bOrder.honey_flow.includes(:client, :transfer_location, :b2b_order_items).where('b2b_orders.created_at > ?', 6.months.ago).to_a
@@ -18,7 +18,7 @@
        last = last_attempts[o.id]
        failed = last && !last.success? && attempt_stage[last.kinds] == o.log_stage
        { id: o.id, record: o, n: "##{o.id}", pn: b2b_pn_cell(o, notes[o.id], remessa: remessas[o.id]), tipo: kind_labels[o.kind], destino: HoneyB2bLog.destination_name(o).presence || '—',
-         dt: o.created_at, total: o.total.to_f, st: o.log_stage, correios: b2b_correios_number(o.correios_order_id), rastreio: o.tracking_code.presence || '—',
+         dt: o.created_at, total: o.total.to_f, st: o.log_stage, correios: b2b_correios_number(o.correios_order_id), rastreio: o.tracking_code.presence || (o.log_stage == 'carrier' ? 'Transportadora' : '—'),
          ultima: last ? "#{last.success? ? 'OK' : 'Falhou'}: #{(last.error.presence || last.message.presence || '—').to_s.truncate(160)}" : '—',
          erro: (if failed
                   content_tag(:span, safe_join([content_tag(:i, '', class: 'fas fa-triangle-exclamation'),
