@@ -44,8 +44,10 @@ module Nfe
     def initialize(company:, recipient:, items:, number:, series:, operation_nature:, issued_at:, cnf: nil,
                    final_consumer: false, presence: '0', freight_mode: '9', payments: nil, additional_info: nil,
                    fisco_info: nil, purpose: 1, tax: nil, ibs_cbs_exempt: nil, environment: nil, duplicates: nil, carrier: nil,
-                   order_number: nil)
+                   order_number: nil, references: nil)
       @company = company
+      # NF-e referenciadas (NFref/refNFe): chaves de 44 dígitos, ex.: a venda original e a devolução numa substituição.
+      @references = Array(references).map { |k| k.to_s.gsub(/\D/, '') }.select { |k| k.size == 44 }.uniq
       # Número do pedido de compra (xPed de cada produto): o pedido do Correios Log, que ele exige na nota.
       @order_number = order_number.to_s.strip.first(15).presence
       # Transportadora (grupo transporta): { document:, name:, state_registration:, address:, city:, state: }.
@@ -305,6 +307,7 @@ module Nfe
         xml.indIntermed '0' if REMOTE_PRESENCES.include?(@presence)
         xml.procEmi '0'
         xml.verProc 'Honey 1.0'
+        @references.each { |key| xml.NFref { xml.refNFe key } }
       end
     end
 

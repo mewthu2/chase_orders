@@ -1,0 +1,113 @@
+<% content_for :title, 'Análise de produtos do atacado' %>
+<% r = @report %>
+<% period = r.period %>
+<% prev = r.previous_totals %>
+<% prev_label = "#{l(period.previous.begin, format: '%d/%m/%Y')} a #{l(period.previous.end, format: '%d/%m/%Y')}" %>
+<% outlet = r.outlet %>
+<% table = rpt_products_table(r) %>
+
+<%= hc_page_header 'Análise de produtos do atacado', 'Curva ABC, produtos parados, tendência, margem e candidatos a outlet.', icon: 'fas fa-layer-group' do %>
+  <%= form_with url: reports_wholesale_products_path, method: :get, local: true, class: 'rpt-period rpt-base', data: { turbo: false } do %>
+    <%= select_tag :base, options_for_select(Reports::WholesaleProducts::BASES.invert, r.basis), class: 'field-input is-set', onchange: 'this.form.requestSubmit()', 'aria-label': 'Base' %>
+    <div class="select-wrap">
+      <%= select_tag :periodo, options_for_select(Reports::WholesaleSales.period_options(current: period.key), period.key), class: 'field-input is-set',
+                     onchange: 'this.form.requestSubmit()', 'aria-label': 'Período' %>
+    </div>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks rpt">
+  <p class="rpt-range"><i class="fas fa-calendar-days"></i><b><%= period.label %></b> · <%= l(period.range.begin, format: '%d/%m/%Y') %> a <%= l(period.range.end, format: '%d/%m/%Y') %>
+    <span>base: <%= Reports::WholesaleProducts::BASES[r.basis].downcase %> · comparado com <%= prev_label %></span></p>
+
+  <div class="kpi-grid stagger pg-kpis rpt-kpis" style="--cols: 4">
+    <%= rpt_kpi(label: 'Faturamento dos produtos', value: rpt_money(r.revenue), icon: 'fas fa-sack-dollar', tone: 'green', i: 0,
+                help: "antes #{rpt_money(prev[:revenue])}", delta: r.delta(r.revenue, prev[:revenue]), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Peças vendidas', value: number_with_delimiter(r.pieces, delimiter: '.'), icon: 'fas fa-shirt', tone: 'orange', i: 1,
+                help: "preço médio #{rpt_money(r.avg_price)}", delta: r.delta(r.pieces, prev[:pieces]), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Modelos vendidos', value: r.sold.size, icon: 'fas fa-layer-group', tone: 'blue', i: 2,
+                help: "de #{r.models.size} com histórico", delta: r.delta(r.sold.size, prev[:models]), previous: prev_label) %>
+    <%= rpt_kpi(label: 'Concentração top 10', value: rpt_percent(r.top10_share, precision: 0), icon: 'fas fa-bullseye', tone: 'purple', i: 3,
+                help: 'do faturamento nos 10 maiores modelos') %>
+    <%= rpt_kpi(label: 'Margem média s/ custo', value: r.avg_margin ? rpt_percent(r.avg_margin, precision: 0) : '—', icon: 'fas fa-percent', tone: 'green', i: 4,
+                help: 'ponderada, modelos com custo no cadastro') %>
+    <%= rpt_kpi(label: 'Sem venda no período', value: r.by_status('parado').size, icon: 'fas fa-pause', tone: 'yellow', i: 5,
+                help: 'venderam antes, não agora') %>
+    <%= rpt_kpi(label: 'Nunca vendidos', value: r.by_status('nunca').size + outlet.count { |m| m[:days_since].nil? }, icon: 'fas fa-box-open', tone: 'purple', i: 6,
+                help: 'entraram no Log02 sem venda no atacado') %>
+    <%= rpt_kpi(label: 'Candidatos a outlet', value: outlet.size, icon: 'fas fa-tags', tone: 'red', i: 7,
+                help: "parados há #{Reports::WholesaleProducts::OUTLET_DAYS}+ dias, curva C caindo ou sem giro") %>
+  </div>
+
+  <div class="rpt-abc">
+    <% { 'A' => ['var(--green)', 'Carro-chefe: proteja o estoque e a reposição.'], 'B' => ['var(--brand-400)', 'Intermediários: oportunidade de empurrar para A.'],
+         'C' => ['var(--text-4)', 'Cauda: revise mix, preço ou leve para outlet.'] }.each_with_index do |(k, (color, tip)), i| %>
+      <div class="rpt-abc-card" style="--c: <%= color %>; --i: <%= i %>">
+        <div class="d-flex justify-content-between align-items-baseline"><b class="big">Curva <%= k %></b><span><%= r.by_class(k).size %> modelos</span></div>
+        <div class="meter"><i style="--w: <%= (r.class_share(k) * 100).round(1) %>%"></i></div>
+        <p><b><%= rpt_percent(r.class_share(k), precision: 0) %></b> do faturamento · <%= tip %></p>
+      </div>
+    <% end %>
+  </div>
+
+  <section class="table-card rpt-card">
+    <div class="rpt-head">
+      <h3><i class="fas fa-chart-column"></i>Curva ABC (Pareto)</h3>
+      <span>faturamento por modelo, do maior para o menor · linha amarela = acumulado</span>
+    </div>
+    <div class="rpt-body"><%= rpt_pareto(r.pareto, title: "Curva ABC dos modelos, #{period.label}") %></div>
+  </section>
+
+  <div class="rpt-grid">
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-tags"></i>Candidatos a outlet</h3><span><%= outlet.size %> modelos · do mais parado</span></div>
+      <div class="rpt-body">
+        <% if outlet.empty? %>
+          <p class="rpt-empty">Nenhum candidato agora: tudo girou dentro das regras.</p>
+        <% else %>
+          <ul class="rpt-outlet">
+            <% outlet.first(12).each_with_index do |m, i| %>
+              <li style="--i: <%= i %>">
+                <b><%= m[:model] %></b>
+                <span><%= m[:reason] %></span>
+                <em><%= m[:last_sale] ? "última venda #{l(m[:last_sale], format: '%d/%m/%y')}" : 'nunca vendeu' %><br><%= m[:received] ? "#{m[:received]} peças entraram" : "#{m[:total_pieces]} peças no histórico" %></em>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-trophy"></i>Top 10 modelos</h3><span>por faturamento, com a classe</span></div>
+      <div class="rpt-body">
+        <%= rpt_bars(r.sold.first(10).map { |m| { label: "#{m[:model]} · #{m[:abc]}", value: m[:revenue], share: m[:share], pieces: m[:pieces] } },
+                     extra: ->(x) { "#{number_with_delimiter(x[:pieces], delimiter: '.')} peças" }) %>
+      </div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-arrow-trend-up"></i>Subindo</h3><span>peças contra o período anterior (base de 3+ peças)</span></div>
+      <div class="rpt-body">
+        <%= rpt_bars(r.risers.map { |m| { label: m[:model], value: m[:revenue], share: m[:share], m: m } }, empty: 'Ninguém subiu contra o período anterior.',
+                     extra: ->(x) { "▲ #{rpt_percent(x[:m][:trend], precision: 0)} em peças (#{x[:m][:prev_pieces]} → #{x[:m][:pieces]})" }) %>
+      </div>
+    </section>
+    <section class="table-card rpt-card">
+      <div class="rpt-head"><h3><i class="fas fa-arrow-trend-down"></i>Caindo</h3><span>atenção: reposição, preço ou outlet</span></div>
+      <div class="rpt-body">
+        <%= rpt_bars(r.fallers.map { |m| { label: m[:model], value: m[:revenue], share: m[:share], m: m } }, empty: 'Ninguém caiu contra o período anterior.',
+                     extra: ->(x) { "▼ #{rpt_percent(x[:m][:trend].abs, precision: 0)} em peças (#{x[:m][:prev_pieces]} → #{x[:m][:pieces]})" }) %>
+      </div>
+    </section>
+  </div>
+
+  <%= hc_pg_table(table, title: 'Todos os modelos', icon: 'fas fa-table-list',
+        meta: 'Filtre por curva ou situação. Botão Colunas mostra % do varejo, entrada no Log02 e giro.',
+        empty: { title: 'Nenhum modelo', text: 'Sem vendas nem entradas no Log02 para analisar.' }) %>
+
+  <div class="callout"><i class="fas fa-circle-info"></i><div>
+    <strong>Como ler:</strong> modelo = nome do produto sem o tamanho. Curva A soma os primeiros 80% do faturamento do período, B os 15% seguintes e C o resto.
+    Margem = (preço médio no atacado − custo do cadastro) ÷ preço médio. Giro da entrada = peças vendidas desde a primeira entrada no Log02 (Colocação de Estoque) ÷ peças que entraram.
+    Outlet: sem venda há <%= Reports::WholesaleProducts::OUTLET_DAYS %> dias ou mais, curva C com queda de 50%+ nas peças, ou menos de 25% de giro <%= Reports::WholesaleProducts::SLOW_DAYS %> dias depois de entrar no Log02.
+    Pedidos de devolução não contam como venda.
+  </div></div>
+</div>

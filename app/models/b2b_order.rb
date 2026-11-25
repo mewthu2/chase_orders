@@ -13,6 +13,13 @@ class B2bOrder < ApplicationRecord
   accepts_nested_attributes_for :b2b_order_items, allow_destroy: true, reject_if: :all_blank
 
   has_many :fiscal_notes, dependent: :nullify
+
+  # Pedido de devolução (substituição de peças devolvidas, sem cobrança): vinculado ao original quando ele está no
+  # Honey; a NF-e sai pela configuração de devolução e leva a chave da nota original e a da devolução do lojista.
+  belongs_to :replacement_of, class_name: 'B2bOrder', optional: true, inverse_of: :replacement_orders
+  has_many :replacement_orders, class_name: 'B2bOrder', foreign_key: :replacement_of_id, inverse_of: :replacement_of, dependent: :nullify
+  before_validation :normalize_nfe_keys
+  validate :nfe_keys_are_valid
   has_many :attempts, dependent: :nullify
 
   # Financeiro: consultor que vendeu (sem cadastro fica só o nome em salesperson_name) e parcelas a receber.
@@ -332,7 +339,28 @@ class B2bOrder < ApplicationRecord
     fiscal_notes.principal.where(environment: :producao, status: %i[rascunho assinada autorizada erro]).order(:id).last
   end
 
+  # Chave de acesso de 44 dígitos com o dígito verificador certo (módulo 11, pesos 2 a 9).
+  def self.valid_nfe_key?(key)
+    return false unless key.to_s.match?(/\A\d{44}\z/)
+
+    sum = key[0, 43].chars.map(&:to_i).reverse.each_with_index.sum { |d, i| d * (2 + (i % 8)) }
+    rest = sum % 11
+    (rest < 2 ? 0 : 11 - rest) == key[43].to_i
+  end
+
   private
+
+  def normalize_nfe_keys
+    self.original_nfe_key = original_nfe_key.to_s.gsub(/\D/, '').presence
+    self.return_nfe_key = return_nfe_key.to_s.gsub(/\D/, '').presence
+  end
+
+  def nfe_keys_are_valid
+    { original_nfe_key: 'da NF-e original', return_nfe_key: 'da NF-e de devolução' }.each do |attr, label|
+      value = self[attr]
+      errors.add(attr, "#{label} inválida: confira os 44 dígitos") if value.present? && !self.class.valid_nfe_key?(value)
+    end
+  end
 
   def apply_shipping_mode
     if pickup?

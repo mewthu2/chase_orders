@@ -1,0 +1,138 @@
+<% e = @employee %>
+<% companies = Company.where(active: true).or(Company.where(id: e.company_id)).order(:legal_name) %>
+<%= form_with model: e, url: (e.new_record? ? hr_employees_path : hr_employee_path(e)), scope: :hr_employee, local: true, data: { turbo: false } do |form| %>
+  <% if e.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% e.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-id-card me-2"></i>Funcionário</h5></div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Nome completo <span class="required">*</span></label>
+          <%= form.text_field :name, class: "field-input #{'field-input--error' if e.errors[:name].any?}", required: true %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">CPF</label>
+          <%= form.text_field :cpf, value: e.cpf_formatted.presence, class: "field-input #{'field-input--error' if e.errors[:cpf].any?}", placeholder: '000.000.000-00', inputmode: 'numeric' %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Cargo</label>
+          <%= form.text_field :role, class: 'field-input', placeholder: 'Ex.: Vendedora' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Empresa <span class="required">*</span></label>
+          <%= form.collection_select :company_id, companies, :id, :selection_label, { prompt: 'Escolha a empresa' }, class: 'field-input', required: true %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Estado onde trabalha <span class="required">*</span></label>
+          <%= form.select :state, Company::STATES.keys.sort, { prompt: 'UF' }, class: 'field-input', required: true %>
+        </div>
+        <div class="form-col-3">
+          <label class="field-label">Admissão</label>
+          <%= form.date_field :admission_date, class: 'field-input' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">Celular (WhatsApp)</label>
+          <%= form.text_field :phone, class: 'field-input', placeholder: '(31) 99999-9999', inputmode: 'tel' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">E-mail</label>
+          <%= form.email_field :email, class: 'field-input' %>
+        </div>
+      </div>
+      <p class="hr-hint"><i class="fas fa-earth-americas"></i>O estado define o fuso do horário do ponto (ex.: AM e MT uma hora antes de Brasília).</p>
+      <% if e.persisted? %>
+        <div class="form-check form-switch mt-3">
+          <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+          <label class="form-check-label text-main fw-bold">Ativo — o link do ponto funciona</label>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="form-section" data-hr-schedule>
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-business-time me-2"></i>Carga horária e horários</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="hr-load">
+        <div>
+          <label class="field-label">Carga semanal (horas) <span class="required">*</span></label>
+          <%= form.text_field :weekly_hours, value: e.weekly_hours, class: "field-input #{'field-input--error' if e.errors[:weekly_minutes].any?}", required: true, placeholder: '44', data: { hr_weekly: true } %>
+        </div>
+        <div class="hr-load-sum">
+          <span>Os horários somam</span><b data-hr-total>—</b><small data-hr-total-msg></small>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-hr-copy><i class="fas fa-copy"></i>Copiar segunda para terça a sexta</button>
+      </div>
+
+      <div class="hr-week">
+        <div class="hr-week-head"><span>Dia</span><span>Entrada</span><span>Saída p/ intervalo</span><span>Volta</span><span>Saída</span><span>No dia</span></div>
+        <% HrEmployee::WEEKDAYS.each do |d, label| %>
+          <% day = e.schedule_hash[d] || {} %>
+          <div class="hr-week-row" data-hr-day="<%= d %>">
+            <span class="hr-day"><%= label %></span>
+            <% HrEmployee::TIME_FIELDS.each do |f| %>
+              <input type="time" name="hr_employee[schedule][<%= d %>][<%= f %>]" value="<%= day[f] %>" class="field-input" data-hr-f="<%= f %>" aria-label="<%= label %>: <%= f %>">
+            <% end %>
+            <span class="hr-day-total" data-hr-day-total>Folga</span>
+          </div>
+        <% end %>
+      </div>
+      <p class="hr-hint"><i class="fas fa-scale-balanced"></i>Deixe o dia em branco para folga. Pela CLT: até 10h por dia (8h + 2h extras ou compensação), intervalo de 1h acima de 6h de trabalho, 15 min de 4h a 6h, e no máximo 44h por semana.</p>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (e.new_record? ? 'Cadastrar funcionário' : 'Salvar alterações'), class: 'btn-submit' %>
+    <%= link_to 'Cancelar', (e.new_record? ? hr_employees_path : hr_employee_path(e)), class: 'btn-cancel' %>
+  </div>
+<% end %>
+
+<script>
+  (function () {
+    var box = document.querySelector('[data-hr-schedule]');
+    if (!box) return;
+    function mins(v) { if (!/^\d{2}:\d{2}$/.test(v || '')) return null; var p = v.split(':'); return +p[0] * 60 + +p[1]; }
+    function span(a, b) { a = mins(a); b = mins(b); if (a === null || b === null) return 0; if (b <= a) b += 1440; return b - a; }
+    function fmt(m) { return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0'); }
+    function weekly() {
+      var t = box.querySelector('[data-hr-weekly]').value.trim().replace(',', '.');
+      if (/[:h]/.test(t)) { var p = t.split(/[:h]/); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+      return Math.round((parseFloat(t) || 0) * 60);
+    }
+    function update() {
+      var total = 0;
+      box.querySelectorAll('[data-hr-day]').forEach(function (row) {
+        var v = {}; row.querySelectorAll('[data-hr-f]').forEach(function (i) { v[i.dataset.hrF] = i.value; });
+        var cell = row.querySelector('[data-hr-day-total]');
+        if (!v.in || !v.out) { cell.textContent = 'Folga'; cell.className = 'hr-day-total is-off'; return; }
+        var pause = v.break_start && v.break_end ? span(v.break_start, v.break_end) : 0;
+        var worked = span(v.in, v.out) - pause;
+        total += worked;
+        var bad = worked > 600 || (worked > 360 && pause < 60);
+        cell.textContent = fmt(worked) + (pause ? ' · int. ' + fmt(pause) : '');
+        cell.className = 'hr-day-total' + (bad ? ' is-bad' : '');
+        cell.title = worked > 600 ? 'Passa de 10h no dia (CLT art. 59)' : (worked > 360 && pause < 60 ? 'Acima de 6h precisa de 1h de intervalo (CLT art. 71)' : '');
+      });
+      var load = weekly(), out = box.querySelector('[data-hr-total]'), msg = box.querySelector('[data-hr-total-msg]');
+      out.textContent = fmt(total);
+      out.className = total > load ? 'is-bad' : (total === load ? 'is-ok' : '');
+      msg.textContent = !load ? '' : total > load ? 'passa da carga de ' + fmt(load) : total === load ? 'igual à carga semanal' : 'faltam ' + fmt(load - total) + ' para a carga';
+    }
+    box.addEventListener('input', update);
+    box.querySelector('[data-hr-copy]').addEventListener('click', function () {
+      var mon = box.querySelectorAll('[data-hr-day="1"] [data-hr-f]');
+      ['2', '3', '4', '5'].forEach(function (d) {
+        box.querySelectorAll('[data-hr-day="' + d + '"] [data-hr-f]').forEach(function (i, k) { i.value = mon[k].value; });
+      });
+      update();
+    });
+    update();
+  })();
+</script>

@@ -1,0 +1,214 @@
+<% zone = HrEmployee::STATE_ZONES[@employee.state] %>
+<% day = @employee.schedule_for(@employee.today.wday) || {} %>
+<% planned = { 'entrada' => day['in'], 'saida_intervalo' => day['break_start'], 'volta_intervalo' => day['break_end'], 'saida' => day['out'] } %>
+<% hour = @employee.now.hour %>
+<% greeting = hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite') %>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0b0e13">
+  <title>Ponto · <%= @employee.first_name %></title>
+  <%= csrf_meta_tags %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <%= render 'punch_clock/styles' %>
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>
+  <main class="pc">
+    <header class="pc-head">
+      <div class="pc-brand"><span class="pc-logo">H</span><span>Honey.Chase · Ponto</span></div>
+      <div class="pc-loc"><i class="fas fa-location-dot"></i><%= @employee.company_name %> · <%= @employee.state %></div>
+    </header>
+
+    <section class="pc-hello">
+      <p class="pc-greet"><%= greeting %>, <b><%= @employee.first_name %></b> <span class="wave">👋</span></p>
+      <div class="pc-clock" data-clock data-zone="<%= zone %>" data-server="<%= (Time.current.to_f * 1000).round %>">
+        <span data-hm><%= @employee.now.strftime('%H:%M') %></span><small data-s><%= @employee.now.strftime(':%S') %></small>
+      </div>
+      <p class="pc-date"><%= l(@employee.today, format: '%A, %d de %B') %> · hoje: <%= @employee.schedule_text(@employee.today.wday) %></p>
+    </section>
+
+    <section class="pc-card" data-step="kind">
+      <h2><span class="pc-num">1</span>Qual marcação?</h2>
+      <div class="pc-kinds">
+        <% HrTimePunch::KINDS.each do |key, info| %>
+          <label class="pc-kind<%= ' is-suggested' if key == @suggested %>">
+            <input type="radio" name="kind" value="<%= key %>" <%= 'checked' if key == @suggested %>>
+            <span class="pc-kind-ic"><%= info[:emoji] %></span>
+            <span class="pc-kind-txt"><b><%= info[:label] %></b><small><%= planned[key] ? "previsto #{planned[key]}" : 'sem horário hoje' %></small></span>
+            <% if key == @suggested %><em>sugerido</em><% end %>
+          </label>
+        <% end %>
+      </div>
+    </section>
+
+    <section class="pc-card">
+      <h2><span class="pc-num">2</span>Tire a foto</h2>
+      <div class="pc-cam" data-cam>
+        <video playsinline autoplay muted data-video></video>
+        <img alt="Sua foto" data-preview hidden>
+        <div class="pc-cam-ring" aria-hidden="true"></div>
+        <div class="pc-cam-msg" data-cam-msg><i class="fas fa-camera"></i><span>Toque em <b>Abrir câmera</b> e permita o acesso.</span></div>
+        <div class="pc-flash" data-flash></div>
+      </div>
+      <canvas data-canvas hidden></canvas>
+      <div class="pc-actions">
+        <button type="button" class="pc-btn is-ghost" data-open><i class="fas fa-camera"></i>Abrir câmera</button>
+        <button type="button" class="pc-btn" data-shoot hidden><i class="fas fa-fingerprint"></i>Tirar foto e bater ponto</button>
+        <button type="button" class="pc-btn is-ghost" data-retake hidden><i class="fas fa-rotate"></i>Tirar outra</button>
+      </div>
+      <p class="pc-error" data-error role="alert" hidden></p>
+    </section>
+
+    <section class="pc-card pc-today">
+      <h2><i class="fas fa-clock-rotate-left"></i>Suas marcações de hoje</h2>
+      <ol class="pc-list" data-list>
+        <% @today_punches.each do |p| %>
+          <li><span><%= HrTimePunch::KINDS.dig(p.kind, :emoji) %> <%= p.label %></span><b><%= p.local_time.strftime('%H:%M') %></b></li>
+        <% end %>
+        <li class="pc-empty" <%= 'hidden' if @today_punches.any? %>>Nenhuma marcação ainda hoje.</li>
+      </ol>
+    </section>
+
+    <p class="pc-foot"><i class="fas fa-shield-halved"></i>O horário gravado é o do servidor (fuso de <%= @employee.state %>), não o do celular. Sua foto fica só no registro de ponto, para o RH.</p>
+  </main>
+
+  <div class="pc-done" data-done hidden>
+    <div class="pc-done-card">
+      <div class="pc-check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>
+      <p class="pc-done-kind" data-done-kind></p>
+      <p class="pc-done-time" data-done-time></p>
+      <p class="pc-done-date" data-done-date></p>
+      <div class="pc-receipt"><span>Comprovante</span><b data-done-nsr></b><small><%= @employee.name %> · <%= @employee.company_name %></small></div>
+      <button type="button" class="pc-btn" data-close><i class="fas fa-check"></i>Pronto</button>
+    </div>
+    <div class="confetti" data-confetti aria-hidden="true"></div>
+  </div>
+
+  <script>
+    (function () {
+      var $ = function (s) { return document.querySelector(s); };
+      var video = $('[data-video]'), canvas = $('[data-canvas]'), preview = $('[data-preview]');
+      var openBtn = $('[data-open]'), shootBtn = $('[data-shoot]'), retakeBtn = $('[data-retake]');
+      var msg = $('[data-cam-msg]'), errorBox = $('[data-error]'), cam = $('[data-cam]');
+      var stream = null, busy = false;
+
+      // Relógio no fuso do estado, acertado pelo horário do servidor.
+      var clock = $('[data-clock]'), offset = Number(clock.dataset.server) - Date.now();
+      function tick() {
+        var parts = new Intl.DateTimeFormat('pt-BR', { timeZone: clock.dataset.zone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+          .format(new Date(Date.now() + offset)).split(':');
+        clock.querySelector('[data-hm]').textContent = parts[0] + ':' + parts[1];
+        clock.querySelector('[data-s]').textContent = ':' + parts[2];
+      }
+      tick(); setInterval(tick, 1000);
+
+      function showError(text) { errorBox.textContent = text; errorBox.hidden = !text; }
+
+      function openCamera() {
+        showError('');
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showError('Este navegador não abre a câmera. Use o Chrome ou o Safari atualizados.');
+          return;
+        }
+        msg.querySelector('span').textContent = 'Abrindo a câmera…';
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 960 } }, audio: false })
+          .then(function (s) {
+            stream = s; video.srcObject = s; cam.classList.add('is-live');
+            msg.hidden = true; openBtn.hidden = true; shootBtn.hidden = false;
+          })
+          .catch(function () {
+            msg.querySelector('span').innerHTML = 'Câmera bloqueada. Libere o acesso à câmera nas configurações do navegador e toque em <b>Abrir câmera</b> de novo.';
+            showError('Sem a câmera não dá para bater o ponto.');
+          });
+      }
+
+      function snap() {
+        var w = video.videoWidth, h = video.videoHeight, size = Math.min(w, h), out = Math.min(size, 720);
+        canvas.width = out; canvas.height = out;
+        var ctx = canvas.getContext('2d');
+        ctx.translate(out, 0); ctx.scale(-1, 1); // espelhada, como a pessoa se vê
+        ctx.drawImage(video, (w - size) / 2, (h - size) / 2, size, size, 0, 0, out, out);
+        return canvas.toDataURL('image/jpeg', 0.82);
+      }
+
+      function stop() { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; cam.classList.remove('is-live'); }
+
+      function send(photo) {
+        var kind = document.querySelector('input[name=kind]:checked');
+        if (!kind) { showError('Escolha a marcação no passo 1.'); return; }
+        busy = true; shootBtn.disabled = true; shootBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Registrando…';
+        fetch(window.location.pathname, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]').content },
+          body: JSON.stringify({ kind: kind.value, photo: photo })
+        }).then(function (r) { return r.json().catch(function () { return { ok: false, error: 'Falha ao registrar. Tente de novo.' }; }); })
+          .then(function (data) {
+            busy = false;
+            if (!data.ok) { showError(data.error); retakeBtn.hidden = false; shootBtn.hidden = true; resetShoot(); return; }
+            stop(); done(data.punch);
+          })
+          .catch(function () { busy = false; resetShoot(); retakeBtn.hidden = false; shootBtn.hidden = true; showError('Sem conexão. Confira a internet e tente de novo.'); });
+      }
+
+      function resetShoot() { shootBtn.disabled = false; shootBtn.innerHTML = '<i class="fas fa-fingerprint"></i>Tirar foto e bater ponto'; }
+
+      function done(p) {
+        $('[data-done-kind]').textContent = p.emoji + ' ' + p.label;
+        $('[data-done-time]').textContent = p.time;
+        $('[data-done-date]').textContent = p.date;
+        $('[data-done-nsr]').textContent = 'NSR ' + p.nsr;
+        var li = document.createElement('li');
+        li.innerHTML = '<span></span><b></b>';
+        li.querySelector('span').textContent = p.emoji + ' ' + p.label;
+        li.querySelector('b').textContent = p.time;
+        var list = $('[data-list]'); list.querySelector('.pc-empty').hidden = true; list.appendChild(li);
+        $('[data-done]').hidden = false;
+        confetti();
+      }
+
+      function confetti() {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        var box = $('[data-confetti]'), colors = ['#3aa3ea', '#e3b341', '#3fb950', '#db61a2', '#a371f7', '#f0883e'];
+        box.innerHTML = '';
+        for (var i = 0; i < 60; i++) {
+          var c = document.createElement('i');
+          c.style.left = Math.random() * 100 + '%';
+          c.style.background = colors[i % colors.length];
+          c.style.animationDelay = (Math.random() * 0.5) + 's';
+          c.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+          box.appendChild(c);
+        }
+      }
+
+      openBtn.addEventListener('click', openCamera);
+      shootBtn.addEventListener('click', function () {
+        if (busy || !stream) return;
+        var flash = $('[data-flash]'); flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        var photo = snap();
+        preview.src = photo; preview.hidden = false; video.hidden = true;
+        send(photo);
+      });
+      retakeBtn.addEventListener('click', function () {
+        preview.hidden = true; video.hidden = false; retakeBtn.hidden = true; showError('');
+        if (stream) { shootBtn.hidden = false; } else { openCamera(); }
+      });
+      $('[data-close]').addEventListener('click', function () {
+        $('[data-done]').hidden = true; preview.hidden = true; video.hidden = false;
+        openBtn.hidden = false; shootBtn.hidden = true; retakeBtn.hidden = true; resetShoot();
+        msg.hidden = false; msg.querySelector('span').innerHTML = 'Toque em <b>Abrir câmera</b> para a próxima marcação.';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      document.querySelectorAll('input[name=kind]').forEach(function (r) {
+        r.addEventListener('change', function () { showError(''); });
+      });
+    })();
+  </script>
+</body>
+</html>

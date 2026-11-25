@@ -57,7 +57,7 @@ module Reports
     attr_reader :period
 
     def notes(range = period.range, status: :autorizada)
-      FiscalNote.principal.producao.where(status: status).joins(:b2b_order).where(b2b_orders: { kind: B2bOrder.kinds[:sale] })
+      FiscalNote.principal.producao.where(status: status).joins(:b2b_order).where(b2b_orders: { kind: B2bOrder.kinds[:sale], replacement: false })
                 .where('COALESCE(fiscal_notes.issued_at, fiscal_notes.authorized_at, fiscal_notes.created_at) BETWEEN ? AND ?',
                        range.begin.beginning_of_day, range.end.end_of_day)
     end

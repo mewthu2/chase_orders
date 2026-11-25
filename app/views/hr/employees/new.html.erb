@@ -1,0 +1,5 @@
+<% content_for :title, 'Novo funcionário' %>
+<%= hc_page_header 'Novo funcionário', 'Empresa, estado, carga horária e os horários de cada dia.', icon: 'fas fa-user-plus' do %>
+  <%= link_to hr_employees_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+<% end %>
+<%= render 'form' %>

@@ -340,4 +340,50 @@ class Nfe::GeneratorTest < ActiveSupport::TestCase
     assert_equal 0, FiscalNote.count
     assert_equal 1, @company.reload.next_nfe_number
   end
+
+  ORIGINAL_KEY = '31261125405327000255550010000157121030566741'.freeze
+
+  test 'pedido de devolucao: sem cobranca, pelo valor das pecas, chaves nas observacoes e NF-e referenciadas' do
+    nature = @company.operation_natures.create!(description: 'MERCADORIA EM SUBSTITUICAO POR DEFEITO', kind: :sale, cfop: '?102', final_consumer: false,
+                                                icms_situation: '102', pis_cst: '49', cofins_cst: '49',
+                                                notes: "Saída em substituição. Operação vinculada à:\r\nChave NF-e de original:\r\nChave NF-e de devolução: ")
+    base = ORIGINAL_KEY[0, 43].sub(/\A31/, '35')
+    returned = base + (0..9).map(&:to_s).find { |d| B2bOrder.valid_nfe_key?(base + d) }
+    order = build_order(payment_method: 'cartao', order_discount: 100, order_discount_type: 'percent', replacement: true,
+                        original_nfe_key: ORIGINAL_KEY, return_nfe_key: returned)
+    assert_equal 0, order.grand_total.to_i
+
+    note = Nfe::Generator.call(order: order, company: @company, nature: nature)
+    xml = Nokogiri::XML(note.xml.download)
+    assert_equal [], NfeSchema.errors(note.xml.download)
+    assert_equal [ORIGINAL_KEY, returned], xml.xpath('//n:ide/n:NFref/n:refNFe', NS).map(&:text)
+    assert_equal '90', xml.at_xpath('//n:detPag/n:tPag', NS).text
+    assert_nil xml.at_xpath('//n:cobr', NS)
+    assert_equal BigDecimal('25.50'), note.total_value
+    info = xml.at_xpath('//n:infAdic/n:infCpl', NS).text
+    assert_includes info, "Chave NF-e de original: #{ORIGINAL_KEY}"
+    assert_includes info, "Chave NF-e de devolução: #{returned}"
+
+    order.update!(original_nfe_key: '123')
+  rescue ActiveRecord::RecordInvalid => e
+    assert_match 'NF-e original inválida', e.message
+  end
+
+
+  test 'abastecimento: destinatario com a razao social da filial e o nome do local, cabendo em 60' do
+    # Homologação troca o nome do destinatário pelo texto padrão: confere o nome montado direto.
+    gen = Nfe::Generator.new(order: build_order(kind: :stock_transfer), company: @company, nature: @transfer_nature)
+    assert_equal 'CD Destino', gen.send(:location_recipient_name, @location)
+
+    branch = Company.new(legal_name: 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA - Brasília', cnpj: '45723174000110', street: 'R', number: '1',
+                         neighbourhood: 'B', city: 'Brasília', city_ibge_code: '5300108', state: 'DF', zip: '70000000')
+    branch.save!(validate: false)
+    @location.update!(name: 'Brasília - Park Shopping')
+    name = gen.send(:location_recipient_name, @location)
+    assert_equal 'CHASE BRASIL COM DE ART ESP LTDA - Brasília - Park Shopping', name
+    assert_operator name.length, :<=, 60
+    @location.update!(name: 'Lagoa')
+    assert_equal 'CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA - Lagoa', gen.send(:location_recipient_name, @location)
+  end
+
 end

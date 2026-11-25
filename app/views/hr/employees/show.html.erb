@@ -1,0 +1,181 @@
+<% e = @employee %>
+<% content_for :title, e.name %>
+<% can_edit = screen_can?(:hr_employees, :edit) %>
+<% can_punch = screen_can?(:hr_punches, :edit) %>
+<% url = hr_punch_url(e) %>
+<% here = request.fullpath %>
+<% today = e.today %>
+
+<%= hc_page_header e.name, [e.role.presence, e.company_name, e.state].compact.join(' · '), icon: 'fas fa-id-card' do %>
+  <%= link_to hr_employees_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+  <% if can_edit %><%= link_to edit_hr_employee_path(e), class: 'btn btn-secondary' do %><i class="fas fa-pen"></i>Editar<% end %><% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <% unless e.active? %>
+    <div class="callout pg-banner is-warn"><i class="fas fa-user-slash"></i><div>Cadastro <b>inativo</b>: o link do ponto não funciona. Edite e marque "Ativo" para ligar de novo.</div></div>
+  <% end %>
+
+  <div class="hr-top">
+    <section class="hr-link-card">
+      <div class="hr-qr"><%= hr_qr_svg(url) %></div>
+      <div class="hr-link-body">
+        <h3><i class="fas fa-camera"></i>Link do ponto de <%= e.first_name %></h3>
+        <p>Abre a câmera do celular: a pessoa escolhe a marcação, tira a foto e o horário é gravado pelo servidor, no fuso de <%= e.state %>.</p>
+        <div class="hr-link-row">
+          <span class="mono pg-mono hr-url"><%= url %></span>
+          <button type="button" class="pg-copy" data-pg-copy="<%= url %>" data-tip="Copiar" aria-label="Copiar link"><i class="far fa-copy"></i></button>
+        </div>
+        <div class="hr-link-actions">
+          <%= link_to hr_whatsapp_url(e), class: 'btn btn-primary btn-sm', target: '_blank', rel: 'noopener' do %><i class="fab fa-whatsapp"></i>Mandar no WhatsApp<% end %>
+          <%= link_to url, class: 'btn btn-secondary btn-sm', target: '_blank', rel: 'noopener' do %><i class="fas fa-arrow-up-right-from-square"></i>Abrir<% end %>
+          <% if can_edit %>
+            <%= button_to regenerate_link_hr_employee_path(e), method: :post, class: 'btn btn-secondary btn-sm',
+                          form: { style: 'display:inline', data: { hc_confirm: { title: 'Gerar um link novo?', text: 'O link atual para de funcionar na hora. Use se o link vazou ou a pessoa trocou de celular.', ok: 'Gerar link novo', icon: 'fas fa-rotate' }.to_json } } do %><i class="fas fa-rotate"></i>Gerar link novo<% end %>
+          <% end %>
+        </div>
+      </div>
+    </section>
+
+    <section class="hr-sched-card">
+      <h3><i class="fas fa-business-time"></i>Carga e horários</h3>
+      <div class="hr-sched-load"><b><%= hr_hours(e.weekly_minutes) %></b><span>por semana · horários somam <%= hr_hours(e.scheduled_weekly_minutes) %></span></div>
+      <ul class="hr-sched">
+        <% HrEmployee::WEEKDAYS.each do |d, label| %>
+          <li class="<%= 'is-off' unless e.schedule_for(d) %><%= ' is-today' if today.wday.to_s == d %>">
+            <span><%= label %></span><span><%= e.schedule_text(d) %></span><b><%= e.schedule_for(d) ? hr_hours(e.scheduled_minutes(d)) : '—' %></b>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  </div>
+
+  <% month_total = @days.sum { |_, d| d.worked_minutes } %>
+  <% month_balance = @days.sum { |_, d| d.balance } %>
+  <% month_alerts = @alerts.count { |a| a.work_date >= @month } %>
+  <%= hc_kpis([
+        { label: 'Trabalhado no mês', icon: 'fas fa-stopwatch', tone: 'blue', value: hr_hours(month_total), help: "Previsto #{hr_hours(@days.sum { |_, d| d.expected_minutes })}." },
+        { label: 'Saldo do mês', icon: 'fas fa-scale-balanced', tone: month_balance.positive? ? 'yellow' : (month_balance.negative? ? 'red' : 'green'), value: hr_hours(month_balance, sign: true), help: 'Horas extras (+) ou faltas (−), com a tolerância de 10 min/dia.' },
+        { label: 'Dias com marcação faltando', icon: 'fas fa-circle-question', tone: 'red', value: @days.count { |_, d| d.incomplete? }, help: 'Entrada sem saída ou o contrário.' },
+        { label: 'Alertas no mês', icon: 'fas fa-triangle-exclamation', tone: 'yellow', value: month_alerts, help: 'Acima da carga ou fora da CLT.' }
+      ]) %>
+
+  <section class="table-card pg-card">
+    <div class="table-toolbar">
+      <div>
+        <h3><i class="fas fa-calendar-days" style="color: var(--text-3); margin-right: 8px"></i>Espelho de ponto · <%= l(@month, format: '%B de %Y').capitalize %></h3>
+        <div class="meta">Horários no fuso de <%= e.state %>. Clique na foto para ampliar.</div>
+      </div>
+      <div class="pg-tools">
+        <%= link_to hr_employee_path(e, mes: @month.prev_month.strftime('%Y-%m')), class: 'btn btn-secondary btn-sm', 'aria-label': 'Mês anterior' do %><i class="fas fa-chevron-left"></i><% end %>
+        <%= link_to hr_employee_path(e, mes: @month.next_month.strftime('%Y-%m')), class: 'btn btn-secondary btn-sm', 'aria-label': 'Próximo mês' do %><i class="fas fa-chevron-right"></i><% end %>
+        <% if screen_can?(:hr_employees, :export) %>
+          <%= link_to hr_employee_path(e, mes: @month.strftime('%Y-%m'), format: :csv), class: 'btn btn-secondary btn-sm' do %><i class="fas fa-file-csv"></i>Exportar CSV<% end %>
+        <% end %>
+        <% if can_punch %>
+          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#hrAddPunch"><i class="fas fa-plus"></i>Incluir marcação</button>
+        <% end %>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table hr-mirror">
+        <thead><tr><th>Dia</th><th>Previsto</th><th>Marcações</th><th class="is-r">Trabalhado</th><th class="is-r">Intervalo</th><th class="is-r">Saldo</th></tr></thead>
+        <tbody>
+          <% day_alerts = @alerts.reject(&:weekly?).group_by(&:work_date) %>
+          <% @days.each do |date, day| %>
+            <% list = @punches_by_day[date].to_a %>
+            <% next if date > today && list.empty? %>
+            <tr class="<%= 'is-today' if date == today %><%= ' is-weekend' if date.saturday? || date.sunday? %>">
+              <td class="hr-date"><b><%= date.strftime('%d/%m') %></b><small><%= l(date, format: '%a') %></small></td>
+              <td><%= day.expected_minutes.positive? ? hr_hours(day.expected_minutes) : content_tag(:span, 'Folga', class: 'pg-dash') %></td>
+              <td>
+                <div class="hr-marks">
+                  <% list.each do |p| %>
+                    <div class="hr-mark<%= ' is-annulled' if p.annulled? %><%= ' is-manual' if p.manual? %>" data-tip="<%= p.label %> · NSR <%= p.nsr_text %><%= " · incluída por #{p.created_by&.name}: #{p.note}" if p.manual? %><%= " · desconsiderada por #{p.annulled_by&.name}: #{p.annul_reason}" if p.annulled? %>">
+                      <% if p.photo.attached? %>
+                        <a href="<%= url_for(p.photo) %>" target="_blank" rel="noopener" class="hr-photo"><%= image_tag url_for(p.photo), alt: "Foto de #{p.label}", loading: 'lazy' %></a>
+                      <% else %>
+                        <span class="hr-photo is-none"><i class="fas fa-user-pen"></i></span>
+                      <% end %>
+                      <span class="hr-mark-txt"><b><%= p.local_time.strftime('%H:%M') %></b><small><%= p.label %></small></span>
+                      <% if can_punch && !p.annulled? %>
+                        <button type="button" class="hr-annul" data-bs-toggle="modal" data-bs-target="#hrAnnul" data-hr-annul="<%= annul_hr_punch_path(p) %>" data-hr-annul-label="<%= p.label %> de <%= p.local_time.strftime('%d/%m %H:%M') %>" aria-label="Desconsiderar"><i class="fas fa-xmark"></i></button>
+                      <% end %>
+                    </div>
+                  <% end %>
+                  <% if day.incomplete? %><span class="ticket-status" style="--c: <%= hc_tone('red') %>">Marcação faltando</span><% end %>
+                  <% if day.open? %><span class="ticket-status hr-live" style="--c: <%= hc_tone('green') %>">Trabalhando</span><% end %>
+                  <% day_alerts[date].to_a.each do |a| %><span class="ticket-status" style="--c: <%= hc_tone(a.tone) %>" data-tip="<%= a.message %> <%= a.law %>"><%= a.emoji %> <%= a.label %></span><% end %>
+                </div>
+              </td>
+              <td class="is-r"><%= list.any? ? hr_hours(day.worked_minutes) : '—' %></td>
+              <td class="is-r"><%= day.periods.size > 1 ? hr_hours(day.break_minutes) : '—' %></td>
+              <td class="is-r"><% b = day.balance %><span class="hr-bal<%= ' is-pos' if b.positive? %><%= ' is-neg' if b.negative? %>"><%= (list.any? || day.expected_minutes.positive?) && date <= today ? hr_hours(b, sign: true) : '—' %></span></td>
+            </tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr><th colspan="3">Total do mês</th><th class="is-r"><%= hr_hours(month_total) %></th><th></th><th class="is-r"><%= hr_hours(month_balance, sign: true) %></th></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <% weekly = @alerts.select(&:weekly?) %>
+  <% if weekly.any? %>
+    <section class="table-card pg-card hr-week-alerts">
+      <div class="table-toolbar"><div><h3><i class="fas fa-chart-line" style="color: var(--text-3); margin-right: 8px"></i>Alertas da semana</h3></div></div>
+      <ul><% weekly.each do |a| %><li><%= a.emoji %> <b><%= a.period_text %>:</b> <%= a.message %></li><% end %></ul>
+    </section>
+  <% end %>
+</div>
+
+<% if can_punch %>
+  <div class="modal fade" id="hrAddPunch" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <%= form_with url: hr_punches_path, method: :post, local: true, data: { turbo: false } do %>
+          <%= hidden_field_tag :hr_employee_id, e.id %>
+          <%= hidden_field_tag :mes, @month.strftime('%Y-%m') %>
+          <div class="modal-header"><h5 class="modal-title"><i class="fas fa-user-pen me-2"></i>Incluir marcação</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+          <div class="modal-body">
+            <p class="hr-hint">Para quando a pessoa esqueceu de bater. Fica marcada como incluída pelo RH, com o seu nome e o motivo.</p>
+            <div class="form-grid">
+              <div class="form-col-6"><label class="field-label">Marcação</label><%= select_tag :kind, options_for_select(HrTimePunch::KINDS.map { |k, v| [v[:label], k] }), class: 'field-input' %></div>
+              <div class="form-col-3"><label class="field-label">Dia</label><%= date_field_tag :date, [today, @month.end_of_month].min, class: 'field-input', required: true, max: today %></div>
+              <div class="form-col-3"><label class="field-label">Hora</label><%= time_field_tag :time, nil, class: 'field-input', required: true %></div>
+              <div class="form-col-12"><label class="field-label">Motivo <span class="required">*</span></label><%= text_area_tag :note, nil, class: 'field-input', rows: 2, required: true, placeholder: 'Ex.: esqueceu de bater a saída; confirmado com a gerente' %></div>
+            </div>
+          </div>
+          <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i>Incluir</button></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="hrAnnul" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <%= form_with url: '#', method: :post, local: true, data: { turbo: false, hr_annul_form: true } do %>
+          <%= hidden_field_tag :return_to, here %>
+          <div class="modal-header"><h5 class="modal-title"><i class="fas fa-ban me-2"></i>Desconsiderar <span data-hr-annul-title></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+          <div class="modal-body">
+            <p class="hr-hint">A marcação não conta mais nas horas, mas continua no histórico com a foto, o seu nome e o motivo (a lei não deixa apagar o registro original).</p>
+            <label class="field-label">Motivo <span class="required">*</span></label>
+            <%= text_area_tag :reason, nil, class: 'field-input', rows: 2, required: true, placeholder: 'Ex.: bateu entrada duas vezes' %>
+          </div>
+          <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-danger"><i class="fas fa-ban"></i>Desconsiderar</button></div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('[data-hr-annul]');
+      if (!btn) return;
+      var form = document.querySelector('[data-hr-annul-form]');
+      form.action = btn.dataset.hrAnnul;
+      form.querySelector('[data-hr-annul-title]').textContent = btn.dataset.hrAnnulLabel;
+    });
+  </script>
+<% end %>

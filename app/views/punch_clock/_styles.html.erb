@@ -1,0 +1,96 @@
+<style>
+  :root { --bg: #090b0f; --card: rgba(22, 27, 34, .82); --border: rgba(255,255,255,.09); --text: #e9edf3; --muted: #8b949e;
+          --brand: #3aa3ea; --pink: #db61a2; --green: #3fb950; --yellow: #e3b341; --red: #f85149; --r: 20px; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Archivo, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); overflow-x: hidden; }
+  .bg-blobs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bg-blobs i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(70px); opacity: .28; animation: drift 18s ease-in-out infinite alternate; }
+  .bg-blobs i:nth-child(1) { background: var(--brand); top: -25vmax; left: -20vmax; }
+  .bg-blobs i:nth-child(2) { background: var(--pink); bottom: -30vmax; right: -25vmax; animation-delay: -6s; }
+  .bg-blobs i:nth-child(3) { background: #a371f7; top: 30%; left: 40%; width: 35vmax; height: 35vmax; opacity: .16; animation-delay: -11s; }
+  @keyframes drift { to { transform: translate(6vmax, 4vmax) scale(1.1); } }
+  .pc { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 18px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+  .pc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+  .pc-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); }
+  .pc-logo { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-weight: 900; color: #0b0e13; background: linear-gradient(135deg, var(--yellow), var(--pink)); }
+  .pc-loc { display: flex; gap: 6px; align-items: center; text-align: right; }
+  .pc-hello { text-align: center; padding: 18px 0 6px; animation: rise .5s cubic-bezier(.2,.9,.3,1.2) both; }
+  .pc-greet { margin: 0; font-size: 18px; color: var(--muted); }
+  .pc-greet b { color: var(--text); }
+  .wave { display: inline-block; transform-origin: 70% 70%; animation: wave 2.6s ease-in-out infinite; }
+  @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } }
+  .pc-clock { font-size: 68px; font-weight: 900; letter-spacing: -2px; line-height: 1.05; margin: 6px 0 2px; font-variant-numeric: tabular-nums;
+              background: linear-gradient(120deg, #fff 10%, var(--brand) 45%, var(--pink) 80%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 6s linear infinite; }
+  .pc-clock small { font-size: 26px; letter-spacing: 0; opacity: .7; }
+  @keyframes shine { to { background-position: -200% 0; } }
+  .pc-date { margin: 0; color: var(--muted); font-size: 13.5px; text-transform: capitalize; }
+  .pc-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); animation: rise .5s cubic-bezier(.2,.9,.3,1.2) both; }
+  .pc-card:nth-of-type(2) { animation-delay: .06s; } .pc-card:nth-of-type(3) { animation-delay: .12s; } .pc-card:nth-of-type(4) { animation-delay: .18s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+  .pc-card h2 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 9px; }
+  .pc-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; background: var(--brand); color: #fff; }
+  .pc-kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .pc-kind { position: relative; display: flex; align-items: center; gap: 10px; padding: 12px 11px; border-radius: 14px; border: 1.5px solid var(--border); background: rgba(255,255,255,.03); cursor: pointer; transition: transform .15s, border-color .15s, background .15s; }
+  .pc-kind:active { transform: scale(.97); }
+  .pc-kind input { position: absolute; opacity: 0; pointer-events: none; }
+  .pc-kind-ic { font-size: 24px; line-height: 1; }
+  .pc-kind-txt { display: flex; flex-direction: column; min-width: 0; }
+  .pc-kind-txt b { font-size: 13.5px; }
+  .pc-kind-txt small { font-size: 11.5px; color: var(--muted); }
+  .pc-kind em { position: absolute; top: -8px; right: 8px; font-style: normal; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 99px; background: var(--yellow); color: #0b0e13; }
+  .pc-kind:has(input:checked) { border-color: var(--brand); background: rgba(58,163,234,.13); box-shadow: 0 0 0 4px rgba(58,163,234,.15); }
+  .pc-kind:has(input:checked) .pc-kind-ic { animation: pop .5s ease; }
+  @keyframes pop { 40% { transform: scale(1.3) rotate(-8deg); } }
+  .pc-cam { position: relative; aspect-ratio: 1; width: 100%; border-radius: 22px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #1c2330, #0b0e13); border: 1px solid var(--border); }
+  .pc-cam video, .pc-cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pc-cam video { transform: scaleX(-1); }
+  .pc-cam-ring { position: absolute; inset: 12%; border-radius: 50%; border: 3px dashed rgba(255,255,255,.25); pointer-events: none; }
+  .pc-cam.is-live .pc-cam-ring { border-color: rgba(58,163,234,.8); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.04); border-color: rgba(219,97,162,.85); } }
+  .pc-cam-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 30px; text-align: center; color: var(--muted); font-size: 14px; }
+  .pc-cam-msg i { font-size: 34px; color: var(--brand); animation: bob 1.6s ease-in-out infinite alternate; }
+  .pc-cam-msg b { color: var(--text); }
+  @keyframes bob { to { transform: translateY(-6px); } }
+  .pc-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .pc-flash.go { animation: flash .45s ease-out; }
+  @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .pc-actions { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+  .pc-btn { appearance: none; border: 0; width: 100%; padding: 16px; border-radius: 16px; font: 800 16px/1 Archivo, sans-serif; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            background: linear-gradient(120deg, var(--brand), #a371f7, var(--pink)); background-size: 200% 100%; animation: shine 5s linear infinite; box-shadow: 0 10px 30px -10px rgba(219,97,162,.6); transition: transform .15s; }
+  .pc-btn:active { transform: scale(.97); }
+  .pc-btn:disabled { opacity: .7; }
+  .pc-btn.is-ghost { background: rgba(255,255,255,.07); border: 1px solid var(--border); box-shadow: none; animation: none; }
+  .pc-btn[hidden] { display: none; }
+  .pc-error { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(248,81,73,.13); border: 1px solid rgba(248,81,73,.4); color: #ffb3ad; font-size: 13.5px; }
+  .pc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .pc-list li { display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); font-size: 14px; animation: rise .4s both; }
+  .pc-list li b { font-variant-numeric: tabular-nums; }
+  .pc-list .pc-empty { color: var(--muted); justify-content: center; }
+  .pc-today h2 i { color: var(--muted); }
+  .pc-foot { margin: 4px 6px 0; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  .pc-foot i { margin-right: 5px; }
+  .pc-done { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(5,7,10,.78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .pc-done[hidden] { display: none; }
+  .pc-done-card { width: min(380px, 100%); text-align: center; padding: 28px 22px 22px; border-radius: 26px; background: #11161d; border: 1px solid var(--border); animation: rise .45s cubic-bezier(.2,.9,.3,1.3) both; }
+  .pc-check svg { width: 84px; height: 84px; }
+  .pc-check circle { fill: none; stroke: var(--green); stroke-width: 3; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw .6s ease-out forwards; }
+  .pc-check path { fill: none; stroke: var(--green); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw .4s .45s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .pc-done-kind { margin: 10px 0 0; font-weight: 700; color: var(--muted); }
+  .pc-done-time { margin: 2px 0; font-size: 56px; font-weight: 900; letter-spacing: -1.5px; }
+  .pc-done-date { margin: 0 0 16px; color: var(--muted); font-size: 13.5px; text-transform: capitalize; }
+  .pc-receipt { display: flex; flex-direction: column; gap: 2px; padding: 12px; margin-bottom: 16px; border-radius: 14px; border: 1px dashed rgba(255,255,255,.2); }
+  .pc-receipt span { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .pc-receipt b { font-family: ui-monospace, Menlo, monospace; font-size: 16px; }
+  .pc-receipt small { color: var(--muted); font-size: 12px; }
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .confetti i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: fall 2.2s cubic-bezier(.3,.6,.5,1) forwards; }
+  @keyframes fall { to { top: 105%; transform: rotate(720deg) translateX(40px); opacity: .6; } }
+  .pc-unavailable { min-height: 100vh; display: grid; place-items: center; text-align: center; padding: 30px; }
+  .pc-unavailable h1 { font-size: 22px; margin: 14px 0 6px; }
+  .pc-unavailable p { color: var(--muted); margin: 0; }
+  .pc-unavailable .big { font-size: 54px; }
+  @media (max-width: 360px) { .pc-kinds { grid-template-columns: 1fr; } .pc-clock { font-size: 56px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .pc-check circle, .pc-check path { stroke-dashoffset: 0; } }
+</style>

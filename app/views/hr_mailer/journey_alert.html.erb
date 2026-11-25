@@ -1,0 +1,39 @@
+<% color = @severe ? '#f85149' : '#e3b341' %>
+<% content_for :banner_color, color %>
+<% content_for :hero_emoji, @alerts.one? ? @alerts.first.emoji : '⚠️' %>
+<% content_for :hero_title, @alerts.one? ? "#{@employee.first_name} — #{@alerts.first.label.downcase}" : "#{@employee.first_name} com #{@alerts.size} alertas de jornada" %>
+<% content_for :hero_sub, "#{@employee.name} · #{@employee.company_name} · #{@employee.state}" %>
+<% content_for :preheader, @alerts.map(&:message).join(' ') %>
+<% content_for :why, 'Este endereço recebe os alertas de jornada do Recursos Humanos do Honey: quando um funcionário passa da carga horária cadastrada ou de um limite da CLT.' %>
+
+<p style="margin:0 0 16px;">Olá! 👋 O ponto de <strong><%= @employee.name %></strong> acendeu <%= @alerts.one? ? 'um alerta' : 'alguns alertas' %>:</p>
+
+<% @alerts.each do |alert| %>
+  <% c = alert.tone == 'red' ? '#f85149' : '#d29922' %>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px;border-radius:12px;background:<%= c %>12;border:1px solid <%= c %>55;">
+    <tr>
+      <td width="48" valign="top" style="padding:14px 0 14px 14px;font-size:24px;line-height:1;"><span class="hero-emoji"><%= alert.emoji %></span></td>
+      <td style="padding:12px 14px;">
+        <div style="font-size:15px;font-weight:800;color:#111827;"><%= alert.label %></div>
+        <div style="margin-top:2px;font-size:12px;font-weight:600;color:<%= c %>;letter-spacing:.3px;text-transform:uppercase;"><%= alert.period_text %></div>
+        <div style="margin-top:6px;font-size:14px;color:#374151;"><%= alert.message %></div>
+        <div style="margin-top:6px;font-size:12px;color:#6b7280;">⚖️ <%= alert.law %></div>
+      </td>
+    </tr>
+  </table>
+<% end %>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0 6px;width:100%;">
+  <tr>
+    <td style="padding:10px 14px;border-radius:12px;background:#f6f8fa;font-size:13px;color:#4b5563;">
+      🗓️ <strong>Carga contratada:</strong> <%= HrEmployee.hours(@employee.weekly_minutes) %> por semana ·
+      hoje <%= @employee.schedule_text(@alerts.first.work_date.wday) %>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:22px 0 0;text-align:center;">
+  <a class="cta" href="<%= hr_employee_url(@employee, mes: @alerts.first.work_date.strftime('%Y-%m')) %>" style="display:inline-block;padding:13px 24px;border-radius:999px;background:#1f6feb;color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;">
+    Ver o espelho de ponto <span class="cta-arrow">→</span>
+  </a>
+</p>

@@ -190,6 +190,34 @@ class Finance::FiscalNotesTest < ActionDispatch::IntegrationTest
     assert_equal first.due_date, @boleto.payments.first.due_date
   end
 
+  test 'financeiro muda o vencimento de uma parcela pendente e ele vira o prazo da parcela' do
+    sign_in @finance
+    base = @boleto.created_at.to_date
+    get edit_finance_order_path(@boleto)
+    assert_select 'form.fin-due-form input[name=due_date]', 3
+
+    patch due_finance_order_path(@boleto), params: { number: 2, due_date: (base + 75).iso8601 }
+    assert_redirected_to edit_finance_order_path(@boleto, return_to: wholesale_fiscal_notes_path)
+    assert_equal '30 75 90', @boleto.reload.payment_terms
+    assert_equal base + 75, @boleto.payments.reload.find_by(number: 2).due_date
+    assert_equal [100.0, 100.0, 100.0], @boleto.payments.map { |p| p.amount.to_f }
+
+    patch due_finance_order_path(@boleto), params: { number: 2, due_date: (base + 95).iso8601 }
+    assert_match 'depois da anterior e antes da seguinte', flash[:alert]
+    patch due_finance_order_path(@boleto), params: { number: 1, due_date: (base - 1).iso8601 }
+    assert_match 'antes da data do pedido', flash[:alert]
+
+    @boleto.payments.find_by(number: 1).update!(paid_at: Date.current)
+    patch due_finance_order_path(@boleto), params: { number: 1, due_date: (base + 20).iso8601 }
+    assert_match 'já está paga', flash[:alert]
+    assert_equal '30 75 90', @boleto.reload.payment_terms
+
+    sign_in @viewer
+    patch due_finance_order_path(@boleto), params: { number: 3, due_date: (base + 100).iso8601 }
+    assert_redirected_to root_path
+    assert_equal '30 75 90', @boleto.reload.payment_terms
+  end
+
   test 'prazos invalidos ou pedido que nao e boleto nao mudam' do
     sign_in @finance
     @boleto.payments.first.update!(paid_at: Date.current)

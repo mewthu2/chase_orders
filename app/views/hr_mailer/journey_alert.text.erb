@@ -1,0 +1,9 @@
+Alertas de jornada: <%= @employee.name %> (<%= @employee.company_name %> · <%= @employee.state %>)
+
+<% @alerts.each do |alert| %>
+- <%= alert.label %> (<%= alert.period_text %>): <%= alert.message %>
+  <%= alert.law %>
+<% end %>
+
+Carga contratada: <%= HrEmployee.hours(@employee.weekly_minutes) %> por semana.
+Espelho de ponto: <%= hr_employee_url(@employee, mes: @alerts.first.work_date.strftime('%Y-%m')) %>

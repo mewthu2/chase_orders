@@ -114,6 +114,38 @@
     </section>
   <% end %>
 
+  <% if @b2b_order.sale? %>
+    <%# Devolução: a nota sai pela configuração de devolução, sem cobrança, com as chaves da original e da devolução. %>
+    <% rp_lock = @b2b_order.nf_details_lock %>
+    <% rp_edit = rp_lock.nil? && screen_can?(:b2b_orders, :edit) && !@b2b_order.cancelado? %>
+    <section class="it-fiscal-card rp-card<%= ' is-on' if @b2b_order.replacement? %>">
+      <header class="it-fiscal-card__head">
+        <span class="transfer-note__route"><span><i class="fas fa-rotate-left"></i> <strong>Pedido de devolução</strong>
+          <% if @b2b_order.replacement_of %> · repõe o <%= link_to "pedido ##{@b2b_order.replacement_of_id}", edit_b2b_order_path(@b2b_order.replacement_of_id) %><% end %></span></span>
+        <span class="it-fiscal-card__meta"><%= @b2b_order.replacement? ? 'Nota pela configuração de devolução, sem cobrança' : 'Venda comum' %></span>
+      </header>
+      <%= form_with url: replacement_b2b_order_path(@b2b_order), method: :patch, local: true, scope: :replacement do |f| %>
+        <fieldset <%= 'disabled' unless rp_edit %>>
+          <label class="rp-toggle">
+            <%= f.check_box :replacement, checked: @b2b_order.replacement? %>
+            <span>Este pedido repõe peças devolvidas (substituição sem cobrança). A nota usa a natureza de devolução, as peças pelo valor delas, pagamento "sem pagamento" e referencia as duas notas.</span>
+          </label>
+          <div class="pg-fields">
+            <div class="form-group pg-fg pg-w2">
+              <label class="field-label">Chave da NF-e original</label>
+              <%= f.text_field :original_nfe_key, value: @b2b_order.original_nfe_key, class: 'field-input mono', maxlength: 54, inputmode: 'numeric', placeholder: '44 dígitos' %>
+            </div>
+            <div class="form-group pg-fg pg-w2">
+              <label class="field-label">Chave da NF-e de devolução</label>
+              <%= f.text_field :return_nfe_key, value: @b2b_order.return_nfe_key, class: 'field-input mono', maxlength: 54, inputmode: 'numeric', placeholder: '44 dígitos' %>
+            </div>
+          </div>
+          <% if rp_edit %><div class="pg-inline-foot"><button type="submit" class="btn btn-primary"><i class="fas fa-floppy-disk"></i>Salvar devolução</button></div><% end %>
+        </fieldset>
+      <% end %>
+    </section>
+  <% end %>
+
   <%# Dados da nota: editáveis até a nota de produção ser autorizada (rejeitada ou excluída libera de novo). %>
   <% lock = @b2b_order.nf_details_lock %>
   <% editable = lock.nil? && screen_can?(B2bOrdersController::KIND_SCREENS.fetch(@b2b_order.kind), :edit) && !@b2b_order.cancelado? %>

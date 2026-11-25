@@ -146,6 +146,15 @@ module Navigation
              path: ->(v) { v.finance_consultants_path }, perm: 'consultants', active: ctrl('finance/consultants'))
       ]),
 
+      area('rh', [
+        link('rh-funcionarios', 'Funcionários', 'fas fa-id-card', 'Cadastro por empresa e estado, carga horária, horários e o link do ponto de cada um.',
+             path: ->(v) { v.hr_employees_path }, perm: 'hr_employees', active: ctrl('hr/employees')),
+        link('rh-ponto', 'Registros de ponto', 'fas fa-camera', 'Todas as marcações com a foto, dia a dia.',
+             path: ->(v) { v.hr_punches_path }, perm: 'hr_punches', active: ctrl('hr/punches')),
+        link('rh-alertas', 'Alertas de jornada', 'fas fa-triangle-exclamation', 'Quem passou da carga horária ou dos limites da CLT.',
+             path: ->(v) { v.hr_alerts_path }, perm: 'hr_alerts', active: ctrl('hr/alerts'))
+      ]),
+
       area('adm', [
         group('acessos', 'Acessos e equipe', 'fas fa-users-cog', 'Quem entra no sistema e o que cada pessoa pode ver e fazer.', children: [
           link('adm-usuarios', 'Gerenciar Usuários', 'fas fa-users-cog', 'Crie e edite quem acessa o painel.',
@@ -159,7 +168,9 @@ module Navigation
         ]),
         group('adm-relatorios', 'Dashboards e relatórios', 'fas fa-chart-line', 'Números do negócio em gráficos e indicadores.', children: [
           link('rel-vendas-atacado', 'Vendas Atacado', 'fas fa-chart-column', 'Faturamento das notas de venda do atacado: indicadores, evolução, clientes, produtos e vendedores.',
-               path: ->(v) { v.reports_wholesale_sales_path }, perm: 'report_wholesale_sales', active: ctrl('reports/wholesale_sales'))
+               path: ->(v) { v.reports_wholesale_sales_path }, perm: 'report_wholesale_sales', active: ctrl('reports/wholesale_sales')),
+          link('rel-produtos-atacado', 'Análise de produtos', 'fas fa-layer-group', 'Curva ABC, produtos sem venda, tendência, margem e candidatos a outlet do atacado.',
+               path: ->(v) { v.reports_wholesale_products_path }, perm: 'report_wholesale_products', active: ctrl('reports/wholesale_products'))
         ]),
         group('adm-logistica', 'Logística', 'fas fa-truck-fast', 'Regras da operação de estoque.', children: [
           link('adm-prioridade-reserva', 'Priorização de reserva de estoque', 'fas fa-stairs', 'Defina quem passa na frente quando o estoque é disputado.',

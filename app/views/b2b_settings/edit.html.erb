@@ -39,6 +39,19 @@
                             { selected: @setting.sale_nature_id || @setting.nature_for(B2bOrder.new(kind: :sale))&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
           </div>
           <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>Na etapa do XML do Log02, o Honey emite a NF-e com esta empresa e natureza, autoriza na SEFAZ e manda o XML ao Correios. Ao salvar, a natureza fica vinculada à empresa. A nota do abastecimento e da transferência B2C se configura em <%= link_to 'Abastecimento Lojas', stock_transfer_settings_path %> e <%= link_to 'Transferência B2C', b2c_transfer_settings_path %> → Configurações (sem escolha lá, vale esta empresa).</span></div>
+
+          <div class="pg-fsec">NF-e dos pedidos de devolução (substituição de peças devolvidas)</div>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_return_issuer_company_id">Empresa emissora da devolução</label>
+            <%= form.select :return_issuer_company_id, Company.order(:id).map { |c| ["#{c.selection_label} · #{c.environment_label.downcase}", c.id] },
+                            { selected: @setting.return_issuer&.id, include_blank: 'A do atacado' }, class: 'field-input' %>
+          </div>
+          <div class="form-group pg-fg pg-w2">
+            <label class="field-label" for="b2b_setting_return_nature_id">Natureza da devolução</label>
+            <%= form.select :return_nature_id, natures.map { |n| ["#{n.description} · CFOP #{n.cfop}", n.id] },
+                            { selected: @setting.return_nature_id || @setting.return_nature_for_notes&.id, include_blank: 'Selecione...' }, class: 'field-input' %>
+          </div>
+          <div class="pg-fnote"><i class="fas fa-circle-info"></i><span>O pedido de devolução segue o Log02 e o Correios como uma venda, mas a nota sai com esta empresa e natureza, sem cobrança, com as peças pelo valor original e referenciando a NF-e original e a de devolução. Nas observações da natureza, o Honey completa as linhas "Chave NF-e de original:" e "Chave NF-e de devolução:" (ou use {chave_original} e {chave_devolucao}).</span></div>
         </div>
         <div class="pg-inline-foot">
           <%= link_to 'Cancelar', b2b_orders_path, class: 'btn btn-ghost' %>

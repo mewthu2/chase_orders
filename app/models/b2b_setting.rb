@@ -31,6 +31,9 @@ class B2bSetting < ApplicationRecord
   belongs_to :b2c_to_b2b_remessa_nature, class_name: 'OperationNature', optional: true
   belongs_to :b2b_to_b2c_remessa_issuer_company, class_name: 'Company', optional: true
   belongs_to :b2b_to_b2c_remessa_nature, class_name: 'OperationNature', optional: true
+  # Pedido de devolução do atacado (mercadoria nova em substituição às peças devolvidas).
+  belongs_to :return_issuer_company, class_name: 'Company', optional: true
+  belongs_to :return_nature, class_name: 'OperationNature', optional: true
 
   # Nota de remessa do abastecimento: destinatário padrão, o depósito do Correios Log+ em Contagem (como na
   # NF-e 15777). Dá para mudar nas configurações e, só num pedido, na aba Nota fiscal dele.
@@ -94,6 +97,7 @@ class B2bSetting < ApplicationRecord
   # Com o pedido (ou o tipo), a empresa escolhida para aquele tipo de transferência vem antes.
   def issuer(order = nil)
     return b2c_to_b2b_issuer if b2c_to_b2b?(order)
+    return return_issuer if replacement?(order)
 
     own = (cols = TRANSFER_KINDS[kind_of(order)]) && public_send(cols[0])
     own || issuer_company || company_with_cnpj(DEFAULT_ISSUER_CNPJ)
@@ -128,8 +132,18 @@ class B2bSetting < ApplicationRecord
     self.class.normalize_recipient(own || remessa_recipient.presence || REMESSA_DEFAULT_RECIPIENT)
   end
 
+  # Devolução: sem escolha, sai pela empresa do atacado.
+  def return_issuer
+    return_issuer_company || issuer('sale')
+  end
+
+  def return_nature_for_notes
+    return_nature || OperationNature.where(active: true).where('description LIKE ?', '%SUBSTITUI%').first
+  end
+
   def nature_for(order)
     return b2c_to_b2b_nature || default_transfer_nature if b2c_to_b2b?(order)
+    return return_nature_for_notes if replacement?(order)
 
     kind = kind_of(order)
     if kind == 'sale'
@@ -140,6 +154,10 @@ class B2bSetting < ApplicationRecord
   end
 
   private
+
+  def replacement?(order)
+    order.is_a?(B2bOrder) && order.sale? && order.replacement?
+  end
 
   def b2c_to_b2b?(order)
     order.to_s == 'b2c_to_b2b' || (order.respond_to?(:b2c_to_b2b?) && order.b2c_to_b2b?)
@@ -168,7 +186,7 @@ class B2bSetting < ApplicationRecord
     [[issuer('sale'), sale_nature], [issuer('stock_transfer'), supply_nature || transfer_nature],
      [issuer('b2c_transfer'), b2c_nature || transfer_nature], [remessa_issuer, remessa_nature],
      [b2c_to_b2b_issuer, b2c_to_b2b_nature], [remessa_issuer('b2c_to_b2b'), b2c_to_b2b_remessa_nature],
-     [remessa_issuer('b2b_to_b2c'), b2b_to_b2c_remessa_nature]]
+     [remessa_issuer('b2b_to_b2c'), b2b_to_b2c_remessa_nature], [return_issuer, return_nature]]
   end
 
   def natures_match_kind

@@ -187,7 +187,10 @@ Rails.application.routes.draw do
   namespace :finance, path: 'financeiro' do
     # Parcelas e consultor de um pedido, abertos da tela de Notas Fiscais (a lista de pedidos do Financeiro saiu).
     resources :orders, only: %i[edit update], path: 'notas_fiscais/pedidos' do
-      member { patch :terms, path: 'prazos' }
+      member do
+        patch :terms, path: 'prazos'
+        patch :due, path: 'vencimento'
+      end
     end
     resources :payments, only: [], path: 'parcelas' do
       member do
@@ -206,6 +209,20 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  # Recursos Humanos: funcionários, registros de ponto e alertas de jornada.
+  namespace :hr, path: 'rh' do
+    resources :employees, path: 'funcionarios' do
+      member { post :regenerate_link }
+    end
+    resources :punches, path: 'registros-de-ponto', only: %i[index create] do
+      member { post :annul }
+    end
+    resources :alerts, path: 'alertas', only: :index
+  end
+  # Ponto pelo link de cada funcionário (sem login): câmera, foto e marcação.
+  get 'ponto/:token', to: 'punch_clock#show', as: :punch_clock
+  post 'ponto/:token', to: 'punch_clock#create'
 
   # Logística › Notas Fiscais de Entrada e Colocação de estoque (Log02 e Log03, com as notas de remessa).
   scope 'logistica' do
@@ -229,6 +246,7 @@ Rails.application.routes.draw do
   # Adm › Dashboards e relatórios.
   namespace :reports, path: 'relatorios' do
     get 'vendas-atacado', to: 'wholesale_sales#index', as: :wholesale_sales
+    get 'produtos-atacado', to: 'wholesale_products#index', as: :wholesale_products
   end
 
   # Ordem e colunas visíveis de cada tabela, por usuário (botão Colunas das listas).
@@ -373,6 +391,11 @@ Rails.application.routes.draw do
 
   # Atacado e transferência de estoque são telas separadas sobre o mesmo
   # controller: o tipo do pedido vem do default da rota (order_kind), não do form.
+  # Pedido de devolução do atacado: escolher as peças do pedido original e marcar a devolução na aba Nota fiscal.
+  get 'b2b_orders/:id/devolucao', to: 'b2b_order_replacements#new', as: :new_replacement_b2b_order
+  post 'b2b_orders/:id/devolucao', to: 'b2b_order_replacements#create', as: :replacement_b2b_order
+  patch 'b2b_orders/:id/devolucao', to: 'b2b_order_replacements#update'
+
   resources :b2b_orders, defaults: { order_kind: 'sale' } do
     collection do
       post :parse_items_spreadsheet

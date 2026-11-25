@@ -1,0 +1,5 @@
+<% content_for :title, "Editar · #{@employee.name}" %>
+<%= hc_page_header "Editar · #{@employee.name}", 'Empresa, estado, carga horária e os horários de cada dia.', icon: 'fas fa-user-pen' do %>
+  <%= link_to hr_employee_path(@employee), class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+<% end %>
+<%= render 'form' %>

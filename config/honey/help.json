@@ -1455,6 +1455,94 @@
      "green"
     ]
    ]
+  },
+  "rh-funcionarios": {
+   "title": "Funcionários",
+   "subtitle": "Cadastro, carga horária e o link do ponto",
+   "purpose": "Cadastrar cada funcionário com a empresa (das já cadastradas), o estado onde trabalha (define o fuso do ponto), a carga semanal e os horários de cada dia. Cada um ganha um link próprio que abre a câmera do celular para bater o ponto com foto. Na tela do funcionário fica o espelho de ponto do mês.",
+   "when": "Na admissão, ao mudar horário ou carga, e para conferir o ponto do mês.",
+   "actions": [
+    "Novo funcionário",
+    "Copiar o link ou mandar no WhatsApp",
+    "Gerar link novo (o antigo para de funcionar)",
+    "Ver o espelho de ponto do mês com as fotos",
+    "Incluir marcação esquecida (com motivo)",
+    "Desconsiderar marcação (com motivo; fica no histórico)",
+    "Exportar o espelho em CSV",
+    "Desativar (quem tem marcação não é excluído)"
+   ],
+   "statuses": [
+    [
+     "Trabalhando",
+     "Bateu a entrada e ainda não saiu.",
+     "green"
+    ],
+    [
+     "Ativo",
+     "O link do ponto funciona.",
+     "blue"
+    ],
+    [
+     "Inativo",
+     "O link do ponto não funciona.",
+     "gray"
+    ]
+   ]
+  },
+  "rh-ponto": {
+   "title": "Registros de ponto",
+   "subtitle": "Marcações do dia com a foto",
+   "purpose": "Ver todas as marcações de um dia, por empresa, com a foto tirada na hora, o NSR (número sequencial do registro) e quem incluiu ou desconsiderou.",
+   "when": "Para conferir quem bateu o ponto e as fotos.",
+   "actions": [
+    "Trocar o dia (setas ou calendário)",
+    "Abrir a foto",
+    "Abrir o espelho do funcionário"
+   ]
+  },
+  "rh-alertas": {
+   "title": "Alertas de jornada",
+   "subtitle": "Acima da carga ou fora da CLT",
+   "purpose": "Lista dos alertas criados a cada marcação: acima da carga do dia (tolerância de 10 min), trabalho na folga, mais de 2h extras ou 10h no dia, intervalo abaixo do mínimo, menos de 11h de descanso entre jornadas e acima da carga semanal. Cada alerta novo vai por e-mail para o RH.",
+   "when": "Todo dia, para agir antes que a hora extra vire passivo trabalhista.",
+   "actions": [
+    "Filtrar por tipo, estado e período",
+    "Abrir o espelho do funcionário"
+   ]
+  },
+  "rel-produtos-atacado": {
+   "title": "Análise de produtos do atacado",
+   "subtitle": "Curva ABC, parados e outlet",
+   "purpose": "Ver quais modelos sustentam o faturamento do atacado (curva ABC), quais pararam de vender, quais estão subindo ou caindo, a margem sobre o custo e o giro das peças que entraram no Log02, para achar oportunidades e escolher o que levar para outlet.",
+   "when": "Toda semana ou mês, antes de planejar compra, campanha ou outlet.",
+   "actions": [
+    "Trocar o período (padrão: últimos 12 meses)",
+    "Trocar a base: notas emitidas ou pedidos não cancelados",
+    "Filtrar a tabela por curva e situação",
+    "Ver candidatos a outlet e o motivo"
+   ],
+   "statuses": [
+    [
+     "Candidato a outlet",
+     "Parado há 90+ dias, curva C caindo forte ou sem giro no Log02.",
+     "red"
+    ],
+    [
+     "Sem venda no período",
+     "Vendeu antes, mas não neste período.",
+     "yellow"
+    ],
+    [
+     "Nunca vendido",
+     "Entrou no Log02 e ainda não vendeu no atacado.",
+     "purple"
+    ],
+    [
+     "Vendendo",
+     "Teve venda no período.",
+     "green"
+    ]
+   ]
   }
  },
  "glossary": [
@@ -1674,6 +1762,10 @@
   "log-notas": "nota nf nfe xml zip contabilidade mes abastecimento transferencia remessa fiscal",
   "rel-vendas-atacado": "relatorio dashboard grafico vendas faturamento atacado kpi ticket medio clientes produtos vendedor consultor",
   "log-entradas": "nota entrada xml compra fornecedor nfe recebimento mercadoria",
-  "log-colocacao": "colocacao estoque log02 log03 csv remessa deposito correios divisao"
+  "log-colocacao": "colocacao estoque log02 log03 csv remessa deposito correios divisao",
+  "rh-funcionarios": "rh recursos humanos funcionario colaborador ponto carga horaria horario jornada link camera foto espelho",
+  "rh-ponto": "ponto marcacao batida foto registro rh entrada saida intervalo",
+  "rh-alertas": "hora extra alerta jornada clt carga horaria rh descanso intervalo",
+  "rel-produtos-atacado": "relatorio produtos curva abc pareto outlet parado sem venda giro margem atacado oportunidade"
  }
 }

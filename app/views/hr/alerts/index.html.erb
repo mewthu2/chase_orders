@@ -1,0 +1,16 @@
+<% content_for :title, 'Alertas de jornada' %>
+<% table = hr_alerts_table(@alerts) %>
+
+<%= hc_page_header 'Alertas de jornada', "Quem passou da carga horária ou de um limite da CLT. Cada alerta novo vai por e-mail para #{HrMailer.recipients.join(', ')}.", icon: 'fas fa-triangle-exclamation' %>
+
+<div class="pg-blocks">
+  <div class="callout"><i class="fas fa-scale-balanced"></i><div>
+    <strong>Regras conferidas a cada marcação:</strong> carga do dia com tolerância de 10 minutos (CLT art. 58 §1º), no máximo 2h extras e 10h no dia (art. 59),
+    intervalo de 1h acima de 6h de trabalho (art. 71), 11h de descanso entre jornadas (art. 66), carga semanal contratada (até 44h, CF art. 7º XIII) e trabalho em dia de folga.
+    Se a pessoa continua trabalhando sem bater a saída, o Honey confere de novo no minuto em que ela passaria do limite.
+  </div></div>
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Alertas', icon: 'fas fa-bell', meta: 'Clique no nome para abrir o espelho de ponto do mês.',
+        link: ->(r) { hr_employee_path(r[:record].employee, mes: r[:record].work_date.strftime('%Y-%m')) },
+        empty: { title: 'Nenhum alerta', text: 'Ninguém passou da carga horária nem dos limites da CLT.' }) %>
+</div>

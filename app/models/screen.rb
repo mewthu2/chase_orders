@@ -21,6 +21,7 @@ class Screen
     'logistica' => { title: 'Logística',   icon: 'fas fa-truck-fast',   color: '#3fb950', desc: 'Envios do atacado, planejador e abastecimento.' },
     'atacado'   => { title: 'Atacado',     icon: 'fas fa-handshake',    color: '#e3b341', desc: 'Lojistas: clientes, pedidos e catálogos.' },
     'financeiro' => { title: 'Financeiro', icon: 'fas fa-sack-dollar',  color: '#2ea043', desc: 'Notas do atacado com a baixa das parcelas, consultores e comissões.' },
+    'rh'        => { title: 'Recursos Humanos', icon: 'fas fa-people-group', color: '#db61a2', desc: 'Funcionários, ponto com foto pelo link e alertas de jornada.' },
     'adm'       => { title: 'Adm',         icon: 'fas fa-gear',         color: '#8b949e', desc: 'Acessos, equipe, marketing e cadastros fiscais.' }
   }.freeze
 
@@ -53,6 +54,9 @@ class Screen
     finance_orders:         { label: 'Financeiro · Notas Fiscais e parcelas', area: 'financeiro', acts: 'VEP' },
     consultants:            { label: 'Financeiro · Consultores',              area: 'financeiro', acts: 'VCED' },
     commissions:            { label: 'Financeiro · Comissões',                area: 'financeiro', acts: 'VEP' },
+    hr_employees:           { label: 'RH · Funcionários e espelho de ponto',   area: 'rh',        acts: 'VCEDP' },
+    hr_punches:             { label: 'RH · Registros de ponto',               area: 'rh',        acts: 'VEP' },
+    hr_alerts:              { label: 'RH · Alertas de jornada',               area: 'rh',        acts: 'V' },
     users_management:       { label: 'Gerenciar Usuários',                    area: 'adm',       acts: 'VCED' },
     marketing_campaigns:    { label: 'Campanhas de Marketing',                area: 'adm',       acts: 'VCEXD' },
     marketing_tasks:        { label: 'Tarefas de Marketing',                  area: 'adm',       acts: 'VEXP' },
@@ -61,7 +65,8 @@ class Screen
     carriers:               { label: 'Transportadoras',                       area: 'adm',       acts: 'VCED' },
     stock_reservation_priority: { label: 'Priorização de reserva de estoque', area: 'adm',       acts: 'VE' },
     logs:                   { label: 'Logs',                                  area: 'adm',       acts: 'V' },
-    report_wholesale_sales: { label: 'Relatórios · Vendas Atacado',           area: 'adm',       acts: 'V' }
+    report_wholesale_sales: { label: 'Relatórios · Vendas Atacado',           area: 'adm',       acts: 'V' },
+    report_wholesale_products: { label: 'Relatórios · Análise de produtos do atacado', area: 'adm', acts: 'V' }
   }.freeze
 
   def self.keys = DEFINITIONS.keys.map(&:to_s)

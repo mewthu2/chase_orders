@@ -92,6 +92,48 @@ module ReportsHelper
     content_tag(:ol, safe_join(rows), class: 'rpt-bars stagger')
   end
 
+  # Curva ABC (Pareto): colunas do faturamento de cada modelo, do maior para o menor, na cor da classe, e a linha
+  # do acumulado (0 a 100%) com as faixas de 80% e 95%. points: [{ label:, value:, cumulative:, abc: }]
+  def rpt_pareto(points, title:, height: 260)
+    return content_tag(:p, 'Sem venda no período.', class: 'rpt-empty') if points.empty?
+
+    w = 1100.0
+    h = height.to_f
+    pad_l = 64.0
+    pad_r = 44.0
+    pad_b = 18.0
+    pad_t = 12.0
+    plot_w = w - pad_l - pad_r
+    plot_h = h - pad_b - pad_t
+    top = rpt_nice_max(points.map { |p| p[:value] }.max.to_f)
+    slot = plot_w / points.size
+    bar_w = [[slot * 0.7, 2].max, 26].min
+    y_of = ->(share) { pad_t + plot_h - plot_h * share }
+    grid = (0..4).map do |i|
+      y = pad_t + plot_h - (plot_h * i / 4)
+      tag.line(x1: pad_l, x2: w - pad_r, y1: y, y2: y, class: i.zero? ? 'rpt-axis' : 'rpt-gl') +
+        content_tag(:text, rpt_money(top * i / 4, compact: true), x: pad_l - 8, y: y + 4, class: 'rpt-tick', 'text-anchor': 'end') +
+        content_tag(:text, "#{i * 25}%", x: w - pad_r + 6, y: y + 4, class: 'rpt-tick')
+    end
+    bands = [[0.8, 'A | B'], [0.95, 'B | C']].map do |share, label|
+      y = y_of.call(share)
+      tag.line(x1: pad_l, x2: w - pad_r, y1: y, y2: y, class: 'rpt-band') + content_tag(:text, label, x: pad_l + 6, y: y - 4, class: 'rpt-tick rpt-band-lbl')
+    end
+    bars = points.each_with_index.map do |p, i|
+      x = pad_l + slot * i + (slot - bar_w) / 2
+      bh = [plot_h * p[:value] / top, 2].max
+      tip = "#{p[:label]} · classe #{p[:abc]}: #{rpt_money(p[:value])} · acumulado #{rpt_percent(p[:cumulative])}"
+      content_tag(:g, class: 'rpt-col') do
+        tag.path(d: rpt_round_top(x, pad_t + plot_h - bh, bar_w, bh, [3, bar_w / 2].min), class: "rpt-bar rpt-abc-#{p[:abc].downcase}", style: "--i: #{i}") +
+          tag.rect(x: pad_l + slot * i, y: pad_t, width: slot, height: plot_h, class: 'rpt-hit', data: { tip: tip })
+      end
+    end
+    line = points.each_with_index.map { |p, i| "#{(pad_l + slot * i + slot / 2).round(1)},#{y_of.call(p[:cumulative]).round(1)}" }.join(' ')
+    svg = content_tag(:svg, safe_join(grid + bands + bars + [tag.polyline(points: line, class: 'rpt-cum')]),
+                      viewBox: "0 0 #{w.to_i} #{h.to_i}", class: 'rpt-svg rpt-pareto', role: 'img', 'aria-label': title)
+    svg + rpt_table(%w[Modelo Classe Faturamento Acumulado], points.map { |p| [p[:label], p[:abc], rpt_money(p[:value]), rpt_percent(p[:cumulative])] })
+  end
+
   def rpt_table(headers, rows)
     content_tag(:details, class: 'rpt-table') do
       content_tag(:summary, safe_join([content_tag(:i, '', class: 'fas fa-table'), 'Ver tabela'])) +
@@ -114,4 +156,45 @@ module ReportsHelper
     r = [r, h].min
     "M#{x},#{y + h} V#{y + r} Q#{x},#{y} #{x + r},#{y} H#{x + w - r} Q#{x + w},#{y} #{x + w},#{y + r} V#{y + h} Z"
   end
+
+  # Tabela completa da análise de produtos (um modelo por linha), filtrável por classe, situação e busca.
+  def rpt_products_table(report)
+    rows = report.models.map do |m|
+      { modelo: m[:model], abc: m[:abc], st: m[:status], motivo: m[:reason].to_s, fat: m[:revenue], pecas: m[:pieces],
+        share: m[:share].positive? ? rpt_percent(m[:share]) : '—', acum: m[:cumulative] ? rpt_percent(m[:cumulative]) : '—',
+        tend: m[:trend] ? "#{m[:trend].positive? ? '▲' : (m[:trend].negative? ? '▼' : '=')} #{rpt_percent(m[:trend].abs, precision: 0)}" : '—',
+        preco: m[:avg_price].to_f, margem: m[:margin] ? rpt_percent(m[:margin], precision: 0) : '—',
+        varejo: m[:retail_ratio] ? rpt_percent(m[:retail_ratio], precision: 0) : '—',
+        ultima: m[:last_sale], dias: m[:days_since] || '—', pedidos: m[:orders], clientes: m[:clients],
+        entrou: m[:received] || '—', giro: m[:sell_through] ? rpt_percent(m[:sell_through], precision: 0) : '—' }
+    end
+    status_map = Reports::WholesaleProducts::STATUSES.transform_values { |v| v }
+    HoneyTable.new(params, rows: rows, unit: 'modelos', unit1: 'modelo', page_size: 25, sort: { k: :fat, dir: -1 },
+      cols: [
+        { k: :modelo, label: 'Modelo', main: true, sub: :motivo, sort: true },
+        { k: :motivo, label: 'Por quê', hide: true },
+        { k: :abc, label: 'Curva', t: :status, map: Reports::WholesaleProducts::CLASSES, sort: true },
+        { k: :st, label: 'Situação', t: :status, map: status_map },
+        { k: :fat, label: 'Faturamento', t: :money, sort: true },
+        { k: :pecas, label: 'Peças', t: :qty, sort: true },
+        { k: :share, label: '% do total' },
+        { k: :acum, label: 'Acumulado', hide: true },
+        { k: :tend, label: 'Tendência (peças)' },
+        { k: :preco, label: 'Preço médio', t: :money, sort: true },
+        { k: :margem, label: 'Margem s/ custo' },
+        { k: :varejo, label: '% do varejo', hide: true },
+        { k: :ultima, label: 'Última venda', t: :d, sort: true },
+        { k: :dias, label: 'Dias sem venda', sort: true },
+        { k: :pedidos, label: 'Pedidos', t: :qty, hide: true },
+        { k: :clientes, label: 'Clientes', t: :qty, sort: true },
+        { k: :entrou, label: 'Entrou no Log02', hide: true },
+        { k: :giro, label: 'Giro da entrada', hide: true }
+      ],
+      filters: [
+        { id: :q, type: :search, label: 'Buscar', ph: 'Modelo…', cols: %i[modelo] },
+        { id: :abc, type: :select, label: 'Curva', col: :abc, all: 'Todas' },
+        { id: :st, type: :select, label: 'Situação', col: :st, all: 'Todas' }
+      ])
+  end
+
 end

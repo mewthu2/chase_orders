@@ -1,0 +1,21 @@
+<% content_for :title, 'Funcionários' %>
+<% table = hr_employees_table(@employees, open_now: @open_now, week_alerts: @week_alerts) %>
+
+<%= hc_page_header 'Funcionários', 'Cadastro por empresa e estado, com carga horária, horários e o link do ponto de cada um.', icon: 'fas fa-id-card' do %>
+  <% if screen_can?(:hr_employees, :create) %>
+    <%= link_to new_hr_employee_path, class: 'btn btn-primary' do %><i class="fas fa-user-plus"></i>Novo funcionário<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'Funcionários', icon: 'fas fa-id-card', meta: 'Clique no nome para ver o link do ponto e o espelho do mês.',
+        link: ->(r) { hr_employee_path(r[:record]) },
+        empty: { title: 'Nenhum funcionário ainda', text: 'Cadastre o primeiro: empresa, estado, carga horária e horários.' },
+        actions: ->(r) {
+          safe_join([
+            hc_row_action('fas fa-calendar-days', 'Espelho de ponto', hr_employee_path(r[:record])),
+            (hc_row_action('fas fa-pen', 'Editar', edit_hr_employee_path(r[:record])) if screen_can?(:hr_employees, :edit))
+          ].compact)
+        }) %>
+</div>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_190000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -246,10 +246,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
     t.json "remessa_recipient"
     t.integer "transfer_direction", default: 0, null: false
     t.bigint "consultant_id"
+    t.boolean "replacement", default: false, null: false
+    t.bigint "replacement_of_id"
+    t.string "original_nfe_key", limit: 44
+    t.string "return_nfe_key", limit: 44
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
     t.index ["consultant_id"], name: "index_b2b_orders_on_consultant_id"
     t.index ["nf_carrier_id"], name: "index_b2b_orders_on_nf_carrier_id"
+    t.index ["replacement_of_id"], name: "index_b2b_orders_on_replacement_of_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
     t.index ["user_id"], name: "index_b2b_orders_on_user_id"
   end
@@ -278,8 +283,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
     t.bigint "b2b_to_b2c_remessa_issuer_company_id"
     t.bigint "b2b_to_b2c_remessa_nature_id"
     t.json "b2b_to_b2c_remessa_recipient"
+    t.bigint "return_issuer_company_id"
+    t.bigint "return_nature_id"
     t.index ["b2c_issuer_company_id"], name: "index_b2b_settings_on_b2c_issuer_company_id"
     t.index ["b2c_nature_id"], name: "index_b2b_settings_on_b2c_nature_id"
+    t.index ["return_issuer_company_id"], name: "index_b2b_settings_on_return_issuer_company_id"
+    t.index ["return_nature_id"], name: "index_b2b_settings_on_return_nature_id"
     t.index ["supply_issuer_company_id"], name: "index_b2b_settings_on_supply_issuer_company_id"
     t.index ["supply_nature_id"], name: "index_b2b_settings_on_supply_nature_id"
   end
@@ -574,6 +583,63 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
     t.index ["order_id"], name: "index_fiscal_notes_on_order_id"
     t.index ["status"], name: "index_fiscal_notes_on_status"
     t.index ["stock_placement_id"], name: "index_fiscal_notes_on_stock_placement_id"
+  end
+
+  create_table "hr_alerts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "hr_employee_id", null: false
+    t.date "work_date", null: false
+    t.string "kind", limit: 30, null: false
+    t.integer "minutes"
+    t.text "message"
+    t.datetime "notified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hr_employee_id", "work_date", "kind"], name: "index_hr_alerts_on_hr_employee_id_and_work_date_and_kind", unique: true
+    t.index ["hr_employee_id"], name: "index_hr_alerts_on_hr_employee_id"
+    t.index ["work_date"], name: "index_hr_alerts_on_work_date"
+  end
+
+  create_table "hr_employees", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "cpf", limit: 14
+    t.string "role"
+    t.string "email"
+    t.string "phone", limit: 30
+    t.bigint "company_id", null: false
+    t.string "state", limit: 2, null: false
+    t.date "admission_date"
+    t.integer "weekly_minutes", default: 2640, null: false
+    t.json "schedule"
+    t.string "punch_token", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_hr_employees_on_company_id"
+    t.index ["cpf"], name: "index_hr_employees_on_cpf"
+    t.index ["punch_token"], name: "index_hr_employees_on_punch_token", unique: true
+  end
+
+  create_table "hr_time_punches", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "hr_employee_id", null: false
+    t.string "kind", limit: 20, null: false
+    t.datetime "punched_at", null: false
+    t.date "work_date", null: false
+    t.bigint "nsr", null: false
+    t.string "source", limit: 10, default: "link", null: false
+    t.string "ip", limit: 64
+    t.string "user_agent"
+    t.bigint "created_by_id"
+    t.text "note"
+    t.datetime "annulled_at"
+    t.bigint "annulled_by_id"
+    t.text "annul_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["annulled_by_id"], name: "index_hr_time_punches_on_annulled_by_id"
+    t.index ["created_by_id"], name: "index_hr_time_punches_on_created_by_id"
+    t.index ["hr_employee_id", "work_date"], name: "index_hr_time_punches_on_hr_employee_id_and_work_date"
+    t.index ["hr_employee_id"], name: "index_hr_time_punches_on_hr_employee_id"
+    t.index ["nsr"], name: "index_hr_time_punches_on_nsr", unique: true
   end
 
   create_table "internal_transfer_approvers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1643,6 +1709,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
   add_foreign_key "b2b_order_items", "b2b_orders"
   add_foreign_key "b2b_order_payments", "b2b_orders"
   add_foreign_key "b2b_order_payments", "users", column: "paid_by_id"
+  add_foreign_key "b2b_orders", "b2b_orders", column: "replacement_of_id", on_delete: :nullify
   add_foreign_key "b2b_orders", "carriers"
   add_foreign_key "b2b_orders", "carriers", column: "nf_carrier_id", on_delete: :nullify
   add_foreign_key "b2b_orders", "clients"
@@ -1650,8 +1717,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
   add_foreign_key "b2b_orders", "transfer_locations"
   add_foreign_key "b2b_orders", "users"
   add_foreign_key "b2b_settings", "companies", column: "b2c_issuer_company_id", on_delete: :nullify
+  add_foreign_key "b2b_settings", "companies", column: "return_issuer_company_id", on_delete: :nullify
   add_foreign_key "b2b_settings", "companies", column: "supply_issuer_company_id", on_delete: :nullify
   add_foreign_key "b2b_settings", "operation_natures", column: "b2c_nature_id", on_delete: :nullify
+  add_foreign_key "b2b_settings", "operation_natures", column: "return_nature_id", on_delete: :nullify
   add_foreign_key "b2b_settings", "operation_natures", column: "supply_nature_id", on_delete: :nullify
   add_foreign_key "campaign_users", "marketing_campaigns"
   add_foreign_key "campaign_users", "users"
@@ -1668,6 +1737,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_160000) do
   add_foreign_key "fiscal_notes", "operation_natures"
   add_foreign_key "fiscal_notes", "orders"
   add_foreign_key "fiscal_notes", "stock_placements"
+  add_foreign_key "hr_alerts", "hr_employees"
+  add_foreign_key "hr_employees", "companies"
+  add_foreign_key "hr_time_punches", "hr_employees"
+  add_foreign_key "hr_time_punches", "users", column: "annulled_by_id"
+  add_foreign_key "hr_time_punches", "users", column: "created_by_id"
   add_foreign_key "internal_transfer_approvers", "users"
   add_foreign_key "internal_transfer_events", "internal_transfer_shipments"
   add_foreign_key "internal_transfer_events", "internal_transfers"

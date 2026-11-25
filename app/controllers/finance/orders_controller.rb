@@ -3,7 +3,7 @@ module Finance
   # baixa e desfazer, e os prazos, que dá para aumentar ou diminuir) ou o PIX/cartão pago na criação, e o consultor
   # (quem recomendou), que dá para trocar ou tirar.
   class OrdersController < ApplicationController
-    guard_screen :finance_orders, actions: { edit: :view, terms: :edit }
+    guard_screen :finance_orders, actions: { edit: :view, terms: :edit, due: :edit }
 
     def edit
       @order = B2bOrder.sale.includes(payments: :paid_by).find(params[:id])
@@ -28,6 +28,47 @@ module Finance
       Finance::PaymentSchedule.call(order)
       Rails.logger.info("[Financeiro] pedido ##{order.id}: prazos do boleto #{before.inspect} -> #{order.payment_terms.inspect} por #{current_user.email}")
       redirect_to back, notice: "Pedido ##{order.id}: boleto em #{days.size}x (#{order.payment_terms})."
+    end
+
+    # Vencimento de uma parcela pendente do boleto. O vencimento vira o prazo em dias daquela parcela (contado da data
+    # do pedido), e as parcelas são refeitas pelo Finance::PaymentSchedule: assim a data escolhida não se perde
+    # quando o pedido muda depois. Precisa ficar depois da parcela anterior e antes da seguinte.
+    def due
+      order = B2bOrder.sale.find(params[:id])
+      back = edit_finance_order_path(order, return_to: helpers.finance_return_to)
+      return redirect_to(back, alert: 'Só dá para mudar o vencimento de pedido no boleto.') unless order.payment_method == 'boleto'
+      return redirect_to(back, alert: 'Pedido cancelado: as parcelas não mudam.') if order.cancelado?
+
+      payment = order.payments.find_by(number: params[:number].to_i)
+      return redirect_to(back, alert: 'Parcela não encontrada.') unless payment
+      return redirect_to(back, alert: "A parcela #{payment.number} já está paga: desfaça a baixa para mudar o vencimento.") if payment.paid?
+
+      date = begin
+        Date.iso8601(params[:due_date].to_s)
+      rescue Date::Error
+        nil
+      end
+      return redirect_to(back, alert: 'Escolha a nova data de vencimento.') unless date
+
+      days = order.installment_days
+      index = payment.number - 1
+      return redirect_to(back, alert: 'Esta parcela não está nos prazos do pedido: ajuste pelos prazos do boleto abaixo.') if index >= days.size
+
+      base = (order.created_at || Time.current).to_date
+      offset = (date - base).to_i
+      return redirect_to(back, alert: "O vencimento não pode ser antes da data do pedido (#{I18n.l(base, format: '%d/%m/%Y')}).") if offset.negative?
+      return redirect_to(back, alert: 'Vencimento longe demais: até 999 dias depois do pedido.') if offset > 999
+
+      days[index] = offset
+      if days.each_cons(2).any? { |a, b| b <= a }
+        return redirect_to(back, alert: "A parcela #{payment.number} precisa vencer depois da anterior e antes da seguinte.")
+      end
+
+      before = payment.due_date
+      order.update_columns(payment_terms: days.join(' '), updated_at: Time.current)
+      Finance::PaymentSchedule.call(order)
+      Rails.logger.info("[Financeiro] pedido ##{order.id}: vencimento da parcela #{payment.number} #{before} -> #{date} por #{current_user.email}")
+      redirect_to back, notice: "Parcela #{payment.number} do pedido ##{order.id} passou a vencer em #{I18n.l(date, format: '%d/%m/%Y')}."
     end
 
     def update

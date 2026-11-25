@@ -1,0 +1,49 @@
+<% content_for :title, 'Registros de ponto' %>
+<% valid = @punches.reject(&:annulled?) %>
+<% by_company = @punches.group_by { |p| p.employee.company_name.to_s } %>
+
+<%= hc_page_header 'Registros de ponto', 'Todas as marcações do dia, com a foto tirada na hora.', icon: 'fas fa-camera' do %>
+  <%= link_to hr_punches_path(dia: (@date - 1).iso8601), class: 'btn btn-secondary', 'aria-label': 'Dia anterior' do %><i class="fas fa-chevron-left"></i><% end %>
+  <%= form_with url: hr_punches_path, method: :get, local: true, class: 'hr-day-pick' do %>
+    <%= date_field_tag :dia, @date, class: 'field-input', onchange: 'this.form.submit()', 'aria-label': 'Dia' %>
+  <% end %>
+  <%= link_to hr_punches_path(dia: (@date + 1).iso8601), class: 'btn btn-secondary', 'aria-label': 'Próximo dia' do %><i class="fas fa-chevron-right"></i><% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <%= hc_kpis([
+        { label: 'Marcações', icon: 'fas fa-fingerprint', tone: 'blue', value: valid.size, help: l(@date, format: '%A, %d/%m/%Y') },
+        { label: 'Pessoas', icon: 'fas fa-users', tone: 'green', value: valid.map(&:hr_employee_id).uniq.size, help: 'Bateram ponto no dia.' },
+        { label: 'Incluídas pelo RH', icon: 'fas fa-user-pen', tone: 'yellow', value: valid.count(&:manual?), help: 'Sem foto, com justificativa.' },
+        { label: 'Desconsideradas', icon: 'fas fa-ban', tone: 'red', value: @punches.count(&:annulled?), help: 'Ficam no histórico.' }
+      ]) %>
+
+  <% if @punches.empty? %>
+    <%= hc_empty('Nenhuma marcação neste dia', 'Use as setas para ver outro dia.') %>
+  <% end %>
+
+  <% by_company.sort.each do |company, punches| %>
+    <section class="hr-gallery-group">
+      <h3><i class="fas fa-building"></i><%= company %> <small><%= punches.size %> marcações</small></h3>
+      <div class="hr-gallery stagger">
+        <% punches.each_with_index do |p, i| %>
+          <article class="hr-shot<%= ' is-annulled' if p.annulled? %>" style="--i: <%= i %>">
+            <% if p.photo.attached? %>
+              <a href="<%= url_for(p.photo) %>" target="_blank" rel="noopener"><%= image_tag url_for(p.photo), alt: "Foto de #{p.employee.name}", loading: 'lazy' %></a>
+            <% else %>
+              <div class="hr-shot-none"><i class="fas fa-user-pen"></i><span>Incluída pelo RH</span></div>
+            <% end %>
+            <div class="hr-shot-body">
+              <b class="hr-shot-time"><%= p.local_time.strftime('%H:%M') %></b>
+              <span class="hr-shot-kind"><%= HrTimePunch::KINDS.dig(p.kind, :emoji) %> <%= p.label %></span>
+              <%= link_to p.employee.name, hr_employee_path(p.employee, mes: p.work_date.strftime('%Y-%m')), class: 'hr-shot-name' %>
+              <small><%= p.employee.state %> · NSR <%= p.nsr_text %></small>
+              <% if p.manual? %><small class="hr-shot-note" title="<%= p.note %>"><i class="fas fa-user-pen"></i><%= p.created_by&.name %>: <%= p.note %></small><% end %>
+              <% if p.annulled? %><small class="hr-shot-note is-red" title="<%= p.annul_reason %>"><i class="fas fa-ban"></i>Desconsiderada: <%= p.annul_reason %></small><% end %>
+            </div>
+          </article>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</div>

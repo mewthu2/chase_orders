@@ -1,0 +1,65 @@
+<% content_for :title, "Devolução do pedido ##{@original.id}" %>
+<%= hc_page_header "Pedido de devolução", "Do pedido ##{@original.id} · #{@original.client&.display_name}", icon: 'fas fa-rotate-left' do %>
+  <%= link_to edit_b2b_order_path(@original), class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar ao pedido<% end %>
+<% end %>
+
+<div class="pg-blocks">
+  <% if flash.now[:alert] %><div class="callout pg-banner is-warn"><i class="fas fa-triangle-exclamation"></i><div><%= flash.now[:alert] %></div></div><% end %>
+  <div class="callout"><i class="fas fa-circle-info"></i><div>
+    Escolha as peças devolvidas. O Honey cria um <strong>pedido novo vinculado</strong> a este, para o mesmo cliente e endereço, que repõe as peças
+    <strong>sem cobrança</strong> e segue o Log02 e o Correios como uma venda. A nota sai pela <strong>configuração de devolução</strong>
+    (<%= [B2bSetting.current.return_issuer&.trade_name.presence || B2bSetting.current.return_issuer&.legal_name, B2bSetting.current.return_nature_for_notes&.description].compact.join(' · ').presence || 'escolha em Configuração do atacado' %>),
+    com as chaves da nota original e da devolução nas observações.
+  </div></div>
+
+  <%= form_with url: replacement_b2b_order_path(@original), method: :post, local: true, data: { turbo: false } do %>
+    <section class="table-card pg-card">
+      <div class="table-toolbar"><div><h3><i class="fas fa-shirt" style="color: var(--text-3); margin-right: 8px"></i>Peças a devolver</h3>
+        <div class="meta">Quantas peças de cada item voltam. Em branco ou zero, o item fica fora.</div></div>
+        <div class="pg-tools"><button type="button" class="btn btn-secondary btn-sm" data-rp-all><i class="fas fa-check-double"></i>Todas</button></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table rp-table">
+          <thead><tr><th>SKU</th><th>Produto</th><th class="is-r">No pedido</th><th class="is-r">Valor unit.</th><th style="width: 150px">Devolver</th></tr></thead>
+          <tbody>
+            <% @items.each do |item| %>
+              <tr>
+                <td class="mono"><%= item.sku %></td>
+                <td><%= item.name %></td>
+                <td class="is-r"><%= item.quantity %></td>
+                <td class="is-r"><%= hc_money(item.price - item.discount) %></td>
+                <td><%= number_field_tag "qty[#{item.id}]", params.dig(:qty, item.id.to_s), min: 0, max: item.quantity, step: 1, class: 'field-input', placeholder: '0', data: { rp_max: item.quantity }, 'aria-label': "Devolver #{item.sku}" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel pg-card" style="padding: 18px">
+      <div class="pg-fields">
+        <div class="form-group pg-fg pg-w2">
+          <label class="field-label" for="original_nfe_key">Chave da NF-e original (venda)</label>
+          <%= text_field_tag :original_nfe_key, params[:original_nfe_key] || @original_key, class: 'field-input mono', maxlength: 54, inputmode: 'numeric', placeholder: '44 dígitos' %>
+        </div>
+        <div class="form-group pg-fg pg-w2">
+          <label class="field-label" for="return_nfe_key">Chave da NF-e de devolução (do lojista)</label>
+          <%= text_field_tag :return_nfe_key, params[:return_nfe_key], class: 'field-input mono', maxlength: 54, inputmode: 'numeric', placeholder: '44 dígitos (dá para informar depois, na aba Nota fiscal)' %>
+        </div>
+        <div class="form-group pg-fg" style="grid-column: 1 / -1">
+          <label class="field-label" for="notes">Observação do pedido</label>
+          <%= text_area_tag :notes, params[:notes], rows: 2, class: 'field-input', placeholder: 'Ex.: 2 moletons com zíper quebrado' %>
+        </div>
+      </div>
+      <div class="pg-inline-foot">
+        <%= link_to 'Cancelar', edit_b2b_order_path(@original), class: 'btn btn-ghost' %>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-rotate-left"></i>Criar pedido de devolução</button>
+      </div>
+    </section>
+  <% end %>
+</div>
+<script>
+  document.querySelector('[data-rp-all]').addEventListener('click', function () {
+    document.querySelectorAll('[data-rp-max]').forEach(function (i) { i.value = i.dataset.rpMax; });
+  });
+</script>

@@ -190,7 +190,7 @@ module Nfe
 
     def location_recipient(location)
       {
-        name: location.name, document: location.registration,
+        name: location_recipient_name(location), document: location.registration,
         ie_indicator: location.state_registration.present? ? 1 : 9, state_registration: location.state_registration,
         street: location.street, number: location.number.presence || 'S/N', complement: location.complement,
         neighbourhood: location.neighbourhood, city: location.city, city_ibge_code: location.city_ibge_code,
@@ -231,6 +231,9 @@ module Nfe
     # Desconto livre do pedido (atacado) rateado pelos itens, proporcional ao valor de cada um (vDesc);
     # o último item fica com a sobra do arredondamento para a soma bater com o desconto do pedido.
     def order_discount_shares(order_items)
+      # Devolução: a mercadoria em substituição vai pelo valor dela, sem cobrança (pagamento 90), e não com o desconto.
+      return Array.new(order_items.size, 0) if replacement?
+
       shares_of(order_items, @order.respond_to?(:discount_amount) ? @order.discount_amount.to_d : 0.to_d)
     end
 
@@ -251,13 +254,13 @@ module Nfe
 
     def payments
       code = PAYMENT_CODES[@order.payment_method]
-      return nil unless sale? && code
+      return nil unless sale? && code && !replacement?
 
       [{ method: code, amount: @order.grand_total, installments: @order.installment_days.size }]
     end
 
     def duplicates
-      return nil unless sale?
+      return nil unless sale? && !replacement?
 
       @order.installments.map { |p| { number: p[:number], due: p[:date], value: p[:value] } }
     end
@@ -276,10 +279,10 @@ module Nfe
         operation_nature: operation_nature, issued_at: issued_at, purpose: @nature.purpose,
         final_consumer: @nature.final_consumer?,
         tax: @nature.tax_rules(company_state: @company.state, recipient_state: recipient[:state]),
-        additional_info: (@order.nf_additional_info.presence unless remessa?) || @nature.notes_for(**note_context(recipient)),
+        additional_info: with_replacement_keys((@order.nf_additional_info.presence unless remessa?) || @nature.notes_for(**note_context(recipient))),
         fisco_info: @nature.fisco_notes_for(**note_context(recipient)), environment: @environment,
         freight_mode: freight_mode, carrier: carrier_data, payments: payments, duplicates: duplicates,
-        order_number: correios_order_number,
+        order_number: correios_order_number, references: replacement_references,
         # Transferência (abastecimento e B2C) leva o IBS/CBS de não incidência, como a Transferência Interna:
         # sem o grupo, a SEFAZ rejeita (1115 "IBS/CBS não informado").
         ibs_cbs_exempt: (XmlBuilder::IBS_CBS_TRANSFER unless sale?)
@@ -330,6 +333,53 @@ module Nfe
     end
 
     def carrier_data = note_carrier
+
+    XNOME_MAX = 60
+    NAME_ABBREVIATIONS = [[/\bCOMERCIO\b/i, 'COM'], [/\bARTIGOS\b/i, 'ART'], [/\bESPORTIVOS\b/i, 'ESP']].freeze
+
+    # Abastecimento: razão social da empresa do CNPJ do local (sem o sufixo da filial) + " - " + nome do local,
+    # ex.: "CHASE BRASIL COMERCIO DE ARTIGOS ESPORTIVOS LTDA - Brasília - Park Shopping". O xNome vai até 60
+    # caracteres: passando, abrevia COMERCIO/ARTIGOS/ESPORTIVOS e, se ainda não couber, corta. Sem empresa
+    # cadastrada com o CNPJ, fica o nome do local.
+    def location_recipient_name(location)
+      place = location.name.to_s.squish
+      company = Company.find_by(cnpj: Cnpj.digits(location.registration))
+      return place unless company
+
+      base = company.legal_name.to_s.squish.sub(/\s+-\s+[^-]+\z/, '')
+      name = "#{base} - #{place}"
+      NAME_ABBREVIATIONS.each do |pattern, short|
+        break if name.length <= XNOME_MAX
+
+        base = base.gsub(pattern, short)
+        name = "#{base} - #{place}"
+      end
+      name.first(XNOME_MAX).strip
+    end
+
+    def replacement?
+      sale? && !remessa? && @order.respond_to?(:replacement?) && @order.replacement?
+    end
+
+    # NF-e referenciadas da devolução: a original da venda e a de devolução do lojista.
+    def replacement_references
+      return [] unless replacement?
+
+      [@order.original_nfe_key, @order.return_nfe_key].compact_blank.uniq
+    end
+
+    # Completa as chaves nas observações: {chave_original}/{chave_devolucao} ou as linhas "Chave NF-e de original:"
+    # e "Chave NF-e de devolução:" do texto da natureza.
+    def with_replacement_keys(text)
+      return text unless replacement? && text
+
+      original = @order.original_nfe_key.to_s
+      returned = @order.return_nfe_key.to_s
+      text = text.gsub('{chave_original}', original).gsub('{chave_devolucao}', returned)
+      text = text.sub(/(Chave NF-e de original:)[ \t]*(?=\r?\n|\z)/i) { "#{Regexp.last_match(1)} #{original}" } if original.present?
+      text = text.sub(/(Chave NF-e de devolu[çc][ãa]o:)[ \t]*(?=\r?\n|\z)/i) { "#{Regexp.last_match(1)} #{returned}" } if returned.present?
+      text
+    end
 
     def note_context(recipient)
       { company_state: @company.state, recipient_state: recipient[:state], order_name: "Pedido #{@order.id}",

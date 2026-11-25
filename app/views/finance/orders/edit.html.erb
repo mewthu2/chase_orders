@@ -41,7 +41,19 @@
                 <% st = finance_payment_status(payment, today) %>
                 <tr>
                   <td class="mono"><%= payment.number %>/<%= @order.payments.size %></td>
-                  <td><%= l(payment.due_date, format: '%d/%m/%Y') %></td>
+                  <td>
+                    <% if can_edit && @order.status != 'cancelado' && @order.payment_method == 'boleto' && !payment.paid? %>
+                      <%= form_with url: due_finance_order_path(@order), method: :patch, class: 'fin-due-form', data: { turbo: false } do %>
+                        <%= hidden_field_tag :return_to, back %>
+                        <%= hidden_field_tag :number, payment.number %>
+                        <%= date_field_tag :due_date, payment.due_date, class: 'field-input', required: true, 'aria-label': "Vencimento da parcela #{payment.number}",
+                                           oninput: "this.form.querySelector('button').hidden = this.value === this.defaultValue" %>
+                        <button type="submit" class="btn btn-sm btn-primary" hidden data-tip="Salvar o novo vencimento"><i class="fas fa-check"></i></button>
+                      <% end %>
+                    <% else %>
+                      <%= l(payment.due_date, format: '%d/%m/%Y') %>
+                    <% end %>
+                  </td>
                   <td><%= money.call(payment.amount) %></td>
                   <td><% label, tone, tip = FinanceHelper::FINANCE_PAYMENT_STATUSES.fetch(st) %><%= hc_status(label, tone, tip: tip) %></td>
                   <td><%= payment.paid_at ? l(payment.paid_at, format: '%d/%m/%Y') : '—' %></td>
@@ -136,6 +148,8 @@
   .fin-pay-one { display: inline-flex; gap: .4rem; align-items: center; justify-content: flex-end; }
   .fin-pay-one .field-input { width: 9.5rem; padding: .25rem .5rem; }
   .fin-parcels td { vertical-align: middle; }
+  .fin-due-form { display: flex; gap: 6px; align-items: center; margin: 0; }
+  .fin-due-form .field-input { width: 150px; padding-top: 4px; padding-bottom: 4px; }
 </style>
 
 <script>
