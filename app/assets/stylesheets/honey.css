@@ -2545,3 +2545,32 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .fin-pmodal form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: flex-end; margin: 0; }
 .fin-pmodal .fin-date { margin-right: auto; }
 @media (prefers-reduced-motion: reduce) { .fin-chip, .fin-chip.is-vencido::after, .pg-cols-pop, .pg-cols-dot { animation: none; } }
+
+/* Arrastar a coluna pelo título no cabeçalho da tabela (pg_columns_controller.js) */
+.pg-tbl thead th.pg-th-drag { cursor: grab; position: relative; transition: background var(--t), opacity var(--t); }
+.pg-tbl thead th.pg-th-drag:hover { background: color-mix(in srgb, var(--brand-400) 7%, transparent); }
+.pg-tbl thead th.is-dragging { opacity: .4; cursor: grabbing; }
+.pg-tbl thead th.is-drop-before { box-shadow: inset 3px 0 0 var(--brand-400); background: var(--brand-bg); }
+.pg-tbl thead th.is-drop-after { box-shadow: inset -3px 0 0 var(--brand-400); background: var(--brand-bg); }
+.pg-card.is-saving .pg-tbl { opacity: .55; transition: opacity var(--t); pointer-events: none; }
+
+/* Prazos do boleto na tela do pedido (Financeiro) */
+.fin-terms-help { color: var(--text-3); font-size: 13px; }
+.fin-terms-help .fa-triangle-exclamation { color: var(--yellow); }
+.fin-terms-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.fin-terms-count { display: inline-flex; flex-direction: column; align-items: center; min-width: 64px; padding: 4px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border-2); }
+.fin-terms-count b { font-size: 22px; line-height: 1.1; color: var(--brand-300); }
+.fin-terms-count span { font-size: 11px; color: var(--text-3); }
+.fin-terms-field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 0 8px; font-size: 12.5px; color: var(--text-3); flex: 1; min-width: 200px; }
+.fin-terms-preview { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.fin-terms-preview li { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--surface); border: 1px solid color-mix(in srgb, var(--yellow) 35%, transparent); animation: popIn 380ms var(--spring) both; animation-delay: calc(var(--n, 0) * 45ms); }
+.fin-terms-preview li b { font: 700 15px/1.2 var(--font-mono, monospace); color: var(--yellow); }
+.fin-terms-preview li b::after { content: ' dias'; font: 500 11px var(--font, sans-serif); color: var(--text-3); }
+.fin-terms-preview li span { font-size: 12.5px; color: var(--text-2); }
+.fin-terms-preview li.is-paid { border-color: color-mix(in srgb, var(--green) 40%, transparent); opacity: .8; }
+.fin-terms-preview li.is-paid b { color: var(--green); }
+.fin-terms-preview li .fa-check { position: absolute; top: 10px; right: 10px; color: var(--green); font-size: 11px; }
+.fin-terms-error { margin: 10px 0 0; color: var(--red); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .fin-terms-preview li { animation: none; } }
+.fin-pmodal .fin-pm-terms { margin: -8px 0 16px; font-size: 13px; }
+.fin-pmodal .fin-pm-terms a { color: var(--brand-300); }

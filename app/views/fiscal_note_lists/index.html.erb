@@ -147,6 +147,7 @@
         form = '<div class="m-row"><button type="button" class="btn btn-secondary" data-fin-close>Fechar</button></div>';
       }
       var note = p.cancelled ? '<p>Pedido cancelado: a parcela não recebe baixa.</p>' : '';
+      if (canPay && !p.cancelled && p.terms) note += '<p class="fin-pm-terms"><a href="' + esc(p.terms) + '"><i class="fas fa-layer-group"></i> Mudar as parcelas deste boleto</a></p>';
       var html = '<div class="backdrop hc-modal-backdrop fin-pmodal-bd" data-fin-pmodal></div>' +
         '<div class="hc-modal fin-pmodal" role="dialog" aria-modal="true" aria-labelledby="finPmTitle" data-fin-pmodal style="--c: ' + (tones[p.st] || tones.pendente) + '">' +
         '<div class="m-ic"><i class="fas fa-barcode"></i></div>' +

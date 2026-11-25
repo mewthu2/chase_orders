@@ -42,7 +42,8 @@ module FinanceHelper
                dueIso: p.due_date.iso8601, value: number_to_currency(p.amount, unit: 'R$ ', separator: ',', delimiter: '.'), st: st,
                stLabel: FINANCE_PAYMENT_STATUSES.dig(st, 0), paid: p.paid_at && l(p.paid_at, format: '%d/%m/%Y'), by: p.paid_by&.name,
                client: b2b_order_destination(order).to_s, cancelled: order.status == 'cancelado',
-               pay: pay_finance_payment_path(p), unpay: unpay_finance_payment_path(p) }
+               pay: pay_finance_payment_path(p), unpay: unpay_finance_payment_path(p),
+               terms: (edit_finance_order_path(order, return_to: request.fullpath, anchor: 'prazos') if order.payment_method == 'boleto') }
       content_tag(:button, type: 'button', class: "fin-chip is-#{st}", style: "--n: #{i}", data: { fin_parcel: info.to_json, tip: "Parcela #{p.number}/#{payments.size} · #{text.end_with?('ª') ? '' : "#{text} dias · "}vence #{info[:due]} · #{info[:value]} · #{info[:stLabel]}" },
                                   'aria-label': "Parcela #{p.number} de #{payments.size}, #{info[:stLabel]}") do
         safe_join([text, (content_tag(:i, '', class: 'fas fa-check') if st == 'pago')].compact)

@@ -3,6 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 // Botão "Colunas" das tabelas (HoneyPageHelper#hc_pg_columns_button): arrastar (ou as setas) muda a ordem, a caixa
 // mostra ou esconde a coluna. Salvar grava para o usuário (PATCH /preferencias/colunas) e recarrega a tela;
 // "Voltar ao padrão" apaga a arrumação. A coluna principal (a do link) fica sempre visível.
+// Também dá para arrastar o título da coluna no cabeçalho da tabela e soltar em outra: salva na hora.
 //   data-controller="pg-columns" data-pg-columns-key-value data-pg-columns-url-value data-pg-columns-items-value
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 
@@ -16,6 +17,53 @@ export default class extends Controller {
       if (this.pop && !path.includes(this.pop) && !path.includes(this.buttonTarget)) this.close()
     }
     this.onKey = (e) => { if (e.key === "Escape" && this.pop) { this.close(); this.buttonTarget.focus() } }
+    this.bindHeader()
+  }
+
+  // Arrastar direto no cabeçalho: solta antes ou depois da coluna de destino (pela metade em que o mouse está).
+  bindHeader() {
+    const card = this.element.closest(".pg-card")
+    const ths = card ? [...card.querySelectorAll("table.pg-tbl thead th[data-col-key]")] : []
+    if (ths.length < 2) return
+    let from = null
+    const clear = () => ths.forEach((th) => th.classList.remove("is-drop-before", "is-drop-after", "is-dragging"))
+    ths.forEach((th) => {
+      th.draggable = true
+      th.classList.add("pg-th-drag")
+      th.title = "Arraste para mudar a ordem da coluna"
+      th.addEventListener("dragstart", (e) => {
+        from = th.dataset.colKey
+        th.classList.add("is-dragging")
+        e.dataTransfer.effectAllowed = "move"
+        e.dataTransfer.setData("text/plain", from)
+      })
+      th.addEventListener("dragend", () => { from = null; clear() })
+      th.addEventListener("dragover", (e) => {
+        if (!from || from === th.dataset.colKey) return
+        e.preventDefault()
+        const r = th.getBoundingClientRect()
+        const after = e.clientX > r.left + r.width / 2
+        clear()
+        th.classList.add(after ? "is-drop-after" : "is-drop-before")
+      })
+      th.addEventListener("dragleave", () => th.classList.remove("is-drop-before", "is-drop-after"))
+      th.addEventListener("drop", (e) => {
+        e.preventDefault()
+        const to = th.dataset.colKey
+        const after = th.classList.contains("is-drop-after")
+        clear()
+        if (!from || from === to) return
+        const items = this.itemsValue.map((i) => ({ ...i }))
+        const fromIdx = items.findIndex((i) => i.k === from)
+        if (fromIdx < 0) return
+        const [moved] = items.splice(fromIdx, 1)
+        let toIdx = items.findIndex((i) => i.k === to)
+        if (toIdx < 0) return
+        items.splice(after ? toIdx + 1 : toIdx, 0, moved)
+        card.classList.add("is-saving")
+        this.send("PATCH", { key: this.keyValue, columns: items.map((i) => ({ k: i.k, on: i.on })) })
+      })
+    })
   }
 
   disconnect() { this.close() }
@@ -121,7 +169,7 @@ export default class extends Controller {
 
   async send(method, body) {
     const token = document.querySelector('meta[name="csrf-token"]')?.content
-    this.pop.querySelectorAll("button").forEach((b) => { b.disabled = true })
+    this.pop?.querySelectorAll("button").forEach((b) => { b.disabled = true })
     try {
       const res = await fetch(this.urlValue, {
         method,
@@ -132,6 +180,8 @@ export default class extends Controller {
       if (!res.ok) throw new Error(res.status)
       window.location.reload()
     } catch (e) {
+      this.element.closest(".pg-card")?.classList.remove("is-saving")
+      if (!this.pop) { this.buttonTarget.dataset.tip = "Não deu para salvar a ordem. Tente de novo."; return }
       this.pop.querySelectorAll("button").forEach((b) => { b.disabled = false })
       this.pop.querySelector(".pg-cols-head span").textContent = "Não deu para salvar. Tente de novo."
     }

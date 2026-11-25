@@ -186,7 +186,9 @@ Rails.application.routes.draw do
   # Financeiro: recebimentos do atacado, consultores e comissões.
   namespace :finance, path: 'financeiro' do
     # Parcelas e consultor de um pedido, abertos da tela de Notas Fiscais (a lista de pedidos do Financeiro saiu).
-    resources :orders, only: %i[edit update], path: 'notas_fiscais/pedidos'
+    resources :orders, only: %i[edit update], path: 'notas_fiscais/pedidos' do
+      member { patch :terms, path: 'prazos' }
+    end
     resources :payments, only: [], path: 'parcelas' do
       member do
         patch :pay

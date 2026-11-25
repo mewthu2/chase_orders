@@ -240,13 +240,13 @@ module HoneyPageHelper
 
     has_actions = actions || detail
     ths = table.visible_cols.map do |c|
-      content_tag(:th, class: ('is-r' if %i[money qty].include?(c[:t]))) do
+      content_tag(:th, class: ('is-r' if %i[money qty].include?(c[:t])), data: { col_key: c[:k] }) do
         if c[:sort]
           s = table.sort
           on = s && s[:k] == c[:k]
           icon = on ? (s[:dir] == -1 ? 'fa-sort-down' : 'fa-sort-up') : 'fa-sort'
           link_to(safe_join([c[:label], content_tag(:i, '', class: "fas #{icon}")]),
-                  hc_pg_url(table.param_name(:sort) => c[:k], table.param_name(:dir) => (on && s[:dir] != -1 ? 'desc' : 'asc'), table.param_name(:page) => nil), class: 'pg-th')
+                  hc_pg_url(table.param_name(:sort) => c[:k], table.param_name(:dir) => (on && s[:dir] != -1 ? 'desc' : 'asc'), table.param_name(:page) => nil), class: 'pg-th', draggable: 'false')
         else
           c[:label]
         end

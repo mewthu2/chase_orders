@@ -73,6 +73,36 @@
     </div>
   </div>
 
+  <% if @order.payment_method == 'boleto' && can_edit && @order.status != 'cancelado' %>
+    <% paid_numbers = @order.payments.select(&:paid?).map(&:number) %>
+    <div class="form-section fin-terms" id="prazos"
+         data-base="<%= (@order.created_at || Time.current).to_date.iso8601 %>" data-total="<%= @order.grand_total.to_f %>"
+         data-paid="<%= @order.payments.select(&:paid?).map { |p| { n: p.number, v: p.amount.to_f, due: p.due_date.iso8601 } }.to_json %>"
+         data-current="<%= @order.payment_terms %>">
+      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-layer-group me-2"></i>Prazos do boleto</h5></div>
+      <div class="form-section-body">
+        <p class="fin-terms-help">Aumente ou diminua as parcelas. As já pagas não mudam; o que falta receber é dividido de novo entre as pendentes.
+          <% if @order.fiscal_notes.any? { |n| n.status.in?(%w[autorizada]) } %><br><i class="fas fa-triangle-exclamation"></i> A NF-e já autorizada continua com as duplicatas antigas.<% end %></p>
+        <%= form_with url: terms_finance_order_path(@order), method: :patch, local: true, data: { fin_terms_form: true } do %>
+          <%= hidden_field_tag :return_to, back %>
+          <div class="fin-terms-row">
+            <button type="button" class="btn btn-secondary btn-sm" data-fin-terms="-1" aria-label="Uma parcela a menos"><i class="fas fa-minus"></i></button>
+            <div class="fin-terms-count"><b data-fin-terms-n><%= @order.installment_days.size %></b><span>parcelas</span></div>
+            <button type="button" class="btn btn-secondary btn-sm" data-fin-terms="1" aria-label="Uma parcela a mais"><i class="fas fa-plus"></i></button>
+            <label class="fin-terms-field">Prazos em dias
+              <%= text_field_tag :payment_terms, @order.payment_terms, class: 'field-input mono', placeholder: '30 60 90', autocomplete: 'off', data: { fin_terms_input: true } %>
+            </label>
+          </div>
+          <ol class="fin-terms-preview" data-fin-terms-preview></ol>
+          <p class="fin-terms-error" data-fin-terms-error hidden></p>
+          <div class="form-actions">
+            <button type="submit" class="btn-submit" data-fin-terms-save disabled><i class="fas fa-check me-1"></i>Salvar parcelas</button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <div class="form-section">
     <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-handshake me-2"></i>Quem recomendou</h5></div>
     <div class="form-section-body">
@@ -107,3 +137,81 @@
   .fin-pay-one .field-input { width: 9.5rem; padding: .25rem .5rem; }
   .fin-parcels td { vertical-align: middle; }
 </style>
+
+<script>
+  // Prazos do boleto: −/+ parcela, prévia das datas e dos valores e o "Tem certeza?" com o antes e o depois.
+  (function () {
+    var box = document.querySelector('.fin-terms');
+    if (!box) return;
+    var form = box.querySelector('[data-fin-terms-form]');
+    var input = box.querySelector('[data-fin-terms-input]');
+    var preview = box.querySelector('[data-fin-terms-preview]');
+    var error = box.querySelector('[data-fin-terms-error]');
+    var save = box.querySelector('[data-fin-terms-save]');
+    var count = box.querySelector('[data-fin-terms-n]');
+    var base = new Date(box.dataset.base + 'T12:00:00');
+    var total = parseFloat(box.dataset.total);
+    var paid = JSON.parse(box.dataset.paid || '[]');
+    var current = box.dataset.current;
+    var max = <%= B2bOrder::MAX_INSTALLMENTS %>;
+    var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    var paidMax = paid.reduce(function (m, p) { return Math.max(m, p.n); }, 0);
+
+    function days() { return input.value.replace(/[,;\/]/g, ' ').trim().split(/\s+/).filter(Boolean); }
+    function problem(d) {
+      if (!d.length) return 'Informe os prazos em dias, por exemplo: 30 60 90.';
+      if (!d.every(function (x) { return /^\d{1,3}$/.test(x); })) return 'Use só números de dias, separados por espaço.';
+      var n = d.map(Number);
+      if (n.length > max) return 'No máximo ' + max + ' parcelas.';
+      for (var i = 1; i < n.length; i++) if (n[i] <= n[i - 1]) return 'Os prazos precisam crescer: cada parcela vence depois da anterior.';
+      if (n.length < paidMax) return 'Já tem ' + paidMax + ' parcela(s) paga(s): deixe pelo menos ' + paidMax + '.';
+      return null;
+    }
+    function render() {
+      var d = days();
+      var err = problem(d);
+      count.textContent = d.length;
+      error.hidden = !err;
+      error.textContent = err || '';
+      var same = d.join(' ') === current;
+      save.disabled = !!err || same;
+      preview.innerHTML = '';
+      if (err) return;
+      var paidBy = {}; var paidSum = 0;
+      paid.forEach(function (p) { paidBy[p.n] = p; paidSum += p.v; });
+      var open = d.map(function (x, i) { return i + 1; }).filter(function (n) { return !paidBy[n]; });
+      var balance = Math.max(total - paidSum, 0);
+      var each = open.length ? Math.floor(balance / open.length * 100) / 100 : 0;
+      d.forEach(function (x, i) {
+        var n = i + 1; var p = paidBy[n];
+        var due = new Date(base); due.setDate(due.getDate() + Number(x));
+        var value = p ? p.v : (n === open[open.length - 1] ? balance - each * (open.length - 1) : each);
+        var li = document.createElement('li');
+        li.className = p ? 'is-paid' : '';
+        li.style.setProperty('--n', i);
+        li.innerHTML = '<b>' + x + '</b><span>' + due.toLocaleDateString('pt-BR') + '</span><span>' + money.format(value) + '</span>' + (p ? '<i class="fas fa-check" title="Paga"></i>' : '');
+        preview.appendChild(li);
+      });
+      form.dataset.hcConfirm = JSON.stringify({
+        title: 'Mudar o boleto para ' + d.length + 'x (' + d.join(' ') + ')?',
+        text: 'Tem certeza? Hoje está ' + (current ? current.split(' ').length + 'x (' + current + ')' : 'sem prazos') + '. As parcelas pendentes são refeitas com o saldo de ' + money.format(balance) + '.',
+        ok: 'Sim, mudar as parcelas', icon: 'fas fa-layer-group' });
+    }
+    box.querySelectorAll('[data-fin-terms]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var d = days().filter(function (x) { return /^\d+$/.test(x); }).map(Number);
+        if (b.dataset.finTerms === '1') {
+          if (d.length >= max) return;
+          var step = d.length > 1 ? d[d.length - 1] - d[d.length - 2] : 30;
+          d.push(d.length ? d[d.length - 1] + step : 30);
+        } else if (d.length > Math.max(1, paidMax)) {
+          d.pop();
+        }
+        input.value = d.join(' ');
+        render();
+      });
+    });
+    input.addEventListener('input', render);
+    render();
+  })();
+</script>

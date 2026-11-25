@@ -169,6 +169,52 @@ class Finance::FiscalNotesTest < ActionDispatch::IntegrationTest
     assert_redirected_to wholesale_fiscal_notes_path
   end
 
+  test 'financeiro aumenta e diminui as parcelas do boleto sem mexer nas pagas' do
+    sign_in @finance
+    first = @boleto.payments.first
+    first.update!(paid_at: Date.new(2026, 11, 20), paid_by: @finance)
+    get edit_finance_order_path(@boleto)
+    assert_select '.fin-terms input[name=payment_terms][value=?]', '30 60 90'
+
+    patch terms_finance_order_path(@boleto), params: { payment_terms: '30 60 90 120' }
+    assert_redirected_to edit_finance_order_path(@boleto, return_to: wholesale_fiscal_notes_path)
+    payments = @boleto.payments.reload
+    assert_equal [1, 2, 3, 4], payments.map(&:number)
+    assert_equal first.id, payments.first.id
+    assert_equal [100.0, 66.66, 66.66, 66.68], payments.map { |p| p.amount.to_f }
+    assert_equal @boleto.grand_total, payments.sum(&:amount)
+    assert_equal '30 60 90 120', @boleto.reload.payment_terms
+
+    patch terms_finance_order_path(@boleto), params: { payment_terms: '30 45' }
+    assert_equal [100.0, 200.0], @boleto.payments.reload.map { |p| p.amount.to_f }
+    assert_equal first.due_date, @boleto.payments.first.due_date
+  end
+
+  test 'prazos invalidos ou pedido que nao e boleto nao mudam' do
+    sign_in @finance
+    @boleto.payments.first.update!(paid_at: Date.current)
+    @boleto.payments.second.update!(paid_at: Date.current)
+    patch terms_finance_order_path(@boleto), params: { payment_terms: '30' }
+    assert_match 'pelo menos 2', flash[:alert]
+    patch terms_finance_order_path(@boleto), params: { payment_terms: '60 30' }
+    assert_match 'precisam crescer', flash[:alert]
+    patch terms_finance_order_path(@boleto), params: { payment_terms: 'abc' }
+    assert_equal '30 60 90', @boleto.reload.payment_terms
+
+    patch terms_finance_order_path(@pix), params: { payment_terms: '30 60' }
+    assert_match 'boleto', flash[:alert]
+    assert_empty @pix.payments.reload
+  end
+
+  test 'quem so ve nao muda as parcelas' do
+    sign_in @viewer
+    get edit_finance_order_path(@boleto)
+    assert_select '.fin-terms', count: 0
+    patch terms_finance_order_path(@boleto), params: { payment_terms: '30' }
+    assert_redirected_to root_path
+    assert_equal '30 60 90', @boleto.reload.payment_terms
+  end
+
   test 'parcela de pedido cancelado nao recebe baixa' do
     sign_in @finance
     @boleto.update_column(:status, B2bOrder.statuses[:cancelado])
