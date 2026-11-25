@@ -149,10 +149,41 @@ class StockPlacementsTest < ActionDispatch::IntegrationTest
     assert_equal 0, StockEntry.count
   end
 
+  def xlsx(rows)
+    require 'rubyXL'
+    book = RubyXL::Workbook.new
+    rows.each_with_index { |row, r| row.each_with_index { |v, c| book[0].add_cell(r, c, v) } }
+    book.stream.string
+  end
+
+  test 'arquivo sem cabecalho: coluna A e o sku e a B a quantidade, em csv ou excel' do
+    assert_equal [['A-1', 3], ['B-2', 2]], StockPlacement.parse_file("a-1;1\nA-1;2\nB-2;2\n", filename: 'x.csv')
+    assert_equal [['A-1', 5]], StockPlacement.parse_file("A-1,5\n", filename: 'x.csv')
+    assert_equal [['TAI-1', 12], ['TAI-2', 3]], StockPlacement.parse_file(xlsx([['TAI-1', 12.0], ['TAI-2', 3]]), filename: 'x.xlsx')
+    assert_equal [['TAI-1', 12]], StockPlacement.parse_file(xlsx([['Produto', 'Qtd'], ['TAI-1', 12]]), filename: 'x.xlsx')
+    assert_equal [['TAI-1', 7]], StockPlacement.parse_file(xlsx([['Estoque', 'SKU'], [7, 'TAI-1']]), filename: 'planilha.xlsx')
+    error = assert_raises(ArgumentError) { StockPlacement.parse_file(xlsx([['TAI-1', 5], ['TAI-2', 'muitos']]), filename: 'x.xlsx') }
+    assert_match 'não é um número inteiro', error.message
+    error = assert_raises(ArgumentError) { StockPlacement.parse_file('PK isto nao e excel', filename: 'x.xlsx') }
+    assert_match 'Não deu para ler a planilha', error.message
+  end
+
+  test 'sobe excel no modal' do
+    sign_in @admin
+    upload_xml
+    entry = StockEntry.last
+    post upload_stock_placement_path(entry, side: 'log02'),
+         params: { csv: Rack::Test::UploadedFile.new(StringIO.new(xlsx([['TAI-1824-P', 141], ['TAI-1824-M', 141]])), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', original_filename: 'log02.xlsx') }
+    assert_redirected_to stock_placement_path(entry)
+    assert_equal({ 'TAI-1824-P' => 141, 'TAI-1824-M' => 141 }, entry.reload.placement('log02').quantities)
+    get stock_placements_path
+    assert_select '.sp-open', text: /Subir estoque/
+  end
+
   test 'parse do csv aceita separadores, cabecalhos e soma repetidos' do
     assert_equal [['A-1', 3], ['B-2', 2]], StockPlacement.parse_csv("﻿Sku;Quantidade\na-1;1\nA-1;2\nB-2;2,0\n")
     assert_equal [['A-1', 5]], StockPlacement.parse_csv("codigo,estoque\nA-1,5\n")
-    assert_raises(ArgumentError) { StockPlacement.parse_csv("produto;qtd\nA;1") }
+    assert_equal [['A', 1]], StockPlacement.parse_csv("produto;qtd\nA;1") # cabeçalho desconhecido: A e B
     assert_raises(ArgumentError) { StockPlacement.parse_csv('') }
   end
 end

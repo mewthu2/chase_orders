@@ -2701,3 +2701,17 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .se-drop-txt span { font-size: 13px; color: var(--text-3); }
 @keyframes se-bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
 @media (prefers-reduced-motion: reduce) { .se-drop, .se-drop.is-dragging .se-drop-ic { animation: none; transition: none; } }
+/* Carregamento na tela ao subir o XML da nota de entrada */
+.se-loading { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: var(--overlay, rgba(1,4,9,.7)); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); animation: fadeIn 200ms var(--ease) both; }
+.se-loading-card { display: flex; flex-direction: column; align-items: center; gap: 10px; width: MIN(360px, calc(100vw - 32px)); padding: 28px 26px 24px; border-radius: var(--r-xl, 16px); background: var(--surface-2); border: 1px solid var(--border-2); box-shadow: var(--shadow-3); text-align: center; animation: scaleIn 260ms var(--ease-out) both; }
+.se-loading-card b { font-size: 16px; color: var(--text); }
+.se-loading-card span { font-size: 12.5px; color: var(--text-3); overflow-wrap: anywhere; }
+.se-loading-ring { position: relative; width: 64px; height: 64px; display: grid; place-items: center; margin-bottom: 4px; color: var(--brand-300); font-size: 22px; }
+.se-loading-ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--brand-400) 18%, transparent); border-top-color: var(--brand-400); animation: se-spin .9s linear infinite; }
+.se-loading-ring i { animation: se-pulse 1.2s ease-in-out infinite; }
+.se-loading-bar { width: 100%; height: 4px; margin-top: 6px; border-radius: 4px; background: color-mix(in srgb, var(--brand-400) 15%, transparent); overflow: hidden; }
+.se-loading-bar i { display: block; width: 40%; height: 100%; border-radius: 4px; background: var(--brand-400); animation: se-slide 1.1s ease-in-out infinite; }
+@keyframes se-spin { to { transform: rotate(360deg); } }
+@keyframes se-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.88); opacity: .7; } }
+@keyframes se-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .se-loading-ring::before, .se-loading-ring i, .se-loading-bar i { animation-duration: 3s; } }

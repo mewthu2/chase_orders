@@ -40,23 +40,23 @@
           <% if placement %>
             <div class="sp-csv">
               <i class="fas fa-file-csv"></i>
-              <div><b><%= placement.csv_filename.presence || 'CSV' %></b>
+              <div><b><%= placement.csv_filename.presence || 'Arquivo' %></b>
                 <span><%= placement.quantities.size %> SKUs · <%= stock_qty(placement.pieces) %> peças · <%= placement.uploaded_by&.name %>, <%= l(placement.updated_at, format: '%d/%m %H:%M') %></span></div>
               <% if can_upload && !active %>
-                <%= button_to remove_stock_placement_path(@entry, side: side), method: :delete, class: 'action-btn', 'aria-label': 'Retirar CSV',
-                              form: { data: { hc_confirm: { title: "Retirar o CSV do #{side_label}?", text: 'A conferência volta a esperar este lado.', ok: 'Retirar', danger: true }.to_json } } do %><i class="fas fa-xmark"></i><% end %>
+                <%= button_to remove_stock_placement_path(@entry, side: side), method: :delete, class: 'action-btn', 'aria-label': 'Retirar arquivo',
+                              form: { data: { hc_confirm: { title: "Retirar o arquivo do #{side_label}?", text: 'A conferência volta a esperar este lado.', ok: 'Retirar', danger: true }.to_json } } do %><i class="fas fa-xmark"></i><% end %>
               <% end %>
             </div>
           <% else %>
-            <p class="sp-wait"><i class="fas fa-hourglass-half"></i>Falta o CSV deste lado.</p>
+            <p class="sp-wait"><i class="fas fa-hourglass-half"></i>Falta o arquivo deste lado: CSV ou Excel com o SKU na coluna A e a quantidade na B (cabeçalho opcional).</p>
           <% end %>
 
           <% if can_upload && !active %>
             <%= form_with url: upload_stock_placement_path(@entry, side: side), method: :post, multipart: true, class: 'sp-upload' do %>
               <label class="btn btn-secondary btn-sm">
-                <i class="fas fa-upload"></i><span data-sp-name><%= placement ? 'Trocar CSV' : 'Escolher CSV' %></span>
-                <%= file_field_tag :csv, accept: '.csv,text/csv,text/plain', hidden: true, required: true,
-                                   onchange: "this.closest('label').querySelector('[data-sp-name]').textContent = this.files[0] ? this.files[0].name : 'Escolher CSV'; this.form.querySelector('[type=submit]').disabled = !this.files[0]" %>
+                <i class="fas fa-upload"></i><span data-sp-name><%= placement ? 'Trocar arquivo' : 'Escolher CSV ou Excel' %></span>
+                <%= file_field_tag :csv, accept: '.csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', hidden: true, required: true,
+                                   onchange: "this.closest('label').querySelector('[data-sp-name]').textContent = this.files[0] ? this.files[0].name : 'Escolher CSV ou Excel'; this.form.querySelector('[type=submit]').disabled = !this.files[0]" %>
               </label>
               <button type="submit" class="btn btn-primary btn-sm" disabled>Subir</button>
             <% end %>

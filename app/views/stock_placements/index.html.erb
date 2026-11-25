@@ -2,8 +2,8 @@
 <% table = stock_entries_table(@entries) %>
 <% ready = StockPlacement::SIDES.keys.all? { |s| StockPlacementConfig.for(s).ready? } %>
 
-<%= hc_page_header 'Colocação de Estoque', 'Divida cada nota de entrada entre o Correios Log02 e o Log03 por CSV (sku, estoque) e gere a nota de remessa de cada lado.', icon: 'fas fa-boxes-stacked' do %>
-  <%= link_to '/templates/colocacao_estoque_modelo.csv', class: 'btn btn-secondary', download: true, data: { tip: 'Planilha modelo com as colunas sku e estoque.' } do %><i class="fas fa-file-csv"></i>CSV modelo<% end %>
+<%= hc_page_header 'Colocação de Estoque', 'Divida cada nota de entrada entre o Correios Log02 e o Log03 com um CSV ou Excel (SKU na coluna A, quantidade na B) e gere a nota de remessa de cada lado.', icon: 'fas fa-boxes-stacked' do %>
+  <%= link_to '/templates/colocacao_estoque_modelo.csv', class: 'btn btn-secondary', download: true, data: { tip: 'Modelo: SKU na coluna A e quantidade na B. O cabeçalho é opcional.' } do %><i class="fas fa-file-csv"></i>Modelo<% end %>
   <% if screen_can?(:stock_placements, :edit) %>
     <%= link_to edit_stock_placement_config_path, class: 'btn btn-secondary' do %><i class="fas fa-sliders"></i>Configurações<% end %>
   <% end %>
@@ -16,12 +16,12 @@
         <%= screen_can?(:stock_placements, :edit) ? link_to('Configurações', edit_stock_placement_config_path) : 'Configurações (peça a quem tem acesso)' %>.</div></div>
   <% end %>
   <%= hc_pg_kpis(table) %>
-  <%= hc_pg_table(table, title: 'Notas de entrada', icon: 'fas fa-boxes-stacked', meta: 'Clique em Colocar para abrir a nota: CSV do Log02, CSV do Log03, conferência e notas de remessa.',
+  <%= hc_pg_table(table, title: 'Notas de entrada', icon: 'fas fa-boxes-stacked', meta: 'Clique em Subir estoque para abrir a nota: arquivo do Log02, arquivo do Log03 (CSV ou Excel), conferência e notas de remessa.',
         link: ->(r) { stock_placement_path(r[:record]) },
         empty: { title: 'Nenhuma nota de entrada ainda', text: 'Suba o XML em Logística › Notas Fiscais de Entrada.' },
         actions: ->(r) {
-          content_tag(:button, safe_join([content_tag(:i, '', class: 'fas fa-boxes-stacked'), 'Colocar']), type: 'button', class: 'btn btn-sm btn-primary sp-open',
-                      data: { sp_open: stock_placement_path(r[:record]), tip: 'Abrir a colocação desta nota' })
+          content_tag(:button, safe_join([content_tag(:i, '', class: 'fas fa-upload'), 'Subir estoque']), type: 'button', class: 'btn btn-sm btn-primary sp-open',
+                      data: { sp_open: stock_placement_path(r[:record]), tip: 'Subir o estoque do Log02 e do Log03 desta nota' })
         }) %>
 </div>
 
@@ -42,7 +42,7 @@
 </div>
 
 <script>
-  // "Colocar" carrega o painel da nota no modal (turbo-frame) e abre o modal. ?abrir=ID abre direto.
+  // "Subir estoque" carrega o painel da nota no modal (turbo-frame) e abre o modal. ?abrir=ID abre direto.
   (function () {
     var modalEl = document.getElementById('placementModal');
     function open(url) {

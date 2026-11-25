@@ -1,5 +1,6 @@
 # Logística › Colocação de estoque: cada nota de entrada é dividida entre o depósito do Correios Log02 (atacado)
-# e o Log03 (e-commerce) por um CSV (sku, estoque) de cada lado. Quando a soma dos dois bate 100% com a nota de
+# e o Log03 (e-commerce) por um arquivo de cada lado (CSV ou Excel: coluna A o SKU, coluna B a quantidade; o
+# cabeçalho é opcional). Quando a soma dos dois bate 100% com a nota de
 # entrada, cada lado gera a sua nota de remessa (Nfe::PlacementGenerator), emitida na SEFAZ pelo botão Emitir.
 # O painel de uma entrada abre num modal (turbo-frame "placement_panel"); sem o frame, abre como página.
 class StockPlacementsController < ApplicationController
@@ -22,10 +23,10 @@ class StockPlacementsController < ApplicationController
     return back_to_panel(alert: "O #{StockPlacement::SIDES[@side]} já tem nota de remessa: exclua ou cancele a nota para trocar o CSV.") if placement&.active_note
 
     file = params[:csv]
-    return back_to_panel(alert: 'Escolha o arquivo CSV.') unless file.respond_to?(:read)
-    return back_to_panel(alert: 'O arquivo passa de 2 MB.') if file.size > 2.megabytes
+    return back_to_panel(alert: 'Escolha o arquivo (CSV ou Excel).') unless file.respond_to?(:read)
+    return back_to_panel(alert: 'O arquivo passa de 5 MB.') if file.size > 5.megabytes
 
-    items = StockPlacement.parse_csv(file.read)
+    items = StockPlacement.parse_file(file.read, filename: file.original_filename)
     placement ||= @entry.placements.build(side: @side)
     placement.update!(items: items, csv_filename: file.original_filename.to_s.first(200), uploaded_by: current_user)
     @entry.placements.reset
@@ -33,7 +34,7 @@ class StockPlacementsController < ApplicationController
     msg += ' A conferência bateu: já dá para gerar as notas de remessa.' if @entry.balanced?
     back_to_panel(notice: msg)
   rescue ArgumentError => e
-    back_to_panel(alert: "CSV do #{StockPlacement::SIDES[@side]}: #{e.message}")
+    back_to_panel(alert: "Arquivo do #{StockPlacement::SIDES[@side]}: #{e.message}")
   end
 
   def remove

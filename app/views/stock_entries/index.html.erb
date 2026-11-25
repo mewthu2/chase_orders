@@ -22,13 +22,31 @@
         var input = document.getElementById('seXmlInput');
         if (!input) return;
         var zone = input.closest('.se-drop');
+        // Carregamento na tela (não só no navegador) enquanto o XML sobe e a nota é lida.
+        function overlay(file) {
+          var box = document.createElement('div');
+          box.className = 'se-loading';
+          box.setAttribute('role', 'status');
+          box.setAttribute('aria-live', 'polite');
+          box.innerHTML = '<div class="se-loading-card"><div class="se-loading-ring"><i class="fas fa-file-invoice"></i></div>' +
+            '<b>Lendo a nota fiscal…</b><span></span><div class="se-loading-bar"><i></i></div></div>';
+          box.querySelector('span').textContent = file.name + ' · isso leva alguns segundos';
+          document.body.appendChild(box);
+        }
         function send(file) {
           if (!file) return;
           zone.classList.add('is-busy');
           zone.querySelector('[data-se-title]').textContent = 'Enviando ' + file.name + '…';
           zone.querySelector('[data-se-sub]').textContent = 'Lendo a nota, só um instante.';
+          overlay(file);
           input.form.submit();
         }
+        // Voltar pelo navegador não deixa o carregamento preso na tela.
+        window.addEventListener('pageshow', function (e) {
+          if (!e.persisted) return;
+          document.querySelectorAll('.se-loading').forEach(function (el) { el.remove(); });
+          zone.classList.remove('is-busy');
+        });
         input.addEventListener('change', function () { send(input.files[0]); });
         zone.addEventListener('dropzone:dropped', function (e) { send(e.detail.file); });
         zone.addEventListener('dropzone:rejected', function () {
@@ -45,6 +63,9 @@
         link: ->(r) { stock_entry_path(r[:record]) },
         empty: { title: 'Nenhuma nota de entrada ainda', text: 'Arraste o XML de uma nota de compra para a área no topo.' },
         actions: ->(r) {
-          screen_can?(:stock_entries, :export) ? hc_row_action('fas fa-file-code', 'Baixar XML', xml_stock_entry_path(r[:record])) : ''.html_safe
+          safe_join([
+            (hc_row_action('fas fa-boxes-stacked', 'Colocação de estoque', stock_placements_path(abrir: r[:id])) if screen_can?(:stock_placements)),
+            (hc_row_action('fas fa-file-code', 'Baixar XML', xml_stock_entry_path(r[:record])) if screen_can?(:stock_entries, :export))
+          ].compact)
         }) %>
 </div>

@@ -4,6 +4,9 @@
 
 <%= hc_page_header "NF-e de entrada nº #{@entry.number}", "#{@entry.supplier_name} · #{Nfe::Cnpj.format(@entry.supplier_cnpj)}#{" · #{@entry.supplier_state}" if @entry.supplier_state.present?}", icon: 'fas fa-file-import' do %>
   <%= link_to stock_entries_path, class: 'btn btn-secondary' do %><i class="fas fa-arrow-left"></i>Voltar<% end %>
+  <% if screen_can?(:stock_placements) %>
+    <%= link_to stock_placements_path(abrir: @entry.id), class: 'btn btn-primary' do %><i class="fas fa-boxes-stacked"></i>Colocação de estoque<% end %>
+  <% end %>
   <% if screen_can?(:stock_entries, :export) && @entry.xml.attached? %>
     <%= link_to xml_stock_entry_path(@entry), class: 'btn btn-export' do %><i class="fas fa-file-code"></i>Baixar XML<% end %>
   <% end %>

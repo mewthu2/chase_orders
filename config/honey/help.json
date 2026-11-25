@@ -1427,13 +1427,13 @@
   "log-colocacao": {
    "title": "Colocação de Estoque",
    "subtitle": "Divisão da nota de entrada entre o Log02 e o Log03",
-   "purpose": "Dizer quanto de cada SKU da nota de entrada vai para o Correios Log02 (atacado) e para o Log03 (e-commerce) com um CSV (sku, estoque) de cada lado. Quando a soma dos dois bate 100% com a nota, cada lado gera a sua NF-e de remessa.",
+   "purpose": "Dizer quanto de cada SKU da nota de entrada vai para o Correios Log02 (atacado) e para o Log03 (e-commerce) com um arquivo de cada lado (CSV ou Excel, SKU e quantidade). Quando a soma dos dois bate com a nota, cada lado gera a sua NF-e de remessa.",
    "when": "Depois de subir a nota de entrada, quando a divisão entre os depósitos estiver definida.",
    "actions": [
-    "Colocar (abre a nota)",
-    "Subir o CSV do Log02 e do Log03",
+    "Subir estoque (abre a nota)",
+    "Subir o arquivo do Log02 e do Log03 (CSV ou Excel: SKU na coluna A, quantidade na B, cabeçalho opcional)",
     "Conferir com a nota de entrada",
-    "Gerar nota de remessa",
+    "Gerar nota de remessa (com divergência, marcando que está ciente)",
     "Emitir na SEFAZ",
     "Baixar DANFE e XML",
     "Configurações (empresa, natureza e destinatário)"
