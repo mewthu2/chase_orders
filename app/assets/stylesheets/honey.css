@@ -2685,3 +2685,19 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .sp-ack { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; color: var(--text-2); background: color-mix(in srgb, var(--yellow) 9%, transparent); border: 1px solid color-mix(in srgb, var(--yellow) 35%, transparent); cursor: pointer; }
 .sp-ack input { margin-top: 2px; }
 .sp-acked { margin: 0; font-size: 12.5px; color: var(--yellow); display: flex; gap: 6px; align-items: center; }
+.se-file.is-busy { opacity: .7; pointer-events: none; }
+/* Área de arrastar o XML (Notas Fiscais de Entrada) */
+.se-drop { display: flex; align-items: center; gap: 18px; margin: 0; padding: 22px 26px; border-radius: var(--r-xl, 16px); border: 2px dashed color-mix(in srgb, var(--brand-400) 45%, var(--border-2)); background: color-mix(in srgb, var(--brand-400) 5%, var(--surface)); cursor: pointer; transition: border-color var(--t), background var(--t), transform var(--t) var(--spring, ease), box-shadow var(--t); }
+.se-drop:hover { border-color: var(--brand-400); background: color-mix(in srgb, var(--brand-400) 9%, var(--surface)); }
+.se-drop.is-dragging { border-style: solid; border-color: var(--brand-400); background: color-mix(in srgb, var(--brand-400) 14%, var(--surface)); transform: scale(1.01); box-shadow: 0 0 0 6px color-mix(in srgb, var(--brand-400) 14%, transparent); }
+.se-drop.is-dragging .se-drop-ic { animation: se-bob .7s ease-in-out infinite alternate; }
+.se-drop.is-busy { pointer-events: none; opacity: .75; }
+.se-drop.is-busy .se-drop-ic i::before { content: '\f110'; }
+.se-drop.is-busy .se-drop-ic i { animation: fa-spin 1s linear infinite; }
+.se-drop.is-error { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--surface)); }
+.se-drop-ic { width: 54px; height: 54px; flex-shrink: 0; border-radius: 15px; display: grid; place-items: center; font-size: 22px; color: var(--brand-300); background: var(--brand-bg); border: 1px solid color-mix(in srgb, var(--brand-400) 35%, transparent); }
+.se-drop-txt { display: flex; flex-direction: column; gap: 3px; }
+.se-drop-txt b { font-size: 15.5px; color: var(--text); }
+.se-drop-txt span { font-size: 13px; color: var(--text-3); }
+@keyframes se-bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .se-drop, .se-drop.is-dragging .se-drop-ic { animation: none; transition: none; } }

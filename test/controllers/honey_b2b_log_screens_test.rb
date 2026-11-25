@@ -42,6 +42,27 @@ class HoneyB2bLogScreensTest < ActionDispatch::IntegrationTest
     assert_equal 'ignored', o.log_stage
   end
 
+  test 'o acompanhamento do Log02 filtra por tipo de pedido: B2B (atacado e abastecimento) ou B2C' do
+    atacado = sale
+    supply = B2bOrder.new(kind: :stock_transfer, user: @admin, transfer_location: @location, price_list: :transfer, receiver_name: 'Maria')
+    supply.b2b_order_items.build(sku: 'SKU1', name: 'Legging', quantity: 1, price: 10)
+    supply.save!(validate: false)
+    b2c = B2bOrder.new(kind: :b2c_transfer, user: @admin, transfer_direction: :b2b_to_b2c)
+    b2c.b2b_order_items.build(sku: 'SKU1', name: 'Legging', quantity: 1, price: 10)
+    b2c.save!(validate: false)
+
+    rows = ->(tipo) do
+      get order_correios_tracking_b2b_dashboard_index_path(honey_tipo: tipo)
+      assert_response :success
+      css_select('#pgt-honey tbody tr').map { |tr| tr.text[/#(\d+)/, 1].to_i }.sort
+    end
+    assert_equal [atacado.id, supply.id, b2c.id].sort, rows.call(nil)
+    assert_equal [atacado.id, supply.id].sort, rows.call('b2b')
+    assert_equal [b2c.id], rows.call('b2c')
+    assert_equal [atacado.id], rows.call('sale')
+    assert_select 'select[name=honey_tipo] option', text: 'B2C (transferência B2B → B2C)'
+  end
+
   test 'every Log02 screen lists the Honey orders of its step' do
     sale(status: :aprovado)
     sale(status: :preparando_envio, correios_order_id: 9)
