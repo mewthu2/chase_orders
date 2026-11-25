@@ -48,7 +48,7 @@ class Screen
     clients:                { label: 'Cadastro de Clientes',                  area: 'atacado',   acts: 'VCED' },
     b2b_orders:             { label: 'Pedidos de Atacado',                    area: 'atacado',   acts: 'VCEXDP' },
     b2b_catalogs:           { label: 'Catálogos',                             area: 'atacado',   acts: 'VCEXP' },
-    finance_orders:         { label: 'Financeiro · Pedidos de Atacado',       area: 'financeiro', acts: 'VE' },
+    finance_orders:         { label: 'Financeiro · Pedidos de Atacado',       area: 'financeiro', acts: 'VEP' },
     consultants:            { label: 'Financeiro · Consultores',              area: 'financeiro', acts: 'VCED' },
     commissions:            { label: 'Financeiro · Comissões',                area: 'financeiro', acts: 'VEP' },
     users_management:       { label: 'Gerenciar Usuários',                    area: 'adm',       acts: 'VCED' },

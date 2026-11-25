@@ -2467,6 +2467,14 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
    Financeiro
    --------------------------------------------------------------------------- */
 .fin-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.fin-pay, .fin-dl, .fin-head-form { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
+.fin-pay { padding-left: 12px; border-left: 1px solid var(--border-2); }
+.fin-bulk .btn[disabled] { opacity: .45; pointer-events: none; }
+.fin-all { color: var(--brand-300); }
+.fin-all-on { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; color: var(--green, #3fb950); background: rgba(63,185,80,.12);
+  border: 1px solid rgba(63,185,80,.35); font-weight: 600; animation: fnl-pop .35s var(--spring, ease) both; }
+.fin-all-on[hidden], .fin-bulk [hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .fin-all-on { animation: none; } }
 .fin-date { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12.5px; }
 .fin-date .field-input { width: auto; height: 32px; }
 .fin-pct-wrap { display: inline-flex; align-items: center; gap: 6px; }

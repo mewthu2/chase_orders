@@ -3,7 +3,7 @@ module Finance
   module Setup
     PROFILE_NAME = 'Financeiro'.freeze
     USER_EMAIL = 'financeiro@chasebrasil.com'.freeze
-    PERMISSIONS = { 'finance_orders' => 'VE', 'consultants' => 'VCED', 'commissions' => 'VEP' }.freeze
+    PERMISSIONS = { 'finance_orders' => 'VEP', 'consultants' => 'VCED', 'commissions' => 'VEP' }.freeze
 
     module_function
 

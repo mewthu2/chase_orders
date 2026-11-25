@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'zip'
 require_relative '../../support/finance_factory'
 
 class Finance::OrdersControllerTest < ActionDispatch::IntegrationTest
@@ -23,7 +24,9 @@ class Finance::OrdersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'td', text: /Pago/
     assert_select 'td', text: /Pendente/
-    assert_select '.row-select-checkbox[data-open=true]', count: 3
+    rows = JSON.parse(css_select('[data-fin-rows]').first.text)
+    assert_equal 3, rows.count { |r| r['o'] }
+    assert_equal 4, rows.size
     assert_match 'cadastro pendente', response.body
   end
 
@@ -77,6 +80,60 @@ class Finance::OrdersControllerTest < ActionDispatch::IntegrationTest
     patch pay_finance_payment_path(@boleto.payments.first)
     assert_nil @boleto.payments.first.reload.paid_at
   end
+
+  def xlsx_rows(body)
+    sheet = RubyXL::Parser.parse_buffer(body)[0]
+    sheet.sheet_data.rows.compact.map { |row| row.cells.map { |c| c&.value } }
+  end
+
+  test 'planilha leva so as linhas marcadas ou todo o filtro' do
+    sign_in @finance
+    payment = @boleto.payments.first
+    post export_finance_orders_path(mes: 'todos'), params: { keys: "#{payment.id},o#{@pix.id}" }
+    assert_response :success
+    assert_equal 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', response.media_type
+    rows = xlsx_rows(response.body)
+    assert_equal 'Status do pedido', rows[0].last
+    assert_equal 4, rows.size # cabeçalho, 2 linhas e total
+    assert_equal [@boleto.id, @pix.id].sort, rows[1..2].map(&:first).map(&:to_i).sort
+    assert_in_delta 250.0, rows.last[6].to_f, 0.01
+
+    @pix.update_columns(status: B2bOrder.statuses[:enviado])
+    post export_finance_orders_path(mes: 'todos', ost: 'aberto'), params: { all: '1' }
+    rows = xlsx_rows(response.body)
+    assert_equal 5, rows.size # cabeçalho, 3 parcelas do boleto e total
+    assert(rows[1..3].all? { |r| r.first.to_i == @boleto.id })
+  end
+
+  test 'xml baixa o ZIP das notas de producao dos pedidos marcados' do
+    sign_in @finance
+    company = Company.new(legal_name: 'Emissora', cnpj: '11.222.333/0001-81', street: 'R', number: '1', neighbourhood: 'B', city: 'BH',
+                          city_ibge_code: '3106200', state: 'MG', zip: '30000000')
+    company.save!(validate: false)
+    make = lambda do |order, number, env|
+      n = FiscalNote.create!(company: company, b2b_order: order, number: number, series: 1, environment: env, status: :autorizada,
+                             total_value: 10, issued_at: Time.current, access_key: format('%044d', number))
+      n.xml.attach(io: StringIO.new("<nfeProc>#{number}</nfeProc>"), filename: 'n.xml', content_type: 'application/xml')
+    end
+    make.call(@pix, 501, :producao)
+    make.call(@pix, 502, :homologacao)
+    make.call(@boleto, 503, :producao)
+
+    post xmls_finance_orders_path(mes: 'todos'), params: { keys: "o#{@pix.id}" }
+    assert_response :success
+    names = []
+    Zip::InputStream.open(StringIO.new(response.body)) { |io| while (entry = io.get_next_entry) do names << entry.name end }
+    assert_equal ["NFe#{format('%044d', 501)}.xml"], names
+
+    post xmls_finance_orders_path(mes: 'todos'), params: { keys: "#{@boleto.payments.first.id}" }
+    assert_response :success
+  end
+
+  test 'sem exportar nao baixa planilha' do
+    sign_in @viewer
+    post export_finance_orders_path(mes: 'todos'), params: { all: '1' }
+    assert_redirected_to root_path
+  end
 end
 
 class Finance::OrdersReviewFixesTest < ActionDispatch::IntegrationTest
@@ -92,7 +149,7 @@ class Finance::OrdersReviewFixesTest < ActionDispatch::IntegrationTest
   test 'vencidas de meses anteriores aparecem no mes atual' do
     old = finance_order(user: @finance, price: 500, payment_terms: '30', created_at: 5.months.ago)
     get finance_orders_path
-    assert_select '.row-select-checkbox[data-id=?]', old.payments.first.id.to_s
+    assert_select '.row-select-checkbox[data-key=?]', old.payments.first.id.to_s
   end
 
   test 'baixa em lote pode usar a data do vencimento' do

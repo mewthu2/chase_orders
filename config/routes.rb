@@ -185,7 +185,12 @@ Rails.application.routes.draw do
   
   # Financeiro: recebimentos do atacado, consultores e comissões.
   namespace :finance, path: 'financeiro' do
-    resources :orders, only: %i[index edit update], path: 'pedidos'
+    resources :orders, only: %i[index edit update], path: 'pedidos' do
+      collection do
+        post :export, path: 'planilha'
+        post :xmls, path: 'xml'
+      end
+    end
     resources :payments, only: [], path: 'parcelas' do
       member do
         patch :pay
