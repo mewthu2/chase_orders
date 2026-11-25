@@ -128,15 +128,14 @@ module Navigation
              path: ->(v) { v.b2b_orders_path }, perm: 'b2b_orders', active: kind('sale')),
         link('atc-frete', 'Tabela de Frete', 'fas fa-truck-ramp-box', 'Frete do pedido de atacado por faixa de valor do pedido.',
              path: ->(v) { v.b2b_freight_rates_path }, perm: 'b2b_orders', active: ctrl('b2b_freight_rates')),
-        link('atc-notas', 'Notas Fiscais', 'fas fa-file-invoice', 'Notas dos pedidos de atacado, mês a mês, com o ZIP dos XML.',
-             path: ->(v) { v.wholesale_fiscal_notes_path }, perm: 'b2b_orders', active: note_list('atacado')),
         link('atc-catalogos', 'Catálogos', 'fas fa-book-open', 'Monte catálogos e mande o link para lojistas encomendarem.',
              path: ->(v) { v.b2b_catalogs_path }, perm: 'b2b_catalogs', badge: :catalogs, active: ctrl('b2b_catalogs', 'b2b_catalog_orders'))
       ]),
 
       area('financeiro', [
-        link('fin-pedidos', 'Pedidos de Atacado', 'fas fa-hand-holding-dollar', 'Recebimentos: PIX e cartão já pagos, boletos com baixa parcela a parcela.',
-             path: ->(v) { v.finance_orders_path }, perm: 'finance_orders', active: ctrl('finance/orders')),
+        link('fin-notas', 'Notas Fiscais', 'fas fa-file-invoice-dollar', 'Notas do atacado mês a mês, com o status do pedido, a baixa das parcelas do boleto e o ZIP dos XML.',
+             path: ->(v) { v.wholesale_fiscal_notes_path }, perm: 'finance_orders',
+             active: ->(v) { note_list('atacado').call(v) || v.controller_path == 'finance/orders' }),
         link('fin-comissoes', 'Comissões', 'fas fa-percent', 'Comissão do mês dos vendedores (quem digitou o pedido) e dos consultores (quem recomendou).',
              path: ->(v) { v.finance_commissions_path }, perm: 'commissions', active: ctrl('finance/commissions')),
         link('fin-consultores', 'Consultores', 'fas fa-id-badge', 'Cadastro dos consultores e os nomes digitados nos pedidos que faltam cadastrar.',

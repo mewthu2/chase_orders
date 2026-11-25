@@ -20,7 +20,7 @@ class Screen
     'ecommerce' => { title: 'Ecommerce',   icon: 'fas fa-bag-shopping', color: '#b58cff', desc: 'Loja online: envios, clientes e cupons.' },
     'logistica' => { title: 'Logística',   icon: 'fas fa-truck-fast',   color: '#3fb950', desc: 'Envios do atacado, planejador e abastecimento.' },
     'atacado'   => { title: 'Atacado',     icon: 'fas fa-handshake',    color: '#e3b341', desc: 'Lojistas: clientes, pedidos e catálogos.' },
-    'financeiro' => { title: 'Financeiro', icon: 'fas fa-sack-dollar',  color: '#2ea043', desc: 'Recebimentos do atacado, consultores e comissões.' },
+    'financeiro' => { title: 'Financeiro', icon: 'fas fa-sack-dollar',  color: '#2ea043', desc: 'Notas do atacado com a baixa das parcelas, consultores e comissões.' },
     'adm'       => { title: 'Adm',         icon: 'fas fa-gear',         color: '#8b949e', desc: 'Acessos, equipe, marketing e cadastros fiscais.' }
   }.freeze
 
@@ -48,7 +48,7 @@ class Screen
     clients:                { label: 'Cadastro de Clientes',                  area: 'atacado',   acts: 'VCED' },
     b2b_orders:             { label: 'Pedidos de Atacado',                    area: 'atacado',   acts: 'VCEXDP' },
     b2b_catalogs:           { label: 'Catálogos',                             area: 'atacado',   acts: 'VCEXP' },
-    finance_orders:         { label: 'Financeiro · Pedidos de Atacado',       area: 'financeiro', acts: 'VEP' },
+    finance_orders:         { label: 'Financeiro · Notas Fiscais e parcelas', area: 'financeiro', acts: 'VEP' },
     consultants:            { label: 'Financeiro · Consultores',              area: 'financeiro', acts: 'VCED' },
     commissions:            { label: 'Financeiro · Comissões',                area: 'financeiro', acts: 'VEP' },
     users_management:       { label: 'Gerenciar Usuários',                    area: 'adm',       acts: 'VCED' },

@@ -16,7 +16,7 @@ class Finance::AccessTest < ActionDispatch::IntegrationTest
 
   test 'usuario comum nao entra nem ve a area no menu' do
     sign_in @common
-    [finance_orders_path, finance_consultants_path, finance_commissions_path].each do |path|
+    [wholesale_fiscal_notes_path, finance_consultants_path, finance_commissions_path].each do |path|
       get path
       assert_redirected_to root_path
     end
@@ -26,12 +26,34 @@ class Finance::AccessTest < ActionDispatch::IntegrationTest
   test 'financeiro e admin entram nas tres telas' do
     [@finance, @admin].each do |user|
       sign_in user
-      [finance_orders_path, finance_consultants_path, finance_commissions_path].each do |path|
+      [wholesale_fiscal_notes_path, finance_consultants_path, finance_commissions_path].each do |path|
         get path
         assert_response :success, "#{user.name} #{path}"
       end
       assert Navigation.for(user).any? { |a| a[:id] == 'financeiro' }
       sign_out user
     end
+  end
+
+  # Bloqueio no servidor, não só no menu: pelo link, quem só tem o perfil Financeiro não entra em nenhuma outra tela.
+  test 'so com o perfil financeiro nenhuma outra tela abre pelo link' do
+    opened = []
+    Rails.application.routes.routes.each do |route|
+      next unless route.verb.include?('GET')
+
+      path = route.path.spec.to_s.sub('(.:format)', '')
+      next if path.include?(':') || path.include?('*') || path.start_with?('/rails', '/user', '/cable', '/assets', '/api', '/webhooks')
+      next if path.match?(/sign_out|logout|impersonat|historical_location/)
+
+      sign_in @finance
+      begin
+        get path
+      rescue StandardError
+        next
+      end
+      opened << path if response.status == 200
+    end
+    allowed = ['/', '/chamados', '/tickets/new', '/financeiro/notas_fiscais', '/financeiro/comissoes', '/financeiro/consultores', '/financeiro/consultores/new']
+    assert_equal [], opened - allowed
   end
 end

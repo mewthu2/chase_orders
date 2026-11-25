@@ -1,18 +1,19 @@
-# Notas fiscais de uma área só, por mês: Atacado (pedidos de venda) e Logística (abastecimento das lojas e
-# transferência B2B ⇄ B2C, com as notas de remessa). Sem o interruptor de homologação/produção da tela de
+# Notas fiscais de uma área só, por mês: Atacado (pedidos de venda, na área Financeiro, com o status do pedido e
+# as parcelas do boleto) e Logística (abastecimento das lojas e transferência B2B ⇄ B2C, com as notas de remessa). Sem o interruptor de homologação/produção da tela de
 # Notas Fiscais do Adm. O ZIP leva o XML das notas autorizadas e canceladas (com o evento de cancelamento)
 # do filtro atual ou só das selecionadas.
 class FiscalNoteListsController < ApplicationController
   LISTS = {
-    'atacado' => { screens: [:b2b_orders], kinds: %w[sale], title: 'Notas Fiscais do Atacado',
-                   subtitle: 'NF-e dos pedidos de atacado, mês a mês.', icon: 'fas fa-file-invoice-dollar' },
+    'atacado' => { screens: [:finance_orders], kinds: %w[sale], title: 'Notas Fiscais',
+                   subtitle: 'NF-e dos pedidos de atacado, mês a mês, com o status do pedido e a baixa das parcelas do boleto.',
+                   icon: 'fas fa-file-invoice-dollar' },
     'logistica' => { screens: %i[store_supply b2b_transfers], kinds: %w[stock_transfer b2c_transfer], title: 'Notas Fiscais da Logística',
                      subtitle: 'NF-e do abastecimento das lojas e das transferências B2B ⇄ B2C, mês a mês.', icon: 'fas fa-truck-fast' }
   }.freeze
   ZIP_STATUSES = %w[autorizada cancelada].freeze
   MAX_ZIP_NOTES = 2000
 
-  guard_screen(actions: { xmls: :export }) { list[:screens] }
+  guard_screen(actions: { xmls: :export, xml: :export, danfe: :export }) { list[:screens] }
   helper_method :list, :list_key
 
   def index
@@ -31,7 +32,27 @@ class FiscalNoteListsController < ApplicationController
     send_data Nfe::XmlZip.call(notes), filename: zip_filename(ids.any?), type: 'application/zip', disposition: 'attachment'
   end
 
+  # XML e DANFE de uma nota da lista, com a permissão da própria tela (sem precisar da tela Notas Fiscais do Adm).
+  def xml
+    note = list_note
+    return redirect_to(list_path, alert: 'Esta nota ainda não tem XML gerado.') unless note.xml_available?
+
+    send_data note.xml.download, filename: "NFe#{note.access_key}.xml", type: 'application/xml', disposition: 'attachment'
+  end
+
+  def danfe
+    note = list_note
+    return redirect_to(list_path, alert: 'Esta nota ainda não tem XML gerado.') unless note.xml_available?
+
+    danfe = Nfe::Danfe.new(note.xml.download, cancelled: note.cancelada?)
+    send_data danfe.render, filename: danfe.filename, type: 'application/pdf', disposition: 'attachment'
+  end
+
   private
+
+  def list_note
+    FiscalNote.joins(:b2b_order).where(b2b_orders: { kind: B2bOrder.kinds.values_at(*list[:kinds]) }).find(params[:id])
+  end
 
   def list_key = LISTS.key?(params[:list]) ? params[:list] : 'atacado'
   def list = LISTS.fetch(list_key)
@@ -41,7 +62,7 @@ class FiscalNoteListsController < ApplicationController
   # escolhido (produção quando não há ambiente na URL).
   def scope
     out = FiscalNote.joins(:b2b_order).where(b2b_orders: { kind: B2bOrder.kinds.values_at(*list[:kinds]) })
-                    .includes(:company, :nature, b2b_order: %i[client transfer_location]).recent
+                    .includes(:company, :nature, b2b_order: [:client, :transfer_location, { payments: :paid_by }]).recent
     out = out.where(environment: params[:amb] == 'homologacao' ? :homologacao : :producao) unless params[:amb] == 'todos'
     range = month_range
     range ? out.where('COALESCE(fiscal_notes.issued_at, fiscal_notes.created_at) BETWEEN ? AND ?', range.begin, range.end) : out

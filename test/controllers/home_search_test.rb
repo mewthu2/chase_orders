@@ -14,7 +14,7 @@ class HomeSearchTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match 'O que você precisa hoje?', response.body
     assert_select 'input#homeSearch'
-    assert_select '.home-tile[href=?]', finance_orders_path
+    assert_select '.home-tile[href=?]', wholesale_fiscal_notes_path
     assert_no_match 'Meus chamados', Nokogiri::HTML(response.body).css('main').text
   end
 
@@ -30,7 +30,7 @@ class HomeSearchTest < ActionDispatch::IntegrationTest
     sign_in @user
     get root_path
     assert_response :success
-    assert_select '.home-tile[href=?]', finance_orders_path, count: 0
+    assert_select '.home-tile[href=?]', wholesale_fiscal_notes_path, count: 0
   end
 
   test 'painel antigo de chamados continua pelo endereco' do

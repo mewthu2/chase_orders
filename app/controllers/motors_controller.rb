@@ -1,4 +1,8 @@
 class MotorsController < ApplicationController
+  # Tela antiga, fora do menu: só admins, nem pelo link.
+  before_action :authenticate_user!
+  before_action :admin_only!
+
   def index
     @motors = Motor.all
     

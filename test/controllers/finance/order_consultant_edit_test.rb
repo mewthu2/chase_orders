@@ -22,7 +22,7 @@ class Finance::OrderConsultantEditTest < ActionDispatch::IntegrationTest
 
   test 'escolhe um consultor cadastrado' do
     patch finance_order_path(@order), params: { consultant_id: @carla.id }
-    assert_redirected_to finance_orders_path
+    assert_redirected_to edit_finance_order_path(@order, return_to: wholesale_fiscal_notes_path)
     @order.reload
     assert_equal @carla.id, @order.consultant_id
     assert_equal 'Carla Souza', @order.salesperson_name

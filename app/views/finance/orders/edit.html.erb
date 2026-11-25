@@ -1,43 +1,106 @@
-<% content_for :title, "Consultor do pedido ##{@order.id}" %>
-<% back = params[:return_to].to_s.start_with?('/financeiro/pedidos') ? params[:return_to] : finance_orders_path %>
+<% content_for :title, "Recebimento do pedido ##{@order.id}" %>
+<% back = finance_return_to %>
+<% here = request.fullpath %>
+<% can_edit = screen_can?(:finance_orders, :edit) %>
+<% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% receipt = finance_receipt(@order) %>
+<% today = Date.current %>
 <div class="users-container">
   <div class="page-header">
     <div class="header-left has-icon">
-      <%= hc_page_icon 'fas fa-id-badge' %>
+      <%= hc_page_icon 'fas fa-hand-holding-dollar' %>
       <div>
         <%= hc_page_eyebrow %>
-        <h1 class="page-title">Consultor do pedido #<%= @order.id %></h1>
-        <p class="page-subtitle"><%= b2b_order_destination(@order) %> · vendedor <%= @order.user&.name || '—' %> · hoje: <b><%= @order.consultant_label || 'sem consultor' %></b><%= ' (cadastro pendente)' if @order.consultant_pending? %></p>
+        <h1 class="page-title">Recebimento do pedido #<%= @order.id %></h1>
+        <p class="page-subtitle">
+          <%= b2b_order_destination(@order) %> · <%= money.call(@order.grand_total) %> · <%= @order.payment_description.presence || 'Sem forma (boleto à vista)' %> ·
+          <%= hc_status(*FinanceHelper::FINANCE_RECEIPT_STATUSES.fetch(receipt[:status]).first(2)) %>
+          <%= hc_status(*b2b_order_statuses.fetch(@order.status, [@order.status, 'gray']).first(2)) %>
+        </p>
       </div>
     </div>
     <div class="header-actions">
-      <%= link_to back, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+      <%= link_to back, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar às notas<% end %>
     </div>
   </div>
 
-  <%= form_with url: finance_order_path(@order), method: :patch, local: true do %>
-    <%= hidden_field_tag :return_to, back %>
-    <div class="form-section">
-      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-handshake me-2"></i>Quem recomendou</h5></div>
-      <div class="form-section-body">
-        <div class="form-grid">
-          <div class="form-col-6">
-            <label class="field-label" for="consultant_id">Consultor cadastrado</label>
-            <%= select_tag :consultant_id, options_from_collection_for_select(@consultants, :id, :name, @order.consultant_id), include_blank: 'Escolha…', class: 'field-input' %>
-          </div>
-          <div class="form-col-6">
-            <label class="field-label" for="name">Ou digite um nome (fica pendente até cadastrar)</label>
-            <%= text_field_tag :name, (@order.salesperson_name if @order.consultant_pending?), class: 'field-input', placeholder: 'Primeiro nome' %>
-          </div>
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-file-invoice-dollar me-2"></i>Parcelas</h5></div>
+    <div class="form-section-body">
+      <% if @order.payments.empty? %>
+        <p class="mb-0"><%= receipt[:text] %>: <b><%= money.call(@order.paid_on_creation? ? @order.creation_paid_amount : 0) %></b>. Não há parcela para dar baixa.</p>
+      <% else %>
+        <% if @order.paid_on_creation? && @order.creation_paid_amount.positive? %>
+          <p><%= @order.payment_label %>, pago na criação: <b><%= money.call(@order.creation_paid_amount) %></b>.</p>
+        <% end %>
+        <div class="table-responsive">
+          <table class="table fin-parcels">
+            <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Situação</th><th>Pago em</th><th>Baixa por</th><th></th></tr></thead>
+            <tbody>
+              <% @order.payments.each do |payment| %>
+                <% st = finance_payment_status(payment, today) %>
+                <tr>
+                  <td class="mono"><%= payment.number %>/<%= @order.payments.size %></td>
+                  <td><%= l(payment.due_date, format: '%d/%m/%Y') %></td>
+                  <td><%= money.call(payment.amount) %></td>
+                  <td><% label, tone, tip = FinanceHelper::FINANCE_PAYMENT_STATUSES.fetch(st) %><%= hc_status(label, tone, tip: tip) %></td>
+                  <td><%= payment.paid_at ? l(payment.paid_at, format: '%d/%m/%Y') : '—' %></td>
+                  <td><%= payment.paid_by&.name || '—' %></td>
+                  <td style="text-align: right">
+                    <% if can_edit && @order.status != 'cancelado' %>
+                      <% if payment.paid? %>
+                        <%= hc_row_action('fas fa-rotate-left', 'Desfazer baixa', unpay_finance_payment_path(payment), method: :patch, params: { return_to: here },
+                                          confirm: { title: "Desfazer a baixa da parcela #{payment.number}?", text: 'A parcela volta a ficar pendente e a comissão do consultor sai do mês em que foi paga.' }) %>
+                      <% else %>
+                        <%= form_with url: pay_finance_payment_path(payment), method: :patch, class: 'fin-pay-one', data: { turbo: false } do %>
+                          <%= hidden_field_tag :return_to, here %>
+                          <%= date_field_tag :paid_at, today, class: 'field-input', 'aria-label': 'Pago em' %>
+                          <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-check"></i>Dar baixa</button>
+                        <% end %>
+                      <% end %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
         </div>
-      </div>
-    </div>
-    <div class="form-actions">
-      <%= submit_tag 'Salvar consultor', class: 'btn-submit' %>
-      <% if @order.consultant_label %>
-        <%= submit_tag 'Tirar o consultor', name: 'remove', value: 'Tirar o consultor', class: 'btn-cancel', data: { tip: 'O pedido fica sem consultor: só o vendedor recebe comissão.' } %>
+        <p class="mb-0">Recebido <b><%= money.call(@order.payments.select(&:paid?).sum(&:amount)) %></b> · a receber <b><%= money.call(receipt[:open_value]) %></b></p>
       <% end %>
-      <%= link_to 'Cancelar', back, class: 'btn-cancel' %>
     </div>
-  <% end %>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-handshake me-2"></i>Quem recomendou</h5></div>
+    <div class="form-section-body">
+      <p>Vendedor (quem digitou): <b><%= @order.user&.name || '—' %></b> · consultor hoje: <b><%= @order.consultant_label || 'sem consultor' %></b><%= ' (cadastro pendente)' if @order.consultant_pending? %></p>
+      <% if can_edit %>
+        <%= form_with url: finance_order_path(@order), method: :patch, local: true do %>
+          <%= hidden_field_tag :return_to, back %>
+          <div class="form-grid">
+            <div class="form-col-6">
+              <label class="field-label" for="consultant_id">Consultor cadastrado</label>
+              <%= select_tag :consultant_id, options_from_collection_for_select(@consultants, :id, :name, @order.consultant_id), include_blank: 'Escolha…', class: 'field-input' %>
+            </div>
+            <div class="form-col-6">
+              <label class="field-label" for="name">Ou digite um nome (fica pendente até cadastrar)</label>
+              <%= text_field_tag :name, (@order.salesperson_name if @order.consultant_pending?), class: 'field-input', placeholder: 'Primeiro nome' %>
+            </div>
+          </div>
+          <div class="form-actions">
+            <%= submit_tag 'Salvar consultor', class: 'btn-submit' %>
+            <% if @order.consultant_label %>
+              <%= submit_tag 'Tirar o consultor', name: 'remove', value: 'Tirar o consultor', class: 'btn-cancel', data: { tip: 'O pedido fica sem consultor: só o vendedor recebe comissão.' } %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
 </div>
+
+<style>
+  .fin-pay-one { display: inline-flex; gap: .4rem; align-items: center; justify-content: flex-end; }
+  .fin-pay-one .field-input { width: 9.5rem; padding: .25rem .5rem; }
+  .fin-parcels td { vertical-align: middle; }
+</style>

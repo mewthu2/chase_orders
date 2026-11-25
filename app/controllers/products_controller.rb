@@ -1,5 +1,7 @@
 class ProductsController < ApplicationController
   before_action :authenticate_user!
+  # Tela antiga, fora do menu: só admins, nem pelo link.
+  before_action :admin_only!
 
   def index
     @products = filter_products

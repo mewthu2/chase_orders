@@ -1,5 +1,7 @@
 class PosController < ApplicationController
   before_action :authenticate_user!
+  # Tela antiga, fora do menu: só admins, nem pelo link.
+  before_action :admin_only!
 
   def index
     @cart_items = session[:cart_items] || []

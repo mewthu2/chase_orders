@@ -1,5 +1,7 @@
 class OrderPdvsController < ApplicationController
   before_action :authenticate_user!
+  # Tela antiga, fora do menu: só admins, nem pelo link.
+  before_action :admin_only!
   before_action :set_order_pdv, only: [:show, :edit, :update, :integrate, :add_product, :remove_product, :items, :integrate_tiny, :mark_as_paid, :attach_client, :generate_pdf]
 
   def index

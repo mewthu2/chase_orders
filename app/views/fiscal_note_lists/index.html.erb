@@ -3,6 +3,9 @@
 <% can_export = list[:screens].any? { |key| screen_can?(key, :export) } %>
 <% xmls_path = list_key == 'atacado' ? xmls_wholesale_fiscal_notes_path : xmls_logistics_fiscal_notes_path %>
 <% filter_query = request.query_parameters.except('page') %>
+<% wholesale = list_key == 'atacado' %>
+<% can_pay = wholesale && screen_can?(:finance_orders, :edit) %>
+<% can_order = screen_can?(:b2b_orders) %>
 
 <%= hc_page_header list[:title], list[:subtitle], icon: list[:icon] do %>
   <% if can_export %>
@@ -21,29 +24,48 @@
       <span class="fnl-sum" data-tip="Soma das notas ativas selecionadas (rascunho, assinada e autorizada), com frete e despesas.">
         <i class="fas fa-sack-dollar"></i><b data-fnl-sum>R$ 0,00</b>
       </span>
+      <% if can_pay %>
+        <%= form_with url: pay_many_finance_payments_path, method: :patch, class: 'fin-pay', data: { fnl_pay: true, turbo: false } do %>
+          <%= hidden_field_tag :note_ids, '', data: { fnl_ids: true } %>
+          <%= hidden_field_tag :return_to, request.fullpath %>
+          <label class="fin-date">Pago em <%= date_field_tag :paid_at, Date.current, class: 'field-input' %></label>
+          <label class="fin-date" data-tip="Cada parcela fica paga na data do próprio vencimento. Use para boletos antigos que já foram pagos: a comissão do consultor cai no mês certo.">
+            <%= check_box_tag :on_due, '1', false %> Pago no vencimento
+          </label>
+          <button type="submit" class="btn btn-sm btn-primary" data-fnl-pay-btn disabled
+                  data-tip="Dá baixa em todas as parcelas de boleto ainda pendentes dos pedidos das notas marcadas.">
+            <i class="fas fa-check-double"></i>Dar baixa em <b data-fnl-open>0 parcelas</b>
+          </button>
+        <% end %>
+      <% end %>
       <% if can_export %>
         <a class="btn btn-sm btn-primary is-disabled" data-fnl-zip href="#" aria-disabled="true"><i class="fas fa-file-zipper"></i>Baixar XML das selecionadas</a>
       <% end %>
       <button type="button" class="btn btn-ghost btn-sm" data-fnl-clear>Limpar seleção</button>
-      <span class="pg-bulk-hint">Marque as notas para somar o valor e baixar só o XML delas.</span>
+      <span class="pg-bulk-hint"><%= can_pay ? 'Marque as notas para somar o valor, dar baixa nas parcelas dos pedidos delas e baixar só o XML delas.' : 'Marque as notas para somar o valor e baixar só o XML delas.' %></span>
     </div>
   <% end %>
   <%= hc_pg_table(table, title: 'Notas fiscais', icon: 'fas fa-file-invoice',
         meta: 'Do mês ou período escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
         link: ->(r) {
           note = r[:record]
-          screen_can?(:fiscal_notes) ? fiscal_note_path(note) : b2b_order_edit_path(note.b2b_order, tab: 'nota', anchor: ('remessaNote' if note.remessa?))
+          if screen_can?(:fiscal_notes) then fiscal_note_path(note)
+          elsif wholesale && !can_order then edit_finance_order_path(note.b2b_order_id, return_to: request.fullpath)
+          else b2b_order_edit_path(note.b2b_order, tab: 'nota', anchor: ('remessaNote' if note.remessa?))
+          end
         },
-        select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]) } },
+        select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]), order: r[:record].b2b_order_id, open: r[:abertas] } },
         bulk: bulk,
         empty: { title: 'Nenhuma nota neste período', text: 'Use as setas do filtro de mês ou o calendário para ver outras datas.' },
-        detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]],
+        detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]] + (wholesale ? [['Parcelas', :recTxt]] : []),
                   note: ->(r) { r[:erro].presence || (r[:amb] == 'homologacao' ? 'Nota de homologação (teste): não tem valor fiscal.' : nil) } },
         actions: ->(r) {
           note = r[:record]
           safe_join([
-            (hc_row_action('fas fa-file-code', 'Baixar XML', xml_fiscal_note_path(note)) if note.xml_available? && can_export),
-            (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', danfe_fiscal_note_path(note)) if note.xml_available? && can_export)
+            (hc_row_action('fas fa-hand-holding-dollar', can_pay ? 'Parcelas (baixa) e consultor' : 'Parcelas e consultor',
+                           edit_finance_order_path(note.b2b_order_id, return_to: request.fullpath)) if wholesale),
+            (hc_row_action('fas fa-file-code', 'Baixar XML', wholesale ? xml_wholesale_fiscal_note_path(note) : xml_logistics_fiscal_note_path(note)) if note.xml_available? && can_export),
+            (hc_row_action('fas fa-file-pdf', 'Baixar DANFE', wholesale ? danfe_wholesale_fiscal_note_path(note) : danfe_logistics_fiscal_note_path(note)) if note.xml_available? && can_export)
           ].compact)
         }) %>
 </div>
@@ -55,14 +77,17 @@
     var table = bar.closest('.pg-body') || document;
     var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     var zip = bar.querySelector('[data-fnl-zip]');
+    var pay = bar.querySelector('[data-fnl-pay]');
 
     function boxes() { return table.querySelectorAll('.row-select-checkbox'); }
     function refresh() {
-      var ids = [], sum = 0;
+      var ids = [], sum = 0, open = 0, orders = {};
       boxes().forEach(function (cb) {
         if (!cb.checked) return;
         ids.push(cb.dataset.id);
         if (cb.dataset.active === 'true') sum += parseFloat(cb.dataset.value || '0');
+        // Duas notas do mesmo pedido (uma cancelada e a reemitida) não contam as parcelas duas vezes.
+        if (cb.dataset.order && !orders[cb.dataset.order]) { orders[cb.dataset.order] = true; open += parseInt(cb.dataset.open || '0', 10); }
       });
       bar.querySelector('[data-fnl-count]').textContent = ids.length;
       bar.querySelector('[data-fnl-unit]').textContent = ids.length === 1 ? 'selecionada' : 'selecionadas';
@@ -70,6 +95,11 @@
       bar.classList.toggle('is-on', ids.length > 0);
       var all = table.querySelector('#selectAllCheckbox');
       if (all) all.checked = ids.length > 0 && ids.length === boxes().length;
+      if (pay) {
+        pay.querySelector('[data-fnl-ids]').value = ids.join(',');
+        pay.querySelector('[data-fnl-open]').textContent = open + (open === 1 ? ' parcela' : ' parcelas');
+        pay.querySelector('[data-fnl-pay-btn]').disabled = open === 0;
+      }
       if (zip) {
         var query = bar.dataset.query ? bar.dataset.query + '&' : '';
         zip.href = ids.length ? bar.dataset.zipUrl + '?' + query + ids.map(function (id) { return 'ids%5B%5D=' + id; }).join('&') : '#';

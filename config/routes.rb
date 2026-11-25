@@ -185,12 +185,8 @@ Rails.application.routes.draw do
   
   # Financeiro: recebimentos do atacado, consultores e comissões.
   namespace :finance, path: 'financeiro' do
-    resources :orders, only: %i[index edit update], path: 'pedidos' do
-      collection do
-        post :export, path: 'planilha'
-        post :xmls, path: 'xml'
-      end
-    end
+    # Parcelas e consultor de um pedido, abertos da tela de Notas Fiscais (a lista de pedidos do Financeiro saiu).
+    resources :orders, only: %i[edit update], path: 'notas_fiscais/pedidos'
     resources :payments, only: [], path: 'parcelas' do
       member do
         patch :pay
@@ -212,11 +208,15 @@ Rails.application.routes.draw do
   resource :internal_transfer_config, only: [:edit, :update]
   resource :b2b_setting, only: [:edit, :update]
   resources :b2b_freight_rates, path: 'atacado/frete', except: [:show]
-  # Notas fiscais por área, mês a mês, com o ZIP dos XML.
-  { 'atacado' => :wholesale_fiscal_notes, 'logistica' => :logistics_fiscal_notes }.each do |list, name|
-    get "#{list}/notas_fiscais", to: 'fiscal_note_lists#index', defaults: { list: list }, as: name
-    get "#{list}/notas_fiscais/xmls", to: 'fiscal_note_lists#xmls', defaults: { list: list }, as: "xmls_#{name}"
+  # Notas fiscais por área, mês a mês, com o ZIP dos XML. As do atacado ficam no Financeiro (com as parcelas do boleto).
+  { 'atacado' => ['financeiro', :wholesale_fiscal_notes], 'logistica' => ['logistica', :logistics_fiscal_notes] }.each do |list, (prefix, name)|
+    get "#{prefix}/notas_fiscais", to: 'fiscal_note_lists#index', defaults: { list: list }, as: name
+    get "#{prefix}/notas_fiscais/xmls", to: 'fiscal_note_lists#xmls', defaults: { list: list }, as: "xmls_#{name}"
+    get "#{prefix}/notas_fiscais/:id/xml", to: 'fiscal_note_lists#xml', defaults: { list: list }, as: "xml_#{name.to_s.singularize}"
+    get "#{prefix}/notas_fiscais/:id/danfe", to: 'fiscal_note_lists#danfe', defaults: { list: list }, as: "danfe_#{name.to_s.singularize}"
   end
+  get 'atacado/notas_fiscais', to: redirect { |_, req| "/financeiro/notas_fiscais#{"?#{req.query_string}" if req.query_string.present?}" }
+  get 'financeiro/pedidos', to: redirect('/financeiro/notas_fiscais')
   # Aba Nota fiscal da edição dos pedidos B2B (atacado, abastecimento e transferência B2C).
   resources :b2b_order_fiscal_notes, path: 'b2b_orders/:b2b_order_id/notas', only: [:create, :destroy] do
     member { post :transmit }
