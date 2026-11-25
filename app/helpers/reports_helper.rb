@@ -20,6 +20,9 @@ module ReportsHelper
   def rpt_kpi(label:, value:, icon:, help:, delta: nil, previous: nil, tone: 'blue', i: 0)
     badge = if delta.nil?
               content_tag(:span, 'sem base anterior', class: 'rpt-delta is-flat', data: { tip: 'O período anterior não teve venda para comparar.' })
+            elsif delta.abs < 0.0005
+              content_tag(:span, safe_join([content_tag(:i, '', class: 'fas fa-equals'), 'igual']), class: 'rpt-delta is-flat',
+                          data: { tip: "Igual ao período anterior (#{previous})." })
             else
               up = delta >= 0
               content_tag(:span, safe_join([content_tag(:i, '', class: "fas fa-arrow-#{up ? 'up' : 'down'}"), rpt_percent(delta.abs)]),

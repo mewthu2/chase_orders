@@ -8,6 +8,15 @@ module Reports
 
     def self.period(param, today: Date.current)
       param = param.to_s
+      # Intervalo do calendário ("2026-11-03..2026-11-20"): por dia até ~2 meses, por mês acima disso; compara com
+      # o mesmo número de dias logo antes.
+      if (range = HoneyTable.parse_range(param))
+        first = range.begin.to_date
+        last = range.end.to_date
+        days = (last - first).to_i + 1
+        return Period.new(key: param, label: HoneyTable.range_label(param), range: first..last,
+                          previous: (first - days)..(first - 1), granularity: days <= 62 ? :day : :month)
+      end
       if (m = param.match(/\A(\d{4})-(\d{2})\z/))
         month = Date.new(m[1].to_i, m[2].to_i, 1)
         prev = month.prev_month
@@ -30,12 +39,15 @@ module Reports
       period(today.strftime('%Y-%m'), today: today)
     end
 
-    # [[rótulo, valor], ...] para o select (options_for_select).
-    def self.period_options(today: Date.current)
+    # [[rótulo, valor], ...] para o select (options_for_select); o intervalo do calendário entra no topo.
+    def self.period_options(today: Date.current, current: nil)
       months = (0..23).map { |i| today.beginning_of_month << i }
-      [['Últimos 30 dias', '30d'], ['Últimos 12 meses', '12m']] +
+      custom = HoneyTable.parse_range(current) ? [[HoneyTable.range_label(current), current]] : []
+      shown = current.to_s.match?(/\A\d{4}-\d{2}\z/) ? Date.iso8601("#{current}-01") : nil
+      months |= [shown] if shown
+      custom + [['Últimos 30 dias', '30d'], ['Últimos 12 meses', '12m']] +
         [today.year, today.year - 1].map { |y| ["Ano de #{y}", "ano-#{y}"] } +
-        months.map { |m| [I18n.l(m, format: '%B de %Y').capitalize, m.strftime('%Y-%m')] }
+        months.sort.reverse.map { |m| [I18n.l(m, format: '%B de %Y').capitalize, m.strftime('%Y-%m')] }
     end
 
     def initialize(period)

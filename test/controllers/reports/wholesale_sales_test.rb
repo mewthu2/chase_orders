@@ -61,6 +61,26 @@ class Reports::WholesaleSalesTest < ActionDispatch::IntegrationTest
     assert_includes ids, 'rel-vendas-atacado'
   end
 
+  test 'intervalo do calendario: por dia ate dois meses, por mes acima, comparando com os mesmos dias antes' do
+    short = Reports::WholesaleSales.period('2026-11-03..2026-11-20', today: @day)
+    assert_equal Date.new(2026, 11, 3)..Date.new(2026, 11, 20), short.range
+    assert_equal Date.new(2026, 10, 16)..Date.new(2026, 11, 2), short.previous
+    assert_equal :day, short.granularity
+    assert_equal '03/11/2026 a 20/11/2026', short.label
+    assert_equal :month, Reports::WholesaleSales.period('2026-01-01..2026-11-20').granularity
+
+    o = finance_order(user: @admin, price: 300)
+    note(o, 20, issued: Time.zone.local(2026, 11, 5, 10))
+    note(o, 21, issued: Time.zone.local(2026, 11, 25, 10), value: 999)
+    assert_equal 300.0, Reports::WholesaleSales.new(short).current[:revenue]
+
+    sign_in @admin
+    get reports_wholesale_sales_path(periodo: '2026-11-03..2026-11-20')
+    assert_response :success
+    assert_select '#rptPeriodo option[selected][value=?]', '2026-11-03..2026-11-20'
+    assert_select '.pg-month[data-controller=date-range] .pg-cal-btn'
+  end
+
   test 'sem permissao nao entra nem pelo link' do
     sign_in @common
     get reports_wholesale_sales_path

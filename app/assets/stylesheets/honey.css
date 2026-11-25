@@ -2622,3 +2622,5 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .rpt-table summary:hover { color: var(--text); }
 .rpt-table table { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .rpt-svg .rpt-bar, .rpt-fill { animation: none; } }
+.rpt-period .pg-month { display: flex; align-items: center; gap: 6px; }
+.rpt-period .pg-month .select-wrap { min-width: 230px; }

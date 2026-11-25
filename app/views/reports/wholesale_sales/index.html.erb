@@ -6,16 +6,28 @@
 <% prev_label = "#{l(period.previous.begin, format: '%d/%m/%Y')} a #{l(period.previous.end, format: '%d/%m/%Y')}" %>
 
 <%= hc_page_header 'Vendas Atacado', 'Notas fiscais de venda do atacado emitidas (autorizadas em produção) são as vendas concretizadas.', icon: 'fas fa-chart-column' do %>
+  <% month = period.key.match?(/\A\d{4}-\d{2}\z/) ? period.range.begin : nil %>
   <%= form_with url: reports_wholesale_sales_path, method: :get, local: true, class: 'rpt-period', data: { turbo: false } do %>
     <label for="rptPeriodo" class="visually-hidden">Período</label>
-    <div class="select-wrap">
-      <%= select_tag :periodo, options_for_select(Reports::WholesaleSales.period_options, period.key), id: 'rptPeriodo', class: 'field-input is-set', onchange: 'this.form.requestSubmit()' %>
-    </div>
+    <%= content_tag(:div, class: "pg-month#{' is-range' if HoneyTable.parse_range(period.key)}",
+                    data: hc_pg_range_data(period.key).merge(date_range_month_value: (month || period.range.end.beginning_of_month).iso8601)) do %>
+      <% if month %>
+        <%= link_to reports_wholesale_sales_path(periodo: (month << 1).strftime('%Y-%m')), class: 'pg-month-nav', data: { tip: 'Mês anterior' }, 'aria-label': 'Mês anterior' do %><i class="fas fa-chevron-left"></i><% end %>
+      <% end %>
+      <div class="select-wrap">
+        <%= select_tag :periodo, options_for_select(Reports::WholesaleSales.period_options(current: period.key), period.key), id: 'rptPeriodo', class: 'field-input is-set',
+                       onchange: 'this.form.requestSubmit()', data: { date_range_target: 'select' } %>
+      </div>
+      <% if month %>
+        <%= link_to reports_wholesale_sales_path(periodo: (month >> 1).strftime('%Y-%m')), class: 'pg-month-nav', data: { tip: 'Próximo mês' }, 'aria-label': 'Próximo mês' do %><i class="fas fa-chevron-right"></i><% end %>
+      <% end %>
+      <%= hc_pg_calendar_button %>
+    <% end %>
   <% end %>
 <% end %>
 
 <div class="pg-blocks rpt">
-  <p class="rpt-range"><i class="fas fa-calendar-days"></i><b><%= period.label %></b> · <%= l(period.range.begin, format: '%d/%m/%Y') %> a <%= l(period.range.end, format: '%d/%m/%Y') %>
+  <p class="rpt-range"><i class="fas fa-calendar-days"></i><b><%= period.label %></b><% unless HoneyTable.parse_range(period.key) %> · <%= l(period.range.begin, format: '%d/%m/%Y') %> a <%= l(period.range.end, format: '%d/%m/%Y') %><% end %>
     <span>comparado com <%= prev_label %></span></p>
 
   <div class="kpi-grid stagger pg-kpis rpt-kpis" style="--cols: 3">
