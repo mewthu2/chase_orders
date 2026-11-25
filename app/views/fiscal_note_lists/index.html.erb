@@ -2,6 +2,7 @@
 <% table = fiscal_note_list_table(list_key, @scope) %>
 <% can_export = list[:screens].any? { |key| screen_can?(key, :export) } %>
 <% xmls_path = list_key == 'atacado' ? xmls_wholesale_fiscal_notes_path : xmls_logistics_fiscal_notes_path %>
+<% export_path = list_key == 'atacado' ? export_wholesale_fiscal_notes_path : export_logistics_fiscal_notes_path %>
 <% filter_query = request.query_parameters.except('page') %>
 <% wholesale = list_key == 'atacado' %>
 <% can_pay = wholesale && screen_can?(:finance_orders, :edit) %>
@@ -9,6 +10,10 @@
 
 <%= hc_page_header list[:title], list[:subtitle], icon: list[:icon] do %>
   <% if can_export %>
+    <%= link_to export_path + (filter_query.any? ? "?#{filter_query.to_query}" : ''), class: 'btn btn-export', id: 'fnlXlsx',
+                data: { tip: 'Baixa uma planilha (Excel) com todas as notas que a lista mostra, de todas as páginas, com todas as colunas. Sem filtro, vai tudo do mês escolhido.' } do %>
+      <i class="fas fa-file-excel"></i>Baixar planilha
+    <% end %>
     <%= link_to xmls_path + (filter_query.any? ? "?#{filter_query.to_query}" : ''), class: 'btn btn-export', id: 'fnlZipAll',
                 data: { tip: 'Baixa um ZIP com o XML de cada nota autorizada ou cancelada que a lista mostra (todas as páginas). As canceladas levam o evento de cancelamento junto.' } do %>
       <i class="fas fa-file-zipper"></i>Baixar XML do filtro (ZIP)
@@ -24,29 +29,15 @@
       <span class="fnl-sum" data-tip="Soma das notas ativas selecionadas (rascunho, assinada e autorizada), com frete e despesas.">
         <i class="fas fa-sack-dollar"></i><b data-fnl-sum>R$ 0,00</b>
       </span>
-      <% if can_pay %>
-        <%= form_with url: pay_many_finance_payments_path, method: :patch, class: 'fin-pay', data: { fnl_pay: true, turbo: false } do %>
-          <%= hidden_field_tag :note_ids, '', data: { fnl_ids: true } %>
-          <%= hidden_field_tag :return_to, request.fullpath %>
-          <label class="fin-date">Pago em <%= date_field_tag :paid_at, Date.current, class: 'field-input' %></label>
-          <label class="fin-date" data-tip="Cada parcela fica paga na data do próprio vencimento. Use para boletos antigos que já foram pagos: a comissão do consultor cai no mês certo.">
-            <%= check_box_tag :on_due, '1', false %> Pago no vencimento
-          </label>
-          <button type="submit" class="btn btn-sm btn-primary" data-fnl-pay-btn disabled
-                  data-tip="Dá baixa em todas as parcelas de boleto ainda pendentes dos pedidos das notas marcadas.">
-            <i class="fas fa-check-double"></i>Dar baixa em <b data-fnl-open>0 parcelas</b>
-          </button>
-        <% end %>
-      <% end %>
       <% if can_export %>
         <a class="btn btn-sm btn-primary is-disabled" data-fnl-zip href="#" aria-disabled="true"><i class="fas fa-file-zipper"></i>Baixar XML das selecionadas</a>
       <% end %>
       <button type="button" class="btn btn-ghost btn-sm" data-fnl-clear>Limpar seleção</button>
-      <span class="pg-bulk-hint"><%= can_pay ? 'Marque as notas para somar o valor, dar baixa nas parcelas dos pedidos delas e baixar só o XML delas.' : 'Marque as notas para somar o valor e baixar só o XML delas.' %></span>
+      <span class="pg-bulk-hint">Marque as notas para somar o valor e baixar só o XML delas.</span>
     </div>
   <% end %>
   <%= hc_pg_table(table, title: 'Notas fiscais', icon: 'fas fa-file-invoice',
-        meta: 'Do mês ou período escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
+        meta: wholesale ? 'Do mês ou período escolhido, da mais nova para a mais antiga. No boleto, clique no quadradinho da parcela (30, 60...) para dar baixa.' : 'Do mês ou período escolhido, da mais nova para a mais antiga. Clique no número para abrir a nota.',
         link: ->(r) {
           note = r[:record]
           if screen_can?(:fiscal_notes) then fiscal_note_path(note)
@@ -54,7 +45,7 @@
           else b2b_order_edit_path(note.b2b_order, tab: 'nota', anchor: ('remessaNote' if note.remessa?))
           end
         },
-        select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]), order: r[:record].b2b_order_id, open: r[:abertas] } },
+        select: ->(r) { { id: r[:id], value: r[:valor], active: FiscalNote::ACTIVE_STATUSES.include?(r[:st]), } },
         bulk: bulk,
         empty: { title: 'Nenhuma nota neste período', text: 'Use as setas do filtro de mês ou o calendário para ver outras datas.' },
         detail: { title: ->(r) { "Nota #{r[:num]}" }, fields: [['Número da nota', :num]] + (wholesale ? [['Parcelas', :recTxt]] : []),
@@ -77,17 +68,14 @@
     var table = bar.closest('.pg-body') || document;
     var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     var zip = bar.querySelector('[data-fnl-zip]');
-    var pay = bar.querySelector('[data-fnl-pay]');
 
     function boxes() { return table.querySelectorAll('.row-select-checkbox'); }
     function refresh() {
-      var ids = [], sum = 0, open = 0, orders = {};
+      var ids = [], sum = 0;
       boxes().forEach(function (cb) {
         if (!cb.checked) return;
         ids.push(cb.dataset.id);
         if (cb.dataset.active === 'true') sum += parseFloat(cb.dataset.value || '0');
-        // Duas notas do mesmo pedido (uma cancelada e a reemitida) não contam as parcelas duas vezes.
-        if (cb.dataset.order && !orders[cb.dataset.order]) { orders[cb.dataset.order] = true; open += parseInt(cb.dataset.open || '0', 10); }
       });
       bar.querySelector('[data-fnl-count]').textContent = ids.length;
       bar.querySelector('[data-fnl-unit]').textContent = ids.length === 1 ? 'selecionada' : 'selecionadas';
@@ -95,11 +83,6 @@
       bar.classList.toggle('is-on', ids.length > 0);
       var all = table.querySelector('#selectAllCheckbox');
       if (all) all.checked = ids.length > 0 && ids.length === boxes().length;
-      if (pay) {
-        pay.querySelector('[data-fnl-ids]').value = ids.join(',');
-        pay.querySelector('[data-fnl-open]').textContent = open + (open === 1 ? ' parcela' : ' parcelas');
-        pay.querySelector('[data-fnl-pay-btn]').disabled = open === 0;
-      }
       if (zip) {
         var query = bar.dataset.query ? bar.dataset.query + '&' : '';
         zip.href = ids.length ? bar.dataset.zipUrl + '?' + query + ids.map(function (id) { return 'ids%5B%5D=' + id; }).join('&') : '#';
@@ -119,3 +102,91 @@
     if (zip) zip.addEventListener('click', function (e) { if (zip.classList.contains('is-disabled')) e.preventDefault(); });
   })();
 </script>
+
+<% if wholesale %>
+<%# Modal da parcela do boleto: abre no clique do quadradinho (30, 60...) da coluna Recebimento. %>
+<script>
+  (function () {
+    var canPay = <%= can_pay ? 'true' : 'false' %>;
+    var back = <%= raw json_escape(request.fullpath.to_json) %>;
+    var token = <%= raw json_escape(form_authenticity_token.to_json) %>;
+    var today = <%= raw json_escape(Date.current.iso8601.to_json) %>;
+    var tones = { pago: 'var(--green)', pendente: 'var(--yellow)', vencido: 'var(--red)' };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+    function close() {
+      document.querySelectorAll('[data-fin-pmodal]').forEach(function (el) { el.remove(); });
+      document.removeEventListener('keydown', onKey, true);
+    }
+    function onKey(e) { if (e.key === 'Escape' && !document.getElementById('modalBox')) { e.stopPropagation(); close(); } }
+
+    function open(p, chip) {
+      close();
+      var days = /ª$/.test(p.days) ? '' : ' · ' + esc(p.days) + ' dias';
+      var form = '';
+      if (canPay && !p.cancelled) {
+        if (p.st === 'pago') {
+          form = '<form method="post" action="' + esc(p.unpay) + '" data-hc-confirm="' + esc(JSON.stringify({
+                   title: 'Desfazer a baixa da parcela ' + p.n + '/' + p.total + ' do pedido #' + p.order + '?',
+                   text: 'Tem certeza? A parcela de ' + p.value + ' volta a ficar pendente e a comissão do consultor sai do mês em que foi paga.',
+                   ok: 'Sim, desfazer', danger: true, icon: 'fas fa-rotate-left' })) + '">' +
+                 '<input type="hidden" name="_method" value="patch"><input type="hidden" name="authenticity_token" value="' + esc(token) + '">' +
+                 '<input type="hidden" name="return_to" value="' + esc(back) + '">' +
+                 '<button type="button" class="btn btn-secondary" data-fin-close>Fechar</button>' +
+                 '<button type="submit" class="btn btn-danger"><i class="fas fa-rotate-left"></i>Desfazer baixa</button></form>';
+        } else {
+          form = '<form method="post" action="' + esc(p.pay) + '" data-fin-payform>' +
+                 '<input type="hidden" name="_method" value="patch"><input type="hidden" name="authenticity_token" value="' + esc(token) + '">' +
+                 '<input type="hidden" name="return_to" value="' + esc(back) + '">' +
+                 '<label class="fin-date">Pago em <input type="date" name="paid_at" class="field-input" value="' + esc(today) + '" max="' + esc(today) + '" required></label>' +
+                 '<button type="button" class="btn btn-ghost btn-sm" data-fin-due data-tip="Boleto antigo já pago: a parcela fica paga na data do vencimento.">Usar o vencimento</button>' +
+                 '<button type="button" class="btn btn-secondary" data-fin-close>Cancelar</button>' +
+                 '<button type="submit" class="btn btn-primary"><i class="fas fa-check"></i>Dar baixa</button></form>';
+        }
+      } else {
+        form = '<div class="m-row"><button type="button" class="btn btn-secondary" data-fin-close>Fechar</button></div>';
+      }
+      var note = p.cancelled ? '<p>Pedido cancelado: a parcela não recebe baixa.</p>' : '';
+      var html = '<div class="backdrop hc-modal-backdrop fin-pmodal-bd" data-fin-pmodal></div>' +
+        '<div class="hc-modal fin-pmodal" role="dialog" aria-modal="true" aria-labelledby="finPmTitle" data-fin-pmodal style="--c: ' + (tones[p.st] || tones.pendente) + '">' +
+        '<div class="m-ic"><i class="fas fa-barcode"></i></div>' +
+        '<h3 id="finPmTitle">Parcela ' + p.n + '/' + p.total + days + '</h3>' +
+        '<dl><dt>Pedido</dt><dd>#' + p.order + (p.client ? ' · ' + esc(p.client) : '') + '</dd>' +
+        '<dt>Vencimento</dt><dd>' + esc(p.due) + '</dd><dt>Valor</dt><dd><b>' + esc(p.value) + '</b></dd>' +
+        '<dt>Situação</dt><dd>' + esc(p.stLabel) + (p.paid ? ' em ' + esc(p.paid) + (p.by ? ', baixa por ' + esc(p.by) : '') : '') + '</dd></dl>' +
+        note + form + '</div>';
+      (document.getElementById('layers') || document.body).insertAdjacentHTML('beforeend', html);
+      var box = document.querySelector('.fin-pmodal');
+      box.querySelectorAll('[data-fin-close]').forEach(function (b) { b.addEventListener('click', function () { close(); chip.focus(); }); });
+      document.querySelector('.fin-pmodal-bd').addEventListener('click', close);
+      var payForm = box.querySelector('[data-fin-payform]');
+      if (payForm) {
+        var date = payForm.querySelector('[name=paid_at]');
+        // "Tem certeza?" com a data escolhida (a confirmação do Honey lê data-hc-confirm no envio).
+        var ask = function () {
+          var d = date.value ? date.value.split('-').reverse().join('/') : '';
+          payForm.dataset.hcConfirm = JSON.stringify({
+            title: 'Dar baixa na parcela ' + p.n + '/' + p.total + ' do pedido #' + p.order + '?',
+            text: 'Tem certeza? A parcela de ' + p.value + ' (vencimento ' + p.due + ') fica paga em ' + d + '.',
+            ok: 'Sim, dar baixa', icon: 'fas fa-circle-check' });
+        };
+        ask();
+        date.addEventListener('input', ask);
+        date.addEventListener('change', ask);
+        payForm.querySelector('[data-fin-due]').addEventListener('click', function () { date.value = p.dueIso <= today ? p.dueIso : today; ask(); });
+      }
+      document.addEventListener('keydown', onKey, true);
+      (box.querySelector('[name=paid_at]') || box.querySelector('button')).focus();
+    }
+
+    document.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-fin-parcel]');
+      if (!chip) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var p; try { p = JSON.parse(chip.dataset.finParcel); } catch (err) { return; }
+      open(p, chip);
+    });
+  })();
+</script>
+<% end %>

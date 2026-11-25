@@ -52,7 +52,10 @@
                         <%= hc_row_action('fas fa-rotate-left', 'Desfazer baixa', unpay_finance_payment_path(payment), method: :patch, params: { return_to: here },
                                           confirm: { title: "Desfazer a baixa da parcela #{payment.number}?", text: 'A parcela volta a ficar pendente e a comissão do consultor sai do mês em que foi paga.' }) %>
                       <% else %>
-                        <%= form_with url: pay_finance_payment_path(payment), method: :patch, class: 'fin-pay-one', data: { turbo: false } do %>
+                        <%= form_with url: pay_finance_payment_path(payment), method: :patch, class: 'fin-pay-one',
+                                      data: { turbo: false, hc_confirm: { title: "Dar baixa na parcela #{payment.number}/#{@order.payments.size} do pedido ##{@order.id}?",
+                                                                         text: "Tem certeza? A parcela de #{money.call(payment.amount)} (vencimento #{l(payment.due_date, format: '%d/%m/%Y')}) fica paga na data escolhida.",
+                                                                         ok: 'Sim, dar baixa', icon: 'fas fa-circle-check' }.to_json } do %>
                           <%= hidden_field_tag :return_to, here %>
                           <%= date_field_tag :paid_at, today, class: 'field-input', 'aria-label': 'Pago em' %>
                           <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-check"></i>Dar baixa</button>

@@ -59,6 +59,13 @@ class HoneyQueryTable < HoneyTable
   # Registros que a lista mostra com os filtros atuais (todas as páginas).
   def filtered = filtered_scope
 
+  # Linhas (já montadas pelo map) de todas as páginas do filtro, na ordem da lista: para a planilha.
+  def all_rows(limit: 20_000)
+    records = sorted_scope.limit(limit).to_a
+    @preload&.call(records)
+    records.map(&@map)
+  end
+
   private
 
   def filtered_scope

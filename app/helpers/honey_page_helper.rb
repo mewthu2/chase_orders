@@ -77,6 +77,11 @@ module HoneyPageHelper
   # select: ->(row) { { id:, tiny_order_id: } } liga uma caixa de seleção em cada linha (classe row-select-checkbox,
   # usada pelo JS de execução em lote); bulk: html da barra de ação em lote (pg-bulk).
   def hc_pg_table(table, title:, icon: nil, meta: nil, tools: nil, locs: nil, empty: {}, link: nil, actions: nil, detail: nil, foot: nil, select: nil, bulk: nil)
+    layout_key = hc_pg_layout_key(table)
+    if layout_key && current_user && (pref = current_user.table_column_preferences.find_by(table_key: layout_key))
+      table.apply_layout(pref.columns)
+    end
+    tools = safe_join([tools, hc_pg_columns_button(table, layout_key)].compact) if layout_key && current_user
     content_tag(:section, class: 'table-card pg-card', id: "pgt-#{table.id}") do
       head = content_tag(:div, class: 'table-toolbar') do
         content_tag(:div) do
@@ -86,6 +91,30 @@ module HoneyPageHelper
       end
       head + hc_pg_tabs(table) + content_tag(:div, hc_pg_filters(table), class: 'pg-fwrap') +
         content_tag(:div, hc_pg_body(table, locs: locs, empty: empty, link: link, actions: actions, detail: detail, foot: foot, select: select, bulk: bulk), class: 'pg-body')
+    end
+  end
+
+  # Chave da arrumação de colunas: a rota da tela (sem os ids) + o id da tabela.
+  def hc_pg_layout_key(table)
+    route = request.respond_to?(:route_uri_pattern) ? request.route_uri_pattern.to_s.sub('(.:format)', '') : ''
+    route = request.path if route.blank?
+    "#{route}|#{table.id}".first(191)
+  rescue StandardError
+    nil
+  end
+
+  # Botão Colunas: arrastar para mudar a ordem, marcar quais aparecem e voltar ao padrão (pg_columns_controller.js).
+  def hc_pg_columns_button(table, key)
+    items = table.layout_items
+    return nil if items.size < 2
+
+    content_tag(:div, class: 'pg-cols', data: { controller: 'pg-columns', pg_columns_key_value: key, pg_columns_url_value: table_columns_path,
+                                                pg_columns_items_value: items.to_json, pg_columns_custom_value: table.customized? }) do
+      content_tag(:button, type: 'button', class: "btn btn-secondary btn-sm#{' is-custom' if table.customized?}", data: { action: 'pg-columns#toggle', pg_columns_target: 'button',
+                                                                                                                     tip: 'Escolha quais colunas aparecem e em que ordem. Fica salvo só para você.' },
+                           'aria-haspopup': 'dialog', 'aria-expanded': 'false') do
+        safe_join([content_tag(:i, '', class: 'fas fa-table-columns'), 'Colunas', (content_tag(:span, '', class: 'pg-cols-dot', 'aria-label': 'arrumação sua') if table.customized?)].compact)
+      end
     end
   end
 

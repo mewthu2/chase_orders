@@ -14,9 +14,10 @@
    "actions": [
     "Trocar o mês pelas setas",
     "Filtrar por status do pedido e recebimento",
-    "Marcar notas para somar o valor",
-    "Dar baixa nas parcelas dos pedidos marcados (numa data ou no vencimento)",
-    "Abrir as parcelas e o consultor de um pedido (baixa e desfazer baixa)",
+    "Clicar no quadradinho da parcela (30, 60...) para dar ou desfazer a baixa, com confirmação",
+    "Abrir as parcelas e o consultor de um pedido",
+    "Arrumar as colunas (botão Colunas, fica salvo para você)",
+    "Baixar planilha (tudo o que o filtro mostra)",
     "Baixar XML do filtro (ZIP)",
     "Baixar XML das selecionadas",
     "Baixar XML e DANFE de uma nota"
@@ -51,6 +52,11 @@
      "Vencido",
      "Tem parcela de boleto sem baixa e já vencida.",
      "red"
+    ],
+    [
+     "Não enviado",
+     "Na linha de uma nota cancelada: a mercadoria não saiu com ela (o pedido pode ter outra nota).",
+     "gray"
     ]
    ],
    "terms": [

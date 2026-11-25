@@ -1,6 +1,6 @@
 module Finance
-  # Baixa (e desfazer a baixa) das parcelas de boleto dos pedidos de atacado: uma a uma na tela do pedido ou, em
-  # lote, das notas marcadas em Financeiro › Notas Fiscais (todas as parcelas pendentes dos pedidos delas).
+  # Baixa (e desfazer a baixa) das parcelas de boleto dos pedidos de atacado, parcela a parcela: pelo quadradinho
+  # da parcela em Financeiro › Notas Fiscais ou na tela do pedido.
   class PaymentsController < ApplicationController
     guard_screen :finance_orders, actions: { pay: :edit, unpay: :edit, pay_many: :edit }
 
@@ -21,13 +21,7 @@ module Finance
     end
 
     def pay_many
-      scope = open_payments.pending
-      scope = if params.key?(:note_ids)
-                note_ids = params[:note_ids].to_s.split(',').map(&:to_i).select(&:positive?)
-                scope.where(b2b_order_id: FiscalNote.where(id: note_ids).select(:b2b_order_id))
-              else
-                scope.where(id: params[:ids].to_s.split(',').map(&:to_i).select(&:positive?))
-              end
+      scope = open_payments.pending.where(id: params[:ids].to_s.split(',').map(&:to_i).select(&:positive?))
       # "Pago no vencimento": cada parcela fica paga na data em que venceu (boletos antigos não caem todos no mês atual).
       count = if params[:on_due] == '1'
                 scope.update_all(['b2b_order_payments.paid_at = b2b_order_payments.due_date, b2b_order_payments.paid_by_id = ?, b2b_order_payments.updated_at = ?', current_user.id, Time.current])

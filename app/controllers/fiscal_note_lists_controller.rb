@@ -13,7 +13,7 @@ class FiscalNoteListsController < ApplicationController
   ZIP_STATUSES = %w[autorizada cancelada].freeze
   MAX_ZIP_NOTES = 2000
 
-  guard_screen(actions: { xmls: :export, xml: :export, danfe: :export }) { list[:screens] }
+  guard_screen(actions: { xmls: :export, xml: :export, danfe: :export, export: :export }) { list[:screens] }
   helper_method :list, :list_key
 
   def index
@@ -30,6 +30,18 @@ class FiscalNoteListsController < ApplicationController
     return redirect_back_or_to(list_path, alert: "São mais de #{MAX_ZIP_NOTES} notas: escolha um mês, um período menor ou filtre mais.") if notes.size > MAX_ZIP_NOTES
 
     send_data Nfe::XmlZip.call(notes), filename: zip_filename(ids.any?), type: 'application/zip', disposition: 'attachment'
+  end
+
+  # Planilha (Excel) com todas as notas que o filtro mostra (todas as páginas); sem filtro, todas do mês/ambiente.
+  MAX_EXPORT_ROWS = 20_000
+
+  def export
+    table = helpers.fiscal_note_list_table(list_key, scope)
+    return redirect_back_or_to(list_path, alert: "São mais de #{MAX_EXPORT_ROWS} notas: filtre mais.") if table.total > MAX_EXPORT_ROWS
+
+    send_data HoneyTableXlsx.call(table, table.all_rows(limit: MAX_EXPORT_ROWS), sheet_name: 'Notas fiscais'),
+              filename: zip_filename(false).sub(/\.zip\z/, '.xlsx'), disposition: 'attachment',
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
   # XML e DANFE de uma nota da lista, com a permissão da própria tela (sem precisar da tela Notas Fiscais do Adm).

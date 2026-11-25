@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -1178,6 +1178,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_140000) do
     t.index ["user_id"], name: "index_stock_withdrawals_on_user_id"
   end
 
+  create_table "table_column_preferences", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "table_key", limit: 191, null: false
+    t.json "columns", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "table_key"], name: "index_table_column_preferences_on_user_id_and_table_key", unique: true
+    t.index ["user_id"], name: "index_table_column_preferences_on_user_id"
+  end
+
   create_table "ticket_messages", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "ticket_id", null: false
     t.bigint "user_id"
@@ -1631,6 +1641,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_140000) do
   add_foreign_key "stock_withdrawal_items", "stock_withdrawals"
   add_foreign_key "stock_withdrawal_items", "users", column: "reverted_by_id"
   add_foreign_key "stock_withdrawals", "users"
+  add_foreign_key "table_column_preferences", "users"
   add_foreign_key "ticket_messages", "tickets"
   add_foreign_key "ticket_messages", "users"
   add_foreign_key "ticket_participants", "tickets"

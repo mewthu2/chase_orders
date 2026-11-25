@@ -38,13 +38,16 @@ module FiscalNoteListsHelper
     map = lambda do |note|
       order = note.b2b_order
       receipt = finance_receipt(order, today) unless logistics
+      rec_html = finance_receipt_cell(order, receipt, today) unless logistics
       { id: note.id, record: note, num: note.number, serieTxt: "Série #{note.series}", serie: note.series, st: note.status,
         tipo: note.remessa? ? 'remessa' : order.kind, empresa: note.company.selection_label, amb: note.environment,
         pedido: order_link.call(note),
         dest: b2b_order_destination(order).presence || '—', valor: note.total_value.to_f, pag: note.payment_method.presence || '—',
         emissao: note.issued_at || note.created_at, natureza: note.operation_nature.presence || '—', cfop: note.cfop_summary.presence || '—',
         chave: note.access_key.to_s.scan(/\d{1,4}/).join(' ').presence || '—', protocolo: note.protocol.presence || '—', erro: note.error_message,
-        ost: order.status, rec: receipt&.dig(:status), recTxt: receipt&.dig(:text), abertas: receipt&.dig(:open).to_i,
+        # Nota cancelada não levou a mercadoria: a linha dela mostra "Não enviado", mesmo que o pedido já tenha outra nota.
+        ost: note.cancelada? ? 'nao_enviado' : order.status, rec: receipt&.dig(:status), recHtml: rec_html, recTxt: receipt&.dig(:text),
+        parcelasTxt: logistics ? nil : finance_parcels_text(order, today),
         consultor: order.consultant_label || '—', vendedor: order.user&.name || '—' }
     end
     search = lambda do |s, text|
@@ -76,13 +79,24 @@ module FiscalNoteListsHelper
       else s
       end
     end
-    order_statuses = b2b_order_statuses
+    order_statuses = b2b_order_statuses.merge(
+      'nao_enviado' => ['Não enviado', 'gray', 'Nota cancelada: a mercadoria não saiu com ela (o pedido pode ter outra nota, em outra linha).']
+    )
+    cancelled = FiscalNote.statuses['cancelada']
+    status_sql = lambda do |s, v|
+      values = v.to_s.split(',')
+      order_values = B2bOrder.statuses.values_at(*values).compact
+      conds = []
+      conds << ActiveRecord::Base.sanitize_sql_array(['fiscal_notes.status = ?', cancelled]) if values.include?('nao_enviado')
+      conds << ActiveRecord::Base.sanitize_sql_array(['(fiscal_notes.status <> ? AND b2b_orders.status IN (?))', cancelled, order_values]) if order_values.any?
+      conds.any? ? s.where(conds.join(' OR ')) : s.none
+    end
     types = FISCAL_LIST_TYPES.slice(*(logistics ? %w[stock_transfer b2c_transfer remessa] : %w[sale]))
 
     HoneyQueryTable.new(params, scope: scope, map: map, search: search, page_size: 50, unit: 'notas', unit1: 'nota', sort: { k: :emissao, dir: -1 },
       attrs: { st: :status, empresa: :company_id, pag: :payment_method },
       filter_sql: { tipo: type_sql, rec: receipt_sql,
-                    ost: ->(s, v) { s.where(b2b_orders: { status: B2bOrder.statuses.values_at(*v.to_s.split(',')).compact }) } },
+                    ost: status_sql },
       sort_sql: { num: 'fiscal_notes.number', valor: 'fiscal_notes.total_value', emissao: 'COALESCE(fiscal_notes.issued_at, fiscal_notes.created_at)' },
       cols: [
         { k: :num, label: 'Nº', t: :num, plain: true, main: true, sub: :serieTxt, sort: true },
@@ -94,8 +108,10 @@ module FiscalNoteListsHelper
         { k: :dest, label: logistics ? 'Destino' : 'Cliente', hide: true },
         { k: :valor, label: 'Valor da nota', t: :money, sort: true },
         ({ k: :pag, label: 'Pagamento', t: :status, map: FiscalNote::PAYMENT_LABELS.merge('—' => ['—', 'gray', 'Nota sem a forma de pagamento gravada.']) } unless logistics),
-        ({ k: :rec, label: 'Recebimento', t: :status, map: FinanceHelper::FINANCE_RECEIPT_STATUSES, sub: :recTxt } unless logistics),
-        ({ k: :recTxt, label: 'Parcelas', hide: true } unless logistics),
+        ({ k: :recHtml, label: 'Recebimento', t: :html, noexport: true } unless logistics),
+        ({ k: :rec, label: 'Situação do recebimento', t: :status, map: FinanceHelper::FINANCE_RECEIPT_STATUSES, hide: true, nodetail: true } unless logistics),
+        ({ k: :recTxt, label: 'Resumo das parcelas', hide: true } unless logistics),
+        ({ k: :parcelasTxt, label: 'Parcelas (vencimento, valor, situação)', hide: true } unless logistics),
         ({ k: :ost, label: 'Status do pedido', t: :status, map: order_statuses } unless logistics),
         ({ k: :consultor, label: 'Consultor', hide: true } unless logistics),
         ({ k: :vendedor, label: 'Vendedor', hide: true } unless logistics),

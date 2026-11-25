@@ -53,7 +53,7 @@ class Finance::AccessTest < ActionDispatch::IntegrationTest
       end
       opened << path if response.status == 200
     end
-    allowed = ['/', '/chamados', '/tickets/new', '/financeiro/notas_fiscais', '/financeiro/comissoes', '/financeiro/consultores', '/financeiro/consultores/new']
+    allowed = ['/', '/chamados', '/tickets/new', '/financeiro/notas_fiscais', '/financeiro/notas_fiscais/planilha', '/financeiro/comissoes', '/financeiro/consultores', '/financeiro/consultores/new']
     assert_equal [], opened - allowed
   end
 end

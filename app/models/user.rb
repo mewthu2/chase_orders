@@ -6,6 +6,7 @@ class User < ApplicationRecord
   include TwoFactorLogin
 
   has_many :user_profiles, dependent: :destroy
+  has_many :table_column_preferences, dependent: :delete_all
   has_many :profiles, through: :user_profiles, after_add: :reset_permission_cache, after_remove: :reset_permission_cache
   has_one_attached :avatar
 

@@ -45,8 +45,6 @@ class Finance::FiscalNotesTest < ActionDispatch::IntegrationTest
     assert_select 'th', text: /Recebimento/
     assert_select 'td', text: /Enviado/
     assert_select 'td', text: /A receber/
-    assert_select '.row-select-checkbox[data-open=?]', '3'
-    assert_match 'Dar baixa em', response.body
 
     get wholesale_fiscal_notes_path(mes: 'todos', ost: 'enviado')
     assert_select '.row-select-checkbox', count: 1
@@ -71,22 +69,60 @@ class Finance::FiscalNotesTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test 'baixa em lote pelas notas marcadas pega as parcelas pendentes dos pedidos delas' do
+  test 'boleto mostra um quadradinho por parcela com o prazo e os dados para a baixa' do
+    @boleto.payments.first.update!(paid_at: Date.current, paid_by: @finance)
     sign_in @finance
-    p1, p2, p3 = @boleto.payments.to_a
-    p1.update!(paid_at: Date.new(2026, 1, 1))
-    patch pay_many_finance_payments_path, params: { note_ids: "#{@boleto_note.id},#{@pix_note.id}", paid_at: '2026-11-21',
-                                                    return_to: '/financeiro/notas_fiscais?mes=todos' }
-    assert_redirected_to '/financeiro/notas_fiscais?mes=todos'
-    assert_equal Date.new(2026, 1, 1), p1.reload.paid_at
-    assert_equal [Date.new(2026, 11, 21)] * 2, [p2.reload.paid_at, p3.reload.paid_at]
-    assert_equal @finance, p2.paid_by
+    get wholesale_fiscal_notes_path(mes: 'todos')
+    chips = css_select('[data-fin-parcel]')
+    assert_equal %w[30 60 90], chips.map { |c| c.text.strip }
+    info = JSON.parse(chips.first['data-fin-parcel'])
+    assert_equal 'pago', info['st']
+    assert_equal unpay_finance_payment_path(@boleto.payments.first), info['unpay']
+    assert_equal 'pendente', JSON.parse(chips.last['data-fin-parcel'])['st']
+    assert_match 'var canPay = true', response.body
+    assert_no_match 'pay_many', response.body
   end
 
-  test 'baixa em lote pode usar a data do vencimento' do
+  test 'nota cancelada mostra nao enviado no status do pedido, mesmo com o pedido enviado' do
+    @pix.update_columns(status: B2bOrder.statuses[:enviado])
+    @pix_note.update_columns(status: FiscalNote.statuses[:cancelada])
+    new_note = FiscalNote.create!(company: @pix_note.company, b2b_order: @pix, number: 503, series: 1, environment: :producao, status: :autorizada,
+                                  total_value: 150, issued_at: Time.current, access_key: format('%044d', 503))
     sign_in @finance
-    patch pay_many_finance_payments_path, params: { note_ids: @boleto_note.id.to_s, on_due: '1' }
-    assert(@boleto.payments.reload.all? { |p| p.paid_at == p.due_date })
+    get wholesale_fiscal_notes_path(mes: 'todos')
+    assert_select 'td', text: /Não enviado/, count: 1
+    get wholesale_fiscal_notes_path(mes: 'todos', ost: 'enviado')
+    assert_select '.row-select-checkbox', count: 1
+    assert_select '.row-select-checkbox[data-id=?]', new_note.id.to_s
+    get wholesale_fiscal_notes_path(mes: 'todos', ost: 'nao_enviado')
+    assert_select '.row-select-checkbox', count: 1
+    assert_select '.row-select-checkbox[data-id=?]', @pix_note.id.to_s
+  end
+
+  test 'baixar planilha leva todas as notas do filtro com todas as colunas' do
+    @pix.update_columns(status: B2bOrder.statuses[:enviado])
+    sign_in @finance
+    get export_wholesale_fiscal_notes_path(mes: 'todos')
+    assert_response :success
+    assert_equal 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', response.media_type
+    sheet = RubyXL::Parser.parse_buffer(response.body)[0]
+    rows = sheet.sheet_data.rows.compact.map { |row| row.cells.map { |c| c&.value } }
+    assert_includes rows[0], 'Status do pedido'
+    assert_includes rows[0], 'Chave de acesso'
+    assert_not_includes rows[0], 'Recebimento'
+    assert_equal 3, rows.size
+    parcel_col = rows[0].index('Parcelas (vencimento, valor, situação)')
+    assert(rows[1..].any? { |r| r[parcel_col].to_s.start_with?('30d ') })
+
+    get export_wholesale_fiscal_notes_path(mes: 'todos', ost: 'enviado')
+    rows = RubyXL::Parser.parse_buffer(response.body)[0].sheet_data.rows.compact
+    assert_equal 2, rows.size
+  end
+
+  test 'sem exportar nao baixa planilha' do
+    sign_in @viewer
+    get export_wholesale_fiscal_notes_path(mes: 'todos')
+    assert_redirected_to root_path
   end
 
   test 'tela do pedido: baixa de uma parcela e desfazer' do
@@ -110,7 +146,7 @@ class Finance::FiscalNotesTest < ActionDispatch::IntegrationTest
     sign_in @viewer
     get wholesale_fiscal_notes_path(mes: 'todos')
     assert_response :success
-    assert_no_match 'Dar baixa em', response.body
+    assert_match 'var canPay = false', response.body
     get edit_finance_order_path(@boleto)
     assert_response :success
     assert_select 'form.fin-pay-one', count: 0

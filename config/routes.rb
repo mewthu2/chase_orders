@@ -205,6 +205,8 @@ Rails.application.routes.draw do
     end
   end
 
+  # Ordem e colunas visíveis de cada tabela, por usuário (botão Colunas das listas).
+  resource :table_columns, only: %i[update destroy], path: 'preferencias/colunas'
   resource :internal_transfer_config, only: [:edit, :update]
   resource :b2b_setting, only: [:edit, :update]
   resources :b2b_freight_rates, path: 'atacado/frete', except: [:show]
@@ -212,6 +214,7 @@ Rails.application.routes.draw do
   { 'atacado' => ['financeiro', :wholesale_fiscal_notes], 'logistica' => ['logistica', :logistics_fiscal_notes] }.each do |list, (prefix, name)|
     get "#{prefix}/notas_fiscais", to: 'fiscal_note_lists#index', defaults: { list: list }, as: name
     get "#{prefix}/notas_fiscais/xmls", to: 'fiscal_note_lists#xmls', defaults: { list: list }, as: "xmls_#{name}"
+    get "#{prefix}/notas_fiscais/planilha", to: 'fiscal_note_lists#export', defaults: { list: list }, as: "export_#{name}"
     get "#{prefix}/notas_fiscais/:id/xml", to: 'fiscal_note_lists#xml', defaults: { list: list }, as: "xml_#{name.to_s.singularize}"
     get "#{prefix}/notas_fiscais/:id/danfe", to: 'fiscal_note_lists#danfe', defaults: { list: list }, as: "danfe_#{name.to_s.singularize}"
   end

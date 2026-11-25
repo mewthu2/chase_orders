@@ -22,7 +22,8 @@ class HoneyTable
     @params = params
     @id = id
     @rows = rows
-    @cols = cols.map { |c| { t: :text }.merge(c) }
+    @cols = cols.compact.map { |c| { t: :text }.merge(c) }
+    @default_cols = @cols
     @filters = filters
     @kpis = kpis
     @tabs = tabs
@@ -54,10 +55,46 @@ class HoneyTable
     filters.any? { |f| filter_value(f) } || kpi_index || tab_index.to_i.positive?
   end
 
-  def main_key = (cols.find { |c| c[:main] } || cols.find { |c| !c[:hide] })[:k]
+  def main_key = @main_key ||= (cols.find { |c| c[:main] } || cols.find { |c| !c[:hide] })[:k]
   def status_col = cols.find { |c| c[:t] == :status }
   def visible_cols = cols.reject { |c| c[:hide] }
   def col(key) = cols.find { |c| c[:k] == key.to_sym }
+  def default_visible_cols = @default_cols.reject { |c| c[:hide] }
+
+  # ---- colunas arrumadas pela pessoa (botão Colunas) ----
+  # saved = [["coluna", true/false], ...] na ordem escolhida. Coluna que não está no salvo (nova na tela) entra
+  # na posição padrão, com a visibilidade padrão; a principal (a do link) nunca some.
+  def apply_layout(saved)
+    main_key
+    saved = Array(saved).to_h { |k, on| [k.to_s, on] }
+    return self if saved.empty?
+
+    by_key = @default_cols.index_by { |c| c[:k].to_s }
+    ordered = saved.keys.filter_map { |k| by_key[k] }
+    @default_cols.each_with_index do |c, i|
+      next if ordered.include?(c)
+
+      before = @default_cols[0...i].reverse.find { |prev| ordered.include?(prev) }
+      ordered.insert(before ? ordered.index(before) + 1 : 0, c)
+    end
+    @cols = ordered.map do |c|
+      key = c[:k].to_s
+      hide = c[:k] == main_key ? false : (saved.key?(key) ? !saved[key] : c[:hide])
+      c.merge(hide: hide)
+    end
+    @customized = true
+    self
+  end
+
+  def customized? = @customized == true
+
+  # O que o painel Colunas mostra: na ordem atual, se está visível, se é a principal (fixa) e o padrão.
+  def layout_items
+    defaults = @default_cols.to_h { |c| [c[:k], !c[:hide]] }
+    cols.map { |c| { k: c[:k].to_s, label: c[:label].to_s, on: !c[:hide], locked: c[:k] == main_key, default: defaults[c[:k]] } }
+  end
+
+  def default_layout = @default_cols.map { |c| [c[:k].to_s, !c[:hide]] }
 
   # ---- linhas ----
   def matching
@@ -199,7 +236,7 @@ class HoneyTable
 
   def search(rows, filter, value)
     tokens = self.class.norm(value).split
-    search_cols = (filter[:cols] || visible_cols.map { |c| c[:k] }).filter_map { |k| col(k) }
+    search_cols = (filter[:cols] || default_visible_cols.map { |c| c[:k] }).filter_map { |k| col(k) }
     rows.select do |r|
       hay = self.class.norm(search_cols.map { |c| cell_text(c, r[c[:k]]) }.join(' '))
       tokens.all? { |t| hay.include?(t) }
