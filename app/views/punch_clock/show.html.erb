@@ -38,11 +38,12 @@
       <h2><span class="pc-num">1</span>Qual marcação?</h2>
       <div class="pc-kinds">
         <% HrTimePunch::KINDS.each do |key, info| %>
-          <label class="pc-kind<%= ' is-suggested' if key == @suggested %>">
-            <input type="radio" name="kind" value="<%= key %>" <%= 'checked' if key == @suggested %>>
+          <% done_at = @done[key] %>
+          <label class="pc-kind<%= ' is-suggested' if key == @suggested %><%= ' is-done' if done_at %>" data-kind="<%= key %>">
+            <input type="radio" name="kind" value="<%= key %>" <%= 'checked' if key == @suggested %> <%= 'disabled' if done_at %>>
             <span class="pc-kind-ic"><%= info[:emoji] %></span>
-            <span class="pc-kind-txt"><b><%= info[:label] %></b><small><%= planned[key] ? "previsto #{planned[key]}" : 'sem horário hoje' %></small></span>
-            <% if key == @suggested %><em>sugerido</em><% end %>
+            <span class="pc-kind-txt"><b><%= info[:label] %></b><small><%= done_at ? "feita às #{done_at}" : (planned[key] ? "previsto #{planned[key]}" : 'sem horário hoje') %></small></span>
+            <% if done_at %><em class="is-ok">✓ feita</em><% elsif key == @suggested %><em>sugerido</em><% end %>
           </label>
         <% end %>
       </div>
@@ -159,7 +160,23 @@
 
       function resetShoot() { shootBtn.disabled = false; shootBtn.innerHTML = '<i class="fas fa-fingerprint"></i>Tirar foto e bater ponto'; }
 
+      // A marcação feita não aceita outra foto no dia: fica travada e a próxima livre já vem marcada.
+      function lockKind(p) {
+        var box = document.querySelector('.pc-kind[data-kind="' + p.kind + '"]');
+        if (!box) return;
+        var input = box.querySelector('input');
+        input.checked = false; input.disabled = true;
+        box.classList.remove('is-suggested'); box.classList.add('is-done');
+        box.querySelector('small').textContent = 'feita às ' + p.time;
+        var tag = box.querySelector('em') || box.appendChild(document.createElement('em'));
+        tag.className = 'is-ok'; tag.textContent = '✓ feita';
+        document.querySelectorAll('.pc-kind.is-suggested em').forEach(function (e) { e.remove(); });
+        var next = document.querySelector('input[name=kind]:not(:disabled)');
+        if (next) next.checked = true;
+      }
+
       function done(p) {
+        lockKind(p);
         $('[data-done-kind]').textContent = p.emoji + ' ' + p.label;
         $('[data-done-time]').textContent = p.time;
         $('[data-done-date]').textContent = p.date;

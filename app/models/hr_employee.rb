@@ -19,6 +19,9 @@ class HrEmployee < ApplicationRecord
   ).freeze
 
   belongs_to :company
+  # Usuário do Honey que bate o ponto: o link só abre logado com ele.
+  belongs_to :user, optional: true
+  validates :user_id, uniqueness: { message: 'já está ligado a outro funcionário' }, allow_nil: true
   has_many :time_punches, class_name: 'HrTimePunch', dependent: :restrict_with_error
   has_many :alerts, class_name: 'HrAlert', dependent: :destroy
 

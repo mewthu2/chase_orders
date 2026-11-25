@@ -48,7 +48,37 @@ class HrTest < ActionDispatch::IntegrationTest
     assert_equal 'America/Manaus', HrEmployee::STATE_ZONES['AM']
   end
 
+  test 'link do ponto pede login e so abre para o usuario ligado ao funcionario' do
+    get punch_clock_path(@employee.punch_token)
+    assert_redirected_to new_user_session_path
+    post punch_clock_path(@employee.punch_token), params: { kind: 'entrada', photo: PHOTO }, as: :json
+    assert_response :unauthorized
+    assert_match 'Honey', response.parsed_body['error']
+
+    sign_in @admin
+    get punch_clock_path(@employee.punch_token)
+    assert_response :forbidden
+    assert_match 'não está ligado', response.body
+
+    ana = finance_user('Ana Souza')
+    @employee.update!(user: ana)
+    get punch_clock_path(@employee.punch_token)
+    assert_response :forbidden
+    assert_match 'outra pessoa', response.body
+    assert_no_difference -> { HrTimePunch.count } do
+      post punch_clock_path(@employee.punch_token), params: { kind: 'entrada', photo: PHOTO }, as: :json
+    end
+    assert_response :forbidden
+
+    other = HrEmployee.new(name: 'Bia', company: @company, state: 'MG', weekly_minutes: 60, schedule: WEEK, user: ana)
+    refute other.valid?
+    assert other.errors[:user_id].any?
+  end
+
   test 'link do ponto abre a camera e grava a marcacao com foto, nsr e horario do servidor' do
+    ana = finance_user('Ana Souza')
+    @employee.update!(user: ana)
+    sign_in ana
     get punch_clock_path(@employee.punch_token)
     assert_response :success
     assert_select '.pc-kind.is-suggested input[value=entrada]'
@@ -73,6 +103,16 @@ class HrTest < ActionDispatch::IntegrationTest
     travel 2.minutes do
       post punch_clock_path(@employee.punch_token), params: { kind: 'saida' }, as: :json
       assert_match 'foto', response.parsed_body['error']
+
+      # Uma foto por marcação no dia: a segunda Entrada é recusada e a tela mostra a Entrada como feita.
+      assert_no_difference -> { @employee.time_punches.count } do
+        post punch_clock_path(@employee.punch_token), params: { kind: 'entrada', photo: PHOTO }, as: :json
+      end
+      assert_response :unprocessable_content
+      assert_match 'já bateu Entrada', response.parsed_body['error']
+      get punch_clock_path(@employee.punch_token)
+      assert_select '.pc-kind.is-done input[value=entrada][disabled]'
+      assert_select '.pc-kind.is-suggested input[value=entrada]', count: 0
     end
 
     post punch_clock_path('nao-existe'), params: { kind: 'entrada', photo: PHOTO }, as: :json
@@ -164,6 +204,7 @@ class HrTest < ActionDispatch::IntegrationTest
     post hr_employees_path, params: { hr_employee: { name: 'Sem Horario', company_id: @company.id, state: 'MG', weekly_hours: '44', schedule: {} } }
     assert_response :unprocessable_content
 
+    @employee.update!(user: @admin)
     travel_to local('2026-11-24 10:00') do
       post punch_clock_path(@employee.punch_token), params: { kind: 'entrada', photo: PHOTO }, as: :json
       get hr_employee_path(@employee)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_200000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -614,9 +614,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_190000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id"
     t.index ["company_id"], name: "index_hr_employees_on_company_id"
     t.index ["cpf"], name: "index_hr_employees_on_cpf"
     t.index ["punch_token"], name: "index_hr_employees_on_punch_token", unique: true
+    t.index ["user_id"], name: "index_hr_employees_on_user_id", unique: true
   end
 
   create_table "hr_time_punches", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1739,6 +1741,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_190000) do
   add_foreign_key "fiscal_notes", "stock_placements"
   add_foreign_key "hr_alerts", "hr_employees"
   add_foreign_key "hr_employees", "companies"
+  add_foreign_key "hr_employees", "users"
   add_foreign_key "hr_time_punches", "hr_employees"
   add_foreign_key "hr_time_punches", "users", column: "annulled_by_id"
   add_foreign_key "hr_time_punches", "users", column: "created_by_id"

@@ -44,8 +44,15 @@
           <label class="field-label">E-mail</label>
           <%= form.email_field :email, class: 'field-input' %>
         </div>
+        <div class="form-col-6">
+          <label class="field-label">Usuário do Honey (para bater o ponto)</label>
+          <% taken = HrEmployee.where.not(user_id: nil).where.not(id: e.id).pluck(:user_id) %>
+          <%= form.collection_select :user_id, User.where.not(id: taken).order(:name), :id, ->(u) { "#{u.name.presence || u.email} · #{u.email}" },
+                                     { include_blank: 'Sem usuário: o link do ponto não abre' }, class: "field-input #{'field-input--error' if e.errors[:user_id].any?}" %>
+        </div>
       </div>
       <p class="hr-hint"><i class="fas fa-earth-americas"></i>O estado define o fuso do horário do ponto (ex.: AM e MT uma hora antes de Brasília).</p>
+      <p class="hr-hint"><i class="fas fa-lock"></i>O link do ponto pede login no Honey e só abre para o usuário escolhido aqui.</p>
       <% if e.persisted? %>
         <div class="form-check form-switch mt-3">
           <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>

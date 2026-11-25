@@ -10,24 +10,40 @@
         <p class="page-subtitle">#<%= @b2b_order.id %></p>
       </div>
     </div>
-    <div class="header-actions">
-      <%= hc_help_button %>
-      <% if order_deletable?(@b2b_order) %>
-        <%= button_to order_path_for(@b2b_order), method: :delete, class: "btn-back",
-                      form: { data: { turbo_confirm: b2b_delete_confirm(@b2b_order) } } do %>
-          <i class="fas fa-trash me-1"></i>Excluir
-        <% end %>
-      <% end %>
+    <%# Topo: Voltar e ajuda à esquerda, ações do dia a dia no meio, o resto (devolução, excluir) no menu Mais. %>
+    <% can_replace = @b2b_order.sale? && !@b2b_order.cancelado? && screen_can?(:b2b_orders, :create) %>
+    <% can_delete = order_deletable?(@b2b_order) %>
+    <div class="header-actions order-actions">
+      <div class="order-actions__nav">
+        <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+        <%= hc_help_button %>
+      </div>
+      <span class="order-actions__sep" aria-hidden="true"></span>
       <% unless @b2b_order.stock_transfer? %>
         <%= link_to romaneio_order_path_for(@b2b_order), class: "btn-back", data: { turbo: false } do %><i class="fas fa-file-pdf me-1"></i>Romaneio<% end %>
       <% end %>
-      <% if @b2b_order.sale? && !@b2b_order.cancelado? && screen_can?(:b2b_orders, :create) %>
-        <%= link_to new_replacement_b2b_order_path(@b2b_order), class: "btn-back" do %><i class="fas fa-rotate-left me-1"></i>Pedido de devolução<% end %>
+      <% if can_replace || can_delete %>
+        <details class="order-more">
+          <summary class="btn-back"><i class="fas fa-ellipsis me-1"></i>Mais<i class="fas fa-chevron-down order-more__caret"></i></summary>
+          <div class="order-more__menu" role="menu">
+            <% if can_replace %>
+              <%= link_to new_replacement_b2b_order_path(@b2b_order), class: "order-more__item", role: "menuitem" do %>
+                <i class="fas fa-rotate-left"></i><span>Pedido de devolução<small>Repor peças devolvidas, sem cobrança</small></span>
+              <% end %>
+            <% end %>
+            <% if can_delete %>
+              <% if can_replace %><div class="order-more__divider"></div><% end %>
+              <%= button_to order_path_for(@b2b_order), method: :delete, class: "order-more__item is-danger", role: "menuitem",
+                            form: { data: { turbo_confirm: b2b_delete_confirm(@b2b_order) } } do %>
+                <i class="fas fa-trash"></i><span>Excluir pedido<small>Não dá para desfazer</small></span>
+              <% end %>
+            <% end %>
+          </div>
+        </details>
       <% end %>
       <% if current_user.can_access_screen?('fiscal_notes') && @b2b_order.sale? %>
         <%= link_to new_fiscal_note_path(b2b_order_id: @b2b_order.id), class: "btn-export" do %><i class="fas fa-file-invoice me-2"></i>Gerar nota fiscal<% end %>
       <% end %>
-      <%= link_to orders_path_for, class: "btn-back" do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
     </div>
   </div>
   <% @tab = params[:tab] == 'nota' ? 'nota' : 'pedido' %>
@@ -51,6 +67,13 @@
 <% content_for :scripts do %>
 <script>
 // Abas Pedido / Nota fiscal: troca sem recarregar (o formulário não perde o que foi digitado) e guarda a aba na URL.
+// Menu Mais do topo: fecha ao clicar fora ou no Esc.
+document.addEventListener('click', function (event) {
+  document.querySelectorAll('details.order-more[open]').forEach(function (menu) { if (!menu.contains(event.target)) menu.open = false; });
+});
+document.addEventListener('keydown', function (event) {
+  if (event.key === 'Escape') document.querySelectorAll('details.order-more[open]').forEach(function (menu) { menu.open = false; });
+});
 document.addEventListener('DOMContentLoaded', function () {
   var tabs = document.querySelector('.it-tabs');
   if (!tabs) return;

@@ -6,15 +6,22 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Ponto · link indisponível</title>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800&display=swap" rel="stylesheet">
-  <%= render 'punch_clock/styles' %>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <%= render "punch_clock/styles" %>
 </head>
 <body>
   <div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>
   <main class="pc pc-unavailable">
     <div>
       <div class="big">🔒</div>
-      <h1>Este link de ponto não está ativo</h1>
-      <p>Ele pode ter sido trocado ou desativado. Peça o link novo ao RH.</p>
+      <% if @reason %>
+        <h1><%= @reason %></h1>
+        <p>Você entrou como <b><%= current_user.email %></b>.</p>
+        <%= link_to destroy_user_session_path, class: 'pc-btn is-ghost pc-switch' do %><i class="fas fa-right-from-bracket"></i>Sair e entrar com outro usuário<% end %>
+      <% else %>
+        <h1>Este link de ponto não está ativo</h1>
+        <p>Ele pode ter sido trocado ou desativado. Peça o link novo ao RH.</p>
+      <% end %>
     </div>
   </main>
 </body>

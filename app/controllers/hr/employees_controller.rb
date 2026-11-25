@@ -72,7 +72,7 @@ module Hr
     end
 
     def employee_params
-      permitted = params.require(:hr_employee).permit(:name, :cpf, :role, :email, :phone, :company_id, :state, :admission_date, :weekly_hours, :active,
+      permitted = params.require(:hr_employee).permit(:name, :cpf, :role, :email, :phone, :user_id, :company_id, :state, :admission_date, :weekly_hours, :active,
                                                       schedule: HrEmployee::WEEKDAYS.keys.to_h { |d| [d, HrEmployee::TIME_FIELDS] })
       permitted[:schedule] = permitted[:schedule].to_h if permitted.key?(:schedule)
       permitted

@@ -41,6 +41,11 @@
   .pc-kind em { position: absolute; top: -8px; right: 8px; font-style: normal; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 99px; background: var(--yellow); color: #0b0e13; }
   .pc-kind:has(input:checked) { border-color: var(--brand); background: rgba(58,163,234,.13); box-shadow: 0 0 0 4px rgba(58,163,234,.15); }
   .pc-kind:has(input:checked) .pc-kind-ic { animation: pop .5s ease; }
+  .pc-kind.is-done { cursor: not-allowed; opacity: .55; border-style: dashed; background: rgba(63,185,80,.06); }
+  .pc-kind.is-done:active { transform: none; }
+  .pc-kind.is-done .pc-kind-ic { filter: grayscale(.6); }
+  .pc-kind.is-done .pc-kind-txt small { color: #3fb950; font-weight: 700; }
+  .pc-kind em.is-ok { background: #3fb950; color: #0b0e13; animation: pop .5s ease; }
   @keyframes pop { 40% { transform: scale(1.3) rotate(-8deg); } }
   .pc-cam { position: relative; aspect-ratio: 1; width: 100%; border-radius: 22px; overflow: hidden; background: radial-gradient(circle at 50% 40%, #1c2330, #0b0e13); border: 1px solid var(--border); }
   .pc-cam video, .pc-cam img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -91,6 +96,38 @@
   .pc-unavailable h1 { font-size: 22px; margin: 14px 0 6px; }
   .pc-unavailable p { color: var(--muted); margin: 0; }
   .pc-unavailable .big { font-size: 54px; }
-  @media (max-width: 360px) { .pc-kinds { grid-template-columns: 1fr; } .pc-clock { font-size: 56px; } }
+  .pc-switch { margin-top: 20px; text-decoration: none; }
+  /* Celular: letras maiores para ler sem esforço (o ponto é usado quase só no celular). */
+  @media (max-width: 600px) {
+    .pc-head { font-size: 15px; }
+    .pc-logo { width: 34px; height: 34px; font-size: 17px; }
+    .pc-greet { font-size: 22px; }
+    .pc-clock { font-size: 84px; }
+    .pc-clock small { font-size: 32px; }
+    .pc-date { font-size: 17px; }
+    .pc-card { padding: 18px; }
+    .pc-card h2 { font-size: 19px; margin-bottom: 14px; }
+    .pc-num { width: 30px; height: 30px; font-size: 15px; }
+    .pc-kinds { grid-template-columns: 1fr; gap: 10px; }
+    .pc-kind { padding: 15px 14px; gap: 14px; }
+    .pc-kind-ic { font-size: 30px; }
+    .pc-kind-txt b { font-size: 17.5px; }
+    .pc-kind-txt small { font-size: 15px; }
+    .pc-kind em { font-size: 12px; padding: 3px 9px; top: -10px; }
+    .pc-cam-msg { font-size: 17px; }
+    .pc-btn { font-size: 19px; padding: 19px; }
+    .pc-error { font-size: 16px; padding: 12px 14px; }
+    .pc-list li { font-size: 17px; padding: 13px 14px; }
+    .pc-foot { font-size: 14.5px; }
+    .pc-done-kind { font-size: 18px; }
+    .pc-done-time { font-size: 68px; }
+    .pc-done-date { font-size: 16.5px; }
+    .pc-receipt span { font-size: 12.5px; }
+    .pc-receipt b { font-size: 18px; }
+    .pc-receipt small { font-size: 14px; }
+    .pc-unavailable h1 { font-size: 26px; }
+    .pc-unavailable p { font-size: 17px; }
+  }
+  @media (max-width: 360px) { .pc-kinds { grid-template-columns: 1fr; } .pc-clock { font-size: 68px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .pc-check circle, .pc-check path { stroke-dashoffset: 0; } }
 </style>

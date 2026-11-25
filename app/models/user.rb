@@ -9,6 +9,7 @@ class User < ApplicationRecord
   has_many :table_column_preferences, dependent: :delete_all
   has_many :profiles, through: :user_profiles, after_add: :reset_permission_cache, after_remove: :reset_permission_cache
   has_one_attached :avatar
+  has_one :hr_employee, dependent: :nullify
 
   AVATAR_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
   AVATAR_MAX_SIZE = 5.megabytes

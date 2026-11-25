@@ -2838,3 +2838,27 @@ tr:hover .correios-flag { animation: correiosWave .7s ease-in-out; }
 .rpt-outlet em { font-style: normal; font-size: 12px; color: var(--text-2); grid-row: 1 / span 2; grid-column: 2; align-self: center; text-align: right; }
 .rpt-base { display: flex; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .rpt-pareto .rpt-cum { animation: none; stroke-dashoffset: 0; } .rpt-abc-card, .rpt-outlet li { animation: none; } }
+
+/* Topo da edição do pedido B2B: Voltar/ajuda | Romaneio, menu Mais e a ação principal */
+.order-actions { align-items: center; }
+.order-actions__nav { display: flex; gap: 8px; align-items: center; }
+.order-actions__sep { width: 1px; height: 26px; background: var(--border-2); margin: 0 2px; }
+.order-more { position: relative; }
+.order-more summary { list-style: none; cursor: pointer; user-select: none; }
+.order-more summary::-webkit-details-marker { display: none; }
+.order-more__caret { font-size: 10px; margin-left: 6px; opacity: .7; transition: transform 220ms var(--ease-out); }
+.order-more[open] .order-more__caret { transform: rotate(180deg); }
+.order-more[open] summary { border-color: var(--brand-500); color: var(--text); box-shadow: 0 0 0 3px var(--brand-bg); }
+.order-more__menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 96; min-width: 260px; padding: 6px; border-radius: var(--r); background: var(--surface-2); border: 1px solid var(--border-2); box-shadow: var(--shadow-3); transform-origin: top right; animation: orderMoreIn 200ms var(--ease-out) both; }
+@keyframes orderMoreIn { from { opacity: 0; transform: translateY(-6px) scale(.96); } to { opacity: 1; transform: none; } }
+.order-more__menu form { margin: 0; }
+.order-more__item { display: flex; align-items: flex-start; gap: 11px; width: 100%; padding: 9px 11px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); font-size: 13.5px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; transition: background 160ms var(--ease), transform 160ms var(--ease); }
+.order-more__item i { width: 16px; margin-top: 2px; color: var(--brand-300); transition: transform 220ms var(--ease-out); }
+.order-more__item span { display: flex; flex-direction: column; gap: 2px; }
+.order-more__item small { font-size: 11.5px; font-weight: 500; color: var(--text-3); }
+.order-more__item:hover { background: var(--brand-bg); color: var(--text); transform: translateX(2px); }
+.order-more__item:hover i { transform: scale(1.15) rotate(-12deg); }
+.order-more__item.is-danger i { color: var(--red); }
+.order-more__item.is-danger:hover { background: var(--red-bg); color: var(--red); }
+.order-more__divider { height: 1px; margin: 5px 4px; background: var(--border); }
+@media (max-width: 720px) { .order-actions__sep { display: none; } .order-more__menu { right: auto; left: 0; } }
