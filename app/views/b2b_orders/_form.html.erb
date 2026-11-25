@@ -45,11 +45,11 @@
           </div>
           <div class="form-col-5">
             <label class="field-label" for="b2b_order_salesperson_name">Consultor</label>
-            <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Escolha da lista ou digite o primeiro nome', list: 'consultantOptions', autocomplete: 'off' %>
+            <%= form.text_field :salesperson_name, class: 'field-input', placeholder: 'Quem recomendou: escolha da lista ou digite o primeiro nome', list: 'consultantOptions', autocomplete: 'off' %>
             <datalist id="consultantOptions">
               <% Consultant.active.ordered.each do |c| %><option value="<%= c.name %>"></option><% end %>
             </datalist>
-            <span class="text-muted-custom d-block mt-1">Não está na lista? Digite só o primeiro nome: o financeiro completa o cadastro depois.</span>
+            <span class="text-muted-custom d-block mt-1">Quem recomendou a venda (o vendedor é você, que está digitando). Não está na lista? Digite só o primeiro nome: o financeiro completa o cadastro depois.</span>
           </div>
         </div>
         <label class="od-toggle">

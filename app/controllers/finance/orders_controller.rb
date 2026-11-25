@@ -6,6 +6,27 @@ module Finance
 
     ORDER_INCLUDES = %i[client user consultant b2b_order_items payments].freeze
 
+    # Consultor (quem recomendou) do pedido: escolher um cadastrado, digitar um nome livre ou tirar.
+    def edit
+      @order = B2bOrder.sale.find(params[:id])
+      @consultants = Consultant.active.ordered.to_a
+      @consultants |= [@order.consultant] if @order.consultant
+    end
+
+    def update
+      order = B2bOrder.sale.find(params[:id])
+      name = params[:name].to_s.squish
+      consultant = if params[:remove].present? then nil
+                   elsif params[:consultant_id].present? then Consultant.find(params[:consultant_id])
+                   elsif name.present? then Consultant.find_by('LOWER(name) = ?', name.downcase)
+                   end
+      order.update_columns(consultant_id: consultant&.id, salesperson_name: params[:remove].present? ? nil : (consultant&.name || name.presence),
+                           updated_at: Time.current)
+      label = order.consultant_label
+      redirect_to params[:return_to].to_s.start_with?('/financeiro/pedidos') ? params[:return_to] : finance_orders_path,
+                  notice: label ? "Pedido ##{order.id}: consultor #{label}." : "Pedido ##{order.id} ficou sem consultor."
+    end
+
     def index
       @month = params[:mes].presence || Date.current.strftime('%Y-%m')
       range = date_range

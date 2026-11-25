@@ -137,7 +137,7 @@ module Navigation
       area('financeiro', [
         link('fin-pedidos', 'Pedidos de Atacado', 'fas fa-hand-holding-dollar', 'Recebimentos: PIX e cartão já pagos, boletos com baixa parcela a parcela.',
              path: ->(v) { v.finance_orders_path }, perm: 'finance_orders', active: ctrl('finance/orders')),
-        link('fin-comissoes', 'Comissões', 'fas fa-percent', 'Comissão do mês de quem digitou e dos consultores, com o percentual de cada um.',
+        link('fin-comissoes', 'Comissões', 'fas fa-percent', 'Comissão do mês dos vendedores (quem digitou o pedido) e dos consultores (quem recomendou).',
              path: ->(v) { v.finance_commissions_path }, perm: 'commissions', active: ctrl('finance/commissions')),
         link('fin-consultores', 'Consultores', 'fas fa-id-badge', 'Cadastro dos consultores e os nomes digitados nos pedidos que faltam cadastrar.',
              path: ->(v) { v.finance_consultants_path }, perm: 'consultants', active: ctrl('finance/consultants'))

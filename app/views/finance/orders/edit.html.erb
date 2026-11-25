@@ -1,0 +1,43 @@
+<% content_for :title, "Consultor do pedido ##{@order.id}" %>
+<% back = params[:return_to].to_s.start_with?('/financeiro/pedidos') ? params[:return_to] : finance_orders_path %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-id-badge' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Consultor do pedido #<%= @order.id %></h1>
+        <p class="page-subtitle"><%= b2b_order_destination(@order) %> · vendedor <%= @order.user&.name || '—' %> · hoje: <b><%= @order.consultant_label || 'sem consultor' %></b><%= ' (cadastro pendente)' if @order.consultant_pending? %></p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= link_to back, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+
+  <%= form_with url: finance_order_path(@order), method: :patch, local: true do %>
+    <%= hidden_field_tag :return_to, back %>
+    <div class="form-section">
+      <div class="form-section-header"><h5 class="form-section-title"><i class="fas fa-handshake me-2"></i>Quem recomendou</h5></div>
+      <div class="form-section-body">
+        <div class="form-grid">
+          <div class="form-col-6">
+            <label class="field-label" for="consultant_id">Consultor cadastrado</label>
+            <%= select_tag :consultant_id, options_from_collection_for_select(@consultants, :id, :name, @order.consultant_id), include_blank: 'Escolha…', class: 'field-input' %>
+          </div>
+          <div class="form-col-6">
+            <label class="field-label" for="name">Ou digite um nome (fica pendente até cadastrar)</label>
+            <%= text_field_tag :name, (@order.salesperson_name if @order.consultant_pending?), class: 'field-input', placeholder: 'Primeiro nome' %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <%= submit_tag 'Salvar consultor', class: 'btn-submit' %>
+      <% if @order.consultant_label %>
+        <%= submit_tag 'Tirar o consultor', name: 'remove', value: 'Tirar o consultor', class: 'btn-cancel', data: { tip: 'O pedido fica sem consultor: só o vendedor recebe comissão.' } %>
+      <% end %>
+      <%= link_to 'Cancelar', back, class: 'btn-cancel' %>
+    </div>
+  <% end %>
+</div>

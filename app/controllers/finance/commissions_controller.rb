@@ -57,7 +57,7 @@ module Finance
       "﻿" + CSV.generate(col_sep: ';') do |out|
         out << %w[Papel Nome Percentual Base Comissão]
         result.rows.each do |r|
-          out << [r.role == :typist ? 'Digitou' : 'Consultor', r.name, r.percent ? money.call(r.percent) : '', money.call(r.base), money.call(r.commission)]
+          out << [r.role == :typist ? 'Vendedor' : 'Consultor', r.name, r.percent ? money.call(r.percent) : '', money.call(r.base), money.call(r.commission)]
         end
       end
     end

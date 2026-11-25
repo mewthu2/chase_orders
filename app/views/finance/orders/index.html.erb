@@ -29,7 +29,7 @@
        { k: :parcela, label: 'Parcela', sub: :forma },
        { k: :forma, label: 'Forma de pagamento', hide: true },
        { k: :consultor, label: 'Consultor', t: :html, sub: :digitador },
-       { k: :digitador, label: 'Digitou', hide: true },
+       { k: :digitador, label: 'Vendedor', hide: true },
        { k: :valor, label: 'Valor', t: :money, sort: true },
        { k: :venc, label: 'Vencimento', t: :d, sort: true },
        { k: :pago_txt, label: 'Pago em', sub: :quem },
@@ -38,7 +38,7 @@
      ],
      filters: [
        { id: :mes, type: :month, label: 'Vencimento', server: true, default: @month, tip: 'Mês do vencimento da parcela (PIX e cartão: a data do pedido). Use "todos" para ver tudo.' },
-       { id: :q, type: :search, label: 'Buscar', ph: 'Pedido, cliente, consultor…', cols: %i[num cliente consultor_txt digitador], tip: 'Procura no número do pedido, no cliente, no consultor e em quem digitou.' }
+       { id: :q, type: :search, label: 'Buscar', ph: 'Pedido, cliente, consultor…', cols: %i[num cliente consultor_txt digitador], tip: 'Procura no número do pedido, no cliente, no consultor e no vendedor.' }
      ],
      kpis: [
        { label: 'Recebido', icon: 'fas fa-circle-check', tone: 'green', help: 'Pago no filtro: PIX e cartão e as parcelas com baixa.', text: money.call(sum.call(%w[pago])) },
@@ -71,11 +71,13 @@
         select: (can_pay ? ->(r) { { id: r[:record]&.id, value: r[:valor], open: r[:st] != 'pago' && r[:record].present? } } : nil),
         bulk: bulk,
         empty: { title: 'Nada a receber neste período', text: 'Use as setas do mês ou escolha "todos" para ver outros vencimentos.' },
-        detail: { title: ->(r) { "Pedido ##{r[:num]} · parcela #{r[:parcela]}" }, fields: [['Forma de pagamento', :forma], ['Digitou', :digitador], ['Baixa por', :quem]] },
+        detail: { title: ->(r) { "Pedido ##{r[:num]} · parcela #{r[:parcela]}" }, fields: [['Forma de pagamento', :forma], ['Vendedor', :digitador], ['Baixa por', :quem]] },
         actions: ->(r) {
           payment = r[:record]
-          next ''.html_safe unless can_pay && payment
-          if payment.paid?
+          next ''.html_safe unless can_pay
+          edit = hc_row_action('fas fa-user-pen', 'Editar ou tirar o consultor', edit_finance_order_path(r[:order], return_to: request.fullpath))
+          next edit unless payment
+          edit + if payment.paid?
             hc_row_action('fas fa-rotate-left', 'Desfazer baixa', unpay_finance_payment_path(payment), method: :patch, params: { return_to: request.fullpath },
                           confirm: { title: "Desfazer a baixa da parcela #{r[:parcela]} do pedido ##{r[:num]}?", text: 'A parcela volta a ficar pendente e a comissão do consultor sai do mês em que foi paga.' })
           else
