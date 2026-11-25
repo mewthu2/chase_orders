@@ -1,0 +1,17 @@
+<% content_for :title, 'Editar consultor' %>
+<div class="users-container">
+  <div class="page-header">
+    <div class="header-left has-icon">
+      <%= hc_page_icon 'fas fa-id-badge' %>
+      <div>
+        <%= hc_page_eyebrow %>
+        <h1 class="page-title">Editar consultor</h1>
+      </div>
+    </div>
+    <div class="header-actions">
+      <%= hc_help_button %>
+      <%= link_to finance_consultants_path, class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+    </div>
+  </div>
+  <%= render 'form' %>
+</div>

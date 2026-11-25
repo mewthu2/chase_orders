@@ -43,7 +43,7 @@
      ]) %>
 <%= hc_pg_table(honey_table, title: title, icon: 'fas fa-house-flag', meta: meta,
       empty: { title: 'Nenhum pedido do Honey aqui', text: empty_text },
-      detail: { title: ->(r) { "Pedido #{r[:n]} (Honey)" }, note: 'Pedido feito no Honey: não passa pelo Tiny. A NF-e é emitida no Honey na etapa do XML.' },
+      detail: { title: ->(r) { "Pedido #{r[:n]} (Honey)" }, note: 'A NF-e é emitida no Honey na etapa do XML.' },
       actions: ->(r) {
         order = r[:record]
         stage = r[:st]

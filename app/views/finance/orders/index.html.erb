@@ -1,0 +1,113 @@
+<% content_for :title, 'Financeiro · Pedidos de Atacado' %>
+<% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% statuses = { 'pago' => ['Pago', 'green', 'Recebido.'], 'pendente' => ['Pendente', 'yellow', 'Boleto ainda não pago, dentro do vencimento.'],
+                'vencido' => ['Vencido', 'red', 'Boleto não pago e já vencido.'] } %>
+<% can_pay = screen_can?(:finance_orders, :edit) %>
+<% today = Date.current %>
+<% rows = @receivables.map do |r|
+     order = r[:order]
+     payment = r[:payment]
+     st = r[:paid_at] ? 'pago' : (r[:due] < today ? 'vencido' : 'pendente')
+     total = payment ? order.payments.size : 1
+     consultant = order.consultant_label
+     { id: payment ? payment.id : "o#{order.id}", record: payment, order: order, num: order.id,
+       pedido: link_to("##{order.id}", b2b_order_edit_path(order), class: 'text-main t mono', data: { tip: 'Abrir o pedido' }),
+       cliente: b2b_order_destination(order).presence || '—',
+       parcela: payment ? "#{payment.number}/#{total}" : 'À vista',
+       forma: order.payment_description.presence || 'Sem forma (boleto à vista)',
+       consultor: consultant ? safe_join([consultant, (hc_status('cadastro pendente', 'yellow', tip: 'Nome digitado no pedido, sem cadastro. Cadastre ou vincule em Financeiro › Consultores.') if order.consultant_pending?)].compact, ' ') : '—',
+       consultor_txt: consultant.to_s, digitador: order.user&.name || '—',
+       valor: r[:amount].to_f, venc: r[:due], pago_em: r[:paid_at], pago_txt: r[:paid_at] ? l(r[:paid_at], format: '%d/%m/%Y') : '—',
+       st: st, quem: payment&.paid_by&.name || (payment ? '—' : 'Na criação (PIX/cartão)') }
+   end %>
+<% sum = ->(sts) { rows.select { |r| sts.include?(r[:st]) }.sum { |r| r[:valor] } } %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'recebimentos', unit1: 'recebimento', page_size: 25, sort: { k: :venc, dir: 1 },
+     tabs: { col: :st, items: [['', 'Todos'], ['pendente', 'Pendentes'], ['vencido', 'Vencidos'], ['pago', 'Pagos']] },
+     cols: [
+       { k: :pedido, label: 'Pedido', t: :html, sub: :cliente, main: true },
+       { k: :cliente, label: 'Cliente', hide: true },
+       { k: :parcela, label: 'Parcela', sub: :forma },
+       { k: :forma, label: 'Forma de pagamento', hide: true },
+       { k: :consultor, label: 'Consultor', t: :html, sub: :digitador },
+       { k: :digitador, label: 'Digitou', hide: true },
+       { k: :valor, label: 'Valor', t: :money, sort: true },
+       { k: :venc, label: 'Vencimento', t: :d, sort: true },
+       { k: :pago_txt, label: 'Pago em', sub: :quem },
+       { k: :quem, label: 'Baixa por', hide: true },
+       { k: :st, label: 'Situação', t: :status, map: statuses }
+     ],
+     filters: [
+       { id: :mes, type: :month, label: 'Vencimento', server: true, default: @month, tip: 'Mês do vencimento da parcela (PIX e cartão: a data do pedido). Use "todos" para ver tudo.' },
+       { id: :q, type: :search, label: 'Buscar', ph: 'Pedido, cliente, consultor…', cols: %i[num cliente consultor_txt digitador], tip: 'Procura no número do pedido, no cliente, no consultor e em quem digitou.' }
+     ],
+     kpis: [
+       { label: 'Recebido', icon: 'fas fa-circle-check', tone: 'green', help: 'Pago no filtro: PIX e cartão e as parcelas com baixa.', text: money.call(sum.call(%w[pago])) },
+       { label: 'A receber', icon: 'fas fa-hourglass-half', tone: 'yellow', help: 'Parcelas de boleto ainda sem baixa (vencidas ou não).', text: money.call(sum.call(%w[pendente vencido])) },
+       { label: 'Vencido', icon: 'fas fa-triangle-exclamation', tone: 'red', help: 'Parcelas sem baixa com o vencimento já passado.', text: money.call(sum.call(%w[vencido])) },
+       { label: 'Parcelas vencidas', icon: 'fas fa-file-invoice-dollar', tone: 'red', help: 'Quantas estão vencidas. Clique para ver só elas.', col: :st, val: 'vencido' }
+     ]) %>
+
+<%= hc_page_header 'Pedidos de Atacado', 'Recebimentos do atacado: PIX e cartão já pagos, boletos com baixa parcela a parcela.', icon: 'fas fa-hand-holding-dollar' %>
+
+<div class="pg-blocks fin">
+  <%= hc_pg_kpis(table) %>
+  <% bulk = if can_pay
+       capture do %>
+    <%= form_with url: pay_many_finance_payments_path, method: :patch, class: 'pg-bulk fin-bulk', data: { fin_bulk: true } do %>
+      <%= hidden_field_tag :ids, '', data: { fin_ids: true } %>
+      <%= hidden_field_tag :return_to, request.fullpath %>
+      <span><b data-fin-count>0</b> selecionadas · <b data-fin-sum>R$ 0,00</b></span>
+      <label class="fin-date">Pago em <%= date_field_tag :paid_at, today, class: 'field-input' %></label>
+      <label class="fin-date" data-tip="Cada parcela fica paga na data do próprio vencimento. Use para boletos antigos que já foram pagos: a comissão do consultor cai no mês certo.">
+        <%= check_box_tag :on_due, '1', false %> Pago no vencimento
+      </label>
+      <button type="submit" class="btn btn-sm btn-primary" data-fin-submit disabled><i class="fas fa-check-double"></i>Dar baixa nas selecionadas</button>
+      <span class="pg-bulk-hint">Marque as parcelas pendentes que foram pagas e dê baixa de uma vez.</span>
+    <% end %>
+  <% end
+     end %>
+  <%= hc_pg_table(table, title: 'Recebimentos', icon: 'fas fa-sack-dollar',
+        meta: 'Cada boleto é uma linha. Parcelas vencidas de meses anteriores sempre aparecem. A comissão do consultor sai no mês em que a parcela foi paga.',
+        select: (can_pay ? ->(r) { { id: r[:record]&.id, value: r[:valor], open: r[:st] != 'pago' && r[:record].present? } } : nil),
+        bulk: bulk,
+        empty: { title: 'Nada a receber neste período', text: 'Use as setas do mês ou escolha "todos" para ver outros vencimentos.' },
+        detail: { title: ->(r) { "Pedido ##{r[:num]} · parcela #{r[:parcela]}" }, fields: [['Forma de pagamento', :forma], ['Digitou', :digitador], ['Baixa por', :quem]] },
+        actions: ->(r) {
+          payment = r[:record]
+          next ''.html_safe unless can_pay && payment
+          if payment.paid?
+            hc_row_action('fas fa-rotate-left', 'Desfazer baixa', unpay_finance_payment_path(payment), method: :patch, params: { return_to: request.fullpath },
+                          confirm: { title: "Desfazer a baixa da parcela #{r[:parcela]} do pedido ##{r[:num]}?", text: 'A parcela volta a ficar pendente e a comissão do consultor sai do mês em que foi paga.' })
+          else
+            hc_row_action('fas fa-check', 'Dar baixa hoje', pay_finance_payment_path(payment), method: :patch, params: { return_to: request.fullpath, paid_at: today.iso8601 },
+                          confirm: { title: "Baixar a parcela #{r[:parcela]} do pedido ##{r[:num]} (#{money.call(r[:valor])})?", text: "Fica paga em #{l(today, format: '%d/%m/%Y')}. Para outra data, marque a parcela e use a barra de baixa em lote.", ok: 'Dar baixa' })
+          end
+        }) %>
+</div>
+
+<script>
+  (function () {
+    var form = document.querySelector('[data-fin-bulk]');
+    if (!form) return;
+    var table = form.closest('.pg-body') || document;
+    var money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    function refresh() {
+      var ids = [], total = 0;
+      table.querySelectorAll('.row-select-checkbox').forEach(function (cb) {
+        if (cb.dataset.open !== 'true') { cb.disabled = true; cb.checked = false; return; }
+        if (cb.checked) { ids.push(cb.dataset.id); total += parseFloat(cb.dataset.value || '0'); }
+      });
+      form.querySelector('[data-fin-ids]').value = ids.join(',');
+      form.querySelector('[data-fin-count]').textContent = ids.length;
+      form.querySelector('[data-fin-sum]').textContent = money.format(total);
+      form.querySelector('[data-fin-submit]').disabled = ids.length === 0;
+    }
+    table.addEventListener('change', function (e) {
+      if (e.target.id === 'selectAllCheckbox') {
+        table.querySelectorAll('.row-select-checkbox').forEach(function (cb) { if (!cb.disabled) cb.checked = e.target.checked; });
+      }
+      refresh();
+    });
+    refresh();
+  })();
+</script>

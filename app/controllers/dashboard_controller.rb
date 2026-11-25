@@ -625,17 +625,8 @@ class DashboardController < ApplicationController
     prepare_tracking_data_optimized(@filter_params)
   end
 
-  def order_correios_tracking_b2b
-    @filter_params = {
-      status: params[:status],
-      period: params[:period],
-      order_id: params[:order_id],
-      transportadora: params[:transportadora]
-    }
-
-    prepare_tracking_data_optimized_b2b(@filter_params)
-    @order_types = B2bOrderType.for_orders(@tracking_summary.keys)
-  end
+  # Só os pedidos do Honey, por etapa (o acompanhamento por tentativas era dos pedidos antigos do Tiny).
+  def order_correios_tracking_b2b; end
 
   def correios_pipeline
     @period = params[:period].presence || '30'

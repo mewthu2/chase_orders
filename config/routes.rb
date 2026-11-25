@@ -9,6 +9,8 @@ Rails.application.routes.draw do
     post 'user/two_factor/resend', to: 'users/two_factor#resend', as: :resend_user_two_factor
   end
   root to: 'home#index'
+  # Painel de chamados (fora do menu; a tela inicial é a busca).
+  get 'chamados', to: 'home#tickets', as: :tickets_dashboard
 
   namespace :whatsapp do
     get :health, to: "health#show"
@@ -181,6 +183,28 @@ Rails.application.routes.draw do
     end
   end
   
+  # Financeiro: recebimentos do atacado, consultores e comissões.
+  namespace :finance, path: 'financeiro' do
+    resources :orders, only: :index, path: 'pedidos'
+    resources :payments, only: [], path: 'parcelas' do
+      member do
+        patch :pay
+        patch :unpay
+      end
+      collection { patch :pay_many }
+    end
+    resources :consultants, path: 'consultores', except: :show do
+      collection { post :link_name }
+    end
+    resources :commissions, only: :index, path: 'comissoes' do
+      collection do
+        post :rates
+        post :copy_previous
+        get ':key', action: :show, as: :person
+      end
+    end
+  end
+
   resource :internal_transfer_config, only: [:edit, :update]
   resource :b2b_setting, only: [:edit, :update]
   resources :b2b_freight_rates, path: 'atacado/frete', except: [:show]

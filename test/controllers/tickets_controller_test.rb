@@ -133,7 +133,7 @@ class TicketsControllerTest < ActionDispatch::IntegrationTest
     sign_in @admin
     get ticket_path(ticket)
     assert_select "form[action='#{ticket_path(ticket)}'] button[title='Excluir chamado']"
-    get root_path(scope: 'all', status: 'all')
+    get tickets_dashboard_path(scope: 'all', status: 'all')
     assert_select "form[action='#{ticket_path(ticket)}'] button[aria-label='Excluir chamado']"
 
     assert_no_enqueued_emails do

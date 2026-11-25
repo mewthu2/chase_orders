@@ -1,0 +1,75 @@
+<% content_for :title, 'Financeiro · Consultores' %>
+<% statuses = { true => ['Ativo', 'green', 'Aparece para escolher no pedido de atacado.'], false => ['Inativo', 'gray', 'Some da lista do pedido. Os pedidos antigos continuam com ele.'] } %>
+<% rows = @consultants.map do |c|
+     { id: c.id, record: c, nome: c.name, doc: c.document.presence || '—', fone: c.phone.presence || '—', email: c.email.presence || '—',
+       pix: c.pix_key.presence || '—', st: c.active, pedidos: @order_counts[c.id].to_i }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'consultores', unit1: 'consultor', page_size: 20, sort: { k: :nome, dir: 1 },
+     tabs: { col: :st, items: [['', 'Todos'], ['true', 'Ativos'], ['false', 'Inativos']] },
+     cols: [
+       { k: :nome, label: 'Consultor', sub: :doc, sort: true, main: true },
+       { k: :doc, label: 'CPF ou CNPJ', hide: true },
+       { k: :fone, label: 'Contato', sub: :email },
+       { k: :email, label: 'E-mail', hide: true },
+       { k: :pix, label: 'Chave PIX' },
+       { k: :st, label: 'Situação', t: :status, map: statuses },
+       { k: :pedidos, label: 'Pedidos', t: :qty, sort: true }
+     ],
+     filters: [{ id: :q, type: :search, label: 'Buscar', ph: 'Nome, documento ou contato…', cols: %i[nome doc fone email], tip: 'Procura no nome, no documento e no contato.' }],
+     kpis: [
+       { label: 'Ativos', icon: 'fas fa-user-check', tone: 'green', help: 'Aparecem para escolher no pedido.', col: :st, val: true },
+       { label: 'Nomes pendentes', icon: 'fas fa-user-clock', tone: 'yellow', help: 'Nomes digitados nos pedidos que ainda não têm cadastro.', count: @pending_names.size },
+       { label: 'Pedidos com consultor', icon: 'fas fa-file-invoice-dollar', tone: 'blue', help: 'Pedidos de atacado ligados a um cadastro.', count: @order_counts.values.sum }
+     ]) %>
+<% can_edit = screen_can?(:consultants, :edit) %>
+
+<%= hc_page_header 'Consultores', 'Quem vende para os lojistas e recebe comissão quando o pedido é pago.', icon: 'fas fa-id-badge' do %>
+  <% if screen_can?(:consultants, :create) %>
+    <%= link_to new_finance_consultant_path, class: 'btn btn-export' do %><i class="fas fa-plus"></i>Novo consultor<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks fin">
+  <%= hc_pg_kpis(table) %>
+
+  <% if @pending_names.any? %>
+    <section class="table-card pg-card fin-pending-card">
+      <div class="table-toolbar">
+        <div>
+          <h3><i class="fas fa-user-clock fin-pulse" style="margin-right: 8px"></i>Nomes pendentes</h3>
+          <div class="meta">Digitados no pedido sem cadastro. Cadastre o nome ou vincule a um consultor que já existe: todos os pedidos com esse nome passam para o cadastro.</div>
+        </div>
+      </div>
+      <div class="fin-pending-list stagger">
+        <% @pending_names.each_with_index do |(name, count), i| %>
+          <div class="fin-pending-item spot" style="--i: <%= i %>">
+            <div class="fin-pending-name"><b><%= name %></b><span><%= count %> <%= count == 1 ? 'pedido' : 'pedidos' %></span></div>
+            <% if can_edit %>
+              <div class="fin-pending-actions">
+                <%= button_to link_name_finance_consultants_path, params: { name: name, create: 1 }, class: 'btn btn-sm btn-primary', form: { style: 'display:inline' } do %><i class="fas fa-user-plus"></i>Cadastrar "<%= name %>"<% end %>
+                <% if @consultants.any? %>
+                  <%= form_with url: link_name_finance_consultants_path, class: 'fin-link-form' do %>
+                    <%= hidden_field_tag :name, name %>
+                    <%= select_tag :consultant_id, options_from_collection_for_select(@consultants, :id, :name), include_blank: 'Vincular a…', class: 'field-input', onchange: 'this.form.requestSubmit()' %>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <%= hc_pg_table(table, title: 'Consultores', icon: 'fas fa-id-badge', meta: 'Excluir um consultor deixa os pedidos dele com o nome, como pendentes.',
+        empty: { title: 'Nenhum consultor cadastrado', text: 'Cadastre os consultores para escolher no pedido de atacado.' },
+        detail: { title: ->(r) { r[:nome] } },
+        actions: ->(r) {
+          c = r[:record]
+          safe_join([
+            (hc_row_action('fas fa-pencil', 'Editar', edit_finance_consultant_path(c)) if can_edit),
+            (hc_row_action('fas fa-trash', 'Excluir', finance_consultant_path(c), danger: true, method: :delete,
+                           confirm: { title: "Excluir #{r[:nome]}?", text: 'Os pedidos dele ficam só com o nome, como pendentes, e a comissão fica sem percentual até vincular de novo.', ok: 'Excluir consultor' }) if screen_can?(:consultants, :destroy))
+          ].compact)
+        }) %>
+</div>

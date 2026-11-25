@@ -15,6 +15,14 @@ class B2bOrder < ApplicationRecord
   has_many :fiscal_notes, dependent: :nullify
   has_many :attempts, dependent: :nullify
 
+  # Financeiro: consultor que vendeu (sem cadastro fica só o nome em salesperson_name) e parcelas a receber.
+  belongs_to :consultant, optional: true
+  has_many :payments, -> { order(:number) }, class_name: 'B2bOrderPayment', dependent: :destroy
+  # Depois dos itens (o autosave deles roda antes): as parcelas acompanham o total, a forma e os prazos.
+  after_save :sync_payments, if: :sale?
+  # O nome digitado no campo Consultor vincula o cadastro quando bate com um (sem diferenciar maiúsculas e espaços).
+  before_validation :match_consultant, if: -> { sale? && salesperson_name_changed? }
+
   # b2c_transfer: transferência do estoque B2B para a filial B2C (destinatário fixo, ver B2bTinyService).
   enum :kind, { sale: 0, stock_transfer: 1, b2c_transfer: 2 }
   # Sentido da transferência B2C. b2c_to_b2b não entra no Log02 nem no Correios e não reserva estoque: só gera a
@@ -231,6 +239,29 @@ class B2bOrder < ApplicationRecord
     PAYMENT_METHODS[payment_method]
   end
 
+  # PIX e cartão contam como pagos na criação do pedido; boleto (ou sem forma) é pago parcela por parcela.
+  def paid_on_creation?
+    %w[pix cartao].include?(payment_method)
+  end
+
+  # Quanto entrou na criação (PIX/cartão): o total menos parcelas de boleto já pagas antes de trocar a forma, que
+  # contam no mês da baixa delas. Assim nada é contado duas vezes.
+  def creation_paid_amount
+    return BigDecimal('0') unless paid_on_creation?
+
+    [grand_total - payments.select(&:paid?).sum(&:amount), BigDecimal('0')].max
+  end
+
+  # Nome do consultor: o do cadastro ou, sem cadastro, o que foi digitado no pedido.
+  def consultant_label
+    consultant&.name || salesperson_name.presence
+  end
+
+  # Consultor só com o nome digitado: o financeiro ainda precisa cadastrar ou vincular.
+  def consultant_pending?
+    consultant_id.nil? && salesperson_name.present?
+  end
+
   # Total a receber: produtos com o desconto do pedido + frete.
   def grand_total
     total + freight_value.to_d
@@ -316,6 +347,16 @@ class B2bOrder < ApplicationRecord
 
   def must_have_items
     errors.add(:base, 'Pedido precisa ter pelo menos um item') if b2b_order_items.reject(&:marked_for_destruction?).empty?
+  end
+
+  def match_consultant
+    name = salesperson_name.to_s.squish
+    self.consultant = name.present? ? Consultant.find_by('LOWER(name) = ?', name.downcase) : nil
+    self.salesperson_name = consultant&.name || name.presence
+  end
+
+  def sync_payments
+    Finance::PaymentSchedule.call(self)
   end
 
   def payment_terms_fit

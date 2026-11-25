@@ -33,7 +33,8 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{stock_withdrawals_path}']", count: 0
     assert_select "a[href='#{companies_path}']", count: 0
     assert_select ".sb-section[data-area='adm']", count: 0
-    assert_select ".sb-section[data-area='geral']", count: 1
+    # Chamados estão fora do menu: Geral só aparece para quem tem o WhatsApp.
+    assert_select ".sb-section[data-area='geral']", count: 0
   end
 
   test 'the current screen is highlighted and its area shows in the top trail' do
@@ -56,17 +57,17 @@ class SidebarTest < ActionDispatch::IntegrationTest
     assert_select ".sb-group[data-group='log02'] .sb-aka", text: 'Correios B2B'
   end
 
-  test 'every user gets their tickets and a way to open one' do
+  test 'chamados ficam fora do menu, para todos' do
     user = User.create!(name: 'Comum Menu', email: 'comum_menu@example.com', password: 'password123')
-    sign_in user
-    get root_path
-
-    assert_select ".sb-group[data-group='chamados']" do
-      assert_select "a[href='#{root_path}']", text: /Meus chamados/
-      assert_select "a[href='#{new_ticket_path}']", text: /Abrir chamado/
-      assert_select "a[href='#{root_path(scope: 'all', status: 'all')}']", count: 0
+    supervisor = User.create!(name: 'Supervisor Menu', email: 'supervisor_menu@example.com', password: 'password123')
+    supervisor.profiles << Profile.create!(name: 'Supervisores', ticket_sectors: [TicketSector.create!(name: 'Lojas Menu')])
+    [user, supervisor, @admin].each do |who|
+      sign_in who
+      get root_path
+      assert_select ".sb-group[data-group='chamados']", count: 0
+      assert_select ".sb-link[href='#{new_ticket_path}']", count: 0
+      sign_out who
     end
-    assert_select "a[href='#{ticket_responsabilities_path}']", count: 0
   end
 
   test 'admins manage sectors and responsabilities under Acessos e equipe' do
@@ -75,17 +76,6 @@ class SidebarTest < ActionDispatch::IntegrationTest
 
     assert_select ".sb-group[data-group='acessos'] a[href='#{ticket_sectors_path}']", text: /Setores/
     assert_select ".sb-group[data-group='acessos'] a[href='#{ticket_responsabilities_path}']", text: /Responsabilidades/
-    assert_select ".sb-group[data-group='chamados'] a[href='#{root_path(scope: 'all', status: 'all')}']", text: /Todos os chamados/
-  end
-
-  test 'sector supervisors see the tickets of their sectors' do
-    supervisor = User.create!(name: 'Supervisor Menu', email: 'supervisor_menu@example.com', password: 'password123')
-    supervisor.profiles << Profile.create!(name: 'Supervisores', ticket_sectors: [TicketSector.create!(name: 'Lojas Menu')])
-    sign_in supervisor
-    get root_path
-
-    assert_select ".sb-group[data-group='chamados'] a[href='#{root_path(scope: 'sectors', status: 'all')}']", text: /Chamados dos meus setores/
-    assert_select "a[href='#{ticket_sectors_path}']", count: 0
   end
 
   test 'the help drawer, map and quick search data are on the page' do

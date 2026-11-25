@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_120100) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -186,6 +186,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
     t.index ["b2b_order_id"], name: "index_b2b_order_items_on_b2b_order_id"
   end
 
+  create_table "b2b_order_payments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "b2b_order_id", null: false
+    t.integer "number", null: false
+    t.date "due_date", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.date "paid_at"
+    t.bigint "paid_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["b2b_order_id", "number"], name: "index_b2b_order_payments_on_b2b_order_id_and_number", unique: true
+    t.index ["b2b_order_id"], name: "index_b2b_order_payments_on_b2b_order_id"
+    t.index ["paid_at"], name: "index_b2b_order_payments_on_paid_at"
+    t.index ["paid_by_id"], name: "index_b2b_order_payments_on_paid_by_id"
+  end
+
   create_table "b2b_orders", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.integer "kind", null: false
     t.integer "status", default: 0, null: false
@@ -230,8 +245,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
     t.bigint "nf_carrier_id"
     t.json "remessa_recipient"
     t.integer "transfer_direction", default: 0, null: false
+    t.bigint "consultant_id"
     t.index ["carrier_id"], name: "index_b2b_orders_on_carrier_id"
     t.index ["client_id"], name: "index_b2b_orders_on_client_id"
+    t.index ["consultant_id"], name: "index_b2b_orders_on_consultant_id"
     t.index ["nf_carrier_id"], name: "index_b2b_orders_on_nf_carrier_id"
     t.index ["transfer_location_id"], name: "index_b2b_orders_on_transfer_location_id"
     t.index ["user_id"], name: "index_b2b_orders_on_user_id"
@@ -354,6 +371,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
     t.index ["responsible_name"], name: "index_clients_on_responsible_name"
   end
 
+  create_table "commission_rates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.date "month", null: false
+    t.string "beneficiary_type", null: false
+    t.bigint "beneficiary_id", null: false
+    t.decimal "percent", precision: 5, scale: 2, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["beneficiary_type", "beneficiary_id"], name: "index_commission_rates_on_beneficiary"
+    t.index ["month", "beneficiary_type", "beneficiary_id"], name: "index_commission_rates_on_month_and_beneficiary", unique: true
+  end
+
   create_table "companies", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "legal_name", null: false
     t.string "trade_name"
@@ -405,6 +433,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
     t.index ["company_id", "operation_nature_id"], name: "idx_company_operation_natures", unique: true
     t.index ["company_id"], name: "index_company_operation_natures_on_company_id"
     t.index ["operation_nature_id"], name: "index_company_operation_natures_on_operation_nature_id"
+  end
+
+  create_table "consultants", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "document"
+    t.string "phone"
+    t.string "email"
+    t.string "pix_key"
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "customers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -1520,9 +1559,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_180100) do
   add_foreign_key "b2b_catalogs", "clients"
   add_foreign_key "b2b_catalogs", "users"
   add_foreign_key "b2b_order_items", "b2b_orders"
+  add_foreign_key "b2b_order_payments", "b2b_orders"
+  add_foreign_key "b2b_order_payments", "users", column: "paid_by_id"
   add_foreign_key "b2b_orders", "carriers"
   add_foreign_key "b2b_orders", "carriers", column: "nf_carrier_id", on_delete: :nullify
   add_foreign_key "b2b_orders", "clients"
+  add_foreign_key "b2b_orders", "consultants"
   add_foreign_key "b2b_orders", "transfer_locations"
   add_foreign_key "b2b_orders", "users"
   add_foreign_key "b2b_settings", "companies", column: "b2c_issuer_company_id", on_delete: :nullify

@@ -1,0 +1,36 @@
+<% content_for :title, "Comissão · #{@row.name}" %>
+<% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% mes = @month.strftime('%Y-%m') %>
+<% rows = @row.entries.map do |e|
+     o = e.order
+     { id: e.payment ? "p#{e.payment.id}" : "o#{o.id}", num: o.id,
+       pedido: link_to("##{o.id}", b2b_order_edit_path(o), class: 'text-main t mono'),
+       cliente: b2b_order_destination(o).presence || '—',
+       origem: e.payment ? "Parcela #{e.payment.number}/#{o.payments.size} paga" : (@row.role == :typist ? 'Pedido digitado' : "#{o.payment_label} na criação"),
+       data: e.date, base: e.base.to_f,
+       comissao: (@row.percent ? (e.base * @row.percent / 100).round(2) : 0).to_f }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'lançamentos', unit1: 'lançamento', page_size: 50, sort: { k: :data, dir: 1 },
+     cols: [
+       { k: :pedido, label: 'Pedido', t: :html, sub: :cliente, main: true },
+       { k: :cliente, label: 'Cliente', hide: true },
+       { k: :origem, label: 'Origem' },
+       { k: :data, label: @row.role == :typist ? 'Data do pedido' : 'Pago em', t: :d, sort: true },
+       { k: :base, label: 'Base', t: :money, sort: true },
+       { k: :comissao, label: 'Comissão', t: :money, sort: true }
+     ],
+     kpis: [
+       { label: 'Percentual', icon: 'fas fa-percent', tone: 'purple', help: 'Percentual do mês.', text: @row.percent ? "#{number_with_precision(@row.percent, precision: 2, separator: ',', strip_insignificant_zeros: true)}%" : 'sem percentual' },
+       { label: 'Base', icon: 'fas fa-receipt', tone: 'blue', help: 'Total com frete.', text: money.call(@row.base) },
+       { label: 'Comissão', icon: 'fas fa-sack-dollar', tone: 'green', help: 'A receber neste mês.', text: money.call(@row.commission) }
+     ]) %>
+
+<%= hc_page_header @row.name, "#{@row.role == :typist ? 'Digitou' : 'Consultor'} · #{HoneyTable.month_label(mes)}", icon: 'fas fa-percent' do %>
+  <%= link_to finance_commissions_path(mes: mes), class: 'btn-back' do %><i class="fas fa-arrow-left me-1"></i>Voltar<% end %>
+<% end %>
+
+<div class="pg-blocks fin">
+  <%= hc_pg_kpis(table) %>
+  <%= hc_pg_table(table, title: 'O que compõe a comissão', icon: 'fas fa-list',
+        empty: { title: 'Nada neste mês', text: '' }) %>
+</div>

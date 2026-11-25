@@ -1,14 +1,26 @@
 <% title 'Solicitação de Código de Rastreio (Log02)' %>
-<%= render 'dashboard/attempt_queue', kind: :log02, action: :push_tracking_b2b, perm: :dashboard_correios_b2b,
-           title: 'Solicitação de Código de Rastreio (Log02)', subtitle: 'O código de rastreio do Correios fica no pedido do Honey.', icon: 'fas fa-route',
-           queue: @push_tracking, errors: @queue_errors, step: 'busca do rastreio', order_types: @order_types,
-           run_path: run_push_tracking_b2b_dashboard_index_path, run_now_path: run_push_tracking_b2b_now_dashboard_index_path,
-           done_label: 'Rastreios hoje', done_help: 'Códigos que o Correios já liberou hoje.', row_tip: 'Buscar o rastreio agora', row_icon: 'fas fa-route',
-           run_msg: 'Solicitando rastreio aos Correios (B2B)...', bulk_label: 'Buscar selecionados',
-           runbox_title: 'Fila de rastreamento', runbox_text: 'Pede ao Correios o código de rastreio dos pedidos de atacado com XML enviado e grava no Honey. O sistema roda sozinho; use Buscar agora se não puder esperar.',
-           runbox_btn: 'Buscar fila agora', table_title: 'Pedidos antigos do Tiny 2', table_meta: 'Feitos no Tiny 2 antes do Honey, com XML enviado e ainda sem código de rastreio. O código fica só no Honey.',
-           empty_text: 'Não há pedidos esperando código de rastreio no momento.' %>
+<%= hc_page_header 'Solicitação de Código de Rastreio (Log02)', 'O código de rastreio do Correios fica no pedido do Honey.', icon: 'fas fa-route' %>
 
-<div class="pg-blocks" style="margin-top: 16px">
-  <%= render 'dashboard/honey_b2b_orders', stages: %w[tracking], show_correios: true, title: 'Pedidos esperando rastreio', meta: 'O código fica no pedido do Honey.', empty_text: 'Nenhum pedido do Honey esperando rastreio.' %>
+<div class="pg-blocks">
+  <%= render 'dashboard/flow', kind: :log02, current: :push_tracking_b2b, counts: { push_tracking_b2b: B2bOrder.waiting_tracking.count } %>
+  <%= render 'dashboard/runbox', title: 'Fila de rastreamento', perm: :dashboard_correios_b2b, run_path: run_push_tracking_b2b_dashboard_index_path,
+             running: @job_running, btn: 'Buscar fila agora', last_run: Attempt.where(kinds: :get_tracking_tiny2).maximum(:created_at),
+             confirm: 'O sistema pede agora ao Correios o código de rastreio dos pedidos da fila.',
+             text: 'Pede ao Correios o código de rastreio dos pedidos de atacado com XML enviado e grava no Honey. O sistema roda sozinho; use Buscar fila agora se não puder esperar.' %>
+  <%= render 'dashboard/honey_b2b_orders', stages: %w[tracking], show_correios: true, title: 'Pedidos esperando rastreio', meta: 'O código fica no pedido do Honey.', empty_text: 'Nenhum pedido esperando rastreio.' %>
 </div>
+
+<%# Pedidos antigos (de antes do Honey) parados nesta etapa: só aparecem se ainda existir algum. %>
+<% if @push_tracking.any? %>
+  <div style="margin-top: 16px">
+    <%= render 'dashboard/attempt_queue', kind: :log02, action: :push_tracking_b2b, perm: :dashboard_correios_b2b, legacy: true,
+               title: nil, subtitle: nil, icon: 'fas fa-box-archive',
+               queue: @push_tracking, errors: @queue_errors, step: 'busca do rastreio', order_types: @order_types,
+               run_path: nil, run_now_path: run_push_tracking_b2b_now_dashboard_index_path,
+               done_label: nil, done_help: nil, row_tip: 'Buscar o rastreio agora', row_icon: 'fas fa-route',
+               run_msg: 'Solicitando rastreio aos Correios (B2B)...', bulk_label: 'Buscar selecionados',
+               runbox_title: nil, runbox_text: nil, runbox_btn: nil, table_title: 'Pedidos antigos',
+               table_meta: 'Feitos antes do Honey, com XML enviado e ainda sem código de rastreio.',
+               empty_text: 'Nenhum pedido antigo parado aqui.' %>
+  </div>
+<% end %>

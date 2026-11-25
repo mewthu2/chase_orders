@@ -6,7 +6,7 @@
      hc_row_action('fas fa-flag-checkered', 'Concluir e tirar da fila', complete_send_xml_b2b_dashboard_index_path, method: :post,
                    params: { attempt_id: att.id }.merge(request.query_parameters.slice('transportadora', 'order_type').symbolize_keys),
                    confirm: { title: "Concluir o pedido #{att.tiny_order_id}?",
-                              text: 'Pedido antigo do Tiny 2: o Tiny 2 não é mais usado, então o XML dele não sai por aqui. Conclua quando o pedido já tiver saído; ele sai desta fila (e não entra na do rastreio).',
+                              text: 'Pedido antigo, de antes do Honey: o XML dele não sai por aqui. Conclua quando o pedido já tiver saído; ele sai desta fila (e não entra na do rastreio).',
                               ok: 'Concluir' })
    } %>
 
@@ -27,8 +27,8 @@
                title: nil, subtitle: nil, icon: 'fas fa-box-archive',
                queue: @send_xml, errors: @last_errors, step: 'nota (XML)', order_types: @order_types, transport: true, extra_action: complete,
                run_path: nil, run_now_path: nil, done_label: nil, done_help: nil, row_tip: nil, row_icon: nil, run_msg: nil, bulk_label: nil,
-               runbox_title: nil, runbox_text: nil, runbox_btn: nil, table_title: 'Pedidos antigos do Tiny 2',
-               table_meta: 'Feitos no Tiny 2 antes do Honey e parados nesta etapa. O Tiny 2 não é mais usado: conclua os que já saíram.',
+               runbox_title: nil, runbox_text: nil, runbox_btn: nil, table_title: 'Pedidos antigos',
+               table_meta: 'Feitos antes do Honey e parados nesta etapa: conclua os que já saíram.',
                empty_text: 'Nenhum pedido antigo parado aqui.' %>
   </div>
 <% end %>

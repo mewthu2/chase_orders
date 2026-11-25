@@ -4,9 +4,12 @@ class HomeController < ApplicationController
 
   SCOPE_TITLES = { 'mine' => 'Meus chamados', 'sectors' => 'Chamados dos meus setores', 'all' => 'Todos os chamados' }.freeze
 
-  # Painel de chamados: "mine" = em que participo; "sectors" = todos dos setores que meus perfis
-  # liberam; "all" = tudo (só admin).
-  def index
+  # Tela inicial: só a busca "O que você precisa hoje?" sobre as telas liberadas (a mesma lista do Ctrl + K).
+  def index; end
+
+  # Painel de chamados (fora do menu, em /chamados): "mine" = em que participo; "sectors" = todos dos setores que
+  # meus perfis liberam; "all" = tudo (só admin).
+  def tickets
     @sector_ids = current_user.visible_ticket_sector_ids
     @scopes = SCOPE_TITLES.slice(*['mine', ('sectors' if @sector_ids.any?), ('all' if current_user.admin?)].compact)
     @scope = @scopes.key?(params[:scope]) ? params[:scope] : 'mine'

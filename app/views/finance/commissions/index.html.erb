@@ -1,0 +1,58 @@
+<% content_for :title, 'Financeiro · Comissões' %>
+<% money = ->(v) { number_to_currency(v, unit: 'R$ ', separator: ',', delimiter: '.') } %>
+<% can_edit = screen_can?(:commissions, :edit) %>
+<% mes = @month.strftime('%Y-%m') %>
+<% roles = { 'typist' => ['Digitou', 'blue', 'Quem digitou o pedido: comissão no mês do pedido, sem esperar pagamento.'],
+             'consultant' => ['Consultor', 'purple', 'Comissão quando o pedido é pago: PIX e cartão na hora, boleto parcela a parcela.'] } %>
+<% rows = @result.rows.map do |r|
+     editable = can_edit && r.beneficiary
+     percent_txt = r.percent ? number_with_precision(r.percent, precision: 2, separator: ',', strip_insignificant_zeros: true) : ''
+     { id: r.key, record: r, papel: r.role.to_s, nome: r.name,
+       pessoa: safe_join([link_to(r.name, person_finance_commissions_path(key: r.key, mes: mes), class: 'text-main'),
+                          (hc_status('cadastro pendente', 'yellow', tip: 'Nome digitado sem cadastro: sem percentual até cadastrar ou vincular em Consultores.') if r.pending),
+                          (hc_status('sem percentual', 'gray', tip: 'Ninguém definiu o percentual deste mês: comissão zero.') if !r.pending && r.percent.nil?)].compact, ' '),
+       pct: editable ? content_tag(:span, text_field_tag("percents[#{r.key}]", percent_txt, form: 'finRates', class: 'field-input fin-pct', inputmode: 'decimal', placeholder: '0', 'aria-label': "Percentual de #{r.name}") + content_tag(:em, '%'), class: 'fin-pct-wrap')
+                     : (r.percent ? "#{percent_txt}%" : '—'),
+       base: r.base.to_f, comissao: r.commission.to_f, itens: r.entries.size }
+   end %>
+<% table = HoneyTable.new(params, rows: rows, unit: 'pessoas', unit1: 'pessoa', page_size: 50, sort: { k: :comissao, dir: -1 },
+     tabs: { col: :papel, items: [['', 'Todos'], ['typist', 'Digitou'], ['consultant', 'Consultores']] },
+     cols: [
+       { k: :pessoa, label: 'Pessoa', t: :html, main: true },
+       { k: :papel, label: 'Papel', t: :status, map: roles },
+       { k: :pct, label: 'Percentual do mês', t: :html },
+       { k: :base, label: 'Base (total com frete)', t: :money, sort: true },
+       { k: :comissao, label: 'Comissão', t: :money, sort: true },
+       { k: :itens, label: 'Pedidos / parcelas', t: :qty }
+     ],
+     filters: [{ id: :mes, type: :month, label: 'Mês', server: true, default: mes, tip: 'Mês da comissão. Quem digitou: mês do pedido. Consultor: mês do pagamento.' },
+               { id: :q, type: :search, label: 'Buscar', ph: 'Nome…', cols: %i[nome] }],
+     kpis: [
+       { label: 'Comissão do mês', icon: 'fas fa-sack-dollar', tone: 'green', help: 'Soma de todas as comissões do mês.', text: money.call(@result.totals[:commission]) },
+       { label: 'Base do mês', icon: 'fas fa-receipt', tone: 'blue', help: 'Total com frete dos pedidos e parcelas que geram comissão.', text: money.call(@result.totals[:base]) },
+       { label: 'Digitaram', icon: 'fas fa-keyboard', tone: 'blue', help: 'Quem digitou pedido no mês.', col: :papel, val: 'typist' },
+       { label: 'Consultores', icon: 'fas fa-id-badge', tone: 'purple', help: 'Consultores com pedido pago no mês.', col: :papel, val: 'consultant' }
+     ]) %>
+
+<%= hc_page_header 'Comissões', "#{HoneyTable.month_label(mes)}: comissão sobre o total do pedido com frete.", icon: 'fas fa-percent' do %>
+  <% if screen_can?(:commissions, :export) %>
+    <%= link_to finance_commissions_path(mes: mes, format: :csv), class: 'btn btn-export' do %><i class="fas fa-file-csv"></i>Exportar CSV<% end %>
+  <% end %>
+<% end %>
+
+<div class="pg-blocks fin">
+  <%= hc_pg_kpis(table) %>
+  <% tools = if can_edit
+       capture do %>
+    <%= button_to copy_previous_finance_commissions_path, params: { mes: mes }, class: 'btn btn-ghost btn-sm', form: { style: 'display:inline' },
+                  data: { tip: 'Traz os percentuais do último mês que tem algum, só para quem ainda não tem neste mês.' } do %><i class="fas fa-clone"></i>Copiar do mês anterior<% end %>
+    <button type="submit" form="finRates" class="btn btn-sm btn-primary fin-save"><i class="fas fa-floppy-disk"></i>Salvar percentuais</button>
+  <% end
+     end %>
+  <%= form_with url: rates_finance_commissions_path, id: 'finRates', class: 'd-none' do %><%= hidden_field_tag :mes, mes %><% end if can_edit %>
+  <%= hc_pg_table(table, title: 'Comissões do mês', icon: 'fas fa-percent', tools: tools,
+        meta: 'Digite o percentual de cada pessoa e salve. Deixar em branco tira o percentual do mês. Cada mês é independente.',
+        empty: { title: 'Ninguém com comissão neste mês', text: 'Use as setas do mês para ver outros meses.' },
+        link: ->(r) { person_finance_commissions_path(key: r[:id], mes: mes) },
+        detail: { title: ->(r) { r[:nome] } }) %>
+</div>

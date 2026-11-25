@@ -13,19 +13,20 @@ module Navigation
   def kind(value) = ->(v) { v.controller_path == 'b2b_orders' && v.params[:order_kind] == value }
   def channel(value) = ->(v) { v.controller_path == 'attempts' && v.params[:channel] == value }
   def note_list(value) = ->(v) { v.controller_path == 'fiscal_note_lists' && v.params[:list] == value }
-  def home(scope) = ->(v) { v.controller_path == 'home' && (v.params[:scope].presence || 'mine') == scope }
+  def home(scope) = ->(v) { v.controller_path == 'home' && v.action_name == 'tickets' && (v.params[:scope].presence || 'mine') == scope }
 
   def menu
     @menu ||= [
       area('geral', [
-        group('chamados', 'Chamados', 'fas fa-ticket-alt', 'Pedidos de ajuda entre setores. Comece por aqui.', badge: :waiting_me, children: [
-          link('inicio', 'Meus chamados', 'fas fa-inbox', 'O que você abriu, resolve ou acompanha.', path: ->(v) { v.root_path }, active: home('mine'), badge: :waiting_me),
+        # Chamados fora do menu por enquanto (o painel continua em /chamados). Para voltar, tire o `hidden: true`.
+        group('chamados', 'Chamados', 'fas fa-ticket-alt', 'Pedidos de ajuda entre setores. Comece por aqui.', badge: :waiting_me, hidden: true, children: [
+          link('inicio', 'Meus chamados', 'fas fa-inbox', 'O que você abriu, resolve ou acompanha.', path: ->(v) { v.tickets_dashboard_path }, active: home('mine'), badge: :waiting_me),
           link('abrir-chamado', 'Abrir chamado', 'fas fa-plus-circle', 'Peça ajuda a outra área. Ela recebe um e-mail na hora.',
                path: ->(v) { v.new_ticket_path }, perm: 'tickets', act: 'C', active: page('tickets', 'new', 'create')),
           link('chamados-setores', 'Chamados dos meus setores', 'fas fa-building', 'Todos os chamados dos setores liberados para você.',
-               path: ->(v) { v.root_path(scope: 'sectors', status: 'all') }, cond: :sectors_non_admin, active: home('sectors')),
+               path: ->(v) { v.tickets_dashboard_path(scope: 'sectors', status: 'all') }, cond: :sectors_non_admin, active: home('sectors')),
           link('chamados-todos', 'Todos os chamados', 'fas fa-list-ul', 'Todos os chamados de todos os setores.',
-               path: ->(v) { v.root_path(scope: 'all', status: 'all') }, cond: :admin, active: home('all'))
+               path: ->(v) { v.tickets_dashboard_path(scope: 'all', status: 'all') }, cond: :admin, active: home('all'))
         ]),
         group('whatsapp', 'Atendimento WhatsApp', 'fab fa-whatsapp', 'Conversas com clientes pelo WhatsApp da empresa.', children: [
           link('wa-conversas', 'Conversas', 'fas fa-comments', 'Responda clientes em equipe, numa caixa única.',
@@ -133,6 +134,15 @@ module Navigation
              path: ->(v) { v.b2b_catalogs_path }, perm: 'b2b_catalogs', badge: :catalogs, active: ctrl('b2b_catalogs', 'b2b_catalog_orders'))
       ]),
 
+      area('financeiro', [
+        link('fin-pedidos', 'Pedidos de Atacado', 'fas fa-hand-holding-dollar', 'Recebimentos: PIX e cartão já pagos, boletos com baixa parcela a parcela.',
+             path: ->(v) { v.finance_orders_path }, perm: 'finance_orders', active: ctrl('finance/orders')),
+        link('fin-comissoes', 'Comissões', 'fas fa-percent', 'Comissão do mês de quem digitou e dos consultores, com o percentual de cada um.',
+             path: ->(v) { v.finance_commissions_path }, perm: 'commissions', active: ctrl('finance/commissions')),
+        link('fin-consultores', 'Consultores', 'fas fa-id-badge', 'Cadastro dos consultores e os nomes digitados nos pedidos que faltam cadastrar.',
+             path: ->(v) { v.finance_consultants_path }, perm: 'consultants', active: ctrl('finance/consultants'))
+      ]),
+
       area('adm', [
         group('acessos', 'Acessos e equipe', 'fas fa-users-cog', 'Quem entra no sistema e o que cada pessoa pode ver e fazer.', children: [
           link('adm-usuarios', 'Gerenciar Usuários', 'fas fa-users-cog', 'Crie e edite quem acessa o painel.',
@@ -198,6 +208,7 @@ module Navigation
 
   # Item liberado para o usuário (sem considerar grupos).
   def allowed?(item, user)
+    return false if item[:hidden]
     return false if item[:cond] == :admin && !user.admin?
     return false if item[:cond] == :sectors_non_admin && (user.admin? || user.visible_ticket_sector_ids.empty?)
     return true unless item[:perm]
@@ -211,6 +222,7 @@ module Navigation
     menu.filter_map do |area|
       items = area[:items].filter_map do |item|
         next (allowed?(item, user) ? item : nil) unless item[:type] == :group
+        next nil if item[:hidden]
 
         children = prune_subs(item[:children].select { |c| c[:type] == :sub || allowed?(c, user) })
         children.any? { |c| c[:type] == :link } ? item.merge(children: children) : nil

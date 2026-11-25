@@ -1,0 +1,47 @@
+<%= form_with model: @consultant, url: (@consultant.new_record? ? finance_consultants_path : finance_consultant_path(@consultant)), local: true do |form| %>
+  <% if @consultant.errors.any? %>
+    <div class="form-error-box">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <ul class="mb-0 mt-1"><% @consultant.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div class="form-section">
+    <div class="form-section-header">
+      <h5 class="form-section-title"><i class="fas fa-id-badge me-2"></i>Consultor</h5>
+    </div>
+    <div class="form-section-body">
+      <div class="form-grid">
+        <div class="form-col-6">
+          <label class="field-label">Nome <span class="required">*</span></label>
+          <%= form.text_field :name, class: "field-input #{'field-input--error' if @consultant.errors[:name].any?}", required: true, placeholder: 'Nome como aparece no pedido' %>
+        </div>
+        <div class="form-col-6">
+          <label class="field-label">CPF ou CNPJ</label>
+          <%= form.text_field :document, class: 'field-input' %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Telefone</label>
+          <%= form.text_field :phone, class: 'field-input' %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">E-mail</label>
+          <%= form.email_field :email, class: 'field-input' %>
+        </div>
+        <div class="form-col-4">
+          <label class="field-label">Chave PIX</label>
+          <%= form.text_field :pix_key, class: 'field-input', placeholder: 'Para pagar a comissão' %>
+        </div>
+      </div>
+      <div class="form-check form-switch mt-3">
+        <%= form.check_box :active, class: 'form-check-input', role: 'switch' %>
+        <label class="form-check-label text-main fw-bold">Ativo — aparece para escolher no pedido de atacado</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit (@consultant.new_record? ? 'Cadastrar consultor' : 'Salvar alterações'), class: 'btn-submit' %>
+    <%= link_to 'Cancelar', finance_consultants_path, class: 'btn-cancel' %>
+  </div>
+<% end %>
