@@ -33,6 +33,7 @@
      { id: order.id, record: order, n: order.id, dia: order.created_at.to_date, dt: order.created_at, cliente: b2b_order_destination(order).presence || '—',
        cidade: [order.client&.city, order.client&.state].compact.join(' / ').presence, cnpj: order.client&.cnpj_formatted.presence || '—', total: order.total,
        total_frete: order.grand_total, frete_sub: (order.freight_value.to_d.positive? ? "com #{number_to_currency(order.freight_value, unit: 'R$', separator: ',', delimiter: '.')} de frete" : 'sem frete'),
+       corr: order.correios_order_id&.to_s.presence || '—',
        track: order.tracking_code.presence || (order.honey_flow? && order.log_stage == 'carrier' ? 'Transportadora' : '—'), st: order.status,
        pecas: items.sum { |i| i.quantity.to_i }, vend: order.consultant_label ? safe_join([order.consultant_label, (hc_status('cadastro pendente', 'yellow', tip: 'Nome digitado sem cadastro: o financeiro cadastra ou vincula em Financeiro › Consultores.') if order.consultant_pending?)].compact, ' ') : '—', serv: (order.sale? ? order.shipping_label : order.freight_service).presence || '—',
        transp: order.carrier&.name.presence || order.carrier_name.presence || '—',
@@ -47,7 +48,7 @@
 <% search = ->(scope, text) {
      q = "%#{ActiveRecord::Base.sanitize_sql_like(text.to_s.strip.delete_prefix('#'))}%"
      scope.left_joins(:client, :transfer_location)
-          .where('clients.responsible_name LIKE :q OR clients.business_name LIKE :q OR b2b_orders.salesperson_name LIKE :q OR b2b_orders.tracking_code LIKE :q ' \
+          .where('clients.responsible_name LIKE :q OR clients.business_name LIKE :q OR b2b_orders.salesperson_name LIKE :q OR b2b_orders.tracking_code LIKE :q OR b2b_orders.correios_order_id LIKE :q ' \
                  'OR b2b_orders.receiver_name LIKE :q OR transfer_locations.name LIKE :q OR b2b_orders.id = :id', q: q, id: text.to_s.delete('#').to_i)
    } %>
 <% common = { scope: @scope, map: map, search: search, attrs: { st: :status, dt: :created_at, loc: :transfer_location_id, sentido: :transfer_direction },
@@ -98,13 +99,14 @@
          { k: :st, label: 'Status', t: :status, map: statuses },
          { k: :log, label: 'Etapa no Log02', t: :tag },
          { k: :entrega, label: 'Entrega', t: :tag },
+         { k: :corr, label: 'Pedido Correios / Rastreio', t: :mono, sub: :track },
          { k: :receb, label: 'Quem recebe na loja', hide: true },
          { k: :track, label: 'Rastreamento', t: :mono, hide: true },
          { k: :por, label: 'Criado por', hide: true },
          { k: :obs, label: 'Observações', hide: true }
        ],
        filters: [
-         { id: :q, type: :search, label: 'Buscar', ph: 'Nº, nota, loja ou quem recebe', tip: 'Procura pelo número do pedido, pela loja de destino ou pelo nome de quem recebe.' },
+         { id: :q, type: :search, label: 'Buscar', ph: 'Nº, pedido Correios, rastreio, loja ou quem recebe', tip: 'Procura pelo número do pedido, pelo pedido no Correios, pelo rastreio, pela loja de destino ou pelo nome de quem recebe.' },
          { id: :loja, type: :select, label: 'Loja de destino', col: :loc, options: @filter_locations.map { |l| [l.id.to_s, l.name] }, all: 'Todas as lojas' },
          { id: :st, type: :select, label: 'Status', col: :st, all: 'Todos os status', tip: 'Em que ponto está o abastecimento, da aprovação até a chegada na loja.' },
          { id: :per, type: :period, label: 'Período', col: :dt }
